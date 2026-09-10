@@ -121,6 +121,30 @@ export function applyFilters(tasks: TaskRow[], f: DashboardFilters, ctx: FilterC
   return f.quick === "asc" ? sortAscending(out) : out;
 }
 
+const COLOURS = new Set<string>(["white", "green", "yellow", "red", "grey"]);
+const ICONS = new Set<string>(["paused", "doubt", "review", "important", "recurring"]);
+const QUICK = new Set<string>(["asc", "tomorrow", "today"]);
+
+/** Coerce the persisted JSON (prisma `User.filterPrefs`) into a well-typed filter set; unknown values are dropped. */
+export function normaliseFilters(raw: unknown): DashboardFilters {
+  const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const strOrNull = (v: unknown) => (typeof v === "string" && v.length > 0 ? v : null);
+  const list = (v: unknown, allowed: Set<string>) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && allowed.has(x)) : []);
+  const quick = strOrNull(r.quick);
+  return {
+    colours: list(r.colours, COLOURS) as DashboardFilters["colours"],
+    icons: list(r.icons, ICONS) as DashboardFilters["icons"],
+    row1: strOrNull(r.row1),
+    row2: strOrNull(r.row2),
+    pill: strOrNull(r.pill),
+    date: typeof r.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(r.date) ? r.date : null,
+    quick: quick && QUICK.has(quick) ? (quick as DashboardFilters["quick"]) : null,
+    completed: r.completed === true,
+    recurringOnly: r.recurringOnly === true,
+    pausedOnly: r.pausedOnly === true,
+  };
+}
+
 /** Toggle helper for multi-select arrays (colour swatches / icon toggles). */
 export function toggleIn<T>(list: T[], v: T): T[] {
   return list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
