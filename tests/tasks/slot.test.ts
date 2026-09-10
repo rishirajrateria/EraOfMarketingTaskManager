@@ -4,7 +4,7 @@ import { resetDb, seedBasics, testDb } from "../helpers/db";
 import { mockSession } from "../helpers/mock-session";
 import { dateKey, zonedDayAt, zonedStartOfDay } from "@/lib/time";
 
-const session = mockSession();
+mockSession();
 const TZ = "Asia/Kolkata";
 
 /** Next Tuesday (strictly after today) at 10:00 IST, plus its yyyy-MM-dd key. */
@@ -90,7 +90,7 @@ describe("scheduling/slot", () => {
     });
 
     it("ignores completed / deleted / out-of-window / excluded tasks", async () => {
-      const { admin, exec, client } = await seedBasics();
+      const { exec, client } = await seedBasics();
       const { start, end } = nextTue();
       const { busyFor } = await import("@/server/scheduling/slot");
       const from = new Date();
