@@ -119,7 +119,7 @@ export async function hrApprove(leaveId: string): Promise<ActionResult<{ status:
       await notify({
         userIds: await adminIds(),
         kind: "GENERIC",
-        title: `Leave approved — ${affected.length} task${affected.length === 1 ? "" : "s"} need shifting`,
+        title: `Leave approved — ${affected.length} ${affected.length === 1 ? "task needs" : "tasks need"} shifting`,
         body: `${leave.user.name}, ${range}`,
         href: `/requests/leave?leaveId=${leaveId}`,
       });
