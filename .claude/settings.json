@@ -1,0 +1,26 @@
+{
+  "env": {
+    "CLAUDE_FLOW_V3_ENABLED": "true",
+    "CLAUDE_FLOW_HOOKS_ENABLED": "true"
+  },
+  "enabledMcpjsonServers": ["claude-flow"],
+  "permissions": {
+    "allow": [
+      "Bash(npx ruflo*)",
+      "Bash(npx -y ruflo*)",
+      "Bash(npx @claude-flow*)",
+      "Bash(npx claude-flow*)",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(npm install*)",
+      "Bash(npx prisma*)",
+      "Bash(npx tsc*)",
+      "Bash(npx next*)",
+      "mcp__claude-flow__*"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  }
+}
