@@ -1,0 +1,721 @@
+// EraOfMarketing Task Manager — data model (SPEC §3)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+enum Role {
+  ADMIN
+  TEAM_LEADER
+  EXECUTIVE
+  HR
+  CA // read-only finance user
+}
+
+enum TaskType {
+  WORK
+  MEETING
+}
+
+enum TaskStatus {
+  DRAFT
+  ASSIGNED
+  STARTED
+  PAUSED
+  FINISH_REQUESTED
+  COMPLETED
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum AttachmentKind {
+  FILE
+  VOICE_NOTE
+  IMAGE
+}
+
+enum RecurrenceFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  CUSTOM
+}
+
+enum RecurrenceTrigger {
+  ON_COMPLETE
+  ON_SCHEDULE
+}
+
+enum RequestType {
+  DOUBT
+  REVIEW
+  TIME_CHANGE
+  FIX_SELF_TASK
+  FINISH
+  LEAVE
+  APPROVED_CHANGE
+}
+
+enum RequestStatus {
+  OPEN
+  RESOLVED
+  APPROVED
+  REJECTED
+}
+
+enum VaultItemKind {
+  ASSET_DRIVE_LINK
+  CREDENTIAL
+  SHARED_DRIVE_LINK
+}
+
+enum InvoiceKind {
+  ONE_TIME
+  RECURRING
+}
+
+enum PaymentMode {
+  FULL
+  ADVANCE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SCHEDULED
+  SENT
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+}
+
+enum InvoiceUnit {
+  HOURS
+  FIXED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  LEAVE
+  HOLIDAY
+}
+
+enum LeaveStatus {
+  REQUESTED
+  HR_APPROVED
+  ADMIN_APPROVED
+  REJECTED
+}
+
+enum NotificationKind {
+  TASK_ASSIGNED
+  TASK_STARTED
+  TASK_PAUSED
+  TASK_RESUMED
+  FINISH_REQUESTED
+  FINISH_APPROVED
+  FINISH_REJECTED
+  DOUBT_RAISED
+  DOUBT_RESOLVED
+  REVIEW_REQUESTED
+  TASK_OVERDUE
+  TASK_SHIFTED
+  LEAVE_REQUESTED
+  LEAVE_APPROVED
+  LEAVE_REJECTED
+  INVOICE_SENT
+  INVOICE_PAID
+  VAULT_ACCESS_GRANTED
+  VAULT_ACCESS_EXPIRING
+  INTEGRATION_FAILED
+  GENERIC
+}
+
+enum IntegrationKind {
+  DRIVE_FOLDER
+  CALENDAR_EVENT
+  CHAT_SPACE
+  DRIVE_SHARE
+  CHAT_MEMBERS
+  CALENDAR_UPDATE
+  GMAIL_SEND
+  SHEETS_SYNC
+}
+
+enum IntegrationStatus {
+  PENDING
+  OK
+  FAILED
+}
+
+// ---------- Auth / people ----------
+model User {
+  id                   String    @id @default(cuid())
+  googleId             String?   @unique
+  email                String    @unique
+  name                 String
+  avatar               String?
+  role                 Role      @default(EXECUTIVE)
+  teamId               String?
+  team                 Team?     @relation("TeamMembers", fields: [teamId], references: [id])
+  teamLeaderId         String?
+  teamLeader           User?     @relation("LeaderExecutives", fields: [teamLeaderId], references: [id])
+  executives           User[]    @relation("LeaderExecutives")
+  dailyCapacityMinutes Int? // override of CompanySettings default
+  workingDays          Int[]     @default([1, 2, 3, 4, 5, 6]) // 0=Sun..6=Sat
+  active               Boolean   @default(true)
+  activatedAt          DateTime?
+  invitedAt            DateTime  @default(now())
+  notifyByEmail        Boolean   @default(false)
+  filterPrefs          Json? // persisted dashboard filters
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  ledTeams          Team[]              @relation("TeamLeader")
+  accounts          Account[]
+  sessions          Session[]
+  assignments       TaskAssignee[]
+  createdTasks      Task[]              @relation("TaskCreatedBy")
+  assignedTasks     Task[]              @relation("TaskAssignedBy")
+  raisedRequests    Request[]           @relation("RequestRaisedBy")
+  resolvedRequests  Request[]           @relation("RequestResolvedBy")
+  vaultGrants       VaultAccessGrant[]  @relation("GrantUser")
+  grantedVaultItems VaultAccessGrant[]  @relation("GrantedBy")
+  expenses          Expense[]
+  attendance        Attendance[]        @relation("AttendanceUser")
+  markedAttendance  Attendance[]        @relation("AttendanceMarkedBy")
+  leaves            Leave[]             @relation("LeaveUser")
+  inventory         InventorySnapshot[]
+  auditLogs         AuditLog[]
+  notifications     Notification[]
+  pushSubscriptions PushSubscription[]
+  vaultViews        VaultViewLog[]
+  attachments       TaskAttachment[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Team = Designation
+model Team {
+  id        String              @id @default(cuid())
+  name      String              @unique
+  colour    String              @default("#2563eb")
+  leaderId  String?
+  leader    User?               @relation("TeamLeader", fields: [leaderId], references: [id])
+  members   User[]              @relation("TeamMembers")
+  tasks     TaskTeam[]
+  inventory InventorySnapshot[]
+  active    Boolean             @default(true)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+}
+
+model Client {
+  id               String            @id @default(cuid())
+  name             String            @unique
+  contact          String?
+  email            String?
+  gstNumber        String?
+  address          String?
+  driveFolderId    String?
+  visibleInFilters Boolean           @default(false)
+  active           Boolean           @default(true)
+  tasks            Task[]
+  vaultItems       ClientVaultItem[]
+  invoices         Invoice[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+// Admin-managed tag labels ("Add Work")
+model WorkType {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  colour    String    @default("#f59e0b")
+  active    Boolean   @default(true)
+  tasks     TaskTag[]
+  createdAt DateTime  @default(now())
+}
+
+// ---------- Tasks ----------
+model Task {
+  id                  String           @id @default(cuid())
+  title               String
+  description         String           @default("") // rich text (HTML)
+  type                TaskType         @default(WORK)
+  clientId            String
+  client              Client           @relation(fields: [clientId], references: [id])
+  teams               TaskTeam[]
+  assignees           TaskAssignee[]
+  createdById         String
+  createdBy           User             @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  assignedById        String?
+  assignedBy          User?            @relation("TaskAssignedBy", fields: [assignedById], references: [id])
+  allocatedMinutes    Int              @default(60)
+  scheduledStart      DateTime?
+  scheduledEnd        DateTime?
+  actualStart         DateTime?
+  actualEnd           DateTime?
+  status              TaskStatus       @default(ASSIGNED)
+  statusBeforePause   TaskStatus?
+  overdue             Boolean          @default(false) // red overlay, set by scheduler
+  overdueNotifiedAt   DateTime?
+  important           Boolean          @default(false)
+  tags                TaskTag[]
+  priority            Priority         @default(NORMAL)
+  selfAssigned        Boolean          @default(false)
+  protected           Boolean          @default(false) // fixed: cannot be overlapped/shifted (Admin self tasks always)
+  recurrenceRuleId    String?
+  recurrenceRule      RecurrenceRule?  @relation(fields: [recurrenceRuleId], references: [id])
+  parentTaskId        String?
+  parentTask          Task?            @relation("TaskRestart", fields: [parentTaskId], references: [id])
+  children            Task[]           @relation("TaskRestart")
+  driveFolderId       String?
+  driveFolderUrl      String?
+  meetLink            String?
+  meetActive          Boolean          @default(false)
+  calendarEventId     String?
+  chatSpaceId         String?
+  chatSpaceUrl        String?
+  pausedAt            DateTime?
+  pausedTotalMinutes  Int              @default(0)
+  doubtRaised         Boolean          @default(false)
+  doubtNote           String?
+  reviewRequested     Boolean          @default(false)
+  reviewNote          String?
+  finishRequestedAt   DateTime?
+  finishRequestedById String?
+  approvedAt          DateTime?
+  approvedById        String?
+  rejectionNote       String?
+  deletedAt           DateTime?
+  deletedById         String?
+  integrationError    String? // last failed Google step, shown as row badge
+  sessions            TaskSession[]
+  attachments         TaskAttachment[]
+  requests            Request[]
+  integrations        IntegrationJob[]
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  @@index([clientId])
+  @@index([status])
+  @@index([scheduledStart])
+  @@index([deletedAt])
+}
+
+model TaskAssignee {
+  taskId String
+  userId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, userId])
+  @@index([userId])
+}
+
+model TaskTeam {
+  taskId String
+  teamId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, teamId])
+}
+
+model TaskTag {
+  taskId     String
+  workTypeId String
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  workType   WorkType @relation(fields: [workTypeId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, workTypeId])
+}
+
+model TaskSession {
+  id        String    @id @default(cuid())
+  taskId    String
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  @@index([taskId])
+}
+
+model TaskAttachment {
+  id           String         @id @default(cuid())
+  taskId       String
+  task         Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  driveFileId  String?
+  url          String?
+  name         String
+  mimeType     String?
+  kind         AttachmentKind @default(FILE)
+  durationSec  Int?
+  sizeBytes    Int?
+  data         Bytes? // local fallback storage when Drive is unavailable/mocked
+  uploadedById String?
+  uploadedBy   User?          @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime       @default(now())
+}
+
+model RecurrenceRule {
+  id        String              @id @default(cuid())
+  frequency RecurrenceFrequency
+  interval  Int                 @default(1)
+  byWeekday Int[]               @default([])
+  trigger   RecurrenceTrigger   @default(ON_SCHEDULE)
+  endDate   DateTime? // null = infinite
+  nextRunAt DateTime?
+  stopped   Boolean             @default(false)
+  tasks     Task[]
+  invoices  Invoice[]
+  createdAt DateTime            @default(now())
+}
+
+model Request {
+  id             String        @id @default(cuid())
+  type           RequestType
+  taskId         String?
+  task           Task?         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  leaveId        String?
+  leave          Leave?        @relation(fields: [leaveId], references: [id], onDelete: Cascade)
+  raisedById     String
+  raisedBy       User          @relation("RequestRaisedBy", fields: [raisedById], references: [id])
+  targetRole     Role          @default(ADMIN)
+  note           String        @default("")
+  payload        Json?
+  status         RequestStatus @default(OPEN)
+  resolvedById   String?
+  resolvedBy     User?         @relation("RequestResolvedBy", fields: [resolvedById], references: [id])
+  resolvedAt     DateTime?
+  resolutionNote String?
+  createdAt      DateTime      @default(now())
+
+  @@index([status, targetRole])
+}
+
+// ---------- Client vault ----------
+model ClientVaultItem {
+  id          String             @id @default(cuid())
+  clientId    String
+  client      Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  kind        VaultItemKind
+  label       String
+  url         String?
+  username    String?
+  passwordEnc String? // AES-256-GCM, base64 iv:tag:ciphertext
+  notes       String?
+  grants      VaultAccessGrant[]
+  views       VaultViewLog[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model VaultAccessGrant {
+  id                           String          @id @default(cuid())
+  vaultItemId                  String
+  vaultItem                    ClientVaultItem @relation(fields: [vaultItemId], references: [id], onDelete: Cascade)
+  userId                       String
+  user                         User            @relation("GrantUser", fields: [userId], references: [id], onDelete: Cascade)
+  grantedById                  String
+  grantedBy                    User            @relation("GrantedBy", fields: [grantedById], references: [id])
+  expiresAt                    DateTime?
+  expiresAfterFirstOpenMinutes Int?
+  firstOpenedAt                DateTime?
+  revoked                      Boolean         @default(false)
+  expiringNotifiedAt           DateTime?
+  createdAt                    DateTime        @default(now())
+
+  @@unique([vaultItemId, userId])
+}
+
+model VaultViewLog {
+  id          String          @id @default(cuid())
+  vaultItemId String
+  vaultItem   ClientVaultItem @relation(fields: [vaultItemId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  viewedAt    DateTime        @default(now())
+}
+
+// ---------- Finance ----------
+model Invoice {
+  id               String          @id @default(cuid())
+  clientId         String
+  client           Client          @relation(fields: [clientId], references: [id])
+  number           String          @unique
+  items            InvoiceItem[]
+  subtotal         Decimal         @db.Decimal(12, 2)
+  gstPercent       Decimal         @default(18) @db.Decimal(5, 2)
+  gstAmount        Decimal         @default(0) @db.Decimal(12, 2)
+  total            Decimal         @db.Decimal(12, 2)
+  kind             InvoiceKind     @default(ONE_TIME)
+  scheduleId       String?
+  schedule         RecurrenceRule? @relation(fields: [scheduleId], references: [id])
+  paymentMode      PaymentMode     @default(FULL)
+  advancePercent   Int?
+  balanceOfId      String?         @unique // this invoice is the balance of an advance invoice
+  balanceOf        Invoice?        @relation("AdvanceBalance", fields: [balanceOfId], references: [id])
+  balanceInvoice   Invoice?        @relation("AdvanceBalance")
+  balanceDueOn     DateTime?
+  notes            String?
+  paymentTerms     String?
+  dueDate          DateTime?
+  sendAt           DateTime?
+  status           InvoiceStatus   @default(DRAFT)
+  pdfDriveFileId   String?
+  pdfBackendFileId String?
+  pdfData          Bytes?
+  sentAt           DateTime?
+  payments         Payment[]
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([clientId, status])
+}
+
+model InvoiceItem {
+  id          String      @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  hsnSac      String?
+  qty         Decimal     @db.Decimal(10, 2)
+  unit        InvoiceUnit @default(FIXED)
+  rate        Decimal     @db.Decimal(12, 2)
+  amount      Decimal     @db.Decimal(12, 2)
+  sortOrder   Int         @default(0)
+}
+
+model Payment {
+  id                  String    @id @default(cuid())
+  invoiceId           String
+  invoice             Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount              Decimal   @db.Decimal(12, 2)
+  receivedAt          DateTime  @default(now())
+  method              String    @default("BANK_TRANSFER")
+  reference           String?
+  receiptNumber       String?   @unique
+  receiptPdfId        String?
+  receiptBackendPdfId String?
+  receiptPdfData      Bytes?
+  receiptSentAt       DateTime?
+  createdAt           DateTime  @default(now())
+}
+
+model Expense {
+  id                   String    @id @default(cuid())
+  date                 DateTime
+  amount               Decimal   @db.Decimal(12, 2)
+  category             String
+  vendor               String?
+  note                 String?
+  tags                 String[]  @default([])
+  receiptImageDriveId  String?
+  receiptImageData     Bytes?
+  receiptImageMime     String?
+  voiceNoteDriveId     String?
+  voiceNoteData        Bytes?
+  voiceNoteDurationSec Int?
+  createdById          String
+  createdBy            User      @relation(fields: [createdById], references: [id])
+  sheetRowSyncedAt     DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([date])
+}
+
+// ---------- Attendance / leave / inventory ----------
+model Attendance {
+  id         String           @id @default(cuid())
+  userId     String
+  user       User             @relation("AttendanceUser", fields: [userId], references: [id], onDelete: Cascade)
+  date       DateTime         @db.Date
+  checkIn    DateTime?
+  checkOut   DateTime?
+  status     AttendanceStatus @default(PRESENT)
+  note       String?
+  markedById String?
+  markedBy   User?            @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@unique([userId, date])
+}
+
+model Leave {
+  id                String      @id @default(cuid())
+  userId            String
+  user              User        @relation("LeaveUser", fields: [userId], references: [id], onDelete: Cascade)
+  from              DateTime    @db.Date
+  to                DateTime    @db.Date
+  reason            String      @default("")
+  status            LeaveStatus @default(REQUESTED)
+  calendarEventId   String?
+  hrApprovedById    String?
+  adminApprovedById String?
+  rejectedById      String?
+  tasksShiftedAt    DateTime?
+  requests          Request[]
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([userId, from, to])
+}
+
+model InventorySnapshot {
+  id              String   @id @default(cuid())
+  date            DateTime @db.Date
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId          String?
+  team            Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  capacityMinutes Int
+  assignedMinutes Int
+  sellableMinutes Int
+  createdAt       DateTime @default(now())
+
+  @@unique([date, userId, teamId])
+}
+
+// ---------- Company / platform ----------
+model CompanySettings {
+  id                            String     @id @default("default")
+  companyName                   String     @default("Era Of Marketing")
+  address                       String     @default("")
+  gstNumber                     String     @default("")
+  bankName                      String     @default("")
+  bankAccountName               String     @default("")
+  bankAccountNumber             String     @default("")
+  bankIfsc                      String     @default("")
+  upiId                         String     @default("")
+  logoUrl                       String?
+  logoData                      Bytes?
+  workStartMinutes              Int        @default(600) // 10:00
+  workEndMinutes                Int        @default(1140) // 19:00
+  lunchStartMinutes             Int        @default(810) // 13:30
+  lunchEndMinutes               Int        @default(870) // 14:30
+  workingDays                   Int[]      @default([1, 2, 3, 4, 5, 6])
+  holidays                      DateTime[] @default([]) @db.Date
+  timezone                      String     @default("Asia/Kolkata")
+  invoicePrefix                 String     @default("EOM-INV-")
+  invoiceNextNumber             Int        @default(1)
+  receiptPrefix                 String     @default("EOM-RCP-")
+  receiptNextNumber             Int        @default(1)
+  invoiceTerms                  String     @default("Payment due within 15 days of invoice date.")
+  invoiceEmailTemplate          String     @default("Dear {{client}},\n\nPlease find attached invoice {{number}} for INR {{total}}, due on {{dueDate}}.\n\nRegards,\n{{company}}")
+  defaultGstPercent             Decimal    @default(18) @db.Decimal(5, 2)
+  notifyEmailDefault            Boolean    @default(false)
+  notifyChatDefault             Boolean    @default(true)
+  restartCreatesNewWorkspace    Boolean    @default(true)
+  recurrenceCreatesNewWorkspace Boolean    @default(true)
+  updatedAt                     DateTime   @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      NotificationKind @default(GENERIC)
+  title     String
+  body      String           @default("")
+  href      String?
+  taskId    String?
+  readAt    DateTime?
+  pushedAt  DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, readAt])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+}
+
+// Queue of idempotent Google side-effects with retry/backoff
+model IntegrationJob {
+  id             String            @id @default(cuid())
+  kind           IntegrationKind
+  taskId         String?
+  task           Task?             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  entityType     String?
+  entityId       String?
+  idempotencyKey String            @unique
+  payload        Json?
+  status         IntegrationStatus @default(PENDING)
+  attempts       Int               @default(0)
+  nextAttemptAt  DateTime          @default(now())
+  lastError      String?
+  result         Json?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([status, nextAttemptAt])
+}

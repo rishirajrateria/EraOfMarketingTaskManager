@@ -1,0 +1,17 @@
+node_modules
+.next
+out
+build
+dist
+coverage
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+/prisma/*.db
+.vercel
+tsconfig.tsbuildinfo
+next-env.d.ts
+.swarm
+.claude-flow

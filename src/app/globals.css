@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-blue: #1e63d6;
+  --color-brand-blue-dark: #174ea6;
+  --color-brand-green: #16a34a;
+  --color-brand-green-dark: #15803d;
+  --color-row-white: #ffffff;
+  --color-row-green: #dcfce7;
+  --color-row-yellow: #fef9c3;
+  --color-row-red: #fee2e2;
+  --color-row-grey: #e5e7eb;
+  --color-restart: #7c3aed;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+  background: #e9edf3;
+  color: #111827;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: contain;
+}
+
+/* Mobile-first phone frame (~390px) centred on desktop in a max ~480px column (SPEC §1). */
+.phone-frame {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #f8fafc;
+  position: relative;
+  box-shadow: 0 0 0 1px #d1d5db;
+}
+
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  scrollbar-width: none;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.sheet-up {
+  animation: sheet-up 180ms ease-out;
+}
+
+.row-white { background: var(--color-row-white); }
+.row-green { background: var(--color-row-green); }
+.row-yellow { background: var(--color-row-yellow); }
+.row-red { background: var(--color-row-red); }
+.row-grey { background: var(--color-row-grey); color: #4b5563; }
+
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.waveform span {
+  display: inline-block;
+  width: 3px;
+  margin-right: 2px;
+  background: currentColor;
+  border-radius: 2px;
+}
