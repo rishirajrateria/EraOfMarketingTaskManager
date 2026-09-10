@@ -46,7 +46,7 @@ export function Dashboard({
   const [addMode, setAddMode] = useState<AddMode | null>(null);
 
   const byId = useMemo(() => new Map(data.tasks.map((t) => [t.id, t])), [data.tasks]);
-  const tasks = useMemo(() => applyFilters(data.tasks, filters, { role: data.role, meId: data.me.id, tz: data.tz }), [data, filters]);
+  const tasks = useMemo(() => applyFilters(data.tasks, filters, { role: data.role, meId: data.me.id, tz: data.tz, nextLeaveKey: data.nextLeaveKey }), [data, filters]);
 
   // Persist filters per user (debounced; skip the initial render).
   const mounted = useRef(false);

@@ -19,7 +19,7 @@ export type RowHandlers = {
 
 const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
-/** Opens a URL in a new tab; when the URL is resolved asynchronously the tab is opened first so popup blockers allow it. */
+/** Opens a URL in a new tab. (For URLs resolved asynchronously — see openDrive — the tab is opened first so popup blockers allow it.) */
 function openExternal(url: string) {
   window.open(url, "_blank", "noopener");
 }

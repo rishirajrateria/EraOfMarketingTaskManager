@@ -57,6 +57,8 @@ export type DashboardData = {
   people: { id: string; name: string; role: string; teamId: string | null; teamLeaderId: string | null }[];
   me: { id: string; role: string; teamId: string | null };
   tz: string;
+  /** yyyy-MM-dd of the user's next approved leave (drives the B4Leave pill filter). */
+  nextLeaveKey: string | null;
 };
 
 /** Dashboard filter state persisted per user (SPEC §5.4). */

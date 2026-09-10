@@ -202,6 +202,15 @@ export async function dashboardData(user: SessionUser): Promise<DashboardData> {
     }),
   ]);
   const pills = await buildPills(user, tasks, settings.timezone);
+  let nextLeaveKey: string | null = null;
+  try {
+    const { nextApprovedLeave } = await import("@/server/inventory/queries");
+    const { dateKey } = await import("@/lib/time");
+    const leave = await nextApprovedLeave(user.id);
+    nextLeaveKey = leave ? dateKey(leave.from, "UTC") : null;
+  } catch {
+    nextLeaveKey = null;
+  }
   // Filter pills only list clients that already have a task (SPEC §5.4); the add-task form gets every active client.
   const filterClients = clients.filter((c) => c.visibleInFilters);
   let row1: DashboardData["row1"];
@@ -228,6 +237,7 @@ export async function dashboardData(user: SessionUser): Promise<DashboardData> {
     people,
     me: { id: user.id, role: user.role, teamId: user.teamId },
     tz: settings.timezone,
+    nextLeaveKey,
   };
 }
 
