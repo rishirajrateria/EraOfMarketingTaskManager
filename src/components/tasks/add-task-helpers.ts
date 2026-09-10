@@ -59,7 +59,7 @@ export function emptyForm(type: TaskMode, meId: string): AddTaskForm {
     important: false,
     priority: "NORMAL",
     recurrence: null,
-    acceptProposedSlot: true,
+    acceptProposedSlot: false, // becomes true once the creator taps Accept on the proposed slot
   };
 }
 

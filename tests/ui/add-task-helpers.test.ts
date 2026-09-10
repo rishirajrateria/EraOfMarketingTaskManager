@@ -104,8 +104,9 @@ describe("toTaskInput / validateForm", () => {
   it("builds a payload that taskInputSchema accepts (auto slot)", () => {
     const form = { ...emptyForm("WORK", "admin"), title: " Brief ", clientId: "c1", allocatedHours: "2.5", tagIds: ["w1"] };
     const payload = toTaskInput(form, TZ);
-    expect(payload).toMatchObject({ title: "Brief", allocatedMinutes: 150, scheduledStart: null, scheduledEnd: null, acceptProposedSlot: true, tagIds: ["w1"] });
+    expect(payload).toMatchObject({ title: "Brief", allocatedMinutes: 150, scheduledStart: null, scheduledEnd: null, acceptProposedSlot: false, tagIds: ["w1"] });
     expect(taskInputSchema.safeParse(payload).success).toBe(true);
+    expect(toTaskInput({ ...form, acceptProposedSlot: true }, TZ).acceptProposedSlot).toBe(true);
   });
   it("meetings drop tags and recurrence; manual time disables acceptProposedSlot", () => {
     const form = {

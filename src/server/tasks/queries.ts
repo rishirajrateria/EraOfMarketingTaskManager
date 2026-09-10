@@ -193,7 +193,7 @@ export async function dashboardData(user: SessionUser): Promise<DashboardData> {
   const [tasks, workTypes, clients, teams, people] = await Promise.all([
     listTasks(user, { includeCompleted: true }),
     prisma.workType.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, colour: true } }),
-    prisma.client.findMany({ where: { active: true, visibleInFilters: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.client.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, visibleInFilters: true } }),
     prisma.team.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, colour: true } }),
     prisma.user.findMany({
       where: { active: true, role: { in: ["ADMIN", "TEAM_LEADER", "EXECUTIVE"] } },
@@ -202,16 +202,18 @@ export async function dashboardData(user: SessionUser): Promise<DashboardData> {
     }),
   ]);
   const pills = await buildPills(user, tasks, settings.timezone);
+  // Filter pills only list clients that already have a task (SPEC §5.4); the add-task form gets every active client.
+  const filterClients = clients.filter((c) => c.visibleInFilters);
   let row1: DashboardData["row1"];
   let row2: DashboardData["row2"];
   if (user.role === "ADMIN") {
     row1 = teams.map((t) => ({ id: t.id, label: t.name }));
-    row2 = clients.map((c) => ({ id: c.id, label: c.name }));
+    row2 = filterClients.map((c) => ({ id: c.id, label: c.name }));
   } else if (user.role === "TEAM_LEADER") {
     row1 = people.filter((p) => p.teamLeaderId === user.id).map((p) => ({ id: p.id, label: p.name.split(" ")[0]! }));
-    row2 = clients.map((c) => ({ id: c.id, label: c.name }));
+    row2 = filterClients.map((c) => ({ id: c.id, label: c.name }));
   } else {
-    row1 = clients.map((c) => ({ id: c.id, label: c.name }));
+    row1 = filterClients.map((c) => ({ id: c.id, label: c.name }));
     row2 = workTypes.map((w) => ({ id: w.id, label: w.name }));
   }
   return {
@@ -221,7 +223,7 @@ export async function dashboardData(user: SessionUser): Promise<DashboardData> {
     row1,
     row2,
     workTypes,
-    clients,
+    clients: clients.map((c) => ({ id: c.id, name: c.name })),
     teams,
     people,
     me: { id: user.id, role: user.role, teamId: user.teamId },
