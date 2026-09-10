@@ -14,19 +14,25 @@ export async function spawnNextOccurrence(taskId: string, actorId: string | null
   if (!t?.recurrenceRule || t.recurrenceRule.stopped) return null;
   const rule = t.recurrenceRule;
   const settings = await getSettings();
-  const base = rule.nextRunAt ?? t.scheduledStart ?? new Date();
-  const next = rule.nextRunAt && rule.nextRunAt > new Date() ? rule.nextRunAt : nextRunAt(rule, base, settings.timezone);
+  // `nextRunAt` IS the due time of the next occurrence (set at creation and advanced after each spawn).
+  // A stale value (e.g. ON_COMPLETE approved late) is still honoured so no occurrence is skipped.
+  const next = rule.nextRunAt ?? nextRunAt(rule, t.scheduledStart ?? new Date(), settings.timezone);
   if (!next) {
     await prisma.recurrenceRule.update({ where: { id: rule.id }, data: { stopped: true } });
     return null;
   }
-  // Idempotency: one occurrence per (rule, nextRunAt)
-  const existing = await prisma.task.findFirst({ where: { recurrenceRuleId: rule.id, scheduledStart: next, deletedAt: null }, select: { id: true } });
-  if (existing) return existing.id;
+  // Occurrences land exactly at the due time when it falls in working hours; otherwise the next working slot.
   const cfg = await workingConfig();
   const slot = findSlot(next, t.allocatedMinutes, cfg, []);
   const start = slot?.start ?? next;
   const end = slot?.end ?? new Date(start.getTime() + t.allocatedMinutes * 60000);
+  // Idempotency: one occurrence per (rule, due time) — never re-create one that already exists.
+  const existing = await prisma.task.findFirst({
+    where: { recurrenceRuleId: rule.id, deletedAt: null, id: { not: t.id }, scheduledStart: { in: [next, start] } },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+  if (existing) return existing.id;
   const reuse = !settings.recurrenceCreatesNewWorkspace;
   const occurrence = await prisma.task.create({
     data: {
