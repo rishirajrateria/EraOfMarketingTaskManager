@@ -74,6 +74,8 @@ body {
 .row-red { background: var(--color-row-red); }
 .row-grey { background: var(--color-row-grey); color: #4b5563; }
 
+.touch-target-sm { min-width: 28px; min-height: 28px; }
+
 .touch-target {
   min-width: 44px;
   min-height: 44px;

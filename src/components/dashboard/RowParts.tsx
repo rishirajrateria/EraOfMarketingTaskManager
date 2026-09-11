@@ -1,13 +1,13 @@
 "use client";
 import { Check, Pause, RotateCcw } from "lucide-react";
 import { clsx } from "@/lib/clsx";
-import { dateChip, fmtMinutes } from "@/lib/time";
+import { dateChip, fmtMinutes, fmtTime } from "@/lib/time";
 import type { TaskRow as Row } from "@/server/tasks/types";
-import { fmtClock, fmtShortDate } from "@/components/dashboard/format";
+import { fmtShortDate } from "@/components/dashboard/format";
 
 export const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
-/** 14px inline icon button used on line 2 of a row (details / Drive / mic / Chat / Meet). */
+/** Inline outline icon button used on the icon line of a row (details / Drive / Meet / Chat / Calendar). */
 export function IconBtn({ label, onClick, disabled, children }: { label: string; onClick: () => void; disabled?: boolean; children: React.ReactNode }) {
   return (
     <button
@@ -21,7 +21,7 @@ export function IconBtn({ label, onClick, disabled, children }: { label: string;
         e.stopPropagation();
         onClick();
       }}
-      className="flex h-5 w-[13px] shrink-0 items-center justify-center text-gray-700 disabled:opacity-40"
+      className="touch-target-sm flex h-7 w-7 shrink-0 items-center justify-center text-gray-800 disabled:opacity-35"
     >
       {children}
     </button>
@@ -33,38 +33,34 @@ export function RedDot({ corner, label }: { corner: "tl" | "tr"; label: string }
   return <span aria-label={label} title={label} className={clsx("absolute -top-1 h-[11px] w-[11px] rounded-full bg-[#EF4444]", corner === "tl" ? "-left-1" : "-right-1")} />;
 }
 
-/** Grey time pill: allocated · scheduled start · scheduled end (red when overdue); actual start/end underneath. */
-export function TimePill({ t, tz }: { t: Row; tz: string }) {
-  const sched = t.overdue && t.colour !== "grey" ? "text-[#DC2626]" : "text-[#111]";
-  return (
-    <div className="flex shrink-0 flex-col items-end">
-      <div className="relative flex h-[22px] items-center gap-2.5 rounded-full bg-[#E5E7EB] px-2 text-[11px] leading-none">
-        <span className="font-bold text-[#111]">{t.type === "MEETING" ? "Meet" : fmtMinutes(t.allocatedMinutes)}</span>
-        <span className={sched}>{fmtClock(t.scheduledStart, tz)}</span>
-        <span className={sched}>{fmtClock(t.scheduledEnd, tz)}</span>
-        {t.reviewRequested ? <RedDot corner="tl" label="Review requested" /> : null}
-      </div>
-      {t.actualStart ? (
-        <div className="mt-0.5 pr-2 text-right text-[11px] leading-3 text-[#6B7280]">
-          {fmtClock(t.actualStart, tz)}
-          <span className="inline-block w-2.5" />
-          {t.actualEnd ? fmtClock(t.actualEnd, tz) : "…"}
-        </div>
-      ) : null}
-    </div>
-  );
-}
+const PILL = "inline-flex h-[22px] items-center rounded-full bg-[#E5E7EB] px-2.5 text-[11px] leading-none whitespace-nowrap";
 
-/** "Today" / "Yestr" / "Tom" / "9 Sep" chip with the full d/M/yy date underneath (46px column). */
-export function DateChip({ t, tz }: { t: Row; tz: string }) {
+/**
+ * Right-hand column of pills (the design the client picked): allocated hours, scheduled start – end,
+ * actual start – end once recorded, and the date chip. Right-aligned, stacked.
+ */
+export function RightPills({ t, tz }: { t: Row; tz: string }) {
   const start = t.scheduledStart ? new Date(t.scheduledStart) : null;
+  const end = t.scheduledEnd ? new Date(t.scheduledEnd) : null;
+  const overdue = t.overdue && t.colour !== "grey";
   return (
-    <div className="flex w-[46px] shrink-0 flex-col items-end">
-      <span className="relative rounded-md bg-[#E5E7EB] px-1.5 text-[11px] leading-[18px] text-[#111]">
+    <div className="flex shrink-0 flex-col items-end gap-1">
+      <span className={clsx(PILL, "relative font-bold text-[#111]")}>
+        {t.type === "MEETING" ? "Meet" : fmtMinutes(t.allocatedMinutes)}
+        {t.reviewRequested ? <RedDot corner="tl" label="Review requested" /> : null}
+      </span>
+      <span className={clsx(PILL, overdue ? "text-[#DC2626]" : "text-[#111]")}>
+        {fmtTime(start, tz)} – {fmtTime(end, tz)}
+      </span>
+      {t.actualStart ? (
+        <span className={clsx(PILL, "bg-[#F3F4F6] text-[#6B7280]")}>
+          {fmtTime(new Date(t.actualStart), tz)} – {t.actualEnd ? fmtTime(new Date(t.actualEnd), tz) : "…"}
+        </span>
+      ) : null}
+      <span className={clsx(PILL, "relative text-[#111]")} title={fmtShortDate(start, tz)}>
         {dateChip(start, new Date(), tz)}
         {t.doubtRaised && t.reviewRequested ? <RedDot corner="tr" label="Doubt and review" /> : null}
       </span>
-      <span className="mt-0.5 text-[10px] leading-3 text-[#374151]">{fmtShortDate(start, tz)}</span>
     </div>
   );
 }
