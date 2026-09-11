@@ -1,46 +1,34 @@
 import { redirect } from "next/navigation";
-import { addDays, endOfMonth, endOfWeek, format, startOfMonth, startOfWeek } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
 import { requireUser } from "@/lib/rbac";
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { dateKey, parseDateKey } from "@/lib/time";
-import { inventoryFor } from "@/server/inventory/queries";
-import { InventoryPanel, type InventoryView } from "@/components/inventory/InventoryView";
+import { hourlyBreakdown, inventoryFor } from "@/server/inventory/queries";
+import { DAY_KEY_RE, customRange, isInventoryView, periodRange, type InventoryView } from "@/server/inventory/ranges";
+import { InventoryPanel } from "@/components/inventory/InventoryView";
 
-type Search = Promise<{ view?: string; from?: string; to?: string; teamId?: string }>;
+type Search = Promise<{ view?: string; date?: string; from?: string; to?: string; teamId?: string }>;
 
-const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
-
-function rangeFor(view: InventoryView, tz: string, from?: string, to?: string): { from: Date; to: Date } {
-  const localNow = toZonedTime(new Date(), tz);
-  // `localNow` carries the company-tz wall clock in its local fields, so plain `format` yields the local key.
-  const key = (d: Date) => format(d, "yyyy-MM-dd");
-  if (view === "custom" && from && to && DAY_KEY.test(from) && DAY_KEY.test(to) && from <= to) {
-    return { from: parseDateKey(from, tz), to: parseDateKey(to, tz) };
-  }
-  if (view === "week") {
-    const s = startOfWeek(localNow, { weekStartsOn: 1 });
-    return { from: parseDateKey(key(s), tz), to: parseDateKey(key(endOfWeek(localNow, { weekStartsOn: 1 })), tz) };
-  }
-  if (view === "month") {
-    return { from: parseDateKey(key(startOfMonth(localNow)), tz), to: parseDateKey(key(endOfMonth(localNow)), tz) };
-  }
-  const today = parseDateKey(dateKey(new Date(), tz), tz);
-  return view === "custom" ? { from: today, to: addDays(today, 6) } : { from: today, to: today };
-}
-
-/** Inventory / sellable hours (SPEC §9.3, §11.6). Admin only. */
+/**
+ * Inventory / sellable hours (SPEC §9.3, §11.6). Admin only.
+ * `view` = day | week | month | quarter | year | custom; `date` anchors the period (defaults to today in the
+ * company timezone); custom ranges use `from`/`to`.
+ */
 export default async function InventoryPage({ searchParams }: { searchParams: Search }) {
   const user = await requireUser();
   if (user.role !== "ADMIN") redirect("/");
   const sp = await searchParams;
-  const view: InventoryView = sp.view === "week" || sp.view === "month" || sp.view === "custom" ? sp.view : "today";
+  const view: InventoryView = isInventoryView(sp.view) ? sp.view : "day";
   const settings = await getSettings();
-  const range = rangeFor(view, settings.timezone, sp.from, sp.to);
-  const [inv, teams] = await Promise.all([
-    inventoryFor(range, { teamId: sp.teamId || undefined }),
+  const tz = settings.timezone;
+  const todayKey = dateKey(new Date(), tz);
+  const anchor = sp.date && DAY_KEY_RE.test(sp.date) ? sp.date : todayKey;
+  const range = view === "custom" ? customRange(sp.from, sp.to, todayKey) : periodRange(view, anchor);
+  const opts = { teamId: sp.teamId || undefined };
+  const [inv, hourly, teams] = await Promise.all([
+    inventoryFor({ from: parseDateKey(range.from, tz), to: parseDateKey(range.to, tz) }, opts),
+    view === "day" ? hourlyBreakdown(parseDateKey(range.from, tz), opts) : Promise.resolve(null),
     prisma.team.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
-  return <InventoryPanel inv={inv} view={view} from={inv.days[0]} to={inv.days[inv.days.length - 1]} teams={teams} teamId={sp.teamId || undefined} />;
+  return <InventoryPanel inv={inv} view={view} range={range} teams={teams} teamId={sp.teamId || undefined} hourly={hourly} />;
 }

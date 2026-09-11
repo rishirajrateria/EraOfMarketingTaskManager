@@ -2,62 +2,78 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import type { InventoryResult } from "@/server/inventory/queries";
+import type { HourlyBreakdown, InventoryResult } from "@/server/inventory/queries";
+import { INVENTORY_VIEWS, shiftRange, stripGranularity, type InventoryView } from "@/server/inventory/ranges";
 import { btnSecondary, inputCls } from "@/components/ui/Field";
 import { Pill } from "@/components/ui/Pill";
 import { clsx } from "@/lib/clsx";
+import { InventoryTable, RemainingStrip, hrs } from "@/components/inventory/InventoryTable";
+import { HourlyGrid } from "@/components/inventory/HourlyGrid";
 
-export type InventoryView = "today" | "week" | "month" | "custom";
-const VIEWS: { id: InventoryView; label: string }[] = [
-  { id: "today", label: "Today" },
-  { id: "week", label: "This week" },
-  { id: "month", label: "This month" },
-  { id: "custom", label: "Custom" },
-];
+export type { InventoryView } from "@/server/inventory/ranges";
 
-const hrs = (min: number) => (Math.round((min / 60) * 10) / 10).toString();
+export type InventoryRangeProps = { from: string; to: string; label: string };
 
+/**
+ * Admin inventory screen (SPEC §9.3 / §11.6). Day view shows the hourly breakdown; Week / Month / Quarter /
+ * Year / Custom show the per-person table, team totals and the per-period "remaining" strip.
+ */
 export function InventoryPanel({
   inv,
   view,
-  from,
-  to,
+  range,
   teams,
   teamId,
+  hourly,
 }: {
   inv: InventoryResult;
   view: InventoryView;
-  from: string;
-  to: string;
+  range: InventoryRangeProps;
   teams: { id: string; name: string }[];
   teamId?: string;
+  hourly?: HourlyBreakdown | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [cFrom, setCFrom] = useState(from);
-  const [cTo, setCTo] = useState(to);
+  const [cFrom, setCFrom] = useState(range.from);
+  const [cTo, setCTo] = useState(range.to);
 
   const href = (q: { view?: InventoryView; from?: string; to?: string; teamId?: string | undefined }) => {
+    const v = q.view ?? view;
     const p = new URLSearchParams();
-    p.set("view", q.view ?? view);
+    p.set("view", v);
     const t = "teamId" in q ? q.teamId : teamId;
     if (t) p.set("teamId", t);
-    if ((q.view ?? view) === "custom") {
+    if (v === "custom") {
       p.set("from", q.from ?? cFrom);
       p.set("to", q.to ?? cTo);
+    } else {
+      // Switching views keeps the current anchor day so Day → Week → Month stay around the same date.
+      p.set("date", q.from ?? range.from);
     }
     return `${pathname}?${p.toString()}`;
   };
+  const prev = shiftRange(view, range, -1);
+  const next = shiftRange(view, range, 1);
 
   return (
     <div className="pb-6">
       <div className="bg-brand-blue px-3 pb-3 pt-2 text-white">
         <div className="scrollbar-none flex gap-2 overflow-x-auto">
-          {VIEWS.map((v) => (
+          {INVENTORY_VIEWS.map((v) => (
             <Link key={v.id} href={href({ view: v.id })}>
               <Pill active={view === v.id}>{v.label}</Pill>
             </Link>
           ))}
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <Link href={href(prev)} className="touch-target flex items-center px-2 text-lg" aria-label={`Previous ${view}`}>
+            ‹
+          </Link>
+          <div className="text-sm font-semibold">{range.label}</div>
+          <Link href={href(next)} className="touch-target flex items-center px-2 text-lg" aria-label={`Next ${view}`}>
+            ›
+          </Link>
         </div>
         {view === "custom" ? (
           <div className="mt-2 flex items-center gap-2">
@@ -84,60 +100,19 @@ export function InventoryPanel({
           <Stat label="Sellable" value={hrs(inv.total.sellableMinutes)} />
         </div>
         <div className="mt-1 text-center text-[10px] text-white/70">
-          {inv.days[0]} → {inv.days[inv.days.length - 1]} · hours
+          {inv.days[0]}
+          {inv.days.length > 1 ? ` → ${inv.days[inv.days.length - 1]}` : ""} · hours
         </div>
       </div>
 
-      <section className="mx-3 mt-3 rounded-xl bg-white p-3 shadow-sm">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Remaining after current assignments</h2>
-        <div className="scrollbar-none mt-2 flex gap-1 overflow-x-auto">
-          {inv.dayTotals.map((d) => {
-            const pct = d.capacityMinutes ? Math.min(100, Math.round((d.assignedMinutes / d.capacityMinutes) * 100)) : 0;
-            return (
-              <div key={d.date} className="flex w-11 shrink-0 flex-col items-center" title={`${d.date}: ${hrs(d.sellableMinutes)}h sellable of ${hrs(d.capacityMinutes)}h`}>
-                <div className="flex h-14 w-6 items-end rounded bg-gray-100">
-                  <div className={clsx("w-full rounded", d.capacityMinutes === 0 ? "bg-gray-300" : pct >= 100 ? "bg-red-400" : "bg-brand-green")} style={{ height: `${d.capacityMinutes ? 100 - pct : 100}%` }} />
-                </div>
-                <div className="mt-1 text-[10px] font-semibold">{hrs(d.sellableMinutes)}</div>
-                <div className="text-[9px] text-gray-400">{d.date.slice(8)}/{d.date.slice(5, 7)}</div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="mx-3 mt-3 overflow-x-auto rounded-xl bg-white p-3 shadow-sm">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="text-left text-[10px] uppercase tracking-wide text-gray-500">
-              <th className="py-1">Person</th>
-              <th className="py-1 text-right">Cap</th>
-              <th className="py-1 text-right">Assigned</th>
-              <th className="py-1 text-right">Sellable</th>
-            </tr>
-          </thead>
-          <tbody>
-            {inv.teams.map((t) => (
-              <TeamRows key={t.teamId ?? "none"} team={t} users={inv.users.filter((u) => u.teamId === t.teamId)} />
-            ))}
-            {inv.users.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="py-3 text-center text-gray-400">
-                  No people in this selection.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-          <tfoot>
-            <tr className="border-t font-semibold">
-              <td className="py-1.5">Total</td>
-              <td className="py-1.5 text-right">{hrs(inv.total.capacityMinutes)}</td>
-              <td className="py-1.5 text-right">{hrs(inv.total.assignedMinutes)}</td>
-              <td className="py-1.5 text-right">{hrs(inv.total.sellableMinutes)}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </section>
+      {view === "day" && hourly ? (
+        <HourlyGrid hourly={hourly} />
+      ) : (
+        <>
+          <RemainingStrip dayTotals={inv.dayTotals} by={stripGranularity(view, inv.days.length)} />
+          <InventoryTable inv={inv} />
+        </>
+      )}
     </div>
   );
 }
@@ -148,26 +123,5 @@ function Stat({ label, value }: { label: string; value: string }) {
       <div className="text-lg font-bold leading-tight">{value}</div>
       <div className="text-[10px] uppercase tracking-wide text-white/80">{label}</div>
     </div>
-  );
-}
-
-function TeamRows({ team, users }: { team: InventoryResult["teams"][number]; users: InventoryResult["users"] }) {
-  return (
-    <>
-      <tr className="bg-gray-50 font-semibold">
-        <td className="py-1">{team.teamName}</td>
-        <td className="py-1 text-right">{hrs(team.capacityMinutes)}</td>
-        <td className="py-1 text-right">{hrs(team.assignedMinutes)}</td>
-        <td className="py-1 text-right">{hrs(team.sellableMinutes)}</td>
-      </tr>
-      {users.map((u) => (
-        <tr key={u.userId} className="border-t border-gray-100">
-          <td className="py-1 pl-3">{u.name}</td>
-          <td className="py-1 text-right">{hrs(u.capacityMinutes)}</td>
-          <td className="py-1 text-right">{hrs(u.assignedMinutes)}</td>
-          <td className={clsx("py-1 text-right", u.sellableMinutes === 0 && u.capacityMinutes > 0 && "text-red-600")}>{hrs(u.sellableMinutes)}</td>
-        </tr>
-      ))}
-    </>
   );
 }

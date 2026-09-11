@@ -12,6 +12,10 @@ import { MarkAttendanceSheet, type MarkTarget } from "@/components/attendance/Ma
 
 const WEEKDAY = ["S", "M", "T", "W", "T", "F", "S"];
 
+/**
+ * Monthly attendance grid. With `canMark` (HR/Admin) each cell opens the marking sheet; otherwise the
+ * grid is read-only (staff viewing their own month).
+ */
 export function AttendanceGrid({
   grid,
   canMark,
@@ -19,6 +23,7 @@ export function AttendanceGrid({
   selectedUserId,
 }: {
   grid: MonthGrid;
+  /** HR/Admin: tapping a cell opens the marking sheet. */
   canMark: boolean;
   /** People selectable in the per-user filter (Admin/HR only). */
   filterUsers: { id: string; name: string }[];
@@ -104,21 +109,26 @@ export function AttendanceGrid({
                   const c = grid.cells[u.id]?.[d.key];
                   const style = c ? STATUS_STYLE[c.status] : null;
                   const title = c ? `${style?.label}${c.checkIn ? ` · in ${c.checkIn}` : ""}${c.checkOut ? ` · out ${c.checkOut}` : ""}${c.note ? ` · ${c.note}` : ""}` : d.key;
+                  const cellCls = clsx(
+                    "flex h-6 w-6 items-center justify-center rounded font-bold",
+                    style ? style.cls : d.working ? "bg-gray-50 text-gray-300" : "bg-gray-200 text-gray-400",
+                  );
                   return (
                     <td key={d.key} className="p-0">
-                      <button
-                        type="button"
-                        title={title}
-                        disabled={!canMark}
-                        onClick={() => setTarget({ userId: u.id, userName: u.name, date: d.key, cell: c })}
-                        className={clsx(
-                          "flex h-6 w-6 items-center justify-center rounded font-bold",
-                          style ? style.cls : d.working ? "bg-gray-50 text-gray-300" : "bg-gray-200 text-gray-400",
-                          canMark && "cursor-pointer hover:ring-1 hover:ring-gray-400",
-                        )}
-                      >
-                        {style?.letter ?? ""}
-                      </button>
+                      {canMark ? (
+                        <button
+                          type="button"
+                          title={title}
+                          onClick={() => setTarget({ userId: u.id, userName: u.name, date: d.key, cell: c })}
+                          className={clsx(cellCls, "cursor-pointer hover:ring-1 hover:ring-gray-400")}
+                        >
+                          {style?.letter ?? ""}
+                        </button>
+                      ) : (
+                        <div title={title} className={cellCls} aria-label={title}>
+                          {style?.letter ?? ""}
+                        </div>
+                      )}
                     </td>
                   );
                 })}
@@ -143,7 +153,7 @@ export function AttendanceGrid({
           <span className="rounded bg-gray-200 px-2 py-0.5" /> non-working
         </span>
       </div>
-      {target ? <MarkAttendanceSheet key={`${target.userId}-${target.date}`} target={target} onClose={() => setTarget(null)} /> : null}
+      {canMark && target ? <MarkAttendanceSheet key={`${target.userId}-${target.date}`} target={target} onClose={() => setTarget(null)} /> : null}
     </section>
   );
 }

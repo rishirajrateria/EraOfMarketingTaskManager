@@ -5,7 +5,9 @@
 import { addDays } from "date-fns";
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
-import { dateKey, zonedEndOfDay, zonedStartOfDay } from "@/lib/time";
+import { dateKey, zonedEndOfDay, zonedStartOfDay, zonedWeekday } from "@/lib/time";
+import { ACTIVE_STATUSES } from "@/server/tasks/state";
+import { buildHourCells, hourStarts, hourlyStatus, toBusyBlock, type BusyBlock, type HourCell, type HourlyStatus } from "@/server/inventory/hourly";
 import {
   computeCapacityMinutes,
   dayKeysBetween,
@@ -155,6 +157,79 @@ export async function inventoryFor(range: InventoryRange, opts: InventoryOptions
   const dayTotals: DayTotals[] = days.map((date) => ({ date, ...sumTotals(rows.filter((r) => r.date === date)) }));
 
   return { days, rows, users: userTotals, teams, dayTotals, total: sumTotals(rows), timezone: tz };
+}
+
+export type HourlyRow = UserTotals & { status: HourlyStatus; cells: HourCell[] };
+export type HourlyBreakdown = {
+  date: string;
+  hours: number[];
+  lunch: { start: number; end: number };
+  rows: HourlyRow[];
+  timezone: string;
+};
+
+/**
+ * Day view (SPEC §9.3): for one day, each person's working hours coloured by what is scheduled then —
+ * busy hours come from open tasks' scheduledStart/End, "off" hours from leave / holiday / attendance —
+ * plus the person's capacity / assigned / sellable for that day (from `inventoryFor`).
+ */
+export async function hourlyBreakdown(date: Date, opts: InventoryOptions = {}): Promise<HourlyBreakdown> {
+  const settings = await getSettings();
+  const cfg = toWorkingConfig(settings);
+  const tz = cfg.timezone;
+  const key = dateKey(date, tz);
+  const dayStart = zonedStartOfDay(date, tz);
+  const dayEnd = zonedEndOfDay(date, tz);
+  const dbDate = toDbDate(key);
+  const minutesOfDay = (d: Date) => Math.round((d.getTime() - dayStart.getTime()) / 60_000);
+
+  const inv = await inventoryFor({ from: date, to: date }, opts);
+  const userIds = inv.users.map((u) => u.userId);
+  const [attendance, leaves, tasks] = await Promise.all([
+    prisma.attendance.findMany({ where: { userId: { in: userIds }, date: dbDate }, select: { userId: true, status: true, checkIn: true, checkOut: true } }),
+    prisma.leave.findMany({
+      where: { userId: { in: userIds }, status: { in: ["HR_APPROVED", "ADMIN_APPROVED"] }, from: { lte: dbDate }, to: { gte: dbDate } },
+      select: { userId: true },
+    }),
+    prisma.task.findMany({
+      where: {
+        deletedAt: null,
+        status: { in: ACTIVE_STATUSES },
+        assignees: { some: { userId: { in: userIds } } },
+        scheduledStart: { lt: dayEnd },
+        OR: [{ scheduledEnd: { gt: dayStart } }, { scheduledEnd: null, scheduledStart: { gte: dayStart } }],
+      },
+      select: { id: true, title: true, type: true, scheduledStart: true, scheduledEnd: true, allocatedMinutes: true, assignees: { select: { userId: true } } },
+      orderBy: { scheduledStart: "asc" },
+    }),
+  ]);
+
+  const busyByUser = new Map<string, BusyBlock[]>();
+  for (const t of tasks) {
+    const block = toBusyBlock(t, dayStart);
+    if (!block) continue;
+    for (const a of t.assignees) busyByUser.set(a.userId, [...(busyByUser.get(a.userId) ?? []), block]);
+  }
+  const attendanceByUser = new Map(attendance.map((a) => [a.userId, a]));
+  const onLeave = new Set(leaves.map((l) => l.userId));
+  const isHoliday = cfg.holidays.includes(key);
+  const weekday = zonedWeekday(dayStart, tz);
+  const hours = hourStarts(cfg);
+
+  const rows: HourlyRow[] = inv.users.map((u) => {
+    const a = attendanceByUser.get(u.userId);
+    const status = hourlyStatus({ attendanceStatus: a?.status ?? null, onLeave: onLeave.has(u.userId), isHoliday, workingDay: cfg.workingDays.includes(weekday) });
+    // Half days with recorded times only occupy the hours between check-in and check-out.
+    const timed = status === "HALF_DAY";
+    const cells = buildHourCells(hours, cfg, busyByUser.get(u.userId) ?? [], {
+      status,
+      presentFrom: timed && a?.checkIn ? minutesOfDay(a.checkIn) : null,
+      presentTo: timed && a?.checkOut ? minutesOfDay(a.checkOut) : null,
+    });
+    return { ...u, status, cells };
+  });
+
+  return { date: key, hours, lunch: { start: cfg.lunchStartMinutes, end: cfg.lunchEndMinutes }, rows, timezone: tz };
 }
 
 /** Next approved leave starting today or later, if any. */

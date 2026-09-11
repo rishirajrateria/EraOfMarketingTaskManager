@@ -16,8 +16,15 @@ export function fromDbDate(d: Date): string {
   return dateKey(d, "UTC");
 }
 
-export function toWorkingConfig(s: CompanySettings): WorkingConfig {
+/** Schema default for `CompanySettings.halfDayMinutes`; used when a caller passes a plain WorkingConfig. */
+export const DEFAULT_HALF_DAY_MINUTES = 240;
+
+/** Working-time config plus the capacity a HALF_DAY counts for (Settings → half-day hours). */
+export type CapacityConfig = WorkingConfig & { halfDayMinutes: number };
+
+export function toWorkingConfig(s: CompanySettings): CapacityConfig {
   return {
+    halfDayMinutes: s.halfDayMinutes,
     timezone: s.timezone,
     workStartMinutes: s.workStartMinutes,
     workEndMinutes: s.workEndMinutes,
@@ -45,8 +52,9 @@ export function dayKeysBetween(from: Date, to: Date, tz: string): string[] {
 export type CapacityInput = {
   /** Any instant on the day in question (interpreted in `settings.timezone`). */
   date: Date;
+  /** `dailyCapacityMinutes` overrides the full-day capacity only; half days always use the company setting. */
   user: { dailyCapacityMinutes: number | null; workingDays: number[] };
-  settings: WorkingConfig;
+  settings: WorkingConfig & { halfDayMinutes?: number };
   /** Explicit attendance row for the day, if any. */
   attendanceStatus?: AttendanceStatus | null;
   /** Approved leave covers this day. */
@@ -58,7 +66,8 @@ export type CapacityInput = {
 /**
  * Capacity (productive minutes) of one person on one day.
  * - default = productive minutes/day from working hours minus lunch, or the user's override
- * - HALF_DAY → half; ABSENT / LEAVE / HOLIDAY, approved leave, holiday or non-working day → 0
+ * - HALF_DAY → `settings.halfDayMinutes` (Settings → half-day hours), capped at the full day
+ * - ABSENT / LEAVE / HOLIDAY, approved leave, holiday or non-working day → 0
  * - future days with no attendance row assume the person is present
  */
 export function computeCapacityMinutes(input: CapacityInput): number {
@@ -74,7 +83,7 @@ export function computeCapacityMinutes(input: CapacityInput): number {
     case "HOLIDAY":
       return 0;
     case "HALF_DAY":
-      return Math.round(full / 2);
+      return Math.min(full, settings.halfDayMinutes ?? DEFAULT_HALF_DAY_MINUTES);
     default:
       return full;
   }

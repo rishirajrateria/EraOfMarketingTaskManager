@@ -1,5 +1,5 @@
 /**
- * Attendance queries (SPEC §11.5): today's row for the check-in card and the monthly grid.
+ * Attendance queries (SPEC §11.5): the monthly grid (everyone for HR/Admin, self for others) and CSV.
  */
 import { addDays, addMonths, endOfMonth, format, startOfMonth } from "date-fns";
 import type { AttendanceStatus } from "@prisma/client";
@@ -38,15 +38,9 @@ export function monthDayKeys(month: string): string[] {
   return keys;
 }
 
+/** HR/Admin see (and mark) everyone's attendance; everyone else sees only their own month, read-only. */
 export const canSeeAllAttendance = (u: SessionUser) => u.role === "ADMIN" || u.role === "HR";
-
-/** Today's attendance row for a user (company timezone). */
-export async function todayAttendance(userId: string) {
-  const s = await getSettings();
-  const key = dateKey(new Date(), s.timezone);
-  const row = await prisma.attendance.findUnique({ where: { userId_date: { userId, date: toDbDate(key) } } });
-  return { key, row, timezone: s.timezone };
-}
+export const canMarkAttendance = canSeeAllAttendance;
 
 /**
  * Monthly grid. Admin/HR see everyone (optionally filtered to one user); others only themselves.
