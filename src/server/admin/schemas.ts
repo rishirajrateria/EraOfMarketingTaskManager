@@ -4,6 +4,9 @@ import { z } from "zod";
 
 export const ROLES = ["ADMIN", "TEAM_LEADER", "EXECUTIVE", "HR", "CA"] as const;
 export const roleSchema = z.enum(ROLES);
+/** Roles Admin may assign. CA access is parked (ADR 0004): the enum value stays, but no user can be given it. */
+export const ASSIGNABLE_ROLES = ["ADMIN", "TEAM_LEADER", "EXECUTIVE", "HR"] as const;
+export const assignableRoleSchema = roleSchema.refine((r) => r !== "CA", "CA access is not available");
 
 const colour = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Colour must be in #rrggbb form");
 const weekday = z.number().int().min(0).max(6);
@@ -24,11 +27,26 @@ const optionalText = (max = 500) =>
 const dateKey = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be yyyy-MM-dd");
 const minutesOfDay = z.number().int().min(0).max(1440);
 
+/** Fixed expense category list (ADR 0004): trimmed, non-empty, de-duplicated case-insensitively, order preserved. */
+export const expenseCategoryListSchema = z
+  .array(z.string().trim().min(1, "Category name is required").max(60))
+  .min(1, "Add at least one expense category")
+  .max(50)
+  .transform((list) => {
+    const seen = new Set<string>();
+    return list.filter((c) => {
+      const key = c.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  });
+
 // ---------- People ----------
 export const userInputSchema = z.object({
   email: z.email("Enter a valid email").transform((e) => e.trim().toLowerCase()),
   name: z.string().trim().min(1, "Name is required").max(120),
-  role: roleSchema,
+  role: assignableRoleSchema,
   teamId: optionalId,
   teamLeaderId: optionalId,
   dailyCapacityMinutes: z.number().int().min(0).max(1440).optional().nullable(),
@@ -113,12 +131,18 @@ export const settingsInputSchema = z
     notifyChatDefault: z.boolean(),
     restartCreatesNewWorkspace: z.boolean(),
     recurrenceCreatesNewWorkspace: z.boolean(),
+    halfDayMinutes: minutesOfDay,
+    expenseCategories: expenseCategoryListSchema,
   })
   .refine((s) => s.workStartMinutes < s.workEndMinutes, { message: "Work start must be before work end", path: ["workEndMinutes"] })
   .refine((s) => s.lunchStartMinutes <= s.lunchEndMinutes, { message: "Lunch start must be before lunch end", path: ["lunchEndMinutes"] })
   .refine((s) => s.lunchStartMinutes >= s.workStartMinutes && s.lunchEndMinutes <= s.workEndMinutes, {
     message: "Lunch must fall inside working hours",
     path: ["lunchStartMinutes"],
+  })
+  .refine((s) => s.halfDayMinutes <= s.workEndMinutes - s.workStartMinutes, {
+    message: "Half day cannot be longer than the working day",
+    path: ["halfDayMinutes"],
   });
 export type SettingsInput = z.input<typeof settingsInputSchema>;
 

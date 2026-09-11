@@ -53,6 +53,8 @@ export const invoiceInputSchema = z.object({
     .nullable(),
   paymentMode: z.enum(["FULL", "ADVANCE"]).default("FULL"),
   advancePercent: z.coerce.number().int().min(1).max(99).optional().nullable(),
+  /** ADVANCE only — how the balance invoice is raised: on `balanceDueOn`, by hand, or automatically (as a draft) once the client's tasks are complete. */
+  balanceMode: z.enum(["DATE", "MANUAL", "AUTO"]).optional().nullable(),
   balanceDueOn: optionalDateInput,
   sendAt: optionalDateInput,
 });
@@ -70,7 +72,7 @@ export type PaymentInput = z.infer<typeof paymentInputSchema>;
 export const expenseFieldsSchema = z.object({
   date: dateInput,
   amount: z.coerce.number().min(0),
-  category: z.string().trim().min(1, "category required").max(100),
+  category: z.string().trim().min(1, "category required").max(100), // must also match CompanySettings.expenseCategories — see expenses.ts
   vendor: optionalStr,
   note: optionalStr,
   tags: z

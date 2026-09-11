@@ -652,17 +652,20 @@ model CompanySettings {
   workingDays                   Int[]      @default([1, 2, 3, 4, 5, 6])
   holidays                      DateTime[] @default([]) @db.Date
   timezone                      String     @default("Asia/Kolkata")
-  invoicePrefix                 String     @default("EOM-INV-")
+  invoicePrefix                 String     @default("EOM")
   invoiceNextNumber             Int        @default(1)
-  receiptPrefix                 String     @default("EOM-RCP-")
+  receiptPrefix                 String     @default("EOM-RCP")
   receiptNextNumber             Int        @default(1)
   invoiceTerms                  String     @default("Payment due within 15 days of invoice date.")
   invoiceEmailTemplate          String     @default("Dear {{client}},\n\nPlease find attached invoice {{number}} for INR {{total}}, due on {{dueDate}}.\n\nRegards,\n{{company}}")
   defaultGstPercent             Decimal    @default(18) @db.Decimal(5, 2)
   notifyEmailDefault            Boolean    @default(false)
-  notifyChatDefault             Boolean    @default(true)
+  notifyChatDefault             Boolean    @default(false) // posting into task Chat spaces is opt-in (ADR 0004)
   restartCreatesNewWorkspace    Boolean    @default(true)
   recurrenceCreatesNewWorkspace Boolean    @default(true)
+  halfDayMinutes                Int        @default(240) // ADR 0004: half-day hours configurable in Settings
+  numberingFyKey                String     @default("") // e.g. "25-26"; invoice/receipt counters reset when the financial year changes
+  expenseCategories             String[]   @default(["Travel", "Software", "Office", "Marketing", "Salaries", "Rent", "Utilities", "Other"]) // ADR 0004: fixed list, no free text
   updatedAt                     DateTime   @updatedAt
 }
 

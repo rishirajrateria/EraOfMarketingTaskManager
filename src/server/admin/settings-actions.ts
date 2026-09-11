@@ -43,6 +43,7 @@ export async function updateSettings(raw: unknown): Promise<ActionResult<{ updat
         ...input,
         workingDays: Array.from(new Set(input.workingDays)).sort((a, b) => a - b),
         holidays,
+        expenseCategories: input.expenseCategories, // already trimmed + de-duplicated by the schema
       },
     });
     await audit(actor.id, "settings.update", "CompanySettings", "default", snapshot(before), snapshot(after));

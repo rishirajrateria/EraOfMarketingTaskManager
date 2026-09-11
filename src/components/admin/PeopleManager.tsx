@@ -9,15 +9,16 @@ import { PeopleForm, type PeopleFormValues } from "@/components/admin/PeopleForm
 import { createUser, deactivateUser, reactivateUser, updateUser } from "@/server/admin/actions";
 import type { LeaderOption, PersonRow, TeamOption } from "@/server/admin/queries";
 
+/** CA access is parked (ADR 0004): no chip / entry point, but legacy CA rows stay visible so Admin can re-role them. */
 const GROUPS: { role: Role; label: string }[] = [
   { role: "ADMIN", label: "Admins" },
   { role: "TEAM_LEADER", label: "Team Leaders" },
   { role: "EXECUTIVE", label: "Executives" },
   { role: "HR", label: "HR" },
-  { role: "CA", label: "CA (read-only finance)" },
+  { role: "CA", label: "CA (parked — re-assign a role)" },
 ];
 
-const TITLE: Partial<Record<Role, string>> = { EXECUTIVE: "Add Executive", TEAM_LEADER: "Add Team Leader", HR: "Add HR", CA: "Add CA" };
+const TITLE: Partial<Record<Role, string>> = { EXECUTIVE: "Add Executive", TEAM_LEADER: "Add Team Leader", HR: "Add HR" };
 
 /** /admin/people — SPEC §4 and §11.7. */
 export function PeopleManager({

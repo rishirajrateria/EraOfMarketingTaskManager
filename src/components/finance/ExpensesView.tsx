@@ -13,9 +13,13 @@ import { downloadText, fmtDay } from "@/components/finance/finance-ui";
 
 type Props = { rows: ExpenseRow[]; total: number; categories: string[]; month: string; category: string | null; canWrite: boolean; tz: string };
 
-/** Expense log (SPEC §11.2): month + category filters, totals, CSV export, Sheet sync, add/edit/delete. */
+/**
+ * Expense log (SPEC §11.2): month + category filters, totals, CSV export, Sheet sync, add/edit/delete.
+ * `categories` is the fixed list from Settings (ADR 0004); a filter on a removed category still shows as a chip.
+ */
 export function ExpensesView({ rows, total, categories, month, category, canWrite, tz }: Props) {
   const router = useRouter();
+  const chips = category && !categories.some((c) => c.toLowerCase() === category.toLowerCase()) ? [...categories, category] : categories;
   const toast = useToast();
   const [editing, setEditing] = useState<ExpenseRow | null | "new">(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -68,7 +72,7 @@ export function ExpensesView({ rows, total, categories, month, category, canWrit
           <Pill active={!category} onClick={() => navigate({ category: null })}>
             All
           </Pill>
-          {categories.map((c) => (
+          {chips.map((c) => (
             <Pill key={c} active={category?.toLowerCase() === c.toLowerCase()} onClick={() => navigate({ category: c })}>
               {c}
             </Pill>

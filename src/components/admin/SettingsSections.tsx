@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { Field, inputCls, btnSecondary } from "@/components/ui/Field";
-import { Toggle, WeekdayPicker } from "@/components/admin/AdminUi";
+import { Toggle, WeekdayPicker, hoursToMinutes, minutesToHours } from "@/components/admin/AdminUi";
 import { minutesToHHMM, hhmmToMinutes } from "@/lib/time";
 import type { GoogleStatus } from "@/server/admin/queries";
 import type { SettingsInput } from "@/server/admin/schemas";
@@ -124,6 +124,18 @@ export function WorkingTimeSection({ v, patch }: { v: SettingsValues; patch: Pat
         <TimeInput label="Lunch end" value={v.lunchEndMinutes} onChange={(lunchEndMinutes) => patch({ lunchEndMinutes })} />
       </div>
       <p className="text-[11px] text-gray-500">= {Math.round((productive / 60) * 10) / 10} productive hours per person per day</p>
+      <Field label="Half-day hours" hint="Capacity counted for a HALF_DAY attendance mark (ADR 0004)">
+        <input
+          className={inputCls}
+          type="number"
+          min={0}
+          max={24}
+          step={0.5}
+          inputMode="decimal"
+          value={minutesToHours(v.halfDayMinutes)}
+          onChange={(e) => patch({ halfDayMinutes: hoursToMinutes(e.target.value) ?? 0 })}
+        />
+      </Field>
       <Field label="Working days">
         <WeekdayPicker value={v.workingDays} onChange={(workingDays) => patch({ workingDays })} />
       </Field>
@@ -201,7 +213,7 @@ export function NotificationsSection({ v, patch }: { v: SettingsValues; patch: P
   return (
     <Section title="Notifications & workspaces">
       <Toggle label="Email notifications by default" hint="Users can override on their profile" checked={v.notifyEmailDefault} onChange={(notifyEmailDefault) => patch({ notifyEmailDefault })} />
-      <Toggle label="Google Chat notifications by default" checked={v.notifyChatDefault} onChange={(notifyChatDefault) => patch({ notifyChatDefault })} />
+      <Toggle label="Post notifications into task Chat spaces" hint="Off by default; in-app and push notifications are always sent" checked={v.notifyChatDefault} onChange={(notifyChatDefault) => patch({ notifyChatDefault })} />
       <Toggle label="Restart creates a new workspace" hint="New Drive folder / Chat space when a task is restarted" checked={v.restartCreatesNewWorkspace} onChange={(restartCreatesNewWorkspace) => patch({ restartCreatesNewWorkspace })} />
       <Toggle label="Recurrence creates a new workspace" hint="Each recurring instance gets its own folder / space" checked={v.recurrenceCreatesNewWorkspace} onChange={(recurrenceCreatesNewWorkspace) => patch({ recurrenceCreatesNewWorkspace })} />
     </Section>

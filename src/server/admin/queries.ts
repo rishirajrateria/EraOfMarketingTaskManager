@@ -5,7 +5,7 @@ import { dateKey } from "@/lib/time";
 
 /** Read-side queries for the admin screens. Results are plain, RSC-serialisable objects. */
 
-const ROLE_ORDER = ["ADMIN", "TEAM_LEADER", "EXECUTIVE", "HR", "CA"] as const;
+const ROLE_ORDER = ["ADMIN", "TEAM_LEADER", "EXECUTIVE", "HR", "CA"] as const; // CA last: parked role, legacy rows only
 
 export async function listPeople() {
   const users = await prisma.user.findMany({
@@ -119,6 +119,8 @@ export async function getSettingsDto() {
     notifyChatDefault: s.notifyChatDefault,
     restartCreatesNewWorkspace: s.restartCreatesNewWorkspace,
     recurrenceCreatesNewWorkspace: s.recurrenceCreatesNewWorkspace,
+    halfDayMinutes: s.halfDayMinutes,
+    expenseCategories: s.expenseCategories,
     updatedAt: s.updatedAt.toISOString(),
   };
 }

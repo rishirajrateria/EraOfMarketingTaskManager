@@ -13,7 +13,7 @@ import { listExpenses } from "@/server/finance/queries";
 import { expenseFieldsSchema, monthKeySchema, parseInput } from "@/server/finance/schemas";
 import { syncExpensesSheet, type SheetSyncResult } from "@/server/finance/sheets-sync";
 
-/** Expense log server actions (SPEC §11.2). Write: ADMIN; read/export: ADMIN or CA. */
+/** Expense log server actions (SPEC §11.2). ADMIN only (write via financeWrite, read/export via financeRead). */
 const PATH = "/admin/expenses";
 const MAX_FILE_BYTES = 12 * 1024 * 1024;
 
@@ -35,8 +35,9 @@ async function readUpload(fd: FormData, key: string): Promise<{ data: Buffer; mi
   return { data: Buffer.from(await f.arrayBuffer()), mime: f.type || "application/octet-stream", name: f.name || key };
 }
 
-function fields(fd: FormData) {
-  return parseInput(expenseFieldsSchema, {
+/** Categories are a fixed list managed in Settings (ADR 0004): reject anything else, normalise to the listed spelling. */
+async function fields(fd: FormData) {
+  const f = parseInput(expenseFieldsSchema, {
     date: fd.get("date"),
     amount: fd.get("amount"),
     category: fd.get("category"),
@@ -44,6 +45,10 @@ function fields(fd: FormData) {
     note: fd.get("note"),
     tags: fd.get("tags"),
   });
+  const allowed = (await getSettings()).expenseCategories;
+  const category = allowed.find((c) => c.toLowerCase() === f.category.toLowerCase());
+  if (!category) throw new Error(`category: "${f.category}" is not in the expense category list (Settings → Expenses)`);
+  return { ...f, category };
 }
 
 /** Best-effort Drive upload into Finance/Expenses/YYYY-MM (SPEC §11.2). */
@@ -64,7 +69,7 @@ async function uploadAttachments(expenseId: string, date: Date, receipt: { data:
 export async function createExpense(fd: FormData): Promise<ActionResult<{ id: string }>> {
   return wrap(async () => {
     const actor = await requireWrite();
-    const f = fields(fd);
+    const f = await fields(fd);
     const [receipt, voice] = await Promise.all([readUpload(fd, "receipt"), readUpload(fd, "voice")]);
     const voiceDuration = Number(fd.get("voiceDurationSec") ?? 0) || 0;
     const e = await prisma.expense.create({
@@ -94,7 +99,7 @@ export async function updateExpense(id: string, fd: FormData): Promise<ActionRes
     const actor = await requireWrite();
     const before = await prisma.expense.findUnique({ where: { id }, select: { date: true, amount: true, category: true, vendor: true, note: true, tags: true } });
     if (!before) throw new Error("Expense not found");
-    const f = fields(fd);
+    const f = await fields(fd);
     const [receipt, voice] = await Promise.all([readUpload(fd, "receipt"), readUpload(fd, "voice")]);
     const voiceDuration = Number(fd.get("voiceDurationSec") ?? 0) || 0;
     await prisma.expense.update({

@@ -13,6 +13,7 @@ import {
   WorkingTimeSection,
   type SettingsValues,
 } from "@/components/admin/SettingsSections";
+import { ExpenseCategoriesSection } from "@/components/admin/ExpenseCategoriesSection";
 import { removeLogo, updateSettings, uploadLogo } from "@/server/admin/settings-actions";
 import type { GoogleStatus, SettingsDto } from "@/server/admin/queries";
 
@@ -49,13 +50,14 @@ export function SettingsForm({ settings, google }: { settings: SettingsDto; goog
         void save();
       }}
     >
-      <ScreenHeader title="Settings" subtitle="Company profile, invoicing, working time and integrations" />
+      <ScreenHeader title="Settings" subtitle="Company profile, invoicing, expenses, working time and integrations" />
       <CompanySection v={v} patch={patch} />
       <LogoSection logoUrl={settings.hasLogo ? settings.logoUrl : null} version={settings.updatedAt} busy={busy} onUpload={upload} onRemove={() => void run(removeLogo(), "Logo removed")} />
       <BankSection v={v} patch={patch} />
       <WorkingTimeSection v={v} patch={patch} />
       <HolidaysSection v={v} patch={patch} />
       <InvoicingSection v={v} patch={patch} />
+      <ExpenseCategoriesSection v={v} patch={patch} />
       <NotificationsSection v={v} patch={patch} />
       <GoogleStatusSection status={google} />
       <div className="fixed bottom-0 z-30 w-full max-w-[480px] border-t bg-white/95 px-4 py-3 backdrop-blur" style={{ left: "50%", transform: "translateX(-50%)" }}>

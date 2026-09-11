@@ -6,9 +6,13 @@ import { createExpense, updateExpense } from "@/server/finance/expenses";
 import type { ExpenseRow } from "@/server/finance/queries";
 import { VoiceRecorder } from "@/components/finance/VoiceRecorder";
 
-/** Add / edit expense sheet body (SPEC §11.2): bill photo via camera, voice note via MediaRecorder. */
+/**
+ * Add / edit expense sheet body (SPEC §11.2): bill photo via camera, voice note via MediaRecorder.
+ * `categories` is the fixed list from Settings (ADR 0004) — no free text.
+ */
 export function ExpenseForm({ initial, categories, onDone }: { initial?: ExpenseRow | null; categories: string[]; onDone: () => void }) {
   const toast = useToast();
+  const legacyCategory = initial && !categories.some((c) => c.toLowerCase() === initial.category.toLowerCase()) ? initial.category : null;
   const [busy, setBusy] = useState(false);
   const [voice, setVoice] = useState<{ blob: Blob; dur: number } | null>(null);
   const [preview, setPreview] = useState<string | null>(initial?.hasReceipt ? `/api/files/expense/${initial.id}/receipt` : null);
@@ -39,13 +43,19 @@ export function ExpenseForm({ initial, categories, onDone }: { initial?: Expense
           <input name="amount" type="number" step="0.01" min="0" required defaultValue={initial?.amount} className={inputCls} inputMode="decimal" />
         </Field>
       </div>
-      <Field label="Category">
-        <input name="category" list="expense-categories" required defaultValue={initial?.category} className={inputCls} placeholder="Travel, Software, Office…" />
-        <datalist id="expense-categories">
+      <Field label="Category" hint={legacyCategory ? `"${legacyCategory}" is no longer in the list — pick a current category to save` : "Managed in Settings → Expenses"}>
+        <select name="category" required defaultValue={initial?.category ?? categories[0] ?? ""} className={inputCls}>
+          {legacyCategory ? (
+            <option value={legacyCategory} disabled>
+              {legacyCategory} (removed)
+            </option>
+          ) : null}
           {categories.map((c) => (
-            <option key={c} value={c} />
+            <option key={c} value={c}>
+              {c}
+            </option>
           ))}
-        </datalist>
+        </select>
       </Field>
       <Field label="Vendor">
         <input name="vendor" defaultValue={initial?.vendor ?? ""} className={inputCls} />

@@ -6,12 +6,12 @@ import { FormFooter, WeekdayPicker, hoursToMinutes, minutesToHours } from "@/com
 import type { LeaderOption, PersonRow, TeamOption } from "@/server/admin/queries";
 import type { UserInput } from "@/server/admin/schemas";
 
+/** Assignable roles. CA access is parked (ADR 0004) — not offered here and rejected by the server. */
 export const ROLE_OPTIONS: { value: Role; label: string; hint?: string }[] = [
   { value: "EXECUTIVE", label: "Executive" },
   { value: "TEAM_LEADER", label: "Team Leader" },
   { value: "HR", label: "HR" },
   { value: "ADMIN", label: "Admin" },
-  { value: "CA", label: "CA", hint: "read-only finance access" },
 ];
 
 export type PeopleFormValues = UserInput;
@@ -51,8 +51,9 @@ export function PeopleForm({
   const [hours, setHours] = useState(minutesToHours(user?.dailyCapacityMinutes));
   const patch = (p: Partial<PeopleFormValues>) => setV((s) => ({ ...s, ...p }));
   const isExec = v.role === "EXECUTIVE";
-  const emailHint = v.role === "CA" ? "External Google accounts allowed for CA" : workspaceDomain ? `Must end with @${workspaceDomain}` : undefined;
-  const roleHint = ROLE_OPTIONS.find((r) => r.value === v.role)?.hint;
+  const emailHint = workspaceDomain ? `Must end with @${workspaceDomain}` : undefined;
+  const isLegacyCa = v.role === "CA";
+  const roleHint = isLegacyCa ? "CA access is parked — choose another role to keep this person" : ROLE_OPTIONS.find((r) => r.value === v.role)?.hint;
 
   return (
     <form
@@ -70,6 +71,11 @@ export function PeopleForm({
       </Field>
       <Field label="Role" hint={roleHint}>
         <select className={inputCls} value={v.role} onChange={(e) => patch({ role: e.target.value as Role })}>
+          {isLegacyCa ? (
+            <option value="CA" disabled>
+              CA (parked)
+            </option>
+          ) : null}
           {ROLE_OPTIONS.map((r) => (
             <option key={r.value} value={r.value}>
               {r.label}

@@ -70,18 +70,32 @@ describe("admin people actions", () => {
     expect(sentMailLog.some((m) => m.to === "e2@test.local")).toBe(true);
   });
 
-  it("enforces the workspace domain except for CA users", async () => {
+  it("enforces the workspace domain for every role and reports duplicate emails", async () => {
     const { admin } = await seedBasics();
     session.set(admin);
     const actions = await load();
     const foreign = await actions.createUser({ email: "x@gmail.com", name: "X", role: "HR" });
     expect(foreign.ok).toBe(false);
     if (!foreign.ok) expect(foreign.error).toMatch(/@test.local/);
-    const ca = await actions.createUser({ email: "accountant@gmail.com", name: "CA", role: "CA" });
-    expect(ca.ok).toBe(true);
-    const dup = await actions.createUser({ email: "accountant@gmail.com", name: "CA", role: "CA" });
+    const first = await actions.createUser({ email: "hr2@test.local", name: "HR Two", role: "HR" });
+    expect(first.ok).toBe(true);
+    const dup = await actions.createUser({ email: "HR2@test.local", name: "HR Two", role: "HR" });
     expect(dup.ok).toBe(false);
     if (!dup.ok) expect(dup.error).toMatch(/already exists/);
+  });
+
+  it("rejects the parked CA role on create and update (ADR 0004)", async () => {
+    const { admin, hr } = await seedBasics();
+    session.set(admin);
+    const actions = await load();
+    const create = await actions.createUser({ email: "accountant@test.local", name: "CA", role: "CA" });
+    expect(create.ok).toBe(false);
+    if (!create.ok) expect(create.error).toMatch(/CA access is not available/);
+    expect(await testDb.user.count({ where: { email: "accountant@test.local" } })).toBe(0);
+
+    const update = await actions.updateUser({ id: hr.id, email: hr.email, name: hr.name, role: "CA" });
+    expect(update.ok).toBe(false);
+    expect((await testDb.user.findUniqueOrThrow({ where: { id: hr.id } })).role).toBe("HR");
   });
 
   it("updates a user and moves them between roles", async () => {

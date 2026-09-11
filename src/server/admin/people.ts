@@ -10,7 +10,7 @@ export const ROLE_LABEL: Record<Role, string> = {
   TEAM_LEADER: "Team Leader",
   EXECUTIVE: "Executive",
   HR: "HR",
-  CA: "CA (read-only finance)",
+  CA: "CA (parked)",
 };
 
 /** Field subset written to the audit log. */
@@ -28,13 +28,10 @@ export function publicUser(u: User) {
   };
 }
 
-/**
- * Workspace-domain rule (SPEC §4). CA users may be external Google accounts (SPEC §11.4),
- * so they are exempt.
- */
-export function assertWorkspaceEmail(email: string, role: Role): void {
+/** Workspace-domain rule (SPEC §4). Applies to every role — CA access (the only external role) is parked (ADR 0004). */
+export function assertWorkspaceEmail(email: string): void {
   const domain = env.workspaceDomain.trim().toLowerCase();
-  if (!domain || role === "CA") return;
+  if (!domain) return;
   if (!email.endsWith("@" + domain)) throw new Error(`Email must end with @${domain}`);
 }
 
@@ -78,18 +75,6 @@ export async function sendInvite(user: Pick<User, "email" | "name" | "role">): P
     });
   } catch {
     // Invite delivery is best-effort; the user row exists regardless.
-  }
-}
-
-/** Best-effort read-only share of the Finance / Expenses sheets with a CA user (SPEC §11.4). */
-export async function grantFinanceSheets(email: string): Promise<void> {
-  const ids = [env.financeSheetId, env.expensesSheetId].filter(Boolean);
-  if (ids.length === 0) return;
-  try {
-    const { shareSpreadsheet } = await import("@/google/sheets");
-    await Promise.all(ids.map((id) => shareSpreadsheet(id, email, "reader").catch(() => undefined)));
-  } catch {
-    // ignore — Admin can re-share from the finance screen
   }
 }
 

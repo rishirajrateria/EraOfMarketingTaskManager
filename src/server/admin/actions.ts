@@ -15,7 +15,7 @@ import {
   workTypeInputSchema,
   updateWorkTypeSchema,
 } from "@/server/admin/schemas";
-import { assertWorkspaceEmail, grantFinanceSheets, publicUser, resolveHierarchy, sendInvite, withUnique } from "@/server/admin/people";
+import { assertWorkspaceEmail, publicUser, resolveHierarchy, sendInvite, withUnique } from "@/server/admin/people";
 
 /**
  * Admin back-office server actions: people (SPEC §4, §11.7), designations/teams and work types
@@ -39,7 +39,7 @@ export async function createUser(raw: unknown): Promise<ActionResult<{ id: strin
   return wrap(async () => {
     const actor = await requireRole("ADMIN");
     const input = parse(userInputSchema, raw);
-    assertWorkspaceEmail(input.email, input.role);
+    assertWorkspaceEmail(input.email);
     const refs = await resolveHierarchy(input);
     const user = await withUnique(
       () =>
@@ -58,7 +58,6 @@ export async function createUser(raw: unknown): Promise<ActionResult<{ id: strin
     );
     await audit(actor.id, "user.create", "User", user.id, null, publicUser(user));
     await sendInvite(user);
-    if (user.role === "CA") await grantFinanceSheets(user.email);
     safeRevalidate(PEOPLE, TEAMS);
     return { id: user.id };
   });
@@ -71,7 +70,7 @@ export async function updateUser(raw: unknown): Promise<ActionResult<{ id: strin
     const before = await prisma.user.findUnique({ where: { id: input.id } });
     if (!before) throw new Error("User not found");
     if (before.id === actor.id && input.role !== "ADMIN") throw new Error("You cannot change your own role");
-    assertWorkspaceEmail(input.email, input.role);
+    assertWorkspaceEmail(input.email);
     const refs = await resolveHierarchy(input, before.id);
     const after = await withUnique(
       () =>
@@ -90,7 +89,6 @@ export async function updateUser(raw: unknown): Promise<ActionResult<{ id: strin
       "A user with this email already exists",
     );
     await audit(actor.id, "user.update", "User", after.id, publicUser(before), publicUser(after));
-    if (after.role === "CA" && (before.role !== "CA" || before.email !== after.email)) await grantFinanceSheets(after.email);
     safeRevalidate(PEOPLE, TEAMS);
     return { id: after.id };
   });

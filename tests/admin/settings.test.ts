@@ -35,11 +35,14 @@ const baseInput = {
   notifyChatDefault: false,
   restartCreatesNewWorkspace: false,
   recurrenceCreatesNewWorkspace: true,
+  halfDayMinutes: 5 * 60,
+  expenseCategories: ["Travel", "Software", "Office"],
 };
 
 describe("company settings actions", () => {
   beforeEach(async () => {
     await resetDb();
+    (await import("@/lib/settings")).invalidateSettingsCache(); // the 10 s cache must not leak between tests
   });
 
   it("round-trips every field and invalidates the cache", async () => {
@@ -64,6 +67,8 @@ describe("company settings actions", () => {
     expect(s.notifyEmailDefault).toBe(true);
     expect(s.notifyChatDefault).toBe(false);
     expect(s.restartCreatesNewWorkspace).toBe(false);
+    expect(s.halfDayMinutes).toBe(300);
+    expect(s.expenseCategories).toEqual(["Travel", "Software", "Office"]);
 
     const dto = await getSettingsDto();
     expect(dto).toMatchObject({ ...baseInput, holidays: ["2026-08-15", "2026-10-02"], hasLogo: false, logoUrl: null });
@@ -86,6 +91,28 @@ describe("company settings actions", () => {
     expect(badTz.ok).toBe(false);
     const badDay = await actions.updateSettings({ ...baseInput, holidays: ["15-08-2026"] });
     expect(badDay.ok).toBe(false);
+    const longHalfDay = await actions.updateSettings({ ...baseInput, halfDayMinutes: 10 * 60 });
+    expect(longHalfDay.ok).toBe(false);
+    if (!longHalfDay.ok) expect(longHalfDay.error).toMatch(/Half day/);
+  });
+
+  it("ships default expense categories, de-duplicates edits and refuses an empty list", async () => {
+    const { admin } = await seedBasics();
+    session.set(admin);
+    const actions = await load();
+    const { getSettings } = await import("@/lib/settings");
+    expect((await getSettings()).expenseCategories).toEqual(expect.arrayContaining(["Travel", "Software", "Office"]));
+    expect((await getSettings()).halfDayMinutes).toBe(240);
+    expect((await getSettings()).notifyChatDefault).toBe(false);
+
+    const res = await actions.updateSettings({ ...baseInput, expenseCategories: [" Rent ", "rent", "Utilities", "Rent"] });
+    expect(res.ok).toBe(true);
+    expect((await getSettings()).expenseCategories).toEqual(["Rent", "Utilities"]);
+
+    const empty = await actions.updateSettings({ ...baseInput, expenseCategories: [] });
+    expect(empty.ok).toBe(false);
+    const blank = await actions.updateSettings({ ...baseInput, expenseCategories: ["Travel", "  "] });
+    expect(blank.ok).toBe(false);
   });
 
   it("uploads, streams and removes the logo", async () => {
