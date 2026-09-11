@@ -9,6 +9,7 @@ import { AddTaskSheet } from "@/components/tasks/AddTaskSheet";
 import { applyFilters } from "@/components/dashboard/filters";
 import { useTaskAction } from "@/components/dashboard/useTaskAction";
 import { TimeStatus } from "@/components/dashboard/TimeStatus";
+import { DashboardTopBar, type TopBarUser } from "@/components/dashboard/DashboardTopBar";
 import { TaskList } from "@/components/dashboard/TaskList";
 import { BottomBar, type AddMode } from "@/components/dashboard/BottomBar";
 import { TaskActionSheet, NOTE_PROMPTS, type NoteKind, type SimpleAction } from "@/components/dashboard/TaskActionSheet";
@@ -19,25 +20,35 @@ import { NoteSheet } from "@/components/dashboard/NoteSheet";
 import { DatePickerSheet } from "@/components/dashboard/DatePickerSheet";
 
 const SAVE_DEBOUNCE_MS = 800;
-/** Height of the sticky app header (AppFrame) so the list, not the page, scrolls. */
-const HEADER_PX = 46;
+/** Anchor id of the attachments block inside TaskDetailSheet (mic icon deep-scroll). */
+export const ATTACHMENTS_ANCHOR = "task-attachments";
 
-/** Client root of the dashboard (SPEC §5): three stacked zones + all sheets. Data comes from the RSC page. */
+/**
+ * Client root of the dashboard (SPEC §5): cyan pill area (with the slim overlay top bar — the app header is hidden
+ * on /dashboard), task list, white filter strip, green area, bottom bar + all sheets. Data comes from the RSC page.
+ */
 export function Dashboard({
   data,
   filters: initialFilters,
   initialTaskId,
   showCompleted,
+  user,
+  unread,
+  openRequests,
 }: {
   data: DashboardData;
   filters: DashboardFilters;
   initialTaskId: string | null;
   showCompleted: boolean;
+  user: TopBarUser;
+  unread: number;
+  openRequests: number;
 }) {
   const router = useRouter();
   const { run, busy, refresh, toast } = useTaskAction();
   const [filters, setFilters] = useState<DashboardFilters>(() => (showCompleted ? { ...initialFilters, completed: true } : initialFilters));
   const [detailId, setDetailId] = useState<string | null>(initialTaskId);
+  const [scrollToAttachments, setScrollToAttachments] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -63,6 +74,14 @@ export function Dashboard({
   useLiveEvents((e) => {
     if (e.type === "task.changed" || e.type === "task.deleted") refresh();
   });
+
+  // Mic icon: once the detail sheet is open, bring the attachments block into view.
+  useEffect(() => {
+    if (!scrollToAttachments || !detailId) return;
+    const h = requestAnimationFrame(() => document.getElementById(ATTACHMENTS_ANCHOR)?.scrollIntoView({ block: "start" }));
+    setScrollToAttachments(false);
+    return () => cancelAnimationFrame(h);
+  }, [scrollToAttachments, detailId]);
 
   // Deep link `?task=<id>`: strip the param once consumed so a refresh does not re-open it.
   useEffect(() => {
@@ -158,14 +177,24 @@ export function Dashboard({
   const noteTask = note ? byId.get(note.taskId) ?? null : null;
 
   return (
-    <div className="flex flex-col" style={{ height: `calc(100dvh - ${HEADER_PX}px)` }}>
-      <TimeStatus data={data} filters={filters} onChange={setFilters} />
+    <div className="flex h-[100dvh] flex-col">
+      <TimeStatus data={data} filters={filters} onChange={setFilters} topBar={<DashboardTopBar user={user} unread={unread} openRequests={openRequests} />} />
       <TaskList
         tasks={tasks}
         data={data}
         refreshing={busy}
         onRefresh={refresh}
-        handlers={{ onOpen: (t) => setDetailId(t.id), onLongPress: (t) => setActionId(t.id), onCircle, onRestart, onRetry }}
+        handlers={{
+          onOpen: (t) => setDetailId(t.id),
+          onOpenAttachments: (t) => {
+            setDetailId(t.id);
+            setScrollToAttachments(true);
+          },
+          onLongPress: (t) => setActionId(t.id),
+          onCircle,
+          onRestart,
+          onRetry,
+        }}
       />
       <BottomBar data={data} filters={filters} onChange={setFilters} onOpenDate={() => setDateOpen(true)} onAdd={setAddMode} />
 

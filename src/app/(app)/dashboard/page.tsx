@@ -12,9 +12,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const user = await requireUser();
   if (user.role === "HR" || user.role === "CA") redirect("/");
   const sp = await searchParams;
-  const [data, prefs] = await Promise.all([
+  const [data, prefs, unread, openRequests] = await Promise.all([
     dashboardData(user),
     prisma.user.findUnique({ where: { id: user.id }, select: { filterPrefs: true } }),
+    prisma.notification.count({ where: { userId: user.id, readAt: null } }),
+    user.role === "ADMIN" ? prisma.request.count({ where: { status: "OPEN", targetRole: "ADMIN" } }) : Promise.resolve(0),
   ]);
   return (
     <Dashboard
@@ -22,6 +24,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       filters={normaliseFilters(prefs?.filterPrefs)}
       initialTaskId={sp.task ?? null}
       showCompleted={sp.completed === "1" || sp.completed === "true"}
+      user={{ id: user.id, name: user.name ?? "", image: user.image ?? null, role: data.role }}
+      unread={unread}
+      openRequests={openRequests}
     />
   );
 }

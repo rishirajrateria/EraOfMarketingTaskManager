@@ -1,4 +1,5 @@
 /** Pure presentation helpers for dashboard rows and the detail sheet. Unit-tested in tests/ui. */
+import { formatInTimeZone } from "date-fns-tz";
 import type { TaskRow } from "@/server/tasks/types";
 
 export const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? "";
@@ -59,3 +60,27 @@ export function waveformHeights(seed: string, bars = 24, max = 22): number[] {
 }
 
 export const fmtSeconds = (s: number | null) => (s == null ? "" : `${Math.round(s)}s`);
+
+/** Minutes → "5", "5.5", "16.5" (one decimal max, no unit) for the cyan pills. */
+export function pillHours(minutes: number): string {
+  const h = Math.round((minutes / 60) * 10) / 10;
+  return Number.isInteger(h) ? String(h) : h.toFixed(1);
+}
+
+/** Cyan pill text "<Label>- <hours>" (the label is ellipsized by CSS in the pill; the hours never truncate). */
+export const pillText = (label: string, minutes: number) => `${label}- ${pillHours(minutes)}`;
+
+/** Date-pill labels exactly as in the Canva design. */
+const DATE_PILL_LABELS: Record<string, string> = {
+  "date:today": "today",
+  "date:tomorrow": "tomorr",
+  "date:b4leave": "B4LEav",
+  "date:all": "Alltime",
+};
+export const datePillLabel = (id: string, fallback: string) => DATE_PILL_LABELS[id] ?? fallback;
+
+/** 24h "H:mm" clock (no am/pm, no leading zero — "4:45", "17:00") in the company timezone; "--:--" when unset. */
+export const fmtClock = (d: Date | string | null | undefined, tz: string) => (d ? formatInTimeZone(new Date(d), tz, "H:mm") : "--:--");
+
+/** "31/4/25" (d/M/yy) full date under the date chip. */
+export const fmtShortDate = (d: Date | string | null | undefined, tz: string) => (d ? formatInTimeZone(new Date(d), tz, "d/M/yy") : "");

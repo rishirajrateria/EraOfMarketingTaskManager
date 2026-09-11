@@ -64,7 +64,7 @@ export type DashboardData = {
 /** Dashboard filter state persisted per user (SPEC §5.4). */
 export type DashboardFilters = {
   colours: RowColour[];
-  icons: ("paused" | "doubt" | "review" | "important" | "recurring")[];
+  icons: ("paused" | "doubt" | "review" | "important" | "recurring" | "restarted")[];
   row1: string | null; // team / executive / client id
   row2: string | null; // client / work type id
   pill: string | null; // "team:<id>" | "person:<id>" | "client:<id>" | "date:today|tomorrow|b4leave|all"

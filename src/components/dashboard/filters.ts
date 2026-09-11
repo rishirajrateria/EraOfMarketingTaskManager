@@ -33,6 +33,9 @@ export function hasIcon(t: TaskRow, icon: IconFilter): boolean {
       return t.important;
     case "recurring":
       return t.recurring;
+    case "restarted":
+      // A restart copy (has a parent) or a completed original that was restarted (has a child).
+      return t.parentTaskId != null || (t.status === "COMPLETED" && t.childTaskId != null);
     default:
       return false;
   }
@@ -122,7 +125,7 @@ export function applyFilters(tasks: TaskRow[], f: DashboardFilters, ctx: FilterC
 }
 
 const COLOURS = new Set<string>(["white", "green", "yellow", "red", "grey"]);
-const ICONS = new Set<string>(["paused", "doubt", "review", "important", "recurring"]);
+const ICONS = new Set<string>(["paused", "doubt", "review", "important", "recurring", "restarted"]);
 const QUICK = new Set<string>(["asc", "tomorrow", "today"]);
 
 /** Coerce the persisted JSON (prisma `User.filterPrefs`) into a well-typed filter set; unknown values are dropped. */

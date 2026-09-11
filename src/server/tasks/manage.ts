@@ -26,7 +26,7 @@ const attachmentSchema = z.object({
 const noteSchema = z.string().max(2000);
 const filtersSchema = z.object({
   colours: z.array(z.enum(["white", "green", "yellow", "red", "grey"])).max(5),
-  icons: z.array(z.enum(["paused", "doubt", "review", "important", "recurring"])).max(5),
+  icons: z.array(z.enum(["paused", "doubt", "review", "important", "recurring", "restarted"])).max(6),
   row1: z.string().max(64).nullable(),
   row2: z.string().max(64).nullable(),
   pill: z.string().max(80).nullable(),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { applyFilters, dayKeys, normaliseFilters, toggleIn, type FilterCtx } from "@/components/dashboard/filters";
-import { assigneeChip, sanitizeHtml, teamCode, waveformHeights } from "@/components/dashboard/format";
+import { assigneeChip, datePillLabel, fmtClock, fmtShortDate, pillHours, pillText, sanitizeHtml, teamCode, waveformHeights } from "@/components/dashboard/format";
 import { DEFAULT_FILTERS, type DashboardFilters, type TaskRow } from "@/server/tasks/types";
 
 const TZ = "Asia/Kolkata";
@@ -100,6 +100,16 @@ describe("applyFilters — colour and icon strip", () => {
     expect(ids(applyFilters(rows, f({ icons: ["important"] }), ctx()))).toEqual([star.id]);
     expect(ids(applyFilters(rows, f({ icons: ["recurring"] }), ctx()))).toEqual([loop.id]);
     expect(ids(applyFilters(rows, f({ icons: ["important", "recurring"] }), ctx()))).toEqual([star.id, loop.id]);
+  });
+
+  it("restarted icon matches restart copies and completed originals with a child", () => {
+    const copy = task({ parentTaskId: "orig" });
+    const original = task({ status: "COMPLETED", colour: "grey", childTaskId: copy.id });
+    const doneNoChild = task({ status: "COMPLETED", colour: "grey" });
+    const rows = [white, copy, original, doneNoChild];
+    expect(ids(applyFilters(rows, f({ icons: ["restarted"] }), ctx()))).toEqual([copy.id]);
+    expect(ids(applyFilters(rows, f({ icons: ["restarted"], completed: true }), ctx()))).toEqual([copy.id, original.id]);
+    expect(normaliseFilters({ icons: ["restarted", "bogus"] }).icons).toEqual(["restarted"]);
   });
 
   it("colour and icon groups combine with AND", () => {
@@ -215,6 +225,24 @@ describe("helpers", () => {
     expect(assigneeChip({ assignees: [{ id: "u1", name: "A", avatar: null }], teams: [{ id: "t1", name: "Graphic", colour: "" }, { id: "t2", name: "Video", colour: "" }] }, ME)).toBe("we");
     expect(assigneeChip({ assignees: [{ id: "u1", name: "Arush Kumar", avatar: null }], teams: [] }, ME)).toBe("Arush");
     expect(teamCode("web site")).toBe("WE");
+  });
+
+  it("cyan pill text: hours with one decimal max, no unit", () => {
+    expect(pillHours(300)).toBe("5");
+    expect(pillHours(330)).toBe("5.5");
+    expect(pillHours(990)).toBe("16.5");
+    expect(pillHours(0)).toBe("0");
+    expect(pillText("Repo", 330)).toBe("Repo- 5.5");
+    expect(pillText("Graphic", 300)).toBe("Graphic- 5");
+    expect(datePillLabel("date:b4leave", "B4Leave")).toBe("B4LEav");
+    expect(datePillLabel("client:x", "Repo")).toBe("Repo");
+  });
+
+  it("fmtClock / fmtShortDate use 24h and d/M/yy in the company timezone", () => {
+    expect(fmtClock("2026-09-10T11:15:00Z", TZ)).toBe("16:45");
+    expect(fmtClock("2026-09-09T23:15:00Z", TZ)).toBe("4:45");
+    expect(fmtClock(null, TZ)).toBe("--:--");
+    expect(fmtShortDate("2026-09-10T11:15:00Z", TZ)).toBe("10/9/26");
   });
 
   it("sanitizeHtml strips scripts, handlers and javascript: URLs", () => {

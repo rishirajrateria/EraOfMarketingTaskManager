@@ -190,7 +190,7 @@ export function TaskDetailSheet({
           </section>
         ) : null}
 
-        <section>
+        <section id="task-attachments">
           <div className="mb-1 flex items-center justify-between">
             <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Attachments</h3>
             {t.type === "WORK" ? (
