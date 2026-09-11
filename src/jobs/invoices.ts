@@ -1,15 +1,20 @@
 import { prisma } from "@/lib/db";
 import { cloneRecurringOccurrence, generateBalanceInvoiceCore, sendInvoiceCore } from "@/server/finance/invoice-core";
+import { draftAutoBalanceInvoices } from "@/server/finance/balance-auto";
 import { isRuleActive, nextOccurrenceAfter } from "@/server/finance/recurrence";
+
+export type InvoiceJobResult = { sent: number; generated: number; drafted: number; overdue: number };
 
 /**
  * Invoice scheduler (SPEC §11.3). Idempotent — every step changes the state it selects on:
  *  (a) SCHEDULED invoices whose sendAt has passed are sent (→ SENT);
  *  (b) active recurrence rules whose nextRunAt has passed generate + send one new occurrence, then nextRunAt advances past now;
  *  (c) SENT / PARTIALLY_PAID invoices past their due date become OVERDUE;
- *  (d) ADVANCE invoices whose balanceDueOn has passed get their balance invoice generated + sent.
+ *  (d) ADVANCE invoices in DATE mode whose balanceDueOn has passed get their balance invoice generated + sent;
+ *  (e) ADVANCE invoices in AUTO mode get a DRAFT balance invoice once the client's tasks are complete — Admin is
+ *      notified and sends it by hand.
  */
-export async function run(now = new Date()): Promise<{ sent: number; generated: number; overdue: number }> {
+export async function run(now = new Date()): Promise<InvoiceJobResult> {
   let sent = 0;
   let generated = 0;
 
@@ -53,7 +58,7 @@ export async function run(now = new Date()): Promise<{ sent: number; generated: 
   });
 
   const advances = await prisma.invoice.findMany({
-    where: { paymentMode: "ADVANCE", balanceDueOn: { lte: now }, balanceInvoice: null, status: { notIn: ["DRAFT", "SCHEDULED"] } },
+    where: { paymentMode: "ADVANCE", balanceMode: "DATE", balanceDueOn: { lte: now }, balanceInvoice: null, status: { notIn: ["DRAFT", "SCHEDULED"] } },
     select: { id: true },
   });
   for (const adv of advances) {
@@ -66,5 +71,7 @@ export async function run(now = new Date()): Promise<{ sent: number; generated: 
     }
   }
 
-  return { sent, generated, overdue: overdue.count };
+  const drafted = await draftAutoBalanceInvoices();
+
+  return { sent, generated, drafted, overdue: overdue.count };
 }

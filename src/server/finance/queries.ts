@@ -1,5 +1,5 @@
 import { addMonths, subMonths } from "date-fns";
-import type { InvoiceStatus, Prisma } from "@prisma/client";
+import type { BalanceMode, InvoiceStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { fmtDate, parseDateKey } from "@/lib/time";
@@ -120,9 +120,13 @@ export type InvoiceDetail = InvoiceRow & {
   notes: string | null;
   paymentTerms: string | null;
   advancePercent: number | null;
+  balanceMode: BalanceMode;
   balanceDueOn: string | null;
   balanceInvoice: { id: string; number: string } | null;
-  balanceOf: { id: string; number: string } | null;
+  /** The advance this invoice settles; its balanceMode tells whether this draft was generated automatically. */
+  balanceOf: { id: string; number: string; balanceMode: BalanceMode } | null;
+  reminderSentAt: string | null;
+  reminderCount: number;
   schedule: { frequency: string; interval: number; nextRunAt: string | null; endDate: string | null; stopped: boolean } | null;
   items: { id: string; description: string; hsnSac: string | null; qty: number; unit: "HOURS" | "FIXED"; rate: number; amount: number }[];
   payments: { id: string; amount: number; receivedAt: string; method: string; reference: string | null; receiptNumber: string | null; receiptSentAt: string | null }[];
@@ -137,7 +141,7 @@ export async function getInvoiceDetail(id: string): Promise<InvoiceDetail | null
       payments: { orderBy: { receivedAt: "asc" } },
       schedule: true,
       balanceInvoice: { select: { id: true, number: true } },
-      balanceOf: { select: { id: true, number: true } },
+      balanceOf: { select: { id: true, number: true, balanceMode: true } },
     },
   });
   if (!i) return null;
@@ -151,9 +155,12 @@ export async function getInvoiceDetail(id: string): Promise<InvoiceDetail | null
     notes: i.notes,
     paymentTerms: i.paymentTerms,
     advancePercent: i.advancePercent,
+    balanceMode: i.balanceMode,
     balanceDueOn: i.balanceDueOn?.toISOString() ?? null,
     balanceInvoice: i.balanceInvoice,
     balanceOf: i.balanceOf,
+    reminderSentAt: i.reminderSentAt?.toISOString() ?? null,
+    reminderCount: i.reminderCount,
     schedule: i.schedule
       ? { frequency: i.schedule.frequency, interval: i.schedule.interval, nextRunAt: i.schedule.nextRunAt?.toISOString() ?? null, endDate: i.schedule.endDate?.toISOString() ?? null, stopped: i.schedule.stopped }
       : null,
@@ -220,8 +227,4 @@ export async function financeSummary(now = new Date()): Promise<FinanceSummary> 
   };
   totals.net = round2(totals.received - totals.expenses);
   return { months: monthRows, clients: clientRows, totals };
-}
-
-export async function caUsers() {
-  return prisma.user.findMany({ where: { role: "CA", active: true }, select: { id: true, name: true, email: true }, orderBy: { name: "asc" } });
 }

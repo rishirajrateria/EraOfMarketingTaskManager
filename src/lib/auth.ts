@@ -66,6 +66,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const existing = await prisma.user.findUnique({ where: { email } });
       if (existing) {
         if (!existing.active) return false;
+        if (existing.role === "CA") return "/login?error=RoleParked"; // CA access is parked (ADR 0004)
         await prisma.user.update({
           where: { id: existing.id },
           data: {

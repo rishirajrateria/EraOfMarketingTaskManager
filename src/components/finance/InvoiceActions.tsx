@@ -6,17 +6,19 @@ import { Field, btnDanger, btnPrimary, btnSecondary, inputCls } from "@/componen
 import { useToast } from "@/components/ui/Toast";
 import { formatINR } from "@/server/finance/money";
 import type { InvoiceDetail } from "@/server/finance/queries";
-import { deleteInvoice, generateBalanceInvoice, scheduleInvoice, sendInvoice, stopRecurrence } from "@/server/finance/invoices";
+import { deleteInvoice, generateBalanceInvoice, scheduleInvoice, sendInvoice, sendReminder, stopRecurrence } from "@/server/finance/invoices";
 import { recordPayment } from "@/server/finance/payments";
+import { fmtDayTime } from "@/components/finance/finance-ui";
 
-/** Admin-only buttons on the invoice detail page: send / schedule / record payment / balance invoice / stop / delete. */
-export function InvoiceActions({ inv }: { inv: InvoiceDetail }) {
+/** Admin-only buttons on the invoice detail page: send / schedule / record payment / reminder / balance invoice / stop / delete. */
+export function InvoiceActions({ inv, tz }: { inv: InvoiceDetail; tz: string }) {
   const router = useRouter();
   const toast = useToast();
   const [sheet, setSheet] = useState<"pay" | "schedule" | null>(null);
   const [busy, setBusy] = useState(false);
   const draft = inv.status === "DRAFT" || inv.status === "SCHEDULED";
   const payable = !draft && inv.status !== "PAID";
+  const remindable = payable && !!inv.clientEmail;
 
   async function act<T>(fn: () => Promise<{ ok: true; data: T } | { ok: false; error: string }>, okMsg: (d: T) => string) {
     setBusy(true);
@@ -66,6 +68,16 @@ export function InvoiceActions({ inv }: { inv: InvoiceDetail }) {
         <button className={btnPrimary} disabled={busy} onClick={() => setSheet("pay")}>
           Mark as paid
         </button>
+      ) : null}
+      {remindable ? (
+        <span className="flex flex-col">
+          <button className={btnSecondary} disabled={busy} onClick={() => act(() => sendReminder(inv.id), (d) => `Reminder ${d.reminderCount} emailed · outstanding ${formatINR(d.balance)}`)}>
+            Send reminder
+          </button>
+          <span className="mt-0.5 text-[11px] text-gray-500">
+            {inv.reminderSentAt ? `Last reminder: ${fmtDayTime(inv.reminderSentAt, tz)} (${inv.reminderCount})` : "No reminder sent yet"}
+          </span>
+        </span>
       ) : null}
       {inv.paymentMode === "ADVANCE" && !inv.balanceInvoice && !draft ? (
         <button className={btnSecondary} disabled={busy} onClick={() => act(() => generateBalanceInvoice(inv.id), (d) => `Balance invoice ${d.number} sent`)}>

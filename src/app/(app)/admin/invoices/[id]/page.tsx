@@ -5,7 +5,7 @@ import { getInvoiceDetail } from "@/server/finance/queries";
 import { getSettings } from "@/lib/settings";
 import { formatINR } from "@/server/finance/money";
 import { InvoiceActions } from "@/components/finance/InvoiceActions";
-import { STATUS_LABEL, STATUS_TONE, fmtDay, fmtDayTime } from "@/components/finance/finance-ui";
+import { BALANCE_MODE_LABEL, STATUS_LABEL, STATUS_TONE, fmtDay, fmtDayTime } from "@/components/finance/finance-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +16,8 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   const [inv, settings] = await Promise.all([getInvoiceDetail(id), getSettings()]);
   if (!inv) notFound();
   const tz = settings.timezone;
+  const autoDraft = inv.status === "DRAFT" && inv.balanceOf?.balanceMode === "AUTO";
+  const balanceText = inv.balanceMode === "DATE" && inv.balanceDueOn ? `on ${fmtDay(inv.balanceDueOn, tz)}` : BALANCE_MODE_LABEL[inv.balanceMode];
   const Row = ({ k, v }: { k: string; v: React.ReactNode }) => (
     <div className="flex justify-between gap-3 text-sm">
       <span className="text-gray-500">{k}</span>
@@ -44,7 +46,13 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
-      {user.canWrite ? <InvoiceActions inv={inv} /> : null}
+      {autoDraft ? (
+        <div role="status" className="mx-4 mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <b>Auto-generated balance invoice</b> — review and Send. Raised because {inv.clientName}&apos;s tasks are complete (balance of{" "}
+          {inv.balanceOf ? <Link className="underline" href={`/admin/invoices/${inv.balanceOf.id}`}>{inv.balanceOf.number}</Link> : null}). Nothing has been emailed yet.
+        </div>
+      ) : null}
+      {user.canWrite ? <InvoiceActions inv={inv} tz={tz} /> : null}
       <div className="px-4 pb-2">
         <a href={`/api/files/invoice/${inv.id}`} target="_blank" rel="noreferrer" className="text-sm text-brand-blue underline">
           {inv.status === "DRAFT" || inv.status === "SCHEDULED" ? "Preview PDF" : "Download PDF"}
@@ -81,7 +89,8 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
           {inv.sendAt && inv.status === "SCHEDULED" ? <Row k="Scheduled send" v={fmtDayTime(inv.sendAt, tz)} /> : null}
           {inv.sentAt ? <Row k="Sent" v={fmtDayTime(inv.sentAt, tz)} /> : null}
           <Row k="Due" v={fmtDay(inv.dueDate, tz)} />
-          <Row k="Payment" v={inv.paymentMode === "ADVANCE" ? `Advance ${inv.advancePercent}% · balance ${inv.balanceDueOn ? fmtDay(inv.balanceDueOn, tz) : "on completion"}` : "Full"} />
+          <Row k="Payment" v={inv.paymentMode === "ADVANCE" ? `Advance ${inv.advancePercent}% · balance ${balanceText}` : "Full"} />
+          {inv.reminderSentAt ? <Row k="Last reminder" v={`${fmtDayTime(inv.reminderSentAt, tz)} (${inv.reminderCount})`} /> : null}
           {inv.balanceInvoice ? <Row k="Balance invoice" v={<Link className="text-brand-blue underline" href={`/admin/invoices/${inv.balanceInvoice.id}`}>{inv.balanceInvoice.number}</Link>} /> : null}
           {inv.balanceOf ? <Row k="Balance of" v={<Link className="text-brand-blue underline" href={`/admin/invoices/${inv.balanceOf.id}`}>{inv.balanceOf.number}</Link>} /> : null}
           {inv.schedule ? (

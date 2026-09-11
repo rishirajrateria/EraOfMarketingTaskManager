@@ -14,7 +14,7 @@ const HOME: Record<Role, string> = {
   TEAM_LEADER: "/",
   EXECUTIVE: "/",
   HR: "/attendance",
-  CA: "/admin/finance",
+  CA: "/me",
 };
 
 export function AppFrame({

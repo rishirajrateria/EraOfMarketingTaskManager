@@ -1,4 +1,4 @@
-import { Prisma, type Invoice, type InvoiceItem, type Client, type RecurrenceRule } from "@prisma/client";
+import { Prisma, type BalanceMode, type Invoice, type InvoiceItem, type Client, type RecurrenceRule } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { adminIds, notify } from "@/lib/notify";
@@ -67,12 +67,21 @@ function itemsCreate(rows: ItemRow[]) {
   }));
 }
 
+/** ADVANCE invoices default to DATE when a balance date is given, else MANUAL; FULL invoices carry the column default. */
+export function resolveBalanceMode(input: Pick<InvoiceInput, "paymentMode" | "balanceMode" | "balanceDueOn">): BalanceMode {
+  if (input.paymentMode !== "ADVANCE") return "MANUAL";
+  const mode = input.balanceMode ?? (input.balanceDueOn ? "DATE" : "MANUAL");
+  if (mode === "DATE" && !input.balanceDueOn) throw new Error("balance due date required when the balance is raised on a date");
+  return mode;
+}
+
 export async function createInvoiceRecord(input: InvoiceInput, actorId: string | null): Promise<InvoiceFull> {
   const settings = await getSettings();
   const client = await prisma.client.findUnique({ where: { id: input.clientId } });
   if (!client) throw new Error("Client not found");
   if (input.paymentMode === "ADVANCE" && !input.advancePercent) throw new Error("advance % required for ADVANCE mode");
   if (input.kind === "RECURRING" && !input.recurrence) throw new Error("recurrence rule required for RECURRING invoices");
+  const balanceMode = resolveBalanceMode(input);
   const gstPercent = input.gstPercent ?? settings.defaultGstPercent.toNumber();
   const rows = buildItemRows(input);
   const t = computeTotals(rows.map((r) => ({ qty: 1, unit: "FIXED" as const, rate: r.amount })), gstPercent);
@@ -80,7 +89,7 @@ export async function createInvoiceRecord(input: InvoiceInput, actorId: string |
   const status = input.sendAt && input.sendAt > now ? "SCHEDULED" : "DRAFT";
 
   const created = await prisma.$transaction(async (tx) => {
-    const number = await allocateInvoiceNumber(tx);
+    const number = await allocateInvoiceNumber(tx, now);
     let scheduleId: string | undefined;
     if (input.kind === "RECURRING" && input.recurrence) {
       const r = input.recurrence;
@@ -109,7 +118,8 @@ export async function createInvoiceRecord(input: InvoiceInput, actorId: string |
         scheduleId,
         paymentMode: input.paymentMode,
         advancePercent: input.paymentMode === "ADVANCE" ? input.advancePercent : null,
-        balanceDueOn: input.paymentMode === "ADVANCE" ? input.balanceDueOn : null,
+        balanceMode,
+        balanceDueOn: balanceMode === "DATE" ? input.balanceDueOn : null,
         notes: input.notes,
         paymentTerms: input.paymentTerms ?? settings.invoiceTerms,
         dueDate: input.dueDate,
@@ -213,7 +223,7 @@ export async function generateBalanceInvoiceCore(advanceId: string, actorId: str
   const t = computeTotals([{ qty: 1, unit: "FIXED", rate: remaining }], gst);
   const issuedAt = new Date();
   const created = await prisma.$transaction(async (tx) => {
-    const number = await allocateInvoiceNumber(tx);
+    const number = await allocateInvoiceNumber(tx, issuedAt);
     const inv = await tx.invoice.create({
       data: {
         clientId: adv.clientId,
@@ -243,7 +253,7 @@ export async function generateBalanceInvoiceCore(advanceId: string, actorId: str
 export async function cloneRecurringOccurrence(template: InvoiceFull, occurrenceAt: Date, actorId: string | null): Promise<InvoiceFull> {
   const rows: ItemRow[] = template.items.map((i) => ({ description: i.description, hsnSac: i.hsnSac, qty: i.qty.toNumber(), unit: i.unit, rate: i.rate.toNumber(), amount: i.amount.toNumber() }));
   return prisma.$transaction(async (tx: Tx) => {
-    const number = await allocateInvoiceNumber(tx);
+    const number = await allocateInvoiceNumber(tx, occurrenceAt);
     const inv = await tx.invoice.create({
       data: {
         clientId: template.clientId,

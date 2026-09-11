@@ -4,9 +4,9 @@ import { wrap, type ActionResult } from "@/lib/action-result";
 import { safeRevalidate } from "@/lib/revalidate";
 import { toCsv } from "@/server/finance/money";
 import { financeSummary } from "@/server/finance/queries";
-import { pullPaymentsFromSheet, syncFinanceSheet, type SheetSyncResult } from "@/server/finance/sheets-sync";
+import { syncFinanceSheet, type SheetSyncResult } from "@/server/finance/sheets-sync";
 
-/** Finance sheet actions (SPEC §11.4): CSV export (ADMIN/CA), two-way Google Sheet sync (ADMIN). */
+/** Finance sheet actions (SPEC §11.4): CSV export and the push-only Google Sheet mirror. ADMIN only. */
 async function requireWrite() {
   const u = await requireUser();
   if (!can.financeWrite(u)) throw new ForbiddenError("Only Admin can sync the finance sheet");
@@ -27,19 +27,11 @@ export async function exportFinanceCsv(): Promise<ActionResult<string>> {
   });
 }
 
+/** Push the app's invoices, payments, expenses and summary to the Google Sheet (a read-only mirror). */
 export async function syncFinance(): Promise<ActionResult<SheetSyncResult>> {
   return wrap(async () => {
     const actor = await requireWrite();
     const res = await syncFinanceSheet(actor.id);
-    safeRevalidate("/admin/finance", "/admin/invoices");
-    return res;
-  });
-}
-
-export async function pullFinancePayments(): Promise<ActionResult<SheetSyncResult>> {
-  return wrap(async () => {
-    const actor = await requireWrite();
-    const res = await pullPaymentsFromSheet(actor.id);
     safeRevalidate("/admin/finance", "/admin/invoices");
     return res;
   });

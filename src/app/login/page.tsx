@@ -4,6 +4,7 @@ import { env } from "@/lib/env";
 
 const ERRORS: Record<string, string> = {
   NotInvited: "This Google account has not been added by an Admin yet.",
+  RoleParked: "Accountant (CA) access is not enabled. Please ask the Admin.",
   AccessDenied: "Only accounts on the company Google Workspace can sign in.",
   Configuration: "Sign-in is not configured. Check AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET.",
 };

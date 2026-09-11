@@ -17,7 +17,7 @@ describe("pdf + money", () => {
   it("renders an invoice PDF buffer", async () => {
     const buf = await renderInvoicePdf(
       {
-        number: "EOM-INV-0001",
+        number: "EOM/26-27/0001",
         issuedAt: new Date("2026-09-10T00:00:00Z"),
         dueDate: new Date("2026-09-25T00:00:00Z"),
         items: [
@@ -40,7 +40,7 @@ describe("pdf + money", () => {
   });
   it("renders a receipt PDF buffer (with a logo it cannot parse → skipped)", async () => {
     const buf = await renderReceiptPdf(
-      { receiptNumber: "EOM-RCP-0001", receivedAt: new Date(), amount: 10000, method: "UPI", reference: "UTR123", invoiceNumber: "EOM-INV-0001", invoiceTotal: 23600, totalReceived: 10000 },
+      { receiptNumber: "EOM-RCP/26-27/0001", receivedAt: new Date(), amount: 10000, method: "UPI", reference: "UTR123", invoiceNumber: "EOM/26-27/0001", invoiceTotal: 23600, totalReceived: 10000 },
       { name: "Repo" },
       { ...company, logoData: Buffer.from("not-an-image") },
     );

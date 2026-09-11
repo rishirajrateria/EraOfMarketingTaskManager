@@ -3,11 +3,11 @@ import { loadInvoiceFull, renderInvoiceBuffer } from "@/server/finance/invoice-c
 
 export const dynamic = "force-dynamic";
 
-/** Streams the stored invoice PDF; drafts are rendered on the fly as a preview. ADMIN / CA only. */
+/** Streams the stored invoice PDF; drafts are rendered on the fly as a preview. ADMIN only. */
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await currentUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
-  if (!can.financeRead(user)) return new Response("Forbidden", { status: 403 });
+  if (user.role !== "ADMIN" || !can.financeRead(user)) return new Response("Forbidden", { status: 403 });
   const { id } = await params;
   const inv = await loadInvoiceFull(id);
   if (!inv) return new Response("Not found", { status: 404 });

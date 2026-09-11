@@ -7,7 +7,7 @@ import { InvoiceListView } from "@/components/finance/InvoiceListView";
 export const dynamic = "force-dynamic";
 const STATUSES = new Set<string>(["DRAFT", "SCHEDULED", "SENT", "PARTIALLY_PAID", "PAID", "OVERDUE"]);
 
-/** Payment Creator (SPEC §11.3). Readable by ADMIN and CA; mutations ADMIN-only. */
+/** Payment Creator (SPEC §11.3). ADMIN only. */
 export default async function InvoicesPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const user = await requireFinancePage();
   const { status: raw } = await searchParams;

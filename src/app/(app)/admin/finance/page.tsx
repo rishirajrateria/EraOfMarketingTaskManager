@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireFinancePage } from "@/server/finance/guard";
-import { caUsers, financeSummary } from "@/server/finance/queries";
+import { financeSummary } from "@/server/finance/queries";
 import { formatINR } from "@/server/finance/money";
 import { env } from "@/lib/env";
 import { MonthlyBars, ClientBars } from "@/components/finance/FinanceCharts";
@@ -8,10 +8,10 @@ import { FinanceActions } from "@/components/finance/FinanceActions";
 
 export const dynamic = "force-dynamic";
 
-/** Finance sheet dashboard (SPEC §11.4): invoiced vs received vs outstanding, expenses, net; Sheets sync; CA access. */
+/** Finance sheet dashboard (SPEC §11.4): invoiced vs received vs outstanding, expenses, net; push-only Sheets mirror. ADMIN only. */
 export default async function FinancePage() {
   const user = await requireFinancePage();
-  const [summary, cas] = await Promise.all([financeSummary(), caUsers()]);
+  const summary = await financeSummary();
   const t = summary.totals;
   const tiles = [
     { label: "Invoiced", value: t.invoiced, cls: "text-brand-blue" },
@@ -61,14 +61,7 @@ export default async function FinancePage() {
         </div>
       </section>
       <section className="mx-4 mt-4 rounded-lg border bg-gray-50 p-3 text-xs">
-        <div className="mb-1 font-semibold">CA access (read-only)</div>
-        {cas.length === 0 ? <p className="text-gray-500">No CA user yet.</p> : (
-          <ul className="space-y-0.5">{cas.map((c) => <li key={c.id}>{c.name} · {c.email}</li>)}</ul>
-        )}
-        {user.canWrite ? (
-          <Link href="/admin/people?role=CA" className="mt-2 inline-block text-brand-blue underline">Manage CA users</Link>
-        ) : null}
-        <div className="mt-2 flex gap-3">
+        <div className="flex gap-3">
           <Link href="/admin/invoices" className="text-brand-blue underline">Invoices</Link>
           <Link href="/admin/expenses" className="text-brand-blue underline">Expenses</Link>
         </div>

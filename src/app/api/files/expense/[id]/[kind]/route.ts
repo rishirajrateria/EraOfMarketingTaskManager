@@ -3,11 +3,11 @@ import { can, currentUser } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
-/** Streams an expense's receipt photo (`kind=receipt`) or voice note (`kind=voice`). ADMIN / CA only. */
+/** Streams an expense's receipt photo (`kind=receipt`) or voice note (`kind=voice`). ADMIN only. */
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string; kind: string }> }) {
   const user = await currentUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
-  if (!can.financeRead(user)) return new Response("Forbidden", { status: 403 });
+  if (user.role !== "ADMIN" || !can.financeRead(user)) return new Response("Forbidden", { status: 403 });
   const { id, kind } = await params;
   if (kind !== "receipt" && kind !== "voice") return new Response("Not found", { status: 404 });
   const e = await prisma.expense.findUnique({

@@ -6,6 +6,7 @@ import { can, requireUser, ForbiddenError } from "@/lib/rbac";
 import { wrap, type ActionResult } from "@/lib/action-result";
 import { safeRevalidate } from "@/lib/revalidate";
 import { createInvoiceRecord, generateBalanceInvoiceCore, sendInvoiceCore } from "@/server/finance/invoice-core";
+import { sendReminderCore } from "@/server/finance/reminder-core";
 import { dateInput, invoiceInputSchema, parseInput } from "@/server/finance/schemas";
 
 /** Payment Creator server actions (SPEC §11.3). All mutations are ADMIN-only. */
@@ -56,13 +57,25 @@ export async function scheduleInvoice(id: string, sendAtRaw: unknown): Promise<A
   });
 }
 
-/** Advance invoices with "balance on completion": Admin generates (and sends) the balance invoice. */
+/** Advance invoices (balance mode MANUAL, or any advance still without a balance): Admin generates and sends the balance invoice. */
 export async function generateBalanceInvoice(advanceId: string): Promise<ActionResult<{ id: string; number: string }>> {
   return wrap(async () => {
     const actor = await requireWrite();
     const inv = await generateBalanceInvoiceCore(advanceId, actor.id, true);
     safeRevalidate(...paths(advanceId), `${LIST}/${inv.id}`);
     return { id: inv.id, number: inv.number };
+  });
+}
+
+export type ReminderView = { reminderSentAt: string; reminderCount: number; balance: number };
+
+/** Manual reminder for SENT / PARTIALLY_PAID / OVERDUE invoices: re-emails the PDF with a gentle nudge. */
+export async function sendReminder(id: string): Promise<ActionResult<ReminderView>> {
+  return wrap(async () => {
+    const actor = await requireWrite();
+    const r = await sendReminderCore(id, actor.id);
+    safeRevalidate(...paths(id));
+    return { reminderSentAt: r.reminderSentAt.toISOString(), reminderCount: r.reminderCount, balance: r.balance };
   });
 }
 

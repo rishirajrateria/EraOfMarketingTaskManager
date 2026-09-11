@@ -1,5 +1,18 @@
 /** Client-safe helpers shared by finance components (no server imports). */
-import type { InvoiceStatus } from "@prisma/client";
+import type { BalanceMode, InvoiceStatus } from "@prisma/client";
+
+/** How the balance invoice of an ADVANCE invoice is raised (create form radio + detail page). */
+export const BALANCE_MODE_OPTIONS: { value: BalanceMode; label: string }[] = [
+  { value: "DATE", label: "On a date" },
+  { value: "MANUAL", label: "Manually" },
+  { value: "AUTO", label: "Automatically when the client's tasks are complete (ask me before sending)" },
+];
+
+export const BALANCE_MODE_LABEL: Record<BalanceMode, string> = {
+  DATE: "on a date",
+  MANUAL: "manually",
+  AUTO: "automatically when the client's tasks are complete",
+};
 
 export const STATUS_TONE: Record<InvoiceStatus, string> = {
   DRAFT: "bg-gray-200 text-gray-800",

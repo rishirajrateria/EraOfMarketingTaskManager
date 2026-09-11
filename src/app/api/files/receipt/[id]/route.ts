@@ -3,11 +3,11 @@ import { can, currentUser } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
-/** Streams a stored receipt PDF for a payment id. ADMIN / CA only. */
+/** Streams a stored receipt PDF for a payment id. ADMIN only. */
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await currentUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
-  if (!can.financeRead(user)) return new Response("Forbidden", { status: 403 });
+  if (user.role !== "ADMIN" || !can.financeRead(user)) return new Response("Forbidden", { status: 403 });
   const { id } = await params;
   const p = await prisma.payment.findUnique({ where: { id }, select: { receiptNumber: true, receiptPdfData: true } });
   if (!p?.receiptPdfData || p.receiptPdfData.length === 0) return new Response("Not found", { status: 404 });

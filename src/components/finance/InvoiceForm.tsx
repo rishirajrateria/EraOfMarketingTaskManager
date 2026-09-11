@@ -5,7 +5,8 @@ import { Field, btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field
 import { useToast } from "@/components/ui/Toast";
 import { computeTotals, formatINR, lineAmount } from "@/server/finance/money";
 import { createInvoice } from "@/server/finance/invoices";
-import { inputSm } from "@/components/finance/finance-ui";
+import { BALANCE_MODE_OPTIONS, inputSm } from "@/components/finance/finance-ui";
+import type { BalanceMode } from "@prisma/client";
 
 type Line = { description: string; hsnSac: string; qty: string; unit: "HOURS" | "FIXED"; rate: string };
 type ClientOpt = { id: string; name: string; email: string | null };
@@ -30,6 +31,7 @@ export function InvoiceForm({ clients, defaultGst, defaultTerms, onDone }: { cli
   const [endDate, setEndDate] = useState("");
   const [mode, setMode] = useState<"FULL" | "ADVANCE">("FULL");
   const [advancePct, setAdvancePct] = useState("50");
+  const [balanceMode, setBalanceMode] = useState<BalanceMode>("MANUAL");
   const [balanceDueOn, setBalanceDueOn] = useState("");
   const [sendAt, setSendAt] = useState("");
 
@@ -57,11 +59,13 @@ export function InvoiceForm({ clients, defaultGst, defaultTerms, onDone }: { cli
       recurrence: kind === "RECURRING" ? { frequency: freq, interval: Number(interval) || 1, byWeekday: freq === "WEEKLY" ? byWeekday : [], endDate: endDate || null } : null,
       paymentMode: mode,
       advancePercent: mode === "ADVANCE" ? Number(advancePct) : null,
-      balanceDueOn: mode === "ADVANCE" && balanceDueOn ? balanceDueOn : null,
+      balanceMode: mode === "ADVANCE" ? balanceMode : null,
+      balanceDueOn: mode === "ADVANCE" && balanceMode === "DATE" && balanceDueOn ? balanceDueOn : null,
       sendAt: action === "schedule" && sendAt ? new Date(sendAt).toISOString() : null,
       sendNow: action === "send",
     };
     if (action === "schedule" && !sendAt) return toast("Pick a send date/time", "err");
+    if (mode === "ADVANCE" && balanceMode === "DATE" && !balanceDueOn) return toast("Pick the balance date", "err");
     setBusy(action);
     const res = await createInvoice(payload);
     setBusy(null);
@@ -165,13 +169,26 @@ export function InvoiceForm({ clients, defaultGst, defaultTerms, onDone }: { cli
         </div>
       </Field>
       {mode === "ADVANCE" ? (
-        <div className="grid grid-cols-2 gap-2 rounded-lg bg-gray-50 p-3">
+        <div className="space-y-3 rounded-lg bg-gray-50 p-3">
           <Field label="Advance %">
             <input type="number" min="1" max="99" value={advancePct} onChange={(e) => setAdvancePct(e.target.value)} className={inputSm} />
           </Field>
-          <Field label="Balance due on" hint="empty = on completion">
-            <input type="date" value={balanceDueOn} onChange={(e) => setBalanceDueOn(e.target.value)} className={inputSm} />
-          </Field>
+          <fieldset>
+            <legend className="mb-1 text-xs font-medium text-gray-600">Balance</legend>
+            <div className="space-y-1.5">
+              {BALANCE_MODE_OPTIONS.map((o) => (
+                <label key={o.value} className="flex items-start gap-2 text-sm">
+                  <input type="radio" name="balanceMode" value={o.value} checked={balanceMode === o.value} onChange={() => setBalanceMode(o.value)} className="mt-1" />
+                  <span>{o.label}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          {balanceMode === "DATE" ? (
+            <Field label="Balance due on">
+              <input type="date" value={balanceDueOn} onChange={(e) => setBalanceDueOn(e.target.value)} className={inputSm} />
+            </Field>
+          ) : null}
         </div>
       ) : null}
 
