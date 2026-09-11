@@ -11,6 +11,7 @@ import { proposeSlot, shiftDisplacedTasks, type SlotProposal } from "@/server/sc
 import { queueTaskCreation } from "@/google/task-integrations";
 import { taskInputSchema, type TaskInput } from "@/server/tasks/schema";
 import { nextRunAt } from "@/server/tasks/recurrence";
+import { ACTIVE_STATUSES } from "@/server/tasks/state";
 import { sanitizeDescription } from "@/lib/sanitize";
 import { z } from "zod";
 
@@ -153,5 +154,64 @@ export async function periodLoads(assigneeIds: string[]): Promise<ActionResult<R
       periodLoad(ids, today, addMonths(today, 1)),
     ]);
     return { today: t, tomorrow: tom, week, month };
+  });
+}
+
+/**
+ * Add-task header (design): remaining inventory (capacity − assigned) and the number of tasks already assigned
+ * for Today / Tom / Week / month. Scope = the selected assignees, or the caller's whole visible team when none
+ * are selected (Admin: everyone; Team Leader: own executives + self; Executive: self).
+ */
+export async function addTaskInventory(assigneeIds: string[]): Promise<ActionResult<Record<string, { minutes: number; count: number }>>> {
+  return wrap(async () => {
+    const user = await requireUser();
+    if (user.role === "HR" || user.role === "CA") throw new ForbiddenError();
+    const requested = idsSchema.parse(assigneeIds);
+    if (requested.length) await validateAssignees(user, requested, "WORK");
+    let scope: string[] = requested;
+    if (!scope.length) {
+      if (user.role === "ADMIN") {
+        scope = (await prisma.user.findMany({ where: { active: true, role: { in: ["ADMIN", "TEAM_LEADER", "EXECUTIVE"] } }, select: { id: true } })).map((u) => u.id);
+      } else if (user.role === "TEAM_LEADER") {
+        scope = [user.id, ...(await prisma.user.findMany({ where: { active: true, teamLeaderId: user.id }, select: { id: true } })).map((u) => u.id)];
+      } else {
+        scope = [user.id];
+      }
+    }
+    const { inventoryFor } = await import("@/server/inventory/queries");
+    const { zonedStartOfDay, dateKey } = await import("@/lib/time");
+    const { addDays, addMonths } = await import("date-fns");
+    const tz = (await getSettings()).timezone;
+    const today = zonedStartOfDay(new Date(), tz);
+    const monthEnd = addDays(addMonths(today, 1), -1);
+    const key = (d: Date) => dateKey(d, tz);
+    const periods: Record<string, { fromKey: string; toKey: string }> = {
+      today: { fromKey: key(today), toKey: key(today) },
+      tomorrow: { fromKey: key(addDays(today, 1)), toKey: key(addDays(today, 1)) },
+      week: { fromKey: key(today), toKey: key(addDays(today, 6)) },
+      month: { fromKey: key(today), toKey: key(monthEnd) },
+    };
+    // One inventory pass over the month; periods are derived from the per-user per-day rows.
+    const scopeSet = new Set(scope);
+    const inv = await inventoryFor({ from: today, to: monthEnd });
+    const rows = inv.rows.filter((r) => scopeSet.has(r.userId));
+    const tasks = await prisma.task.findMany({
+      where: {
+        deletedAt: null,
+        status: { in: ACTIVE_STATUSES },
+        assignees: { some: { userId: { in: scope } } },
+        scheduledStart: { gte: today, lt: addDays(monthEnd, 1) },
+      },
+      select: { scheduledStart: true },
+    });
+    const out: Record<string, { minutes: number; count: number }> = {};
+    for (const [name, p] of Object.entries(periods)) {
+      const inRange = (k: string) => k >= p.fromKey && k <= p.toKey;
+      out[name] = {
+        minutes: rows.filter((r) => inRange(r.date)).reduce((sum, r) => sum + r.sellableMinutes, 0),
+        count: tasks.filter((t) => t.scheduledStart && inRange(key(t.scheduledStart))).length,
+      };
+    }
+    return out;
   });
 }

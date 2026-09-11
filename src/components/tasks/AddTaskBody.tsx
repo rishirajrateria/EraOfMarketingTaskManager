@@ -5,7 +5,7 @@ import { clsx } from "@/lib/clsx";
 import { RichTextEditor, type RichTextEditorHandle } from "@/components/tasks/RichTextEditor";
 import { DictationButton } from "@/components/tasks/DictationButton";
 import { VoiceInputBar, VoiceNoteStrip, type VoiceNote } from "@/components/tasks/VoiceRecorder";
-import type { AddTaskForm, TaskMode } from "@/components/tasks/add-task-helpers";
+import type { AddTaskForm } from "@/components/tasks/add-task-helpers";
 
 type Props = {
   form: AddTaskForm;
@@ -25,19 +25,6 @@ type Props = {
 
 const ICON_BTN = "flex h-9 w-9 items-center justify-center rounded-md bg-[#2B2B2B] text-white";
 
-/** Step-0 chooser: two big Work / Meeting buttons in the dark body. */
-export function AddTaskChooser({ onChoose }: { onChoose: (type: TaskMode) => void }) {
-  return (
-    <div className="flex flex-1 flex-col gap-4 bg-[#1E1E1E] p-6 pt-10 text-white">
-      <button type="button" onClick={() => onChoose("WORK")} className="h-[88px] rounded-xl bg-[#2563EB] text-2xl font-bold text-white active:brightness-90">
-        Work
-      </button>
-      <button type="button" onClick={() => onChoose("MEETING")} className="h-[88px] rounded-xl bg-[#16A34A] text-2xl font-bold text-white active:brightness-90">
-        Meeting
-      </button>
-    </div>
-  );
-}
 
 /** DARK BODY: star/loop column, title, rich description, assignee + send row, input bar, voice notes, file chips. */
 export function AddTaskBody(p: Props) {

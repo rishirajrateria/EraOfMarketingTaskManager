@@ -5,11 +5,11 @@ import type { JSX } from "react";
 import { Sheet } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import type { DashboardData } from "@/server/tasks/types";
-import { createTask, periodLoads } from "@/server/tasks/create";
+import { addTaskInventory, createTask } from "@/server/tasks/create";
 import { uploadAttachment } from "@/server/tasks/manage";
 import { AddTaskHeader } from "@/components/tasks/AddTaskHeader";
-import { AddTaskBody, AddTaskChooser } from "@/components/tasks/AddTaskBody";
-import { AddTaskBottomBar, AddTaskTags, type Shortcut } from "@/components/tasks/AddTaskFooter";
+import { AddTaskBody } from "@/components/tasks/AddTaskBody";
+import { AddTaskBottomBar, AddTaskTags, TaskTypeSheet, type Shortcut } from "@/components/tasks/AddTaskFooter";
 import { AddTaskDetails, AssigneeSheet, LoopSheet, type DetailsFocus, type FieldErrors } from "@/components/tasks/AddTaskDetails";
 import type { VoiceNote } from "@/components/tasks/VoiceRecorder";
 import {
@@ -57,6 +57,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
   const [details, setDetails] = useState<{ open: boolean; focus: DetailsFocus }>({ open: false, focus: null });
   const [assigneesOpen, setAssigneesOpen] = useState(false);
   const [loopOpen, setLoopOpen] = useState(false);
+  const [typeOpen, setTypeOpen] = useState(false);
   const teamsTouched = useRef(false);
 
   const patch = useCallback((p: Partial<AddTaskForm>) => setForm((f) => ({ ...f, ...p })), []);
@@ -64,8 +65,9 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
   // Reset everything each time the sheet opens (or the entry mode changes while open).
   useEffect(() => {
     if (!open) return;
+    // "+" and "Work" open a task; the Meet icon opens a meeting. The type icon in the bottom bar switches later.
     const type: TaskMode = mode === "MEETING" ? "MEETING" : "WORK";
-    setChosen(mode === "CHOOSE" ? null : type);
+    setChosen(type);
     setForm(emptyForm(type, data.me.id));
     setManualTime(false);
     setVoiceNotes([]);
@@ -75,6 +77,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
     setDetails({ open: false, focus: null });
     setAssigneesOpen(false);
     setLoopOpen(false);
+    setTypeOpen(false);
     teamsTouched.current = false;
   }, [open, mode, data.me.id]);
 
@@ -86,12 +89,12 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assigneeKey]);
 
-  // Header pills — refreshed (debounced 400ms) whenever the assignee set changes.
+  // Header pills (remaining inventory + assigned tasks) — refreshed (debounced 400ms) whenever the assignee set changes.
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
     const t = setTimeout(async () => {
-      const res = await periodLoads(form.assigneeIds).catch(() => null);
+      const res = await addTaskInventory(form.assigneeIds).catch(() => null);
       if (cancelled || !res || !res.ok) return;
       setLoads({ ...EMPTY_LOADS, ...(res.data as Partial<PeriodLoads>) });
     }, 400);
@@ -105,7 +108,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
   const assignees = useMemo(() => allowedAssignees(data, chosen ?? "WORK"), [data, chosen]);
   const executives = useMemo(() => allowedAssignees(data, "WORK").filter((p) => p.id !== data.me.id), [data]);
   const meeting = chosen === "MEETING";
-  const subSheetOpen = details.open || assigneesOpen || loopOpen;
+  const subSheetOpen = details.open || assigneesOpen || loopOpen || typeOpen;
 
   const choose = (type: TaskMode) => {
     if (type === chosen) return;
@@ -189,10 +192,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
       <Sheet open={open} onClose={subSheetOpen ? () => undefined : close} full>
         <div className="flex h-full min-h-full flex-col bg-[#1E1E1E]">
           <AddTaskHeader loads={loads} />
-          {chosen === null ? (
-            <AddTaskChooser onChoose={choose} />
-          ) : (
-            <AddTaskBody
+          <AddTaskBody
               form={liveForm}
               patch={patch}
               titleError={errors.title}
@@ -206,9 +206,8 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
               setFiles={setFiles}
               busy={busy}
               onError={(m) => toast(m, "err")}
-            />
-          )}
-          {chosen !== null ? <AddTaskTags form={liveForm} patch={patch} data={data} executives={executives} onTeamsTouched={() => (teamsTouched.current = true)} /> : null}
+          />
+          <AddTaskTags form={liveForm} patch={patch} data={data} executives={executives} onTeamsTouched={() => (teamsTouched.current = true)} />
           <AddTaskBottomBar
             form={liveForm}
             type={chosen}
@@ -216,12 +215,13 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
             onShortcut={setShortcut}
             onType={choose}
             onOpenSchedule={() => setDetails({ open: true, focus: "schedule" })}
-            onOpenDetails={() => setDetails({ open: true, focus: null })}
+            onOpenTypeChooser={() => setTypeOpen(true)}
             onClose={close}
           />
         </div>
       </Sheet>
 
+      <TaskTypeSheet open={typeOpen} onClose={() => setTypeOpen(false)} type={chosen} onType={choose} />
       {chosen !== null ? (
         <>
           <AddTaskDetails
