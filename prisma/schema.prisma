@@ -98,6 +98,12 @@ enum InvoiceStatus {
   OVERDUE
 }
 
+enum BalanceMode {
+  DATE // balance invoice generated on balanceDueOn
+  MANUAL // Admin presses "Generate balance invoice"
+  AUTO // generated as a draft when the client's tasks are all complete; Admin reviews before sending
+}
+
 enum InvoiceUnit {
   HOURS
   FIXED
@@ -502,6 +508,9 @@ model Invoice {
   balanceOf        Invoice?        @relation("AdvanceBalance", fields: [balanceOfId], references: [id])
   balanceInvoice   Invoice?        @relation("AdvanceBalance")
   balanceDueOn     DateTime?
+  balanceMode      BalanceMode     @default(MANUAL)
+  reminderSentAt   DateTime?
+  reminderCount    Int             @default(0)
   notes            String?
   paymentTerms     String?
   dueDate          DateTime?
