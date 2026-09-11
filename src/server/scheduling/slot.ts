@@ -129,6 +129,7 @@ export async function shiftTaskToNextSlot(taskId: string, actorId: string, reaso
     include: { assignees: { select: { userId: true } } },
   });
   if (!task || task.deletedAt || task.status === "COMPLETED") return null;
+  if (task.protected) return null; // fixed tasks (Admin's own, or protected on request) are never moved (SPEC §2)
   const slot = await proposeSlot(
     task.assignees.map((a) => a.userId),
     task.allocatedMinutes,
