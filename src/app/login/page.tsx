@@ -13,6 +13,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   if (session?.user) redirect("/");
   const sp = await searchParams;
   const error = sp.error ? (ERRORS[sp.error] ?? "Sign-in failed. Please try again.") : null;
+  // Only same-site relative paths may be used as the post-login destination (no open redirects).
+  const redirectTo = sp.callbackUrl && /^\/(?!\/)/.test(sp.callbackUrl) ? sp.callbackUrl : "/";
   return (
     <main className="phone-frame items-center justify-center bg-brand-blue text-white">
       <div className="w-full px-8 text-center">
@@ -24,7 +26,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           className="mt-8"
           action={async () => {
             "use server";
-            await signIn("google", { redirectTo: sp.callbackUrl ?? "/" });
+            await signIn("google", { redirectTo });
           }}
         >
           <button className="touch-target w-full rounded-xl bg-white px-4 py-3 font-semibold text-brand-blue shadow" type="submit">
