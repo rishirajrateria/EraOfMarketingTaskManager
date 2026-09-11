@@ -9,7 +9,7 @@ export type NotifyInput = {
   body?: string;
   href?: string;
   taskId?: string;
-  /** post to the task's Google Chat space too (default true when taskId present) */
+  /** post to the task's Google Chat space too (default: CompanySettings.notifyChatDefault, off unless enabled) */
   chat?: boolean;
 };
 
@@ -43,7 +43,16 @@ export async function notify(input: NotifyInput, tx: Prisma.TransactionClient | 
     } catch {
       /* push optional */
     }
-    if (input.taskId && input.chat !== false) {
+    let chatWanted = input.chat === true;
+    if (input.chat === undefined && input.taskId) {
+      try {
+        const { getSettings } = await import("@/lib/settings");
+        chatWanted = (await getSettings()).notifyChatDefault;
+      } catch {
+        chatWanted = false;
+      }
+    }
+    if (input.taskId && chatWanted) {
       try {
         const { postTaskChatMessage } = await import("@/google/chat");
         await postTaskChatMessage(input.taskId, `${input.title}${input.body ? " — " + input.body : ""}`);

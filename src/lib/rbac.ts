@@ -70,7 +70,7 @@ export const can = {
   attendanceDashboard: (u: SessionUser) => isAdmin(u) || isHR(u),
   approveLeave: (u: SessionUser) => isAdmin(u) || isHR(u),
   manageVault: (u: SessionUser) => isAdmin(u),
-  financeRead: (u: SessionUser) => isAdmin(u) || u.role === "CA",
+  financeRead: (u: SessionUser) => isAdmin(u), // CA access is parked; Admin shares finance data manually
   financeWrite: (u: SessionUser) => isAdmin(u),
   resolveDoubt: (u: SessionUser) => isAdmin(u),
 };

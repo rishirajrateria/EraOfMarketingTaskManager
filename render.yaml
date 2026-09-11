@@ -1,0 +1,48 @@
+# Render blueprint: one always-on web service (Docker) + managed Postgres.
+# Real-time updates (SSE) and the inline job scheduler both need a single long-running process, which this gives.
+services:
+  - type: web
+    name: eom-task-manager
+    runtime: docker
+    plan: starter
+    region: singapore
+    healthCheckPath: /login
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: eom-postgres
+          property: connectionString
+      - key: JOBS_INLINE
+        value: "true"
+      - key: GOOGLE_MOCK
+        value: "false"
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: VAULT_ENCRYPTION_KEY
+        generateValue: true
+      - key: CRON_SECRET
+        generateValue: true
+      - key: AUTH_URL
+        sync: false
+      - key: AUTH_GOOGLE_ID
+        sync: false
+      - key: AUTH_GOOGLE_SECRET
+        sync: false
+      - key: GOOGLE_WORKSPACE_DOMAIN
+        sync: false
+      - key: BOOTSTRAP_ADMIN_EMAILS
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT_KEY_BASE64
+        sync: false
+      - key: GOOGLE_IMPERSONATE_USER
+        sync: false
+      - key: NEXT_PUBLIC_VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false
+databases:
+  - name: eom-postgres
+    plan: basic-256mb
+    region: singapore

@@ -85,13 +85,27 @@ apply migrations to it once with `DATABASE_URL=<test url> npx prisma migrate dep
    features* off, visibility: your Workspace domain. Spaces are created via `spaces.setup` by the impersonated user.
 7. Set `GOOGLE_IMPERSONATE_USER` to a real Workspace user (e.g. `ops@company.com`) and `GOOGLE_MOCK=false`.
 
-## Deployment (Vercel + Neon/Supabase)
+## Deployment
 
-- Add every env var above; set `JOBS_INLINE=false` and keep `vercel.json` crons (overdue every minute, recurrence,
-  invoices, vault-expiry, inventory nightly, leave-sync from Google Calendar every 30 minutes). Vercel sends `Authorization: Bearer $CRON_SECRET`.
+### Recommended: one always-on container + managed Postgres (Render, Railway, Fly, or any Docker host)
+
+The app needs a single long-running Node process so that real-time updates (SSE) and the inline job scheduler work
+without Redis. A `Dockerfile`, `docker-compose.yml` and a Render blueprint (`render.yaml`) are included.
+
+- **Render**: "New → Blueprint", point it at this repo; it creates the web service and a Postgres database, wires
+  `DATABASE_URL`, and generates `AUTH_SECRET`, `VAULT_ENCRYPTION_KEY` and `CRON_SECRET`. Fill in the remaining env
+  vars (Google OAuth, service account, VAPID keys, `AUTH_URL`). Migrations run on every boot (`prisma migrate deploy`).
+  Roughly $15–25/month for the starter web service plus the basic database.
+- **Any Docker host**: `docker compose up --build` (uses `.env`), or build the image and run it with `DATABASE_URL`
+  and the env vars above; keep `JOBS_INLINE=true`.
+
+### Alternative: Vercel + Neon/Supabase
+
+- Set `JOBS_INLINE=false` and keep `vercel.json` crons (overdue every minute, recurrence, invoices, vault-expiry,
+  inventory nightly, leave-sync every 30 minutes). Vercel sends `Authorization: Bearer $CRON_SECRET`.
 - Build command `npm run build` (runs `prisma generate`), then `npx prisma migrate deploy` as a release step.
-- For any Node host: `npm run build && npm start`, with `JOBS_INLINE=true` (jobs start from `instrumentation.ts`).
-- Real-time updates use in-process SSE; on multi-instance deployments swap `src/lib/events.ts` for Redis pub/sub.
+- Live updates rely on in-process SSE; on Vercel's serverless runtime they degrade to refresh-on-focus/pull-to-refresh,
+  so prefer the container deployment if instant multi-user updates matter.
 
 ## Roles & where things live
 
@@ -101,7 +115,7 @@ apply migrations to it once with `DATABASE_URL=<test url> npx prisma migrate dep
 | Team Leader | `/dashboard` | own team, start/finish, raise doubt / requests |
 | Executive | `/dashboard` | own tasks, raise review/time-change requests |
 | HR | `/attendance`, `/requests/leave` | attendance, leave approvals |
-| CA | `/admin/finance` | read-only invoices, expenses, finance sheet |
+| CA | (parked) | no login for now; Admin shares finance exports manually |
 
 Source layout: `src/app` (routes), `src/components` (UI), `src/server/<module>` (server actions + queries),
 `src/google` (Workspace wrappers + durable retry queue), `src/jobs` (schedulers), `src/lib` (auth, RBAC, time, …),
