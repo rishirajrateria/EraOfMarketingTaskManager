@@ -92,3 +92,14 @@ export async function hrIds() {
   const rows = await prisma.user.findMany({ where: { role: { in: ["HR", "ADMIN"] }, active: true }, select: { id: true } });
   return rows.map((a) => a.id);
 }
+
+/** Publish a task change only to the people who can see the task (assignees, their leaders, admins). */
+export async function publishTaskChanged(taskId: string) {
+  let userIds: string[] | undefined;
+  try {
+    userIds = await taskStakeholderIds(taskId);
+  } catch {
+    userIds = undefined;
+  }
+  bus.publish({ type: "task.changed", taskId, userIds });
+}

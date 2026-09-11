@@ -2,8 +2,7 @@
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { audit } from "@/lib/audit";
-import { notify } from "@/lib/notify";
-import { bus } from "@/lib/events";
+import { notify, publishTaskChanged } from "@/lib/notify";
 import { queueTaskCreation } from "@/google/task-integrations";
 import { nextRunAt } from "@/server/tasks/recurrence";
 import { findSlot } from "@/lib/working-time";
@@ -65,7 +64,7 @@ export async function spawnNextOccurrence(taskId: string, actorId: string | null
   await audit(actorId, "task.recur", "Task", occurrence.id, { from: t.id }, occurrence);
   await queueTaskCreation(occurrence.id, t.type);
   await notify({ userIds: t.assignees.map((a) => a.userId), kind: "TASK_ASSIGNED", title: `Recurring task: ${t.title}`, href: `/dashboard?task=${occurrence.id}`, taskId: occurrence.id, chat: false });
-  bus.publish({ type: "task.changed", taskId: occurrence.id });
+  void publishTaskChanged(occurrence.id);
   return occurrence.id;
 }
 

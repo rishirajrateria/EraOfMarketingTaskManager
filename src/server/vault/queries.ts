@@ -51,7 +51,7 @@ export async function listVaultClients(): Promise<ClientDto[]> {
 
 export async function listGrantableUsers(): Promise<UserOption[]> {
   return prisma.user.findMany({
-    where: { active: true, role: { not: "ADMIN" } },
+    where: { active: true, role: { in: ["TEAM_LEADER", "EXECUTIVE"] } }, // HR/CA never get vault access (SPEC §2)
     orderBy: { name: "asc" },
     select: { id: true, name: true, role: true },
   });

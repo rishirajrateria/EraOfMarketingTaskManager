@@ -7,9 +7,8 @@ import { getSettings } from "@/lib/settings";
 import { dateKey, zonedStartOfDay } from "@/lib/time";
 import { findSlot, type Interval, type WorkingConfig } from "@/lib/working-time";
 import { freeBusy } from "@/google/calendar";
-import { notify } from "@/lib/notify";
+import { notify, publishTaskChanged } from "@/lib/notify";
 import { audit } from "@/lib/audit";
-import { bus } from "@/lib/events";
 import { ACTIVE_STATUSES } from "@/server/tasks/state";
 
 export async function workingConfig(): Promise<WorkingConfig> {
@@ -151,7 +150,7 @@ export async function shiftTaskToNextSlot(taskId: string, actorId: string, reaso
     href: `/dashboard?task=${task.id}`,
     taskId: task.id,
   });
-  bus.publish({ type: "task.changed", taskId: task.id });
+  void publishTaskChanged(task.id);
   return slot;
 }
 

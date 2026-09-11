@@ -87,6 +87,14 @@ export async function markAttendance(input: MarkAttendanceInput): Promise<Action
     const checkIn = data.checkIn ? zonedDayAt(day, hhmmToMinutes(data.checkIn), tz) : null;
     const checkOut = data.checkOut ? zonedDayAt(day, hhmmToMinutes(data.checkOut), tz) : null;
     const before = await prisma.attendance.findUnique({ where: { userId_date: { userId: data.userId, date } } });
+    // Days covered by an already-approved leave can only be changed by Admin (SPEC §2).
+    if (actor.role === "HR" && data.status !== "LEAVE") {
+      const approvedLeave = await prisma.leave.findFirst({
+        where: { userId: data.userId, status: { in: ["HR_APPROVED", "ADMIN_APPROVED"] }, from: { lte: date }, to: { gte: date } },
+        select: { id: true },
+      });
+      if (approvedLeave) throw new ForbiddenError("This day is covered by an approved leave; ask an Admin to change it");
+    }
     const values = { status: data.status, checkIn, checkOut, note: data.note ?? null, markedById: actor.id };
     const row = await prisma.attendance.upsert({
       where: { userId_date: { userId: data.userId, date } },

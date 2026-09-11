@@ -17,6 +17,7 @@ export async function POST(req: Request) {
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof File) || !file.size) return NextResponse.json({ error: "No audio file" }, { status: 400 });
+  if (file.size > 10 * 1024 * 1024) return NextResponse.json({ error: "Audio larger than 10 MB" }, { status: 413 });
 
   const upstream = new FormData();
   upstream.append("file", file, file.name || "audio.webm");

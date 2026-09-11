@@ -1,7 +1,6 @@
 /** Runs every minute (SPEC §7): red overlay + notify assignees and superior; also drains the Google queue. */
 import { prisma } from "@/lib/db";
-import { bus } from "@/lib/events";
-import { notify, taskStakeholderIds } from "@/lib/notify";
+import { notify, taskStakeholderIds, publishTaskChanged } from "@/lib/notify";
 import { isOverdue, ACTIVE_STATUSES } from "@/server/tasks/state";
 import { processPending } from "@/google/queue";
 
@@ -17,11 +16,11 @@ export async function run(now = new Date()): Promise<{ flagged: number; cleared:
     if (od && !t.overdue) {
       await prisma.task.update({ where: { id: t.id }, data: { overdue: true, overdueNotifiedAt: now } });
       await notify({ userIds: await taskStakeholderIds(t.id), kind: "TASK_OVERDUE", title: `Overdue: ${t.title}`, href: `/dashboard?task=${t.id}`, taskId: t.id });
-      bus.publish({ type: "task.changed", taskId: t.id });
+      void publishTaskChanged(t.id);
       flagged++;
     } else if (!od && t.overdue) {
       await prisma.task.update({ where: { id: t.id }, data: { overdue: false } });
-      bus.publish({ type: "task.changed", taskId: t.id });
+      void publishTaskChanged(t.id);
       cleared++;
     }
   }

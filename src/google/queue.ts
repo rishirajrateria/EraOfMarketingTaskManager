@@ -1,10 +1,10 @@
+import { publishTaskChanged } from "@/lib/notify";
 /**
  * Durable queue of Google side-effects (SPEC §14): every call is idempotent (keyed) and retried with
  * backoff; a permanent failure is surfaced on the task row (`integrationError`) so Admin can retry.
  */
 import type { IntegrationKind, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { bus } from "@/lib/events";
 
 const MAX_ATTEMPTS = 5;
 
@@ -56,7 +56,7 @@ export async function processPending(limit = 25): Promise<number> {
       });
       if (job.taskId) {
         await prisma.task.update({ where: { id: job.taskId }, data: { integrationError: null } }).catch(() => undefined);
-        bus.publish({ type: "task.changed", taskId: job.taskId });
+        void publishTaskChanged(job.taskId);
       }
       done++;
     } catch (e) {
@@ -74,7 +74,7 @@ export async function processPending(limit = 25): Promise<number> {
       });
       if (failed && job.taskId) {
         await prisma.task.update({ where: { id: job.taskId }, data: { integrationError: `${job.kind}: ${msg.slice(0, 200)}` } }).catch(() => undefined);
-        bus.publish({ type: "task.changed", taskId: job.taskId });
+        void publishTaskChanged(job.taskId);
       }
     }
   }

@@ -3,8 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireUser, type SessionUser, ForbiddenError } from "@/lib/rbac";
 import { wrap, type ActionResult } from "@/lib/action-result";
 import { audit } from "@/lib/audit";
-import { notify } from "@/lib/notify";
-import { bus } from "@/lib/events";
+import { notify, publishTaskChanged } from "@/lib/notify";
 import { safeRevalidate } from "@/lib/revalidate";
 import { parseDateKey } from "@/lib/time";
 import { getSettings } from "@/lib/settings";
@@ -12,6 +11,10 @@ import { proposeSlot, shiftDisplacedTasks, type SlotProposal } from "@/server/sc
 import { queueTaskCreation } from "@/google/task-integrations";
 import { taskInputSchema, type TaskInput } from "@/server/tasks/schema";
 import { nextRunAt } from "@/server/tasks/recurrence";
+import { sanitizeDescription } from "@/lib/sanitize";
+import { z } from "zod";
+
+const idsSchema = z.array(z.string().min(1)).max(50);
 
 /** Assignment rules (SPEC §2): Admin→Team Leaders (or self), TL→own Executives (or self), Exec→self only. */
 export async function validateAssignees(user: SessionUser, assigneeIds: string[], type: "WORK" | "MEETING") {
@@ -75,7 +78,7 @@ export async function createTask(raw: unknown): Promise<ActionResult<CreateResul
     const task = await prisma.task.create({
       data: {
         title: input.title,
-        description: input.description,
+        description: sanitizeDescription(input.description),
         type: input.type,
         clientId: input.clientId,
         createdById: user.id,
@@ -109,7 +112,7 @@ export async function createTask(raw: unknown): Promise<ActionResult<CreateResul
       taskId: task.id,
       chat: false,
     });
-    bus.publish({ type: "task.changed", taskId: task.id });
+    void publishTaskChanged(task.id);
     safeRevalidate("/dashboard");
     // Process the integration queue promptly (best-effort; the job runner also drains it).
     void import("@/google/queue").then((q) => q.processPending()).catch(() => undefined);
@@ -121,20 +124,27 @@ export async function createTask(raw: unknown): Promise<ActionResult<CreateResul
 export async function previewSlot(assigneeIds: string[], allocatedMinutes: number): Promise<ActionResult<SlotProposal | null>> {
   return wrap(async () => {
     const user = await requireUser();
-    if (!assigneeIds.length) return null;
-    return proposeSlot(assigneeIds, allocatedMinutes, { requesterRole: user.role, requesterId: user.id });
+    if (user.role === "HR" || user.role === "CA") throw new ForbiddenError();
+    const ids = idsSchema.parse(assigneeIds);
+    if (!ids.length) return null;
+    await validateAssignees(user, ids, "WORK"); // only people this user may assign to
+    const minutes = z.number().int().min(5).max(24 * 60 * 30).parse(allocatedMinutes);
+    return proposeSlot(ids, minutes, { requesterRole: user.role, requesterId: user.id });
   });
 }
 
 /** Live "Today / Tom / Week / Month – X Hours – N" figures for the add-task header (SPEC §6). */
 export async function periodLoads(assigneeIds: string[]): Promise<ActionResult<Record<string, { minutes: number; count: number }>>> {
   return wrap(async () => {
-    await requireUser();
+    const user = await requireUser();
+    if (user.role === "HR" || user.role === "CA") throw new ForbiddenError();
+    const requested = idsSchema.parse(assigneeIds);
+    if (requested.length) await validateAssignees(user, requested, "WORK");
     const { periodLoad } = await import("@/server/tasks/queries");
     const { zonedStartOfDay } = await import("@/lib/time");
     const { addDays, addMonths } = await import("date-fns");
     const tz = (await getSettings()).timezone;
-    const ids = assigneeIds.length ? assigneeIds : [(await requireUser()).id];
+    const ids = requested.length ? requested : [user.id];
     const today = zonedStartOfDay(new Date(), tz);
     const [t, tom, week, month] = await Promise.all([
       periodLoad(ids, today, addDays(today, 1)),

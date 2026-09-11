@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireUser, can, ForbiddenError, type SessionUser } from "@/lib/rbac";
 import { wrap, type ActionResult } from "@/lib/action-result";
 import { audit } from "@/lib/audit";
-import { notify, taskStakeholderIds, adminIds } from "@/lib/notify";
+import { notify, taskStakeholderIds, adminIds, publishTaskChanged } from "@/lib/notify";
 import { bus } from "@/lib/events";
 import { safeRevalidate } from "@/lib/revalidate";
 import { canView } from "@/server/tasks/queries";
@@ -11,7 +11,10 @@ import { nextStatus } from "@/server/tasks/state";
 import { deactivateMeet, queueTaskCreation, queueTaskPropagation } from "@/google/task-integrations";
 import { proposeSlot } from "@/server/scheduling/slot";
 import { getSettings } from "@/lib/settings";
-import type { RequestType } from "@prisma/client";
+import { z } from "zod";
+
+const noteSchema = z.string().max(2000);
+const reviewKindSchema = z.enum(["REVIEW", "TIME_CHANGE"]);
 
 async function loadTask(user: SessionUser, taskId: string) {
   if (!(await canView(user, taskId))) throw new ForbiddenError("Task not visible");
@@ -21,7 +24,7 @@ async function loadTask(user: SessionUser, taskId: string) {
 }
 
 function done(taskId: string) {
-  bus.publish({ type: "task.changed", taskId });
+  void publishTaskChanged(taskId);
   safeRevalidate("/dashboard", "/requests");
 }
 
@@ -137,8 +140,9 @@ export async function approveFinish(taskId: string): Promise<ActionResult<undefi
   });
 }
 
-export async function rejectFinish(taskId: string, note: string): Promise<ActionResult<undefined>> {
+export async function rejectFinish(taskId: string, rawNote: string): Promise<ActionResult<undefined>> {
   return wrap(async () => {
+    const note = noteSchema.parse(rawNote);
     const user = await requireUser();
     if (!can.approveFinish(user)) throw new ForbiddenError();
     const t = await loadTask(user, taskId);
@@ -157,8 +161,9 @@ export async function rejectFinish(taskId: string, note: string): Promise<Action
 }
 
 /** Team Leader → Raise doubt (yellow). */
-export async function raiseDoubt(taskId: string, note: string): Promise<ActionResult<undefined>> {
+export async function raiseDoubt(taskId: string, rawNote: string): Promise<ActionResult<undefined>> {
   return wrap(async () => {
+    const note = noteSchema.parse(rawNote);
     const user = await requireUser();
     if (!can.raiseDoubt(user)) throw new ForbiddenError();
     const t = await loadTask(user, taskId);
@@ -175,8 +180,9 @@ export async function raiseDoubt(taskId: string, note: string): Promise<ActionRe
 }
 
 /** Admin → Unflag. */
-export async function resolveDoubt(taskId: string, note = ""): Promise<ActionResult<undefined>> {
+export async function resolveDoubt(taskId: string, rawNote = ""): Promise<ActionResult<undefined>> {
   return wrap(async () => {
+    const note = noteSchema.parse(rawNote);
     const user = await requireUser();
     if (!can.resolveDoubt(user)) throw new ForbiddenError();
     const t = await loadTask(user, taskId);
@@ -194,15 +200,17 @@ export async function resolveDoubt(taskId: string, note = ""): Promise<ActionRes
 }
 
 /** Long-press → review / time-change request (red dot). Executives only on own tasks. */
-export async function raiseReviewRequest(taskId: string, kind: "REVIEW" | "TIME_CHANGE", note: string): Promise<ActionResult<undefined>> {
+export async function raiseReviewRequest(taskId: string, rawKind: "REVIEW" | "TIME_CHANGE", rawNote: string): Promise<ActionResult<undefined>> {
   return wrap(async () => {
+    const kind = reviewKindSchema.parse(rawKind);
+    const note = noteSchema.parse(rawNote);
     const user = await requireUser();
     if (!can.raiseReview(user)) throw new ForbiddenError();
     const t = await loadTask(user, taskId);
     if (user.role === "EXECUTIVE" && !t.assignees.some((a) => a.userId === user.id)) throw new ForbiddenError("Own tasks only");
     await prisma.$transaction([
       prisma.task.update({ where: { id: t.id }, data: { reviewRequested: true, reviewNote: note } }),
-      prisma.request.create({ data: { type: kind as RequestType, taskId: t.id, raisedById: user.id, targetRole: "ADMIN", note } }),
+      prisma.request.create({ data: { type: kind, taskId: t.id, raisedById: user.id, targetRole: "ADMIN", note } }),
     ]);
     await audit(user.id, "task.raise_review", "Task", t.id, null, { kind, note });
     await notify({ userIds: await adminIds(), kind: "REVIEW_REQUESTED", title: `${kind === "REVIEW" ? "Review" : "Time change"} requested: ${t.title}`, body: note, href: `/requests`, taskId: t.id });
@@ -213,8 +221,9 @@ export async function raiseReviewRequest(taskId: string, kind: "REVIEW" | "TIME_
 }
 
 /** TL/Exec: ask Admin to protect (fix) a self-assigned task so it cannot be overlapped/moved. */
-export async function requestFixSelfTask(taskId: string, note: string): Promise<ActionResult<undefined>> {
+export async function requestFixSelfTask(taskId: string, rawNote: string): Promise<ActionResult<undefined>> {
   return wrap(async () => {
+    const note = noteSchema.parse(rawNote);
     const user = await requireUser();
     if (user.role !== "TEAM_LEADER" && user.role !== "EXECUTIVE") throw new ForbiddenError();
     const t = await loadTask(user, taskId);

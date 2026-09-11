@@ -21,6 +21,7 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
     "@prisma/client": "^6.19.3",
+    "@types/sanitize-html": "^2.16.1",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "googleapis": "^178.1.1",
@@ -30,6 +31,7 @@
     "pdfkit": "^0.17.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "sanitize-html": "^2.17.7",
     "web-push": "^3.6.7",
     "zod": "^4.1.0"
   },

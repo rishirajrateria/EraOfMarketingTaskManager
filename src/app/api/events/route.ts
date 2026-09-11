@@ -14,6 +14,8 @@ export async function GET() {
       const send = (e: AppEvent) => {
         if (e.type === "notification" && e.userId !== user.id) return;
         if (e.type === "task.changed" && e.userIds && !e.userIds.includes(user.id) && user.role !== "ADMIN") return;
+        if (e.type === "leave.changed" && e.userId !== user.id && user.role !== "ADMIN" && user.role !== "HR") return;
+        if (e.type === "requests.changed" && user.role !== "ADMIN" && user.role !== "HR") return;
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(e)}\n\n`));
         } catch {

@@ -38,7 +38,12 @@ export function sanitizeHtml(html: string): string {
     .replace(/<\s*(script|style|iframe|object|embed)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "")
     .replace(/<\s*\/?\s*(script|style|iframe|object|embed)\b[^>]*>/gi, "")
     .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
-    .replace(/(href|src)\s*=\s*(["']?)\s*javascript:[^"'\s>]*\2/gi, '$1="#"');
+    .replace(/<\s*\/?\s*(form|meta|link|base|svg|math)\b[^>]*>/gi, "")
+    .replace(/\s(href|src|action|formaction|xlink:href)\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/gi, (_m, attr: string, _q, d?: string, sq?: string, bare?: string) => {
+      const raw = (d ?? sq ?? bare ?? "").replace(/&#x([0-9a-f]+);?/gi, (_x, h: string) => String.fromCharCode(parseInt(h, 16))).replace(/&#(\d+);?/g, (_x, n: string) => String.fromCharCode(Number(n)));
+      const url = raw.replace(/[\u0000-\u0020]/g, "").toLowerCase();
+      return /^(https?:|mailto:|\/|#)/.test(url) || url === "" ? ` ${attr}="${raw.replace(/"/g, "&quot;")}"` : ` ${attr}="#"`;
+    });
 }
 
 /** Deterministic pseudo-random bar heights (px) for a voice-note waveform, seeded by id. */
