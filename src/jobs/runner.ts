@@ -10,6 +10,7 @@ const SCHEDULE: Record<JobName, number> = {
   invoices: 10 * 60_000,
   "vault-expiry": 5 * 60_000,
   inventory: 24 * 60 * 60_000,
+  "leave-sync": 30 * 60_000,
 };
 
 const g = globalThis as unknown as { __eomJobsStarted?: boolean };

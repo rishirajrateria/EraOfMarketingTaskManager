@@ -88,7 +88,7 @@ apply migrations to it once with `DATABASE_URL=<test url> npx prisma migrate dep
 ## Deployment (Vercel + Neon/Supabase)
 
 - Add every env var above; set `JOBS_INLINE=false` and keep `vercel.json` crons (overdue every minute, recurrence,
-  invoices, vault-expiry, inventory nightly). Vercel sends `Authorization: Bearer $CRON_SECRET`.
+  invoices, vault-expiry, inventory nightly, leave-sync from Google Calendar every 30 minutes). Vercel sends `Authorization: Bearer $CRON_SECRET`.
 - Build command `npm run build` (runs `prisma generate`), then `npx prisma migrate deploy` as a release step.
 - For any Node host: `npm run build && npm start`, with `JOBS_INLINE=true` (jobs start from `instrumentation.ts`).
 - Real-time updates use in-process SSE; on multi-instance deployments swap `src/lib/events.ts` for Redis pub/sub.

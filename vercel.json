@@ -4,6 +4,7 @@
     { "path": "/api/jobs/recurrence", "schedule": "*/5 * * * *" },
     { "path": "/api/jobs/invoices", "schedule": "*/10 * * * *" },
     { "path": "/api/jobs/vault-expiry", "schedule": "*/5 * * * *" },
-    { "path": "/api/jobs/inventory", "schedule": "30 18 * * *" }
+    { "path": "/api/jobs/inventory", "schedule": "30 18 * * *" },
+    { "path": "/api/jobs/leave-sync", "schedule": "*/30 * * * *" }
   ]
 }

@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { calendar, isMock, mockId, withRetry } from "@/google/client";
+import { calendar, calendarAs, isMock, mockId, withRetry } from "@/google/client";
 
 export type CalendarEventResult = { eventId: string; meetLink: string | null; htmlLink: string | null };
 
@@ -101,4 +101,38 @@ export async function freeBusy(email: string, from: Date, to: Date): Promise<Bus
   );
   const busy = res.data.calendars?.[email]?.busy ?? [];
   return busy.filter((b) => b.start && b.end).map((b) => ({ start: new Date(b.start!), end: new Date(b.end!) }));
+}
+
+export type OutOfOfficeEvent = { id: string; summary: string; start: string; end: string; allDay: boolean };
+
+const LEAVE_WORDS = /\b(leave|out of office|ooo|vacation|pto|off)\b/i;
+
+/**
+ * Events the user blocked in their own Google Calendar as leave (SPEC §11.5): Google's native
+ * "out of office" events or any event whose title says leave/OOO/vacation. Reads the user's primary calendar
+ * via domain-wide delegation.
+ */
+export async function listLeaveEvents(email: string, from: Date, to: Date): Promise<OutOfOfficeEvent[]> {
+  if (isMock()) return [];
+  const res = await withRetry(() =>
+    calendarAs(email).events.list({
+      calendarId: "primary",
+      timeMin: from.toISOString(),
+      timeMax: to.toISOString(),
+      singleEvents: true,
+      maxResults: 250,
+      orderBy: "startTime",
+    }),
+  );
+  const items = res.data.items ?? [];
+  return items
+    .filter((e) => e.status !== "cancelled" && (e.eventType === "outOfOffice" || LEAVE_WORDS.test(e.summary ?? "")))
+    .map((e) => ({
+      id: e.id!,
+      summary: e.summary ?? "Out of office",
+      start: e.start?.date ?? e.start?.dateTime ?? "",
+      end: e.end?.date ?? e.end?.dateTime ?? "",
+      allDay: !!e.start?.date,
+    }))
+    .filter((e) => e.start && e.end);
 }

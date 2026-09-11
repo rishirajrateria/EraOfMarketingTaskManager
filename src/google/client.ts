@@ -37,7 +37,15 @@ export function getJwt(): JWT {
   return jwt;
 }
 
+/** JWT impersonating a specific Workspace user (domain-wide delegation) — used for per-user Calendar reads. */
+export function getJwtFor(email: string): JWT {
+  if (!env.serviceAccountKeyB64) throw new Error("GOOGLE_SERVICE_ACCOUNT_KEY_BASE64 not configured");
+  const key = JSON.parse(Buffer.from(env.serviceAccountKeyB64, "base64").toString("utf8")) as { client_email: string; private_key: string };
+  return new google.auth.JWT({ email: key.client_email, key: key.private_key, scopes: SA_SCOPES, subject: email });
+}
+
 export const drive = () => google.drive({ version: "v3", auth: getJwt() });
+export const calendarAs = (email: string) => google.calendar({ version: "v3", auth: getJwtFor(email) });
 export const calendar = () => google.calendar({ version: "v3", auth: getJwt() });
 export const chat = () => google.chat({ version: "v1", auth: getJwt() });
 export const gmail = () => google.gmail({ version: "v1", auth: getJwt() });
