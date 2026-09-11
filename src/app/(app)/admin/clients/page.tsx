@@ -3,8 +3,8 @@ import { listClients } from "@/server/admin/queries";
 import { ClientsManager } from "@/components/admin/ClientsManager";
 
 /** Add Client (SPEC §11.1). */
-export default async function ClientsPage() {
+export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ add?: string }> }) {
   await requireAdminPage();
-  const clients = await listClients();
-  return <ClientsManager clients={clients} />;
+  const [clients, sp] = await Promise.all([listClients(), searchParams]);
+  return <ClientsManager clients={clients} openAdd={sp.add === "1"} />;
 }

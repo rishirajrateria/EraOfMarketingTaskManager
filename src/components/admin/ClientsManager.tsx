@@ -9,10 +9,10 @@ import type { ClientRow } from "@/server/admin/queries";
 import type { ClientInput } from "@/server/admin/schemas";
 
 /** /admin/clients — "Add Client" (SPEC §11.1). Vault items are managed at /admin/vault. */
-export function ClientsManager({ clients }: { clients: ClientRow[] }) {
+export function ClientsManager({ clients, openAdd = false }: { clients: ClientRow[]; openAdd?: boolean }) {
   const { busy, run } = useAdminAction();
   const [editing, setEditing] = useState<ClientRow | null>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(openAdd);
   const close = () => {
     setOpen(false);
     setEditing(null);
