@@ -7,6 +7,7 @@ import { deleteTask, retryIntegrations, saveFilters, setTaskProtected } from "@/
 import { useLiveEvents } from "@/components/shell/useLiveEvents";
 import { AddTaskSheet } from "@/components/tasks/AddTaskSheet";
 import { applyFilters } from "@/components/dashboard/filters";
+import { ATTACHMENTS_ANCHOR } from "@/components/dashboard/format";
 import { useTaskAction } from "@/components/dashboard/useTaskAction";
 import { TimeStatus } from "@/components/dashboard/TimeStatus";
 import { DashboardTopBar, type TopBarUser } from "@/components/dashboard/DashboardTopBar";
@@ -20,9 +21,6 @@ import { NoteSheet } from "@/components/dashboard/NoteSheet";
 import { DatePickerSheet } from "@/components/dashboard/DatePickerSheet";
 
 const SAVE_DEBOUNCE_MS = 800;
-/** Anchor id of the attachments block inside TaskDetailSheet (mic icon deep-scroll). */
-export const ATTACHMENTS_ANCHOR = "task-attachments";
-
 /**
  * Client root of the dashboard (SPEC §5): cyan pill area (with the slim overlay top bar — the app header is hidden
  * on /dashboard), task list, white filter strip, green area, bottom bar + all sheets. Data comes from the RSC page.

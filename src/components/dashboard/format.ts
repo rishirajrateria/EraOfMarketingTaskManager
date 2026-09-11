@@ -2,6 +2,9 @@
 import { formatInTimeZone } from "date-fns-tz";
 import type { TaskRow } from "@/server/tasks/types";
 
+/** DOM id of the attachments block in TaskDetailSheet (the row's mic icon opens the sheet scrolled to it). */
+export const ATTACHMENTS_ANCHOR = "task-attachments";
+
 export const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? "";
 
 /** "Graphic" → "GR" (SPEC §5.2 team chip). */
@@ -67,8 +70,14 @@ export function pillHours(minutes: number): string {
   return Number.isInteger(h) ? String(h) : h.toFixed(1);
 }
 
-/** Cyan pill text "<Label>- <hours>" (the label is ellipsized by CSS in the pill; the hours never truncate). */
-export const pillText = (label: string, minutes: number) => `${label}- ${pillHours(minutes)}`;
+/** Short pill label as in the Canva design ("Grap", "Writi", "Webs"): first 5 characters of the first word, no ellipsis. */
+export function shortPillLabel(label: string, max = 5): string {
+  const word = label.trim().split(/\s+/)[0] ?? "";
+  return word.length > max + 1 ? word.slice(0, max) : word;
+}
+
+/** Cyan pill text "<Label>- <hours>" (the label is shortened; the hours never truncate). */
+export const pillText = (label: string, minutes: number) => `${shortPillLabel(label)}- ${pillHours(minutes)}`;
 
 /** Date-pill labels exactly as in the Canva design. */
 const DATE_PILL_LABELS: Record<string, string> = {

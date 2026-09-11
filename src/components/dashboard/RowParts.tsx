@@ -21,7 +21,7 @@ export function IconBtn({ label, onClick, disabled, children }: { label: string;
         e.stopPropagation();
         onClick();
       }}
-      className="flex h-5 w-[14px] shrink-0 items-center justify-center text-gray-700 disabled:opacity-40"
+      className="flex h-5 w-[13px] shrink-0 items-center justify-center text-gray-700 disabled:opacity-40"
     >
       {children}
     </button>

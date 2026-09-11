@@ -1,7 +1,7 @@
 "use client";
 import { clsx } from "@/lib/clsx";
 import type { DashboardData, DashboardFilters } from "@/server/tasks/types";
-import { datePillLabel, pillHours, pillText } from "@/components/dashboard/format";
+import { datePillLabel, pillHours, pillText, shortPillLabel } from "@/components/dashboard/format";
 
 /** 5 pills of 32px with 8px gaps — the column scrolls when a group has more. */
 const COLUMN_PX = 5 * 32 + 4 * 8;
@@ -35,7 +35,7 @@ export function TimeStatus({
               key={g.key}
               role="group"
               aria-label={g.label}
-              className={clsx("scrollbar-none flex min-w-0 flex-1 flex-col gap-2 overflow-y-auto", alignEnd ? "items-end" : "items-stretch")}
+              className={clsx("scrollbar-none flex min-w-0 flex-1 flex-col gap-2 overflow-y-auto", alignEnd ? "items-end" : twoCol ? "items-start" : "items-stretch")}
               style={{ height: COLUMN_PX }}
             >
               {g.items.length === 0 ? <span className="px-1 text-[12px] font-semibold text-white/70">—</span> : null}
@@ -49,12 +49,12 @@ export function TimeStatus({
                     title={pillText(it.label, it.minutes)}
                     onClick={() => select(it.id)}
                     className={clsx(
-                      "no-select flex h-8 shrink-0 items-center rounded-[6px] px-3 text-left text-[14px] font-bold leading-none text-[#111] transition",
+                      "no-select flex h-8 shrink-0 items-center rounded-[6px] px-2.5 text-left text-[13px] font-bold leading-none text-[#111] transition",
                       twoCol ? "w-auto max-w-full" : "w-full",
                       active ? "bg-cyan-pill-active shadow-[inset_0_0_0_2px_#0E7490]" : "bg-cyan-pill",
                     )}
                   >
-                    <span className="truncate">{datePillLabel(it.id, it.label)}</span>
+                    <span className="truncate">{it.id.startsWith("date:") ? datePillLabel(it.id, it.label) : shortPillLabel(it.label)}</span>
                     <span className="shrink-0 whitespace-pre">- {pillHours(it.minutes)}</span>
                   </button>
                 );

@@ -25,7 +25,7 @@ function openExternal(url: string) {
   window.open(url, "_blank", "noopener");
 }
 
-const CHIP = "min-w-[28px] max-w-[52px] shrink truncate rounded-full bg-[#E5E7EB] px-1.5 py-0.5 text-[10px] leading-3 text-[#111]";
+const CHIP = "max-w-[52px] shrink-0 truncate rounded-full bg-[#E5E7EB] px-1.5 py-0.5 text-[10px] leading-3 text-[#111]";
 
 /**
  * Team Leader only: assignee first names (lowercase) in a fixed 60px column beside the title (line 1), or a person
@@ -108,17 +108,17 @@ export function TaskRow({ t, data, h }: { t: Row; data: DashboardData; h: RowHan
           ) : null}
           {data.role === "TEAM_LEADER" ? <AssigneeNames t={t} meId={data.me.id} /> : null}
         </div>
-        <div className="mt-[3px] flex items-center gap-1.5 overflow-hidden">
+        <div className="mt-[3px] flex items-center gap-1 overflow-hidden">
           <span className={CHIP}>{t.client.name}</span>
           <span className={CHIP}>{assigneeChip(t, data.me.id)}</span>
           <IconBtn label="Task details" onClick={() => h.onOpen(t)}>
-            <Info size={14} strokeWidth={2.25} />
+            <Info size={13} strokeWidth={2.25} />
           </IconBtn>
           <IconBtn label="Drive folder" onClick={openDrive} disabled={driveBusy || t.type === "MEETING"}>
             <DriveIcon muted={t.type === "MEETING"} />
           </IconBtn>
           <IconBtn label={hasVoice ? "Voice notes" : "No voice notes"} onClick={() => h.onOpenAttachments(t)}>
-            <Mic size={14} strokeWidth={2.25} className={hasVoice ? "text-[#111]" : "text-[#9CA3AF]"} />
+            <Mic size={13} strokeWidth={2.25} className={hasVoice ? "text-[#111]" : "text-[#9CA3AF]"} />
           </IconBtn>
           <IconBtn label="Chat space" onClick={() => t.chatSpaceUrl && openExternal(t.chatSpaceUrl)} disabled={!t.chatSpaceUrl}>
             <ChatIcon muted={!t.chatSpaceUrl} />

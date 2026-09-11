@@ -49,11 +49,11 @@ export function MenuTray({ open, onClose }: { open: boolean; onClose: () => void
           aria-label="Add Client"
         >
           <span className="text-[38px] font-light leading-none text-gray-900">+</span>
-          <span className="mt-0.5 w-[92px] text-right text-[8px] leading-[10px] text-gray-500">
-            Add Client (if I add work client name visible or else not)
+          <span className="mt-0.5 w-[84px] text-right text-[8px] leading-[10px] text-gray-500">
+            Add Client (visible in filters once it has a task)
           </span>
         </Link>
-        <ul className="px-5 pt-9">
+        <ul className="px-5 pt-[76px]">
           {MENU_GROUPS.map((group, gi) => (
             <li key={gi} className={gi === 0 ? "" : "mt-9"}>
               <ul className="space-y-1.5">

@@ -9,7 +9,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { btnPrimary, btnSecondary } from "@/components/ui/Field";
 import { deleteAttachment, retryIntegrations, uploadAttachment } from "@/server/tasks/manage";
 import { useTaskAction } from "@/components/dashboard/useTaskAction";
-import { fmtSeconds, sanitizeHtml, statusLabel, waveformHeights } from "@/components/dashboard/format";
+import { ATTACHMENTS_ANCHOR, fmtSeconds, sanitizeHtml, statusLabel, waveformHeights } from "@/components/dashboard/format";
 
 function LinkBtn({ href, label, icon, disabled }: { href: string | null; label: string; icon: React.ReactNode; disabled?: boolean }) {
   const off = disabled || !href;
@@ -190,7 +190,7 @@ export function TaskDetailSheet({
           </section>
         ) : null}
 
-        <section id="task-attachments">
+        <section id={ATTACHMENTS_ANCHOR}>
           <div className="mb-1 flex items-center justify-between">
             <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Attachments</h3>
             {t.type === "WORK" ? (

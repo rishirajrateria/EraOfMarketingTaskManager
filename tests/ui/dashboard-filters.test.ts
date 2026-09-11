@@ -233,7 +233,8 @@ describe("helpers", () => {
     expect(pillHours(990)).toBe("16.5");
     expect(pillHours(0)).toBe("0");
     expect(pillText("Repo", 330)).toBe("Repo- 5.5");
-    expect(pillText("Graphic", 300)).toBe("Graphic- 5");
+    expect(pillText("Graphic", 300)).toBe("Graph- 5");
+    expect(pillText("Website", 240)).toBe("Websi- 4");
     expect(datePillLabel("date:b4leave", "B4Leave")).toBe("B4LEav");
     expect(datePillLabel("client:x", "Repo")).toBe("Repo");
   });
