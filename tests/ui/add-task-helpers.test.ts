@@ -132,3 +132,29 @@ describe("toTaskInput / validateForm", () => {
     expect(validateForm({ ...emptyForm("WORK", "me"), title: "t", clientId: "c" })).toEqual({});
   });
 });
+
+describe("tag-mode helpers", () => {
+  it("teamLeaderId finds the leader of a team", async () => {
+    const { teamLeaderId } = await import("@/components/tasks/add-task-helpers");
+    expect(teamLeaderId({ people }, "teamA")).toBe("tl1");
+    expect(teamLeaderId({ people }, "nope")).toBeNull();
+  });
+  it("toggleTeamWithLeader adds the leader when switching a team on, keeps assignees when switching off", async () => {
+    const { toggleTeamWithLeader } = await import("@/components/tasks/add-task-helpers");
+    const on = toggleTeamWithLeader({ teamIds: [], assigneeIds: ["admin"] }, { people }, "teamA");
+    expect(on).toEqual({ teamIds: ["teamA"], assigneeIds: ["admin", "tl1"] });
+    const again = toggleTeamWithLeader(on, { people }, "teamA");
+    expect(again).toEqual({ teamIds: [], assigneeIds: ["admin", "tl1"] });
+    const dup = toggleTeamWithLeader({ teamIds: [], assigneeIds: ["tl1"] }, { people }, "teamA");
+    expect(dup.assigneeIds).toEqual(["tl1"]);
+  });
+  it("needsDetailsSheet / parseAddParam", async () => {
+    const { needsDetailsSheet, parseAddParam } = await import("@/components/tasks/add-task-helpers");
+    expect(needsDetailsSheet({ title: "x" })).toBe(false);
+    expect(needsDetailsSheet({ clientId: "x" })).toBe(true);
+    expect(parseAddParam("WORK")).toBe("WORK");
+    expect(parseAddParam("CHOOSE")).toBe("CHOOSE");
+    expect(parseAddParam("nope")).toBeNull();
+    expect(parseAddParam(null)).toBeNull();
+  });
+});

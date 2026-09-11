@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Mic } from "lucide-react";
 import { clsx } from "@/lib/clsx";
 import { useToast } from "@/components/ui/Toast";
 import { useMediaRecorder } from "@/components/tasks/VoiceRecorder";
@@ -28,7 +29,18 @@ function speechCtor(): RecognitionCtor | null {
  * Mic button that appends recognised speech to the description (SPEC §6 "mic → voice-to-text").
  * Uses the Web Speech API when present; otherwise records a clip and posts it to /api/stt.
  */
-export function DictationButton({ onText, lang = "en-IN", className }: { onText: (text: string) => void; lang?: string; className?: string }) {
+export function DictationButton({
+  onText,
+  lang = "en-IN",
+  className,
+  compact,
+}: {
+  onText: (text: string) => void;
+  lang?: string;
+  className?: string;
+  /** Icon-only 12px mic for the dark description toolbar. */
+  compact?: boolean;
+}) {
   const toast = useToast();
   const [supported, setSupported] = useState<boolean | null>(null);
   const [listening, setListening] = useState(false);
@@ -101,6 +113,22 @@ export function DictationButton({ onText, lang = "en-IN", className }: { onText:
   const active = supported ? listening : fallback.recording;
   const onClick = supported ? (listening ? stopNative : startNative) : toggleFallback;
   const label = active ? (supported ? "Listening…" : `Recording ${fallback.seconds}s`) : busy ? "Transcribing…" : "Dictate";
+
+  if (compact) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={busy || supported === null}
+        aria-pressed={active}
+        aria-label={label}
+        title={supported === false ? "Web Speech API unavailable — records a clip and sends it to /api/stt" : "Dictate into the description"}
+        className={clsx("flex h-6 w-6 items-center justify-center rounded disabled:opacity-50", active ? "animate-pulse text-red-400" : "text-[#9CA3AF] hover:text-white", className)}
+      >
+        <Mic size={12} strokeWidth={2.5} aria-hidden />
+      </button>
+    );
+  }
 
   return (
     <button

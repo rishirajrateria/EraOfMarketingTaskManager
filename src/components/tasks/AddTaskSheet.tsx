@@ -1,25 +1,26 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { JSX } from "react";
-import { clsx } from "@/lib/clsx";
 import { Sheet } from "@/components/ui/Sheet";
-import { Pill } from "@/components/ui/Pill";
 import { useToast } from "@/components/ui/Toast";
 import type { DashboardData } from "@/server/tasks/types";
 import { createTask, periodLoads } from "@/server/tasks/create";
 import { uploadAttachment } from "@/server/tasks/manage";
-import { AddTaskFields, type FieldErrors } from "@/components/tasks/AddTaskFields";
+import { AddTaskHeader } from "@/components/tasks/AddTaskHeader";
+import { AddTaskBody, AddTaskChooser } from "@/components/tasks/AddTaskBody";
+import { AddTaskBottomBar, AddTaskTags, type Shortcut } from "@/components/tasks/AddTaskFooter";
+import { AddTaskDetails, AssigneeSheet, LoopSheet, type DetailsFocus, type FieldErrors } from "@/components/tasks/AddTaskDetails";
 import type { VoiceNote } from "@/components/tasks/VoiceRecorder";
 import {
   EMPTY_LOADS,
   allowedAssignees,
   defaultTeamIds,
   emptyForm,
-  fmtLoadHours,
+  needsDetailsSheet,
+  parseAddParam,
   shortcutStart,
   toTaskInput,
-  toggleId,
   validateForm,
   type AddTaskForm,
   type PeriodLoads,
@@ -28,17 +29,23 @@ import {
 
 type Props = { open: boolean; mode: "WORK" | "MEETING" | "CHOOSE" | null; onClose: () => void; data: DashboardData };
 
-const TILES: { key: keyof PeriodLoads; label: string }[] = [
-  { key: "today", label: "Today" },
-  { key: "tomorrow", label: "Tom" },
-  { key: "week", label: "Week" },
-  { key: "month", label: "Month" },
-];
-
 /** Full-screen "after clicking +" sheet (SPEC §6). Creates a Work task or a Meeting via `createTask`. */
-export function AddTaskSheet({ open, mode, onClose, data }: Props): JSX.Element | null {
+export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: Props): JSX.Element | null {
   const toast = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // `/dashboard?add=WORK|MEETING|CHOOSE` opens the sheet on mount (deep link / screenshots).
+  const urlMode = parseAddParam(searchParams?.get("add"));
+  const [urlOpen, setUrlOpen] = useState(false);
+  useEffect(() => setUrlOpen(!!urlMode), [urlMode]);
+  const open = openProp || urlOpen;
+  const mode = openProp ? modeProp : urlMode;
+  const close = useCallback(() => {
+    setUrlOpen(false);
+    onClose();
+  }, [onClose]);
+
   const [chosen, setChosen] = useState<TaskMode | null>(null);
   const [form, setForm] = useState<AddTaskForm>(() => emptyForm("WORK", data.me.id));
   const [manualTime, setManualTime] = useState(false);
@@ -47,6 +54,9 @@ export function AddTaskSheet({ open, mode, onClose, data }: Props): JSX.Element 
   const [loads, setLoads] = useState<PeriodLoads>(EMPTY_LOADS);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [busy, setBusy] = useState<false | "saving" | "uploading">(false);
+  const [details, setDetails] = useState<{ open: boolean; focus: DetailsFocus }>({ open: false, focus: null });
+  const [assigneesOpen, setAssigneesOpen] = useState(false);
+  const [loopOpen, setLoopOpen] = useState(false);
   const teamsTouched = useRef(false);
 
   const patch = useCallback((p: Partial<AddTaskForm>) => setForm((f) => ({ ...f, ...p })), []);
@@ -62,6 +72,9 @@ export function AddTaskSheet({ open, mode, onClose, data }: Props): JSX.Element 
     setFiles([]);
     setErrors({});
     setBusy(false);
+    setDetails({ open: false, focus: null });
+    setAssigneesOpen(false);
+    setLoopOpen(false);
     teamsTouched.current = false;
   }, [open, mode, data.me.id]);
 
@@ -73,7 +86,7 @@ export function AddTaskSheet({ open, mode, onClose, data }: Props): JSX.Element 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assigneeKey]);
 
-  // Header tiles — refreshed (debounced 400ms) whenever the assignee set changes.
+  // Header pills — refreshed (debounced 400ms) whenever the assignee set changes.
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
@@ -90,14 +103,18 @@ export function AddTaskSheet({ open, mode, onClose, data }: Props): JSX.Element 
   }, [open, assigneeKey]);
 
   const assignees = useMemo(() => allowedAssignees(data, chosen ?? "WORK"), [data, chosen]);
+  const executives = useMemo(() => allowedAssignees(data, "WORK").filter((p) => p.id !== data.me.id), [data]);
   const meeting = chosen === "MEETING";
+  const subSheetOpen = details.open || assigneesOpen || loopOpen;
 
   const choose = (type: TaskMode) => {
+    if (type === chosen) return;
     setChosen(type);
     setForm((f) => ({ ...emptyForm(type, data.me.id), title: f.title, description: f.description, clientId: f.clientId }));
+    teamsTouched.current = false;
   };
 
-  const setShortcut = (kind: "upnext" | "tomorrow" | "today") => {
+  const setShortcut = (kind: Shortcut) => {
     if (kind === "upnext") {
       setManualTime(false);
       patch({ scheduledStart: "", scheduledEnd: "", acceptProposedSlot: false });
@@ -128,27 +145,33 @@ export function AddTaskSheet({ open, mode, onClose, data }: Props): JSX.Element 
     else toast(`${jobs.length} attachment${jobs.length === 1 ? "" : "s"} uploaded`);
   };
 
+  const showErrors = (errs: FieldErrors) => {
+    setErrors(errs);
+    if (needsDetailsSheet(errs)) setDetails({ open: true, focus: null });
+  };
+
   const submit = async () => {
     if (busy || !chosen) return;
     const errs = validateForm(form);
-    setErrors(errs);
     const first = Object.values(errs)[0];
     if (first) {
       toast(first, "err");
+      showErrors(errs);
       return;
     }
+    setErrors({});
     setBusy("saving");
     try {
       const res = await createTask(toTaskInput({ ...form, type: chosen }, data.tz));
       if (!res.ok) {
         toast(res.error, "err");
-        setErrors(errorsFromMessage(res.error));
+        showErrors(errorsFromMessage(res.error));
         return;
       }
       toast(meeting ? "Meeting scheduled" : "Task created");
       await uploadAll(res.data.taskId);
       voiceNotes.forEach((n) => URL.revokeObjectURL(n.url));
-      onClose();
+      close();
       router.refresh();
     } catch (e) {
       toast(e instanceof Error ? e.message : "Something went wrong", "err");
@@ -158,135 +181,68 @@ export function AddTaskSheet({ open, mode, onClose, data }: Props): JSX.Element 
   };
 
   if (!open) return null;
-  const startIs = (kind: "tomorrow" | "today") => !!form.scheduledStart && form.scheduledStart === shortcutStart(kind, new Date(), data.tz);
+  const liveForm = { ...form, type: chosen ?? "WORK" };
+  const canPickAssignees = data.role !== "EXECUTIVE" || meeting;
 
   return (
-    <Sheet open={open} onClose={onClose} full>
-      <div className="flex min-h-full flex-col">
-        <header className="sticky top-0 z-10 bg-brand-blue px-4 pb-3 pt-3 text-white">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold">{chosen === null ? "New" : meeting ? "New meeting" : "New work"}</h2>
-            {chosen && mode === "CHOOSE" ? (
-              <button type="button" onClick={() => setChosen(null)} className="touch-target text-xs text-white/80">
-                Change type
-              </button>
-            ) : null}
-          </div>
-          <div className="mt-2 grid grid-cols-4 gap-2" aria-label="Assignee load">
-            {TILES.map((t) => (
-              <div key={t.key} className="rounded-lg bg-white/15 px-2 py-2 text-center">
-                <div className="text-[11px] font-medium text-white/80">{t.label}</div>
-                <div className="text-xs font-bold leading-tight">{fmtLoadHours(loads[t.key].minutes)}</div>
-                <div className="text-[11px] text-white/80">– {loads[t.key].count}</div>
-              </div>
-            ))}
-          </div>
-        </header>
-
-        <main className="flex-1 px-4 py-4">
+    <>
+      <Sheet open={open} onClose={subSheetOpen ? () => undefined : close} full>
+        <div className="flex h-full min-h-full flex-col bg-[#1E1E1E]">
+          <AddTaskHeader loads={loads} />
           {chosen === null ? (
-            <div className="grid grid-cols-1 gap-4 py-8 sm:grid-cols-2">
-              <button type="button" onClick={() => choose("WORK")} className="touch-target rounded-2xl bg-brand-blue py-8 text-xl font-bold text-white shadow-md active:bg-brand-blue-dark">
-                Work
-              </button>
-              <button type="button" onClick={() => choose("MEETING")} className="touch-target rounded-2xl bg-brand-green py-8 text-xl font-bold text-white shadow-md active:bg-brand-green-dark">
-                Meeting
-              </button>
-            </div>
+            <AddTaskChooser onChoose={choose} />
           ) : (
-            <AddTaskFields
-              form={{ ...form, type: chosen }}
+            <AddTaskBody
+              form={liveForm}
               patch={patch}
-              data={data}
-              assignees={assignees}
-              errors={errors}
-              manualTime={manualTime}
-              setManualTime={setManualTime}
+              titleError={errors.title}
+              canPickAssignees={canPickAssignees}
+              onOpenAssignees={() => setAssigneesOpen(true)}
+              onOpenLoop={() => setLoopOpen(true)}
+              onSubmit={submit}
               voiceNotes={voiceNotes}
               setVoiceNotes={setVoiceNotes}
               files={files}
               setFiles={setFiles}
-              onTeamsTouched={() => (teamsTouched.current = true)}
-              disabled={!!busy}
+              busy={busy}
+              onError={(m) => toast(m, "err")}
             />
           )}
-        </main>
+          {chosen !== null ? <AddTaskTags form={liveForm} patch={patch} data={data} executives={executives} onTeamsTouched={() => (teamsTouched.current = true)} /> : null}
+          <AddTaskBottomBar
+            form={liveForm}
+            type={chosen}
+            tz={data.tz}
+            onShortcut={setShortcut}
+            onType={choose}
+            onOpenSchedule={() => setDetails({ open: true, focus: "schedule" })}
+            onOpenDetails={() => setDetails({ open: true, focus: null })}
+            onClose={close}
+          />
+        </div>
+      </Sheet>
 
-        <footer className="sticky bottom-0 z-10 bg-brand-green text-white">
-          {chosen !== null ? (
-            <div className="space-y-1 border-b border-white/20 px-3 py-2">
-              {!meeting && data.workTypes.length ? (
-                <TagRow label="Work">
-                  {data.workTypes.map((w) => (
-                    <Pill key={w.id} active={form.tagIds.includes(w.id)} onClick={() => patch({ tagIds: toggleId(form.tagIds, w.id) })}>
-                      {w.name}
-                    </Pill>
-                  ))}
-                </TagRow>
-              ) : null}
-              {data.teams.length ? (
-                <TagRow label="Teams">
-                  {data.teams.map((t) => (
-                    <Pill
-                      key={t.id}
-                      active={form.teamIds.includes(t.id)}
-                      onClick={() => {
-                        teamsTouched.current = true;
-                        patch({ teamIds: toggleId(form.teamIds, t.id) });
-                      }}
-                    >
-                      {t.name}
-                    </Pill>
-                  ))}
-                </TagRow>
-              ) : null}
-              {data.clients.length ? (
-                <TagRow label="Clients">
-                  {data.clients.map((c) => (
-                    <Pill key={c.id} active={form.clientId === c.id} onClick={() => patch({ clientId: form.clientId === c.id ? "" : c.id })}>
-                      {c.name}
-                    </Pill>
-                  ))}
-                </TagRow>
-              ) : null}
-            </div>
-          ) : null}
-          <div className="flex items-center gap-1 px-3 py-2">
-            <Pill active={!form.scheduledStart} onClick={() => setShortcut("upnext")} className="touch-target" title="Next available slot">
-              Upnext
-            </Pill>
-            <Pill active={startIs("tomorrow")} onClick={() => setShortcut("tomorrow")} className="touch-target" title="Tomorrow 10:00">
-              Tom
-            </Pill>
-            <Pill active={startIs("today")} onClick={() => setShortcut("today")} className="touch-target" title="Today, next full hour">
-              Today
-            </Pill>
-            <div className="flex-1" />
-            <button type="button" onClick={onClose} aria-label="Cancel" className="touch-target rounded-full text-lg text-white/90 hover:bg-white/15">
-              ✕
-            </button>
-            <button
-              type="button"
-              onClick={submit}
-              disabled={!!busy || chosen === null}
-              aria-label={meeting ? "Schedule meeting" : "Create task"}
-              className={clsx("touch-target flex items-center gap-1 rounded-full bg-white px-4 text-sm font-bold text-brand-green-dark shadow disabled:opacity-60")}
-            >
-              {busy === "saving" ? "Saving…" : busy === "uploading" ? "Uploading…" : "Send"} <span aria-hidden>✈</span>
-            </button>
-          </div>
-        </footer>
-      </div>
-    </Sheet>
-  );
-}
-
-function TagRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="w-12 shrink-0 text-[11px] font-semibold uppercase tracking-wide text-white/80">{label}</span>
-      <div className="scrollbar-none flex flex-1 gap-1 overflow-x-auto py-0.5">{children}</div>
-    </div>
+      {chosen !== null ? (
+        <>
+          <AddTaskDetails
+            open={details.open}
+            onClose={() => setDetails({ open: false, focus: null })}
+            focus={details.focus}
+            form={liveForm}
+            patch={patch}
+            data={data}
+            assignees={assignees}
+            errors={errors}
+            manualTime={manualTime}
+            setManualTime={setManualTime}
+            onTeamsTouched={() => (teamsTouched.current = true)}
+            disabled={!!busy}
+          />
+          <AssigneeSheet open={assigneesOpen} onClose={() => setAssigneesOpen(false)} form={liveForm} patch={patch} data={data} assignees={assignees} />
+          {!meeting ? <LoopSheet open={loopOpen} onClose={() => setLoopOpen(false)} value={form.recurrence} onChange={(recurrence) => patch({ recurrence })} /> : null}
+        </>
+      ) : null}
+    </>
   );
 }
 

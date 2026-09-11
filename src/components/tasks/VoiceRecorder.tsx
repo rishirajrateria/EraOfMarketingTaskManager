@@ -1,6 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Mic, Square, Upload, X } from "lucide-react";
 import { clsx } from "@/lib/clsx";
+import { useLongPress } from "@/components/ui/useLongPress";
 
 export type VoiceNote = { id: string; blob: Blob; durationSec: number; url: string };
 
@@ -81,13 +83,28 @@ export function useMediaRecorder() {
   return { recording, seconds, error, start, stop, supported: recorderSupported() };
 }
 
-/** Deterministic pseudo-waveform bar heights (px) so pills look stable across renders. */
-function bars(seed: number, count = 18): number[] {
-  return Array.from({ length: count }, (_, i) => 4 + ((Math.sin(seed * 7 + i * 1.7) + 1) / 2) * 14);
+/** Deterministic pseudo-waveform tick heights (px) so pills look stable across renders. */
+function ticks(seed: number, count = 26): number[] {
+  return Array.from({ length: count }, (_, i) => 3 + ((Math.sin(seed * 7 + i * 1.7) + 1) / 2) * 11);
 }
 
-/** Recorded voice notes rendered as "20s" waveform pills with inline playback (SPEC §6). */
-export function VoiceRecorder({ notes, onChange, disabled }: { notes: VoiceNote[]; onChange: (notes: VoiceNote[]) => void; disabled?: boolean }) {
+/**
+ * The dark INPUT BAR under the description: upload ↥ (left), thin track, mic (right).
+ * The mic starts/stops a voice-note recording; while recording it shows a red dot + seconds.
+ */
+export function VoiceInputBar({
+  notes,
+  onChange,
+  onUpload,
+  disabled,
+  onError,
+}: {
+  notes: VoiceNote[];
+  onChange: (notes: VoiceNote[]) => void;
+  onUpload: () => void;
+  disabled?: boolean;
+  onError?: (message: string) => void;
+}) {
   const r = useMediaRecorder();
 
   const toggle = async () => {
@@ -97,42 +114,53 @@ export function VoiceRecorder({ notes, onChange, disabled }: { notes: VoiceNote[
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       onChange([...notes, { id, blob: res.blob, durationSec: res.durationSec, url: URL.createObjectURL(res.blob) }]);
     } else {
-      await r.start();
+      const ok = await r.start();
+      if (!ok) onError?.(r.error ?? "Recording is not supported in this browser");
     }
   };
 
+  return (
+    <div className="mx-3 my-2 flex h-11 items-center gap-2 rounded-[10px] bg-[#2B2B2B] px-3 text-white">
+      <button type="button" onClick={onUpload} disabled={disabled} aria-label="Upload files" className="flex h-8 w-8 items-center justify-center rounded disabled:opacity-50">
+        <Upload size={20} strokeWidth={2} aria-hidden />
+      </button>
+      <div className="flex h-full flex-1 items-center" aria-hidden>
+        {r.recording ? (
+          <span className="flex items-center gap-2 text-xs text-white">
+            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" /> {r.seconds}s
+          </span>
+        ) : (
+          <span className="h-[3px] w-full rounded-full bg-[#3A3A3A]" />
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={toggle}
+        disabled={disabled}
+        aria-pressed={r.recording}
+        aria-label={r.recording ? "Stop recording" : "Record voice note"}
+        title={r.supported ? undefined : "Recording is not supported in this browser"}
+        className={clsx("flex h-8 w-8 items-center justify-center rounded disabled:opacity-50", r.recording && "text-red-400")}
+      >
+        {r.recording ? <Square size={18} fill="currentColor" aria-hidden /> : <Mic size={20} strokeWidth={2} aria-hidden />}
+      </button>
+    </div>
+  );
+}
+
+/** Recorded voice notes: 170×26 dark pills with tick-mark waveform + "20s"; two per view, horizontally scrollable. */
+export function VoiceNoteStrip({ notes, onChange }: { notes: VoiceNote[]; onChange: (notes: VoiceNote[]) => void }) {
+  if (!notes.length) return null;
   const remove = (n: VoiceNote) => {
     URL.revokeObjectURL(n.url);
     onChange(notes.filter((x) => x.id !== n.id));
   };
-
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={toggle}
-          disabled={disabled || !r.supported}
-          aria-label={r.recording ? "Stop recording" : "Record voice note"}
-          className={clsx(
-            "touch-target flex items-center gap-2 rounded-full px-4 text-sm font-semibold text-white disabled:opacity-50",
-            r.recording ? "animate-pulse bg-red-600" : "bg-brand-blue",
-          )}
-        >
-          <span aria-hidden>{r.recording ? "■" : "🎙"}</span>
-          {r.recording ? `Stop · ${r.seconds}s` : "Record voice note"}
-        </button>
-        {!r.supported ? <span className="text-[11px] text-gray-400">Not supported in this browser</span> : null}
-        {r.error ? <span className="text-[11px] text-red-600">{r.error}</span> : null}
-      </div>
-      {notes.length ? (
-        <ul className="flex flex-wrap gap-2">
-          {notes.map((n, i) => (
-            <VoiceNotePill key={n.id} note={n} seed={i + 1} onRemove={() => remove(n)} />
-          ))}
-        </ul>
-      ) : null}
-    </div>
+    <ul className="scrollbar-none mx-3 flex gap-2 overflow-x-auto py-1" aria-label="Voice notes">
+      {notes.map((n, i) => (
+        <VoiceNotePill key={n.id} note={n} seed={i + 1} onRemove={() => remove(n)} />
+      ))}
+    </ul>
   );
 }
 
@@ -145,21 +173,26 @@ export function VoiceNotePill({ note, seed, onRemove }: { note: VoiceNote; seed:
     if (playing) a.pause();
     else void a.play();
   };
+  const press = useLongPress(() => onRemove?.(), toggle);
   return (
-    <li className="flex items-center gap-1 rounded-full bg-brand-blue/10 py-1 pl-1 pr-2 text-brand-blue">
-      <button type="button" onClick={toggle} aria-label={playing ? "Pause" : "Play voice note"} className="touch-target flex items-center gap-2">
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-blue text-xs text-white">{playing ? "❚❚" : "▶"}</span>
-        <span className="waveform flex h-5 items-center" aria-hidden>
-          {bars(seed).map((h, i) => (
-            <span key={i} style={{ height: `${h}px` }} />
+    <li className="relative h-[26px] w-[170px] shrink-0 rounded-md bg-[#111]">
+      <button
+        type="button"
+        {...press}
+        aria-label={`${playing ? "Pause" : "Play"} voice note, ${note.durationSec} seconds (long-press to remove)`}
+        className="flex h-full w-full items-center gap-2 pl-2 pr-6"
+      >
+        <span className="flex h-full flex-1 items-center gap-[2px] overflow-hidden" aria-hidden>
+          {ticks(seed).map((h, i) => (
+            <span key={i} className={clsx("w-px shrink-0 rounded-full", playing ? "bg-[#93C5FD]" : "bg-[#9CA3AF]")} style={{ height: `${h}px` }} />
           ))}
         </span>
-        <span className="text-xs font-semibold">{note.durationSec}s</span>
+        <span className="text-[10px] leading-none text-[#D1D5DB]">{note.durationSec}s</span>
       </button>
       <audio ref={audio} src={note.url} preload="metadata" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} />
       {onRemove ? (
-        <button type="button" onClick={onRemove} aria-label="Remove voice note" className="touch-target text-gray-400">
-          ✕
+        <button type="button" onClick={onRemove} aria-label="Remove voice note" className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded text-[#9CA3AF] hover:text-white">
+          <X size={10} aria-hidden />
         </button>
       ) : null}
     </li>

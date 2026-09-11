@@ -177,3 +177,34 @@ export function toggleId(list: string[], id: string): string[] {
 }
 
 export const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"] as const;
+
+/** The Team Leader of a team (Admin tag row auto-assigns them when the team pill is tapped). */
+export function teamLeaderId(data: Pick<DashboardData, "people">, teamId: string): string | null {
+  return data.people.find((p) => p.role === "TEAM_LEADER" && p.teamId === teamId)?.id ?? null;
+}
+
+/**
+ * Admin green-row behaviour: toggling a team pill toggles `teamIds` and, when switching a team ON,
+ * adds that team's leader to `assigneeIds` if not already present.
+ */
+export function toggleTeamWithLeader(
+  form: Pick<AddTaskForm, "teamIds" | "assigneeIds">,
+  data: Pick<DashboardData, "people">,
+  teamId: string,
+): Pick<AddTaskForm, "teamIds" | "assigneeIds"> {
+  const teamIds = toggleId(form.teamIds, teamId);
+  if (!teamIds.includes(teamId)) return { teamIds, assigneeIds: form.assigneeIds };
+  const leader = teamLeaderId(data, teamId);
+  const assigneeIds = leader && !form.assigneeIds.includes(leader) ? [...form.assigneeIds, leader] : form.assigneeIds;
+  return { teamIds, assigneeIds };
+}
+
+/** Which validation errors live in the details sheet (title is edited in the main body). */
+export function needsDetailsSheet(errors: Partial<Record<"title" | "clientId" | "assigneeIds" | "allocatedHours", string>>): boolean {
+  return !!(errors.clientId || errors.assigneeIds || errors.allocatedHours);
+}
+
+/** `?add=WORK|MEETING|CHOOSE` → sheet mode (used to deep-link the add sheet). */
+export function parseAddParam(value: string | null | undefined): "WORK" | "MEETING" | "CHOOSE" | null {
+  return value === "WORK" || value === "MEETING" || value === "CHOOSE" ? value : null;
+}
