@@ -23,7 +23,7 @@ export function StepClient({ form, set, errors, clients, tax, query }: StepProps
                 key={c.id}
                 type="button"
                 aria-pressed={active}
-                onClick={() => set({ clientId: c.id, tdsApplicable: c.tdsPercent != null, currency: c.country?.toUpperCase() === "IN" ? "INR" : c.currency || "INR" })}
+                onClick={() => set({ clientId: c.id, tdsApplicable: (c.country ?? "IN").toUpperCase() === "IN" && c.tdsPercent != null, currency: c.country?.toUpperCase() === "IN" ? "INR" : c.currency || "INR" })}
                 className={`touch-target rounded-full px-3.5 py-1.5 text-sm font-medium transition ${active ? "bg-gradient-to-b from-[#2f74e6] to-[#1e63d6] text-white shadow-[0_6px_16px_rgba(30,99,214,.35)]" : "glass-chip text-gray-800"}`}
               >
                 {c.name}
@@ -46,6 +46,7 @@ export function StepClient({ form, set, errors, clients, tax, query }: StepProps
             <li className={picked.email ? "text-gray-700" : "text-amber-700"}>✉️ {picked.email ?? "No email on file — email sending will be disabled"}</li>
             <li className={picked.whatsapp ? "text-gray-700" : "text-amber-700"}>💬 {picked.whatsapp ?? "No WhatsApp number — WhatsApp sending will be disabled"}</li>
           </ul>
+          {(picked.country ?? "IN").toUpperCase() === "IN" ? (
           <div className="border-t border-white/60">
             <Toggle
               checked={form.tdsApplicable}
@@ -54,6 +55,7 @@ export function StepClient({ form, set, errors, clients, tax, query }: StepProps
               hint={picked.tdsPercent != null ? `${picked.tdsPercent}% on the client card — the payment sheet pre-fills it` : "No TDS % on the client card; you can still enter it when recording the payment"}
             />
           </div>
+          ) : null}
           {warnings.length === 2 ? <p className="text-xs font-medium text-red-600">This client has no contact channel; add an email or WhatsApp number before approving.</p> : null}
         </div>
       ) : null}

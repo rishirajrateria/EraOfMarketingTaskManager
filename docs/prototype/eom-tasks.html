@@ -180,6 +180,23 @@ textarea.in{resize:vertical;min-height:70px}
 .ta{width:100%;border:0;background:transparent;font-size:16px;font-weight:600;outline:none;resize:none;color:var(--ink)}
 .ta.desc{font-size:14px;font-weight:400;min-height:90px}
 .mini{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.hrs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:12px}
+.hrs .lab{font-size:12px;color:var(--muted);margin-right:2px}
+.hrs .pill.on{background:#111;color:#fff;border-color:#111}
+.step{display:flex;align-items:center;border:1px solid var(--line);border-radius:999px;background:var(--chip);height:30px}
+.step button{width:30px;height:30px;font-size:18px;line-height:1}
+.step b{min-width:46px;text-align:center;font-size:13px}
+.voice{display:flex;align-items:center;gap:12px;margin-top:14px}
+.micbtn{width:64px;height:64px;border-radius:999px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 8px 20px rgba(0,0,0,.25);touch-action:none}
+.micbtn.rec{background:#dc2626;animation:pulse 1s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(220,38,38,.5)}70%{box-shadow:0 0 0 14px rgba(220,38,38,0)}100%{box-shadow:0 0 0 0 rgba(220,38,38,0)}}
+.notes{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1}
+.vn{display:flex;align-items:center;gap:8px;background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:4px 6px 4px 12px;font-size:12px}
+.vn .bars{flex:1;height:14px;background:repeating-linear-gradient(90deg,var(--ink) 0 2px,transparent 2px 5px);opacity:.35;border-radius:2px;min-width:30px}
+.wd{display:flex;gap:6px}
+.wd button{width:36px;height:36px;border-radius:999px;border:1px solid var(--line);background:var(--chip);font-weight:600;font-size:12px}
+.wd button.on{background:#111;color:#fff;border-color:#111}
+.recsum{margin:4px 0 12px;padding:8px 12px;border-radius:12px;background:rgba(191,219,254,.6);color:#1e3a8a;font-size:13px;font-weight:600}
 .hoursrow{display:flex;align-items:center;gap:8px;margin-top:10px}
 .hoursrow input{width:64px}
 .slot{margin-top:10px;font-size:12px;color:var(--muted)}
@@ -295,16 +312,15 @@ svg{display:block}
       <div class="mini">
         <button class="pill" id="tImportant">★ Important</button>
         <button class="pill" id="tRecur">⟳ Recurring</button>
-        <button class="pill" id="tVoice">🎙 Voice note</button>
         <button class="pill" id="tProtect">🔒 Protected</button>
       </div>
-      <div class="hoursrow"><span style="font-size:12px;color:var(--muted)">Hours</span><input class="in" id="tHours" type="number" min="0.25" step="0.25" value="2"></div>
-      <div class="sched"><input class="in" id="tDate" type="date"><input class="in" id="tTime" type="time" value="10:00"></div>
+      <div class="hrs" id="tHrs"></div><input id="tHours" type="hidden" value="2">
+      <div hidden><input id="tDate" type="date"><input id="tTime" type="time" value="10:00"></div>
+      <div class="voice"><button class="micbtn" id="tMic" aria-label="Record a voice note"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" fill="currentColor"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg></button><div class="notes" id="tNotes"></div></div>
       <div class="slot" id="tSlot"></div>
       <div id="tAssignWrap" class="card" style="margin:12px 0 0;padding:10px 12px;font-size:12.5px"></div>
-      <div id="tRecurWrap" hidden style="margin-top:10px"><div class="seg" id="tRecurSeg"></div></div>
     </div>
-    <div class="greenarea" style="flex-shrink:0"><div class="wrow" id="tRow1"></div><div class="wrow" id="tRowWork"></div><div class="wrow" id="tRowPref"></div><div class="wrow" id="tRow2"></div></div>
+    <div class="greenarea" style="flex-shrink:0"><div class="wrow" id="tRowPref"></div><div class="wrow" id="tRowWork"></div><div class="wrow" id="tRow1"></div><div class="wrow" id="tRow2"></div></div>
     <div class="bar" style="flex-shrink:0">
       <div class="g" id="tBarG"></div>
       <div class="w">
@@ -386,13 +402,13 @@ function seed(){
  const T=(o)=>Object.assign({id:uid(),type:"WORK",status:"NOT_STARTED",paused:false,important:false,recurring:false,doubt:false,review:false,protected:false,parent:false,voice:false,createdBy:"u1",actualStart:null,actualEnd:null,work:"w1",team:"t1",desc:""},o);
  const tasks=[
   T({title:"Instagram reels calendar — October",client:"c1",assignees:["u3"],mins:180,start:at(0,10),end:at(0,13),status:"STARTED",actualStart:at(0,10,5),important:true,desc:"12 reels for Zenith Foods. Use the new brand kit in Drive."}),
-  T({title:"Weekly performance report",client:"c2",assignees:["u4"],mins:60,start:at(0,14),end:at(0,15),recurring:true,work:"w4"}),
+  T({title:"Weekly performance report",client:"c2",assignees:["u4"],mins:60,start:at(0,14),end:at(0,15),recurring:true,work:"w4",recurText:"Every Fri"}),
   T({title:"Landing page hero redesign",client:"c2",assignees:["u6"],mins:240,start:at(-1,11),end:at(-1,15),status:"STARTED",actualStart:at(-1,11,20),doubt:true,team:"t2",work:"w2",desc:"Client asked for a darker palette. Doubt: which logo version?"}),
   T({title:"Meta ads — festive campaign setup",client:"c4",assignees:["u3","u4"],mins:120,start:at(-2,10),end:at(-2,12),work:"w3",desc:"Overdue: waiting on creatives."}),
   T({title:"Client kickoff — Nordic Labs",client:"c3",assignees:["u2","u3"],mins:45,start:at(0,16),end:at(0,16,45),type:"MEETING",createdBy:"u1",meet:true}),
   T({title:"Blog: 10 SEO wins for D2C brands",client:"c3",assignees:["u4"],mins:150,start:at(1,10),end:at(1,12,30),team:"t3",review:true}),
   T({title:"Brand guideline PDF v2",client:"c1",assignees:["u6"],mins:300,start:at(1,11),end:at(1,16),team:"t2",work:"w2",paused:true}),
-  T({title:"Monthly newsletter copy",client:"c4",assignees:["u3"],mins:90,start:at(2,10),end:at(2,11,30),recurring:true}),
+  T({title:"Monthly newsletter copy",client:"c4",assignees:["u3"],mins:90,start:at(2,10),end:at(2,11,30),recurring:true,recurText:"Every month on the last day"}),
   T({title:"Website audit fixes",client:"c2",assignees:["u3"],mins:120,start:at(-3,10),end:at(-3,12),status:"COMPLETED",actualStart:at(-3,10),actualEnd:at(-3,12,10)}),
   T({title:"Competitor research — snacks",client:"c1",assignees:["u4"],mins:120,start:at(-1,15),end:at(-1,17),status:"COMPLETED",actualStart:at(-1,15),actualEnd:at(-1,16,40),parent:true}),
   T({title:"Reel edit — Diwali teaser",client:"c1",assignees:["u3"],mins:60,start:at(0,15),end:at(0,16),status:"FINISH_REQUESTED",actualStart:at(0,15),actualEnd:at(0,15,50),voice:true}),
@@ -649,7 +665,7 @@ function openDetail(t,attach){
  openSheet(t.title,
   el("div",{style:"display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"},el("span",{class:"chip"},c.name),el("span",{class:"chip me"},t.assignees.map(id=>first(userById(id).name)).join(", ")),el("span",{class:"chip"},t.type==="MEETING"?"Meeting":S.workTypes.find(w=>w.id===t.work)?.name||"Work"),el("span",{class:"chip"},t.status.replace("_"," ").toLowerCase())),
   t.desc?el("p",{style:"font-size:13px;margin:0 0 10px"},t.desc):null,
-  el("div",{class:"card",style:"margin:0 0 10px"},kv("Allocated",fmtMin(t.mins)),kv("Scheduled",fmtDY(t.start)+" · "+fmtT(t.start)+" – "+fmtT(t.end)),kv("Actual",t.actualStart?fmtT(t.actualStart)+" – "+(t.actualEnd?fmtT(t.actualEnd):"…"):"not started"),kv("Created by",userById(t.createdBy).name),kv("Team",S.teams.find(x=>x.id===t.team)?.name||"—")),
+  el("div",{class:"card",style:"margin:0 0 10px"},kv("Allocated",fmtMin(t.mins)),kv("Scheduled",fmtDY(t.start)+" · "+fmtT(t.start)+" – "+fmtT(t.end)),kv("Actual",t.actualStart?fmtT(t.actualStart)+" – "+(t.actualEnd?fmtT(t.actualEnd):"…"):"not started"),kv("Created by",userById(t.createdBy).name),kv("Team",S.teams.find(x=>x.id===t.team)?.name||"—"),t.recurring?kv("Repeats",t.recurText||"yes"):null),
   el("div",{class:"card",style:"margin:0 0 10px"+(attach?";box-shadow:0 0 0 2px var(--blue)":"")},el("h4",{},"Attachments"),t.voice?el("div",{style:"display:flex;align-items:center;gap:8px;font-size:13px"},svg(I.mic,18),"Voice note · 0:42",el("button",{class:"pill",style:"margin-left:auto",onclick:()=>toast("Plays the voice note")},"Play")):el("div",{class:"pre"},"No voice notes. Drive folder holds files.")),
   el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Close"),el("button",{class:"btn",onclick:()=>{closeSheet();openActions(t);}},"Actions")));
 }
@@ -657,7 +673,7 @@ function openDetail(t,attach){
 let AF=null; // form
 function openAdd(mode,edit){
  const m=me(),r=role();
- AF={prefs:edit?[...(edit.prefs||[])]:[],edit:edit||null,type:mode==="CHOOSE"?null:mode,title:edit?edit.title:"",desc:edit?edit.desc:"",hours:edit?edit.mins/60:2,work:edit?edit.work:S.workTypes[0].id,client:edit?edit.client:"",teams:edit?[edit.team]:[],assignees:edit?[...edit.assignees]:[],date:edit?dk(new Date(edit.start)):"",time:edit?fmtTimeInput(edit.start):"10:00",important:!!edit?.important,recurring:!!edit?.recurring,recur:"WEEKLY",voice:!!edit?.voice,protect:!!edit?.protected,shortcut:edit?null:"upnext"};
+ AF={notes:edit&&edit.voice?[{secs:42,url:null}]:[],rec:edit?.rec||null,prefs:edit?[...(edit.prefs||[])]:[],edit:edit||null,type:mode==="CHOOSE"?null:mode,title:edit?edit.title:"",desc:edit?edit.desc:"",hours:edit?edit.mins/60:2,work:edit?edit.work:S.workTypes[0].id,client:edit?edit.client:"",teams:edit?[edit.team]:[],assignees:edit?[...edit.assignees]:[],date:edit?dk(new Date(edit.start)):"",time:edit?fmtTimeInput(edit.start):"10:00",important:!!edit?.important,recurring:!!edit?.recurring,recur:"WEEKLY",voice:!!edit?.voice,protect:!!edit?.protected,shortcut:edit?null:"upnext"};
  if(r==="EXECUTIVE")AF.assignees=[m.id];
  show("add");renderAdd();
  if(mode==="CHOOSE")typeChooser();
@@ -680,15 +696,18 @@ function renderAdd(){
  $("#addLoads").replaceChildren(...[["today","Today"],["tomorrow","Tom"],["week","Week"],["month","month"]].map(([k,l])=>el("div",{class:"ltile",title:`${L[k].left} hours left to assign · ${L[k].count} task(s) already assigned`},el("b",{},l),` - ${Number.isInteger(L[k].left)?L[k].left:L[k].left.toFixed(1)} Hours - `,el("b",{},L[k].count))));
  $("#tTitle").value=AF.title;$("#tTitle").placeholder=AF.type==="MEETING"?"Meeting title":"Task title";
  $("#tDesc").value=AF.desc;$("#tHours").value=AF.hours;
+ const HP=[0.5,1,2,3,4,6,8];const hl=h=>h===0.5?"½h":(Number.isInteger(h)?h:h.toFixed(2).replace(/0$/,""))+"h";
+ $("#tHrs").replaceChildren(el("span",{class:"lab"},"How long"),...HP.map(h=>el("button",{class:"pill"+(AF.hours===h?" on":""),onclick:()=>{AF.hours=h;renderAdd();}},hl(h))),
+  el("div",{class:"step"},el("button",{"aria-label":"less",onclick:()=>{AF.hours=Math.max(0.25,Math.round((AF.hours-0.25)*4)/4);renderAdd();}},"−"),el("b",{},hl(AF.hours)),el("button",{"aria-label":"more",onclick:()=>{AF.hours=Math.round((AF.hours+0.25)*4)/4;renderAdd();}},"+")));
+ $("#tNotes").replaceChildren(...(MIC.on?[el("div",{style:"font-size:13px;font-weight:700;color:#dc2626"},"● Recording "+fmtSecs(MIC.secs)+" · tap to stop")]:AF.notes.length?AF.notes.map((n,i)=>el("div",{class:"vn"},el("span",{},"🎙 "+fmtSecs(n.secs)),el("span",{class:"bars"}),n.url?el("button",{class:"pill",onclick:()=>{try{new Audio(n.url).play();}catch(e){}}},"▶"):null,el("button",{class:"pill",onclick:()=>{AF.notes.splice(i,1);renderAdd();}},"✕"))):[el("div",{style:"font-size:13px;color:var(--muted)"},el("b",{style:"color:var(--ink)"},"Voice note"),el("br"),"Tap the mic to record, tap again to stop")]));
+ $("#tMic").className="micbtn"+(MIC.on?" rec":"");
  $("#tDate").value=AF.date;$("#tTime").value=AF.time;
- $("#tImportant").style.background=AF.important?"#fde68a":"";$("#tRecur").style.background=AF.recurring?"#bfdbfe":"";$("#tVoice").style.background=AF.voice?"#ddd6fe":"";$("#tProtect").style.background=AF.protect?"#d1fae5":"";
+ $("#tImportant").style.background=AF.important?"#fde68a":"";$("#tRecur").style.background=AF.recurring?"#bfdbfe":"";$("#tRecur").textContent="⟳ "+(AF.recurring&&AF.rec?recurText(AF.rec):"Recurring");$("#tProtect").style.background=AF.protect?"#d1fae5":"";
  $("#tProtect").hidden=r!=="ADMIN";
- $("#tRecurWrap").hidden=!AF.recurring;
- $("#tRecurSeg").replaceChildren(...["DAILY","WEEKLY","MONTHLY"].map(k=>el("button",{class:AF.recur===k?"on":"",onclick:()=>{AF.recur=k;renderAdd();}},k.toLowerCase())));
  // slot preview + who gets it
  const tlsOf=ids=>S.users.filter(u=>u.role==="TEAM_LEADER"&&ids.includes(u.teamId));
  const people=r==="ADMIN"?(AF.teams.length?tlsOf(AF.teams).map(u=>first(u.name)).join(", "):"pick a team"):AF.assignees.length?AF.assignees.map(id=>id===m.id?"me":first(userById(id).name)).join(", "):(r==="EXECUTIVE"?"me":"whole team");
- $("#tSlot").textContent=AF.date?`Scheduled ${fmtDY(AF.date)} at ${AF.time} · for ${people}`:`Next available slot: ${nextSlot()} · for ${people}`;
+ $("#tSlot").textContent=(AF.date?`📅 ${fmtDY(AF.date)} at ${AF.time}`:`📅 Next free slot: ${nextSlot()}`)+` · ${hl(AF.hours)}`+(people==="pick a team"?"":` · for ${people}`)+" · change with the calendar icon below";
  const aw=$("#tAssignWrap");aw.hidden=r==="EXECUTIVE";
  if(r==="ADMIN"){
   if(!AF.teams.length)aw.replaceChildren(el("b",{},"Pick a team below."),el("div",{class:"pre"},"The task goes to that team's Team Leader. Then tap executives to say who you'd prefer; the Team Leader makes the final call."));
@@ -708,11 +727,61 @@ function renderAdd(){
  rowWork.replaceChildren(...[lbl("Work"),...(wl.length?wl.map(w=>el("button",{class:"gpk"+(AF.work===w.id?" on":""),onclick:()=>{AF.work=w.id;renderAdd();}},w.name)):[el("span",{class:"lbl",style:"text-transform:none;font-weight:500"},"no work types for this team · Menu → Add Work")])]);
  row2.replaceChildren(lbl("Client"),...S.clients.filter(c=>!c.onHold||r==="ADMIN").map(c=>el("button",{class:"gpk"+(AF.client===c.id?" on":""),onclick:()=>{AF.client=AF.client===c.id?"":c.id;renderAdd();}},c.name+(c.onHold?" ⏸":""))));
  const sc=k=>{AF.shortcut=k;if(k==="upnext"){AF.date="";}else{AF.date=dk(new Date(Date.now()+(k==="tomorrow"?DAY:0)));AF.time="10:00";}renderAdd();};
- $("#tBarG").replaceChildren(el("button",{style:"display:flex;align-items:center;height:32px;width:28px;justify-content:center;color:#fff;flex-shrink:0",onclick:()=>$("#tDate").showPicker?$("#tDate").showPicker():$("#tDate").focus()},svg(I.cal,22,2)),
+ $("#tBarG").replaceChildren(el("button",{style:"display:flex;align-items:center;height:32px;width:28px;justify-content:center;color:#fff;flex-shrink:0",onclick:scheduleSheet},svg(I.cal,22,2)),
   el("button",{class:"gpk"+(!AF.date?" on":""),onclick:()=>sc("upnext")},"upnext"),el("button",{class:"gpk"+(AF.date&&AF.shortcut==="tomorrow"?" on":""),onclick:()=>sc("tomorrow")},"Tom"),el("button",{class:"gpk"+(AF.date&&AF.shortcut==="today"?" on":""),onclick:()=>sc("today")},"today"));
  $("#tMeet").className="sq"+(AF.type==="MEETING"?" on":"");
  $("#tWorkBtn").style.boxShadow=AF.type==="WORK"?"0 0 0 1px rgba(0,0,0,.6)":"";
  $("#tTypeDot").style.background=AF.type==="MEETING"?"#00AC47":"#2563eb";
+}
+const fmtSecs=s=>Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+const MIC={on:false,secs:0,t:null,mr:null,chunks:[]};
+async function micToggle(){
+ if(MIC.on){MIC.on=false;clearInterval(MIC.t);if(MIC.mr&&MIC.mr.state!=="inactive"){MIC.mr.stop();}else{if(MIC.secs>0)AF.notes.push({secs:MIC.secs,url:null});toast("Voice note attached");}renderAdd();return;}
+ MIC.on=true;MIC.secs=0;MIC.mr=null;MIC.chunks=[];
+ try{const st=await navigator.mediaDevices.getUserMedia({audio:true});const mr=new MediaRecorder(st);MIC.mr=mr;mr.ondataavailable=e=>MIC.chunks.push(e.data);mr.onstop=()=>{st.getTracks().forEach(t=>t.stop());const url=URL.createObjectURL(new Blob(MIC.chunks,{type:mr.mimeType||"audio/webm"}));AF.notes.push({secs:Math.max(1,MIC.secs),url});toast("Voice note attached");renderAdd();};mr.start();}
+ catch(e){toast("Prototype: no microphone access here, so this is a pretend recording. The real app records audio.");}
+ MIC.t=setInterval(()=>{MIC.secs++;renderAdd();},1000);renderAdd();
+}
+function scheduleSheet(){
+ const d=el("input",{class:"in",type:"date",value:AF.date||dk(new Date(Date.now()+DAY))}),t=el("input",{class:"in",type:"time",value:AF.time||"10:00"});
+ openSheet("When should it start?",el("div",{style:"display:grid;grid-template-columns:1fr 1fr;gap:8px"},field("Date",d),field("Start time",t)),el("p",{class:"pre",style:"margin:0 0 8px"},"Or close this and use upnext / Tom / today in the bar."),
+  el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{AF.date="";AF.shortcut="upnext";closeSheet();renderAdd();}},"Next free slot"),el("button",{class:"btn",onclick:()=>{if(!d.value)return toast("Pick a date","err");AF.date=d.value;AF.time=t.value||"10:00";AF.shortcut=null;closeSheet();renderAdd();}},"Set")));
+}
+const WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],NTH=["first","second","third","fourth","last"];
+const ord=n=>n+(n%10===1&&n!==11?"st":n%10===2&&n!==12?"nd":n%10===3&&n!==13?"rd":"th");
+function recurText(r){
+ let s;const every=(n,u)=>n===1?"Every "+u:"Every "+n+" "+u+"s";
+ if(r.freq==="DAILY")s=every(r.interval,"day");
+ else if(r.freq==="WEEKDAYS")s="Every weekday (Mon–Fri)";
+ else if(r.freq==="WEEKLY")s=(r.interval===1?"Every ":"Every "+r.interval+" weeks on ")+r.days.slice().sort((a,b)=>((a+6)%7)-((b+6)%7)).map(d=>WD[d]).join(", ");
+ else if(r.freq==="MONTHLY")s=every(r.interval,"month")+" on the "+(r.monthMode==="DATE"?(r.monthDay===32?"last day":ord(r.monthDay)):NTH[r.nth-1]+" "+WD[r.nthDay]);
+ else s="Every year on "+new Date(2026,r.yMonth,r.yDay).toLocaleDateString("en-IN",{day:"numeric",month:"short"});
+ if(r.ends==="COUNT")s+=" · "+r.count+" times";else if(r.ends==="UNTIL"&&r.until)s+=" · until "+fmtD(r.until+"T10:00:00");
+ return s;
+}
+function recurSheet(){
+ const base=AF.date?new Date(AF.date+"T10:00:00"):new Date();const wd=base.getDay(),md=base.getDate();
+ let r=AF.rec?JSON.parse(JSON.stringify(AF.rec)):{freq:"WEEKLY",interval:1,days:[wd],monthMode:"DATE",monthDay:md,nth:Math.min(5,Math.ceil(md/7)),nthDay:wd,yMonth:base.getMonth(),yDay:md,ends:"NEVER",count:10,until:""};
+ const presets=[["Every day",{freq:"DAILY",interval:1}],["Every weekday",{freq:"WEEKDAYS",interval:1}],["Every "+WD[wd],{freq:"WEEKLY",interval:1,days:[wd]}],["Every 2 weeks",{freq:"WEEKLY",interval:2,days:[wd]}],["Every month on the "+ord(md),{freq:"MONTHLY",interval:1,monthMode:"DATE",monthDay:md}],["Every month, last day",{freq:"MONTHLY",interval:1,monthMode:"DATE",monthDay:32}],["Every 3 months",{freq:"MONTHLY",interval:3,monthMode:"DATE",monthDay:md}],["Every year",{freq:"YEARLY",interval:1}]];
+ const body=el("div");
+ const draw=()=>{
+  const sum=el("div",{class:"recsum"},"⟳ "+recurText(r));
+  const pre=el("div",{class:"seg",style:"margin-bottom:12px"},...presets.map(([l,o])=>el("button",{class:recurText(Object.assign({},r,o))===recurText(r)?"on":"",onclick:()=>{Object.assign(r,o);draw();}},l)));
+  const unit={DAILY:"day",WEEKDAYS:"",WEEKLY:"week",MONTHLY:"month",YEARLY:"year"}[r.freq];
+  const freq=el("div",{class:"seg"},...[["DAILY","Daily"],["WEEKDAYS","Weekdays"],["WEEKLY","Weekly"],["MONTHLY","Monthly"],["YEARLY","Yearly"]].map(([k,l])=>el("button",{class:r.freq===k?"on":"",onclick:()=>{r.freq=k;if(k==="WEEKLY"&&!r.days.length)r.days=[wd];draw();}},l)));
+  const intv=unit?el("div",{class:"step",style:"width:max-content;margin-top:8px"},el("button",{onclick:()=>{r.interval=Math.max(1,r.interval-1);draw();}},"−"),el("b",{style:"min-width:110px"},"every "+(r.interval===1?unit:r.interval+" "+unit+"s")),el("button",{onclick:()=>{r.interval=Math.min(12,r.interval+1);draw();}},"+")):null;
+  let detail=null;
+  if(r.freq==="WEEKLY")detail=field("On",el("div",{class:"wd"},...[1,2,3,4,5,6,0].map(d=>el("button",{class:r.days.includes(d)?"on":"",onclick:()=>{r.days=r.days.includes(d)&&r.days.length>1?r.days.filter(x=>x!==d):[...new Set([...r.days,d])];draw();}},WD[d].slice(0,2)))));
+  if(r.freq==="MONTHLY")detail=el("div",{},el("div",{class:"seg",style:"margin:10px 0 8px"},el("button",{class:r.monthMode==="DATE"?"on":"",onclick:()=>{r.monthMode="DATE";draw();}},"On a date"),el("button",{class:r.monthMode==="NTH"?"on":"",onclick:()=>{r.monthMode="NTH";draw();}},"On a weekday")),
+   r.monthMode==="DATE"?el("select",{class:"in",onchange:e=>{r.monthDay=Number(e.target.value);draw();}},...Array.from({length:31},(_,i)=>el("option",{value:i+1,selected:r.monthDay===i+1||null},ord(i+1))),el("option",{value:32,selected:r.monthDay===32||null},"Last day of the month"))
+   :el("div",{style:"display:grid;grid-template-columns:1fr 1fr;gap:8px"},el("select",{class:"in",onchange:e=>{r.nth=Number(e.target.value);draw();}},...NTH.map((n,i)=>el("option",{value:i+1,selected:r.nth===i+1||null},"The "+n))),el("select",{class:"in",onchange:e=>{r.nthDay=Number(e.target.value);draw();}},...[1,2,3,4,5,6,0].map(d=>el("option",{value:d,selected:r.nthDay===d||null},WD[d])))));
+  const ends=el("div",{},el("div",{class:"seg"},...[["NEVER","Never ends"],["COUNT","After…"],["UNTIL","Until a date"]].map(([k,l])=>el("button",{class:r.ends===k?"on":"",onclick:()=>{r.ends=k;draw();}},l))),
+   r.ends==="COUNT"?el("div",{class:"step",style:"width:max-content;margin-top:8px"},el("button",{onclick:()=>{r.count=Math.max(2,r.count-1);draw();}},"−"),el("b",{style:"min-width:80px"},r.count+" times"),el("button",{onclick:()=>{r.count=Math.min(365,r.count+1);draw();}},"+")):null,
+   r.ends==="UNTIL"?el("input",{class:"in",type:"date",style:"margin-top:8px",value:r.until,onchange:e=>{r.until=e.target.value;draw();}}):null);
+  body.replaceChildren(...[sum,el("div",{class:"lab",style:"font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px"},"Quick pick"),pre,el("div",{style:"font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:4px 0 6px"},"Or set it yourself"),freq,intv,detail,el("div",{style:"font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:12px 0 6px"},"Ends"),ends].filter(Boolean));
+ };
+ draw();
+ openSheet("Repeat this task",body,el("div",{class:"btnrow",style:"margin-top:14px"},AF.recurring?el("button",{class:"btn ghost",style:"color:#dc2626",onclick:()=>{AF.recurring=false;AF.rec=null;closeSheet();renderAdd();}},"Don't repeat"):el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>{AF.recurring=true;AF.rec=r;closeSheet();renderAdd();toast("Repeats: "+recurText(r));}},"Done")));
 }
 function nextSlot(){const d=new Date();d.setMinutes(0,0,0);d.setHours(d.getHours()+1);if(d.getHours()>=18){d.setDate(d.getDate()+1);d.setHours(10);}return `${dateChip(d.toISOString())} ${fmtT(d.toISOString())}`;}
 function saveTask(){
@@ -729,7 +798,7 @@ function saveTask(){
  let start;if(AF.date){start=new Date(AF.date+"T"+AF.time+":00");}else{start=new Date();start.setMinutes(0,0,0);start.setHours(start.getHours()+1);}
  const end=new Date(start.getTime()+AF.hours*3600000);
  const team=AF.teams[0]||userById(assignees[0])?.teamId||m.teamId||"t1";
- const base={title:AF.title,desc:AF.desc,client:AF.client,assignees,mins:Math.round(AF.hours*60),start:start.toISOString(),end:end.toISOString(),type:AF.type,work:AF.work,team,prefs:r==="ADMIN"?[...AF.prefs]:(AF.edit?.prefs||[]),important:AF.important,recurring:AF.recurring,voice:AF.voice,protected:AF.protect,meet:AF.type==="MEETING"};
+ const base={title:AF.title,desc:AF.desc,client:AF.client,assignees,mins:Math.round(AF.hours*60),start:start.toISOString(),end:end.toISOString(),type:AF.type,work:AF.work,team,prefs:r==="ADMIN"?[...AF.prefs]:(AF.edit?.prefs||[]),important:AF.important,recurring:AF.recurring,rec:AF.recurring?AF.rec:null,recurText:AF.recurring&&AF.rec?recurText(AF.rec):"",voice:AF.notes.length>0,protected:AF.protect,meet:AF.type==="MEETING"};
  if(AF.edit){Object.assign(AF.edit,base);toast("Task updated");}
  else{S.tasks.unshift(Object.assign({id:uid(),status:"NOT_STARTED",paused:false,doubt:false,review:false,parent:false,createdBy:m.id,actualStart:null,actualEnd:null},base));assignees.filter(id=>id!==m.id).forEach(id=>notify(id,`New ${AF.type==="MEETING"?"meeting":"task"} from ${first(m.name)}: ${AF.title}`+(r==="ADMIN"&&AF.prefs.length?` · prefers ${AF.prefs.map(x=>first(userById(x).name)).join(", ")} — assign it from the task`:"")));toast(AF.type==="MEETING"?"Meeting scheduled · Calendar + Meet link queued":"Task added · Drive folder + Chat space queued");}
  save();show("dash");renderDash();
@@ -739,12 +808,11 @@ $("#tMeet").onclick=()=>{AF.type="MEETING";renderAdd();};
 $("#tWorkBtn").onclick=()=>{AF.type="WORK";renderAdd();};
 $("#tType").onclick=typeChooser;
 $("#tImportant").onclick=()=>{AF.important=!AF.important;renderAdd();};
-$("#tRecur").onclick=()=>{AF.recurring=!AF.recurring;renderAdd();};
+$("#tRecur").onclick=()=>recurSheet();
 $("#tProtect").onclick=()=>{AF.protect=!AF.protect;renderAdd();};
-$("#tVoice").onclick=()=>{AF.voice=!AF.voice;renderAdd();toast(AF.voice?"Voice note attached (recorded via mic in the real app)":"Voice note removed");};
-$("#tDate").onchange=()=>{AF.date=$("#tDate").value;AF.shortcut=null;renderAdd();};
-$("#tTime").onchange=()=>{AF.time=$("#tTime").value;};
+const _oldVoice=()=>{AF.voice=!AF.voice;renderAdd();toast(AF.voice?"Voice note attached (recorded via mic in the real app)":"Voice note removed");};
 $("#tTitle").oninput=()=>{AF.title=$("#tTitle").value;};$("#tDesc").oninput=()=>{AF.desc=$("#tDesc").value;};$("#tHours").oninput=()=>{AF.hours=Number($("#tHours").value)||AF.hours;};
+$("#tMic").onclick=micToggle;
 $("#tTitle").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();saveTask();}};
 // save button lives in the header tiles area? No: the real app saves from the title row ✓ — add a floating save
 const saveBtn=el("button",{class:"btn",style:"flex:none;height:40px;border-radius:999px;padding:0 22px;box-shadow:0 8px 24px rgba(0,0,0,.2);pointer-events:auto",onclick:saveTask},"Save");
@@ -815,9 +883,9 @@ function renderWizard(){
  let body;
  if(W.step===0){
   body=el("div",{style:"padding:12px"},el("div",{style:"font-size:12px;color:var(--muted);margin-bottom:8px"},"Who is this invoice for?"),
-   el("div",{class:"cl"},...S.clients.map(x=>el("button",{class:x.id===W.client?"on":"",onclick:()=>{W.client=x.id;W.tds=!!clientById(x.id).tdsPercent;renderWizard();}},x.name))),
-   c?el("div",{class:"card",style:"margin:12px 0 0"},el("div",{style:"display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px"},el("span",{class:"tag "+DOCC[docFor(c)]},DOCL[docFor(c)]),el("span",{class:"tag draft"},TAXL[taxFor(c)])),el("div",{class:"kv"},el("span",{},"GSTIN"),el("span",{},c.gstin||"— (export)")),el("div",{class:"kv"},el("span",{},"Place of supply"),el("span",{},c.country==="IN"?c.stateName+" ("+c.stateCode+")":c.country)),el("div",{class:"kv"},el("span",{},"Email / WhatsApp"),(c.email?"✓":"missing")+" / "+(c.phone?"✓":"missing")),el("div",{class:"kv"},el("span",{},"PAN"),el("span",{},c.pan||"—"))):null,
-   c?el("label",{class:"check",style:"margin-top:12px"},el("input",{type:"checkbox",checked:W.tds||null,onchange:e=>{W.tds=e.target.checked;renderWizard();}}),el("div",{},el("b",{},"This client will deduct TDS"),el("small",{},W.tds?"When the payment comes in you enter the % cut; it adds to your FY TDS total":"No TDS expected on this invoice"+(c.tdsPercent?" (client default "+c.tdsPercent+"%)":"")))):null,
+   el("div",{class:"cl"},...S.clients.map(x=>el("button",{class:x.id===W.client?"on":"",onclick:()=>{W.client=x.id;W.tds=clientById(x.id).country==="IN"&&!!clientById(x.id).tdsPercent;renderWizard();}},x.name))),
+   c?el("div",{class:"card",style:"margin:12px 0 0"},el("div",{style:"display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px"},el("span",{class:"tag "+DOCC[docFor(c)]},DOCL[docFor(c)]),el("span",{class:"tag draft"},TAXL[taxFor(c)])),el("div",{class:"kv"},el("span",{},"GSTIN"),el("span",{},c.gstin||"— (export)")),el("div",{class:"kv"},el("span",{},"Place of supply"),el("span",{},c.country==="IN"?c.stateName+" ("+c.stateCode+")":c.country)),el("div",{class:"kv"},el("span",{},"Email / WhatsApp"),(c.email?"✓":"missing")+" / "+(c.phone?"✓":"missing")),c.country==="IN"?el("div",{class:"kv"},el("span",{},"PAN"),el("span",{},c.pan||"—")):null):null,
+   c&&c.country==="IN"?el("label",{class:"check",style:"margin-top:12px"},el("input",{type:"checkbox",checked:W.tds||null,onchange:e=>{W.tds=e.target.checked;renderWizard();}}),el("div",{},el("b",{},"This client will deduct TDS"),el("small",{},W.tds?"When the payment comes in you enter the % cut; it adds to your FY TDS total":"No TDS expected on this invoice"+(c.tdsPercent?" (client default "+c.tdsPercent+"%)":"")))):null,
    el("div",{class:"check",style:"margin-top:12px"},el("input",{type:"checkbox",checked:W.proforma||null,onchange:e=>{W.proforma=e.target.checked;renderWizard();}}),el("div",{},el("b",{},"Proforma first"),el("small",{},"No tax, no number; converts to a tax invoice later"))));
  }else if(W.step===1){
   body=el("div",{style:"padding:12px"},
@@ -843,7 +911,7 @@ function renderWizard(){
   const ps=W.plan==="PART"?W.parts.map((p,i)=>({n:i+1,amount:W.partMode==="PERCENT"?(amt+taxAmt)*Number(p.v)/100:Number(p.v)*(1+gst/100),date:new Date(p.date+"T10:00:00").toISOString(),status:i===0?"AWAITING_APPROVAL":"SCHEDULED",desc:p.desc})):[];
   body=el("div",{style:"padding:12px"},
    el("div",{class:"card",style:"margin:0 0 10px"},el("div",{style:"display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px"},el("span",{class:"tag "+DOCC[W.proforma?"PROFORMA":docFor(c)]},DOCL[W.proforma?"PROFORMA":docFor(c)]),el("span",{class:"tag draft"},TAXL[tax]),el("span",{class:"tag draft"},W.plan==="ONE_TIME"?"One time":W.plan==="RECURRING"?"Recurring · "+(W.anchor==="FIRST"?"1st":W.anchor==="LAST"?"last day":W.billDay+"th")+" · "+W.billTime:"Part payment · "+W.parts.length+" parts")),
-    el("div",{class:"kv"},el("span",{},"Client"),el("span",{},c.businessName||c.name)),W.plan!=="RECURRING"&&W.remindDate?el("div",{class:"kv"},el("span",{},"Approval reminder"),el("span",{},fmtDY(W.remindDate+"T10:00:00")+" "+W.remindTime)):null,el("div",{class:"kv"},el("span",{},"TDS"),el("span",{},W.tds?"client deducts TDS":"no TDS")),el("div",{class:"kv"},el("span",{},"Number"),el("span",{},"assigned on approval ("+S.settings.fyPrefix+"/"+fyKey()+"/…)")),el("div",{class:"kv"},el("span",{},"Description"),el("span",{style:"text-align:right"},W.desc||"—")),el("div",{class:"kv"},el("span",{},"Taxable"),el("span",{class:"num"},inr(amt))),el("div",{class:"kv"},el("span",{},"Tax"),el("span",{class:"num"},inr(taxAmt))),el("div",{class:"kv"},el("span",{},"Total"),el("b",{class:"num"},inr(amt+taxAmt)))),
+    el("div",{class:"kv"},el("span",{},"Client"),el("span",{},c.businessName||c.name)),W.plan!=="RECURRING"&&W.remindDate?el("div",{class:"kv"},el("span",{},"Approval reminder"),el("span",{},fmtDY(W.remindDate+"T10:00:00")+" "+W.remindTime)):null,c.country==="IN"?el("div",{class:"kv"},el("span",{},"TDS"),el("span",{},W.tds?"client deducts TDS":"no TDS")):null,el("div",{class:"kv"},el("span",{},"Number"),el("span",{},"assigned on approval ("+S.settings.fyPrefix+"/"+fyKey()+"/…)")),el("div",{class:"kv"},el("span",{},"Description"),el("span",{style:"text-align:right"},W.desc||"—")),el("div",{class:"kv"},el("span",{},"Taxable"),el("span",{class:"num"},inr(amt))),el("div",{class:"kv"},el("span",{},"Tax"),el("span",{class:"num"},inr(taxAmt))),el("div",{class:"kv"},el("span",{},"Total"),el("b",{class:"num"},inr(amt+taxAmt)))),
    ps.length?el("div",{class:"card",style:"margin:0 0 10px"},el("h4",{},"Parts"),...ps.map(p=>el("div",{class:"kv"},el("span",{},"Part "+p.n+" · "+fmtD(p.date)+(p.desc?" · "+p.desc:"")),el("span",{class:"num"},inr(p.amount))))):null,
    el("p",{class:"pre",style:"margin:0"},"Saving creates a draft awaiting approval. Approve → confirm sheet → Email + WhatsApp. No auto-send."));
  }
@@ -868,7 +936,7 @@ function openInvoice(i){
   el("div",{class:"card",style:"margin:12px 12px 10px"},el("div",{style:"display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"},docTag(i),stTag(i),el("span",{class:"tag draft"},TAXL[i.taxMode]),i.plan!=="ONE_TIME"?el("span",{class:"tag draft"},i.plan==="PART"?"Part payment":"Recurring"):null),
    el("div",{style:"font-size:18px;font-weight:800"},c.name),el("div",{style:"font-size:12px;color:var(--muted);margin-bottom:8px"},i.desc||"No description"),
    kv("Taxable",inr(i.amount)),i.taxMode==="CGST_SGST"?[kv("CGST "+gstHalf+"%",inr(i.amount*gstHalf/100)),kv("SGST "+gstHalf+"%",inr(i.amount*gstHalf/100))]:i.taxMode==="IGST"?kv("IGST "+i.gst+"%",inr(i.amount*i.gst/100)):kv("Tax",i.taxMode==="EXPORT_LUT"?"0% under LUT":"none"),
-   kv("Total",el("b",{},inr(total(i)))),kv("TDS",i.tdsApplicable?"client deducts TDS":"not expected"),kv("Paid",inr(i.paid)),kv("Balance",el("b",{style:balance(i)?"color:#dc2626":""},inr(balance(i)))),
+   kv("Total",el("b",{},inr(total(i)))),c.country==="IN"?kv("TDS",i.tdsApplicable?"client deducts TDS":"not expected"):null,kv("Paid",inr(i.paid)),kv("Balance",el("b",{style:balance(i)?"color:#dc2626":""},inr(balance(i)))),
    kv("Issued",fmtDY(i.issued)),kv("Due",fmtDY(i.due)),i.remindAt?kv("Approval reminder",fmtDY(i.remindAt)+" "+fmtT(i.remindAt)):null,i.plan==="RECURRING"?kv("Next invoice",(i.anchor==="FIRST"?"1st":i.anchor==="LAST"?"last day":(i.billDay||"1")+"th")+" of next month · "+(i.billTime||"09:00")+" · you approve before it goes"):null,i.emailAt?kv("Emailed",fmtDY(i.emailAt)):null,i.waAt?kv("WhatsApp",i.waStatus||"queued"):null,c.onHold?kv("Work",el("span",{style:"color:#dc2626"},"ON HOLD since "+fmtD(c.holdSince))):null),
   i.parts.length?el("div",{class:"card"},el("h4",{},"Parts"),...i.parts.map(p=>el("div",{class:"kv"},el("span",{},"Part "+p.n+" · "+fmtD(p.date)+(p.desc?" · "+p.desc:"")),el("span",{style:"display:flex;gap:6px;align-items:center"},el("span",{class:"num"},inr(p.amount)),el("span",{class:"tag "+(STL[p.status]||["",""])[1]},(STL[p.status]||[p.status])[0]))))):null,
   el("div",{class:"card"},el("h4",{},"Payment via UPI"),el("div",{class:"qr"},...Array.from({length:144},(_,k)=>el("i",{class:((k*7+Math.floor(k/12)*3)%5<2)?"":"o"}))),el("div",{style:"text-align:center;font-size:12px"},S.settings.upi),el("div",{style:"text-align:center;font-size:11px;color:var(--muted)"},"Printed on the PDF with a public pay link")),
@@ -899,7 +967,7 @@ function paymentSheet(i){
  const tdsOn=el("input",{type:"checkbox",checked:i.tdsApplicable||null,onchange:e=>{tdsWrap.hidden=!e.target.checked;if(!e.target.checked){tds.value=0;amt.value=bal.toFixed(0);}else{tds.value=c.tdsPercent||10;amt.value=Math.max(0,bal-tdsAmt()).toFixed(0);}upd();}});
  const tdsWrap=el("div",{hidden:!i.tdsApplicable||null},field("TDS cut by client %",tds),tdsHint);
  let method="BANK";const seg=el("div",{class:"seg"});const rs=()=>seg.replaceChildren(...["CASH","BANK","UPI"].map(k=>el("button",{class:method===k?"on":"",onclick:()=>{method=k;rs();}},k==="BANK"?"Bank":k==="UPI"?"UPI":"Cash")));rs();
- openSheet("Record payment · "+i.number,field("Amount received (₹)",amt,"Balance "+inr(bal)),el("label",{class:"check"},tdsOn,el("div",{},el("b",{},"Client cut TDS on this payment"),el("small",{},"Enter the % that was deducted"))),tdsWrap,field("Method",seg),field("Date",date),field("Notes",note),
+ openSheet("Record payment · "+i.number,field("Amount received (₹)",amt,"Balance "+inr(bal)),c.country!=="IN"?null:el("label",{class:"check"},tdsOn,el("div",{},el("b",{},"Client cut TDS on this payment"),el("small",{},"Enter the % that was deducted"))),tdsWrap,field("Method",seg),field("Date",date),field("Notes",note),
   el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn blue",onclick:()=>{
    const a=Number(amt.value)||0;if(a<=0)return toast("Enter an amount","err");const t=tdsOn.checked?tdsAmt():0;if(t>0)i.tdsApplicable=true;
    S.payments.unshift({id:uid(),invoice:i.id,amount:a,tds:t,method,date:new Date(date.value+"T10:00:00").toISOString(),note:note.value});
@@ -1002,12 +1070,13 @@ function clientForm(c){
  const syncState=()=>{const code=(v.gstin||"").slice(0,2);if(v.gstin&&v.gstin.length>=2&&GST_STATES[code]){v.stateCode=code;v.stateName=GST_STATES[code];stateSel.value=code;stateSel.disabled=true;stateHint.textContent="Taken from the GSTIN";}else{stateSel.disabled=false;stateHint.textContent="Pick the state for an unregistered client";}hint.textContent=taxHint();};
  const inp=(k,ph,type="text")=>el("input",{class:"in",type,value:v[k]||"",placeholder:ph,oninput:e=>{v[k]=e.target.value;if(k==="gstin")syncState();}});
  const indiaWrap=el("div");
- const country=el("select",{class:"in",onchange:e=>{v.country=e.target.value;indiaWrap.hidden=v.country!=="IN";hint.textContent=taxHint();}},...[["IN","India"],["US","United States"],["GB","United Kingdom"],["AE","UAE"],["SE","Sweden"],["SG","Singapore"],["AU","Australia"],["ZZ","Other (outside India)"]].map(([k,l])=>el("option",{value:k,selected:v.country===k||null},l)));
+ const country=el("select",{class:"in",onchange:e=>{v.country=e.target.value;indiaWrap.hidden=v.country!=="IN";indiaOnly.hidden=v.country!=="IN";hint.textContent=taxHint();}},...[["IN","India"],["US","United States"],["GB","United Kingdom"],["AE","UAE"],["SE","Sweden"],["SG","Singapore"],["AU","Australia"],["ZZ","Other (outside India)"]].map(([k,l])=>el("option",{value:k,selected:v.country===k||null},l)));
  indiaWrap.append(field("GSTIN",inp("gstin","27AAACZ1234F1Z5"),"Leave empty if the client is not GST registered"),field("State",stateSel),stateHint);stateHint.style.cssText="margin:-8px 0 12px";
- indiaWrap.hidden=v.country!=="IN";syncState();
- page(c?c.name:"Add client",[el("div",{style:"padding:12px"},field("Name",inp("name","Client name")),field("Business name",inp("businessName","Legal name printed on invoices")),field("Email",inp("email","accounts@client.com","email")),field("WhatsApp number",inp("phone","+91 …","tel")),field("Country",country),indiaWrap,hint,field("PAN",inp("pan","AAACZ1234F"),"5 letters, 4 digits, 1 letter · printed on invoices and needed for TDS credit"),field("TDS % this client usually deducts",inp("tdsPercent","0","number"),"Default for the per-invoice choice; you confirm the actual % when the payment arrives"),field("Billing address",el("textarea",{class:"in",oninput:e=>{v.address=e.target.value;}},v.address||"")),
+ const indiaOnly=el("div",{},field("PAN",inp("pan","AAACZ1234F"),"5 letters, 4 digits, 1 letter · printed on invoices and needed for TDS credit"),field("TDS % this client usually deducts",inp("tdsPercent","0","number"),"Default for the per-invoice choice; you confirm the actual % when the payment arrives"));
+ indiaWrap.hidden=v.country!=="IN";indiaOnly.hidden=v.country!=="IN";syncState();
+ page(c?c.name:"Add client",[el("div",{style:"padding:12px"},field("Name",inp("name","Client name")),field("Business name",inp("businessName","Legal name printed on invoices")),field("Email",inp("email","accounts@client.com","email")),field("WhatsApp number",inp("phone","+91 …","tel")),field("Country",country),indiaWrap,hint,indiaOnly,field("Billing address",el("textarea",{class:"in",oninput:e=>{v.address=e.target.value;}},v.address||"")),
   el("p",{class:"pre"},"Tax type is picked automatically: same state as your company ("+(GST_STATES[S.settings.stateCode]||S.settings.stateCode)+") → CGST+SGST, another Indian state → IGST, outside India → export invoice at 0% under LUT."))],
-  [zoneActions(el("button",{class:"btn ghost",onclick:()=>PAGES.clients()},"Cancel"),el("button",{class:"btn blue",onclick:()=>{if(!v.name.trim())return toast("Name is required","err");v.pan=(v.pan||"").toUpperCase().trim();if(v.pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v.pan))return toast("PAN must look like AAACZ1234F","err");v.gstin=(v.gstin||"").toUpperCase().trim();v.tdsPercent=Number(v.tdsPercent)||0;if(v.country!=="IN"){v.stateCode="";v.stateName="";}if(c)Object.assign(c,v);else S.clients.push(Object.assign({id:uid(),onHold:false},v));save();toast(c?"Client saved":"Client added · shows in filters once it has a task");PAGES.clients();}},"Save"))]);
+  [zoneActions(el("button",{class:"btn ghost",onclick:()=>PAGES.clients()},"Cancel"),el("button",{class:"btn blue",onclick:()=>{if(!v.name.trim())return toast("Name is required","err");v.pan=(v.pan||"").toUpperCase().trim();if(v.pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v.pan))return toast("PAN must look like AAACZ1234F","err");v.gstin=(v.gstin||"").toUpperCase().trim();v.tdsPercent=Number(v.tdsPercent)||0;if(v.country!=="IN"){v.stateCode="";v.stateName="";v.pan="";v.tdsPercent=0;v.gstin="";}if(c)Object.assign(c,v);else S.clients.push(Object.assign({id:uid(),onHold:false},v));save();toast(c?"Client saved":"Client added · shows in filters once it has a task");PAGES.clients();}},"Save"))]);
 }
 /* ---------- requests ---------- */
 PAGES.requests=function(){

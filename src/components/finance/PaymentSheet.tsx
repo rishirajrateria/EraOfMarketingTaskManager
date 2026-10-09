@@ -120,10 +120,12 @@ export function PaymentSheet({ inv, tdsPercent, open, onClose }: { inv: InvoiceD
               ))}
             </div>
           </Field>
+          {inv.docType === "EXPORT_INVOICE" ? null : (
           <div className="glass rounded-2xl px-3">
             <Toggle checked={tdsOn} onChange={toggleTds} label="Client deducted TDS?" hint={inv.tdsApplicable ? "Marked on the invoice — pre-filled from the client card" : "Not expected on this invoice; turn on if the client deducted it anyway"} />
           </div>
-          {tdsOn ? (
+          )}
+          {tdsOn && inv.docType !== "EXPORT_INVOICE" ? (
             <div className="grid grid-cols-2 gap-3">
               <Field label="TDS %" hint={clientPct != null ? "from the client card" : undefined}>
                 <input type="number" min="0" max="100" step="0.01" value={tdsPct} onChange={(e) => onTdsPct(e.target.value)} className={inputCls} inputMode="decimal" />

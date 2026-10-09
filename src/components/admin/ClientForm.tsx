@@ -63,7 +63,7 @@ export function ClientForm({ client, busy, companyStateCode, onSubmit, onCancel,
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const tds = v.tdsPercent === "" || v.tdsPercent == null ? null : Number(v.tdsPercent);
-    onSubmit({ ...v, stateCode: india ? stateCode || null : null, stateName: india ? STATES.find((s) => s.code === stateCode)?.name ?? null : null, tdsPercent: tds, currency: india ? "INR" : v.currency || "INR" });
+    onSubmit({ ...v, gstNumber: india ? v.gstNumber : null, pan: india ? v.pan : null, stateCode: india ? stateCode || null : null, stateName: india ? STATES.find((s) => s.code === stateCode)?.name ?? null : null, tdsPercent: india ? tds : null, currency: india ? "INR" : v.currency || "INR" });
   };
 
   return (
@@ -88,18 +88,13 @@ export function ClientForm({ client, busy, companyStateCode, onSubmit, onCancel,
       <Field label="Email" hint="Invoices and receipts are sent here">
         <input className={inputCls} type="email" value={v.email ?? ""} onChange={set("email")} />
       </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Country">
-          <select className={inputCls} value={v.country ?? "IN"} onChange={setCountry}>
-            {COUNTRIES.map((c) => (
-              <option key={c.code} value={c.code}>{c.name}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="TDS %" hint="optional">
-          <input className={inputCls} type="number" min="0" max="100" step="0.01" inputMode="decimal" value={v.tdsPercent ?? ""} onChange={set("tdsPercent")} />
-        </Field>
-      </div>
+      <Field label="Country" hint={india ? undefined : "Export invoice · 0% under LUT · no GST, PAN or TDS"}>
+        <select className={inputCls} value={v.country ?? "IN"} onChange={setCountry}>
+          {COUNTRIES.map((c) => (
+            <option key={c.code} value={c.code}>{c.name}</option>
+          ))}
+        </select>
+      </Field>
       {india ? (
         <>
           <div className="grid grid-cols-2 gap-3">
@@ -110,6 +105,9 @@ export function ClientForm({ client, busy, companyStateCode, onSubmit, onCancel,
               <input className={inputCls} value={v.pan ?? ""} onChange={set("pan")} placeholder="ABCDE1234F" maxLength={10} autoCapitalize="characters" />
             </Field>
           </div>
+          <Field label="TDS % this client usually deducts" hint="optional · you confirm the actual % when the payment arrives">
+            <input className={inputCls} type="number" min="0" max="100" step="0.01" inputMode="decimal" value={v.tdsPercent ?? ""} onChange={set("tdsPercent")} />
+          </Field>
           <Field label="State" hint={stateHint}>
             <select className={`${inputCls} disabled:opacity-70`} value={stateCode} disabled={!!fromGstin} onChange={set("stateCode")}>
               <option value="">— unregistered / same as company —</option>
