@@ -18,10 +18,20 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/taskmanager?schema=public
       JOBS_INLINE: "true"
+      # Local try-out defaults (override in .env for a real deployment):
+      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+      AUTH_SECRET: ${AUTH_SECRET:-local-dev-secret-change-me-0123456789abcdef}
+      VAULT_ENCRYPTION_KEY: ${VAULT_ENCRYPTION_KEY:-bG9jYWwtZGV2LXZhdWx0LWtleS1jaGFuZ2UtbWUtMDEyMzQ1Njc4OQ==}
+      CRON_SECRET: ${CRON_SECRET:-local-dev-cron}
+      GOOGLE_MOCK: ${GOOGLE_MOCK:-true}
+      DEMO_LOGIN: ${DEMO_LOGIN:-true}
+      SEED_DEMO: ${SEED_DEMO:-true}
     ports:
       - "3000:3000"
 volumes:

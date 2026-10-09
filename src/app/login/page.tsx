@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import { auth, signIn } from "@/lib/auth";
 import { env } from "@/lib/env";
+import { demoLogin, demoRoles } from "@/server/demo-login";
+
+const ROLE_LABEL: Record<string, string> = { ADMIN: "Admin", TEAM_LEADER: "Team Leader", EXECUTIVE: "Executive", HR: "HR" };
 
 const ERRORS: Record<string, string> = {
   NotInvited: "This Google account has not been added by an Admin yet.",
@@ -9,10 +12,11 @@ const ERRORS: Record<string, string> = {
   Configuration: "Sign-in is not configured. Check AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET.",
 };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; callbackUrl?: string }> }) {
-  const session = await auth();
-  if (session?.user) redirect("/");
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; callbackUrl?: string; switch?: string }> }) {
   const sp = await searchParams;
+  const demo = await demoRoles();
+  const session = await auth();
+  if (session?.user && !(demo.length && sp.switch === "1")) redirect("/");
   const error = sp.error ? (ERRORS[sp.error] ?? "Sign-in failed. Please try again.") : null;
   // Only same-site relative paths may be used as the post-login destination (no open redirects).
   const redirectTo = sp.callbackUrl && /^\/(?!\/)/.test(sp.callbackUrl) ? sp.callbackUrl : "/";
@@ -34,6 +38,24 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             Continue with Google
           </button>
         </form>
+        {demo.length ? (
+          <div className="mt-8 border-t border-white/60 pt-5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Try a demo role</p>
+            <p className="mt-1 text-[11px] text-gray-500">Demo sign-in is on (DEMO_LOGIN=true). Each button opens that role&apos;s dashboard with the sample data.</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {demo.map((d) => (
+                <form key={d.role} action={demoLogin}>
+                  <input type="hidden" name="role" value={d.role} />
+                  <button type="submit" className="touch-target glass-chip w-full rounded-xl px-3 py-2 text-left">
+                    <span className="block text-sm font-semibold text-gray-900">{ROLE_LABEL[d.role] ?? d.role}</span>
+                    <span className="block truncate text-[11px] text-gray-600">{d.name}</span>
+                  </button>
+                </form>
+              ))}
+            </div>
+            <p className="mt-3 text-[11px] text-gray-500">Switch any time from the dashboard&apos;s &ldquo;Demo&rdquo; chip or by opening /login?switch=1.</p>
+          </div>
+        ) : null}
       </div>
     </main>
   );

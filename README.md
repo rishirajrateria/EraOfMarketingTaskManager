@@ -11,6 +11,27 @@ Next.js 15 (App Router, Server Actions) · TypeScript · Tailwind v4 · Prisma +
 googleapis (service account with domain-wide delegation) · pdfkit · web-push · vitest. Installable PWA with offline
 shell and push notifications. Jobs run either in-process (`JOBS_INLINE=true`) or via Vercel Cron (`vercel.json`).
 
+## Try the three dashboards in 5 minutes (no Google setup)
+
+Needs Docker Desktop (or Node 22 + Postgres, see below).
+
+```bash
+git clone https://github.com/rishirajrateria/EraOfMarketingTaskManager.git
+cd EraOfMarketingTaskManager
+docker compose up --build
+```
+
+Open http://localhost:3000. The login page shows **Try a demo role** with Admin, Team Leader, Executive and HR
+buttons (sample data is seeded on first boot). Tap one to open that role's dashboard; use the small **Demo · switch**
+chip at the top of any screen (or `/login?switch=1`) to jump to another role. Google integrations run in mock mode, so
+Drive/Meet/Chat links are placeholders.
+
+Demo sign-in only exists while `DEMO_LOGIN=true`; the compose file turns it on for local use. Never set it on a
+public deployment.
+
+Without Docker: `npm install`, create a Postgres database, copy `.env.example` to `.env` and set `DATABASE_URL`,
+`DEMO_LOGIN=true`, `GOOGLE_MOCK=true`, then `npx prisma migrate deploy && npm run db:seed && npm run dev`.
+
 ## Quick start (local)
 
 ```bash
@@ -58,6 +79,10 @@ apply migrations to it once with `DATABASE_URL=<test url> npx prisma migrate dep
 | `VAULT_ENCRYPTION_KEY` | 32-byte base64 key for client-vault passwords (AES-256-GCM) |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Web push (`npx web-push generate-vapid-keys`) |
 | `COMPANY_TIMEZONE` | Default `Asia/Kolkata` (also editable in Settings) |
+| `DEMO_LOGIN` | `true` shows the demo role chooser on the login page (local try-outs only) |
+| `SEED_DEMO` | `true` runs the demo seed on container boot (docker-compose default) |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM` | WhatsApp sends on invoice approval (mock when unset) |
+| `PUBLIC_BASE_URL` | Public URL used in WhatsApp PDF links (defaults to `AUTH_URL`) |
 | `STT_PROVIDER_URL` | Optional server speech-to-text fallback endpoint |
 
 ## Google Cloud setup

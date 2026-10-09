@@ -25,5 +25,5 @@ COPY --from=build /app/public ./public
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/next.config.ts ./next.config.ts
 EXPOSE 3000
-# Apply migrations on boot, then start Next (jobs start from instrumentation.ts)
-CMD ["sh", "-c", "npx prisma migrate deploy && npx next start -p ${PORT}"]
+# Apply migrations on boot (and seed demo data when SEED_DEMO=true), then start Next (jobs start from instrumentation.ts)
+CMD ["sh", "-c", "npx prisma migrate deploy && if [ \"$SEED_DEMO\" = \"true\" ]; then npx tsx prisma/seed.ts; fi && npx next start -p ${PORT}"]
