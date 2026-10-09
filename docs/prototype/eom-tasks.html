@@ -407,7 +407,7 @@ function seed(){
   {id:uid(),client:"c2",kind:"SHARED_DRIVE_LINK",label:"Website assets",value:"drive.google.com/…/bluewave",expires:null},
   {id:uid(),client:"c3",kind:"CREDENTIAL",label:"WordPress admin",value:"nordic-admin / ••••••••",expires:at(-2,0)},
  ];
- const settings={company:"EraOfMarketing",gstin:"27AAECE1234A1Z9",stateCode:"27",lut:"AD270326000123",fyPrefix:"EOM",halfDayMinutes:240,tz:"Asia/Kolkata",expenseCategories:["Software","Ads spend","Office","Travel","Freelancers","Salaries","Other"],tdsThreshold:20000,notifyChat:false,upi:"eraofmarketing@upi"};
+ const settings={company:"EraOfMarketing",legalName:"Era Of Marketing",gstin:"27AAECE1234A1Z9",pan:"AAECE1234A",stateCode:"27",stateName:"Maharashtra",lut:"AD270326000123",iec:"0316012345",address:"402, Trade Centre, Bandra Kurla Complex, Mumbai 400051",email:"accounts@eraofmarketing.com",phone:"+91 98200 00000",bank:"HDFC Bank · A/c 50200012345678 · IFSC HDFC0000123",fyPrefix:"EOM",halfDayMinutes:240,tz:"Asia/Kolkata",expenseCategories:["Software","Ads spend","Office","Travel","Freelancers","Salaries","Other"],tdsThreshold:20000,notifyChat:false,upi:"eraofmarketing@upi"};
  return {users,teams,workTypes,clients,tasks,invoices,payments,expenses,requests,notifs,attendance,inventory,vault,settings,filters:{},me:null,seq:10};
 }
 let S=null;
@@ -431,6 +431,7 @@ const fmtDY=iso=>iso?new Date(iso).toLocaleDateString("en-IN",{day:"2-digit",mon
 const fyStart=(d=new Date())=>{const y=d.getMonth()>=3?d.getFullYear():d.getFullYear()-1;return new Date(y,3,1);};
 const fyEnd=(d=new Date())=>{const s=fyStart(d);return new Date(s.getFullYear()+1,2,31,23,59,59);};
 const inFY=(iso,ref=new Date())=>{const t=new Date(iso);return t>=fyStart(ref)&&t<=fyEnd(ref);};
+const GST_STATES={"01":"Jammu & Kashmir","02":"Himachal Pradesh","03":"Punjab","04":"Chandigarh","05":"Uttarakhand","06":"Haryana","07":"Delhi","08":"Rajasthan","09":"Uttar Pradesh","10":"Bihar","11":"Sikkim","12":"Arunachal Pradesh","13":"Nagaland","14":"Manipur","15":"Mizoram","16":"Tripura","17":"Meghalaya","18":"Assam","19":"West Bengal","20":"Jharkhand","21":"Odisha","22":"Chhattisgarh","23":"Madhya Pradesh","24":"Gujarat","26":"Dadra & Nagar Haveli and Daman & Diu","27":"Maharashtra","29":"Karnataka","30":"Goa","31":"Lakshadweep","32":"Kerala","33":"Tamil Nadu","34":"Puducherry","35":"Andaman & Nicobar","36":"Telangana","37":"Andhra Pradesh","38":"Ladakh"};
 const payeeKey=s=>(s||"").trim().toLowerCase();
 const payeeFyTotal=(payee,ref=new Date(),excl=null)=>S.expenses.filter(e=>e!==excl&&payeeKey(e.payee)===payeeKey(payee)&&inFY(e.date,ref)).reduce((s,e)=>s+e.amount,0);
 const inr=n=>"₹"+Math.round(n).toLocaleString("en-IN");
@@ -444,7 +445,7 @@ function audit(){}
 
 /* ---------- sheet ---------- */
 const sheetDim=$("#sheetDim"),sheetEl=$("#sheet");
-function openSheet(title,...content){sheetEl.replaceChildren(el("div",{class:"grab"}),title?el("h3",{},title):null,...content);sheetDim.hidden=false;}
+function openSheet(title,...content){sheetEl.replaceChildren(el("div",{class:"grab"}),...[title?el("h3",{},title):null,...content.flat()].filter(Boolean));sheetDim.hidden=false;}
 function closeSheet(){sheetDim.hidden=true;}
 sheetDim.addEventListener("click",e=>{if(e.target===sheetDim)closeSheet();});
 function actionList(items){return el("div",{class:"al"},items.map(it=>el("button",{class:it.danger?"danger":"",onclick:it.onClick},el("span",{},it.label),it.hint?el("small",{},it.hint):null)));}
@@ -712,7 +713,7 @@ function nav(go){
  const fn=PAGES[page];if(!fn)return toast("Not in the prototype");
  show("page");fn(arg);
 }
-function page(title,body,zone){$("#pgTitle").textContent=title;$("#pgBody").replaceChildren(...body);$("#pgZone").replaceChildren(...(zone||[]));$("#pgZone").hidden=!zone||!zone.length;}
+function page(title,body,zone){$("#pgTitle").textContent=title;$("#pgBody").replaceChildren(...body.flat().filter(Boolean));$("#pgZone").replaceChildren(...(zone||[]).filter(Boolean));$("#pgZone").hidden=!zone||!zone.length;}
 function zoneTabs(items,active,on){return el("div",{class:"r1"},...items.map(([k,l])=>el("button",{class:"gp"+(active===k?" on":""),style:"height:30px;font-size:12px;background:"+(active===k?"#111":"var(--chip)")+";color:"+(active===k?"#fff":"var(--ink)"),onclick:()=>on(k)},l)));}
 function zoneActions(...btns){return el("div",{class:"r2"},...btns);}
 /* ---------- finance helpers ---------- */
@@ -745,7 +746,7 @@ const tile=(l,v)=>el("div",{class:"tile"},el("small",{},l),el("b",{},v));
 /* ---------- wizard: client → amount → plan → review ---------- */
 let W=null;
 function openWizard(preset){
- W=Object.assign({step:0,client:"",tds:null,amount:"",desc:"",gst:18,plan:"ONE_TIME",anchor:"FIRST",partMode:"PERCENT",parts:[{v:50,date:dk(),desc:"Advance"},{v:50,date:dk(new Date(Date.now()+30*DAY)),desc:"On delivery"}],due:dk(new Date(Date.now()+15*DAY)),proforma:false},preset||{});
+ W=Object.assign({step:0,client:"",tds:null,amount:"",desc:"",gst:18,plan:"ONE_TIME",anchor:"FIRST",billDay:"1",billTime:"09:00",remindDate:"",remindTime:"09:00",partMode:"PERCENT",parts:[{v:50,date:dk(),desc:"Advance"},{v:50,date:dk(new Date(Date.now()+30*DAY)),desc:"On delivery"}],due:dk(new Date(Date.now()+15*DAY)),proforma:false},preset||{});
  renderWizard();
 }
 function renderWizard(){
@@ -773,7 +774,10 @@ function renderWizard(){
    el("div",{style:"font-size:12px;color:var(--muted);margin-bottom:8px"},"How will this be billed?"),
    el("div",{class:"seg"},...[["ONE_TIME","One time"],["RECURRING","Recurring"],["PART","Part payment"]].map(([k,l])=>el("button",{class:W.plan===k?"on":"",onclick:()=>{W.plan=k;renderWizard();}},l))),
    W.plan==="ONE_TIME"?field("Due date",el("input",{class:"in",type:"date",value:W.due,onchange:e=>{W.due=e.target.value;}})):null,
-   W.plan==="RECURRING"?el("div",{style:"margin-top:12px"},el("div",{style:"font-size:12px;color:var(--muted);margin-bottom:6px"},"Bill every month on the"),el("div",{class:"seg"},...[["FIRST","1st day"],["LAST","last day"]].map(([k,l])=>el("button",{class:W.anchor===k?"on":"",onclick:()=>{W.anchor=k;renderWizard();}},l))),el("p",{class:"pre",style:"margin:10px 0 0"},"Each month a new invoice is cloned and waits for your approval. Nothing is sent automatically.")):null,
+   W.plan==="RECURRING"?el("div",{style:"margin-top:12px"},el("div",{style:"font-size:12px;color:var(--muted);margin-bottom:6px"},"Bill every month on the"),el("div",{class:"seg"},...[["FIRST","1st day"],["LAST","last day"],["DAY","a date"]].map(([k,l])=>el("button",{class:W.anchor===k?"on":"",onclick:()=>{W.anchor=k;renderWizard();}},l))),
+     el("div",{style:"display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px"},W.anchor==="DAY"?field("Day of month",el("select",{class:"in",onchange:e=>{W.billDay=e.target.value;}},...Array.from({length:28},(_,i)=>el("option",{value:String(i+1),selected:W.billDay===String(i+1)||null},String(i+1))))):el("div"),field("Notify me at",el("input",{class:"in",type:"time",value:W.billTime,onchange:e=>{W.billTime=e.target.value;}}))),
+     el("p",{class:"pre",style:"margin:6px 0 0"},"On that day at "+W.billTime+" a new invoice is created and you get a notification. Nothing is sent until you approve it.")):null,
+   W.plan!=="RECURRING"?el("div",{style:"margin-top:12px"},el("div",{style:"font-size:12px;color:var(--muted);margin-bottom:6px"},"Remind me to approve and send on (optional)"),el("div",{style:"display:grid;grid-template-columns:1fr 1fr;gap:8px"},el("input",{class:"in",type:"date",value:W.remindDate,onchange:e=>{W.remindDate=e.target.value;}}),el("input",{class:"in",type:"time",value:W.remindTime,onchange:e=>{W.remindTime=e.target.value;}})),el("p",{class:"pre",style:"margin:6px 0 0"},"Leave the date empty to approve straight away. Either way the invoice only goes out after you tap Approve.")):null,
    W.plan==="PART"?el("div",{style:"margin-top:12px"},el("div",{class:"seg"},...[["PERCENT","% of total"],["FIXED","Fixed ₹"]].map(([k,l])=>el("button",{class:W.partMode===k?"on":"",onclick:()=>{W.partMode=k;renderWizard();}},l))),
      el("div",{style:"margin-top:10px"},...W.parts.map((p,i)=>el("div",{class:"part"},el("input",{class:"in",type:"number",value:p.v,placeholder:W.partMode==="PERCENT"?"%":"₹",oninput:e=>{p.v=e.target.value;}}),el("input",{class:"in",type:"date",value:p.date,onchange:e=>{p.date=e.target.value;}}),el("input",{class:"in full",placeholder:"Description for part "+(i+1)+" (optional, can be written when sending)",value:p.desc,oninput:e=>{p.desc=e.target.value;}}),W.parts.length>1?el("button",{class:"full",style:"font-size:11px;color:#dc2626;text-align:right",onclick:()=>{W.parts.splice(i,1);renderWizard();}},"remove"):null))),
      el("button",{class:"pill",onclick:()=>{W.parts.push({v:"",date:dk(),desc:""});renderWizard();}},"+ add part"),
@@ -781,8 +785,8 @@ function renderWizard(){
  }else{
   const ps=W.plan==="PART"?W.parts.map((p,i)=>({n:i+1,amount:W.partMode==="PERCENT"?(amt+taxAmt)*Number(p.v)/100:Number(p.v)*(1+gst/100),date:new Date(p.date+"T10:00:00").toISOString(),status:i===0?"AWAITING_APPROVAL":"SCHEDULED",desc:p.desc})):[];
   body=el("div",{style:"padding:12px"},
-   el("div",{class:"card",style:"margin:0 0 10px"},el("div",{style:"display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px"},el("span",{class:"tag "+DOCC[W.proforma?"PROFORMA":docFor(c)]},DOCL[W.proforma?"PROFORMA":docFor(c)]),el("span",{class:"tag draft"},TAXL[tax]),el("span",{class:"tag draft"},W.plan==="ONE_TIME"?"One time":W.plan==="RECURRING"?"Recurring · "+(W.anchor==="FIRST"?"1st":"last day"):"Part payment · "+W.parts.length+" parts")),
-    el("div",{class:"kv"},el("span",{},"Client"),el("span",{},c.businessName||c.name)),el("div",{class:"kv"},el("span",{},"TDS"),el("span",{},W.tds?"client deducts TDS":"no TDS")),el("div",{class:"kv"},el("span",{},"Number"),el("span",{},"assigned on approval ("+S.settings.fyPrefix+"/"+fyKey()+"/…)")),el("div",{class:"kv"},el("span",{},"Description"),el("span",{style:"text-align:right"},W.desc||"—")),el("div",{class:"kv"},el("span",{},"Taxable"),el("span",{class:"num"},inr(amt))),el("div",{class:"kv"},el("span",{},"Tax"),el("span",{class:"num"},inr(taxAmt))),el("div",{class:"kv"},el("span",{},"Total"),el("b",{class:"num"},inr(amt+taxAmt)))),
+   el("div",{class:"card",style:"margin:0 0 10px"},el("div",{style:"display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px"},el("span",{class:"tag "+DOCC[W.proforma?"PROFORMA":docFor(c)]},DOCL[W.proforma?"PROFORMA":docFor(c)]),el("span",{class:"tag draft"},TAXL[tax]),el("span",{class:"tag draft"},W.plan==="ONE_TIME"?"One time":W.plan==="RECURRING"?"Recurring · "+(W.anchor==="FIRST"?"1st":W.anchor==="LAST"?"last day":W.billDay+"th")+" · "+W.billTime:"Part payment · "+W.parts.length+" parts")),
+    el("div",{class:"kv"},el("span",{},"Client"),el("span",{},c.businessName||c.name)),W.plan!=="RECURRING"&&W.remindDate?el("div",{class:"kv"},el("span",{},"Approval reminder"),el("span",{},fmtDY(W.remindDate+"T10:00:00")+" "+W.remindTime)):null,el("div",{class:"kv"},el("span",{},"TDS"),el("span",{},W.tds?"client deducts TDS":"no TDS")),el("div",{class:"kv"},el("span",{},"Number"),el("span",{},"assigned on approval ("+S.settings.fyPrefix+"/"+fyKey()+"/…)")),el("div",{class:"kv"},el("span",{},"Description"),el("span",{style:"text-align:right"},W.desc||"—")),el("div",{class:"kv"},el("span",{},"Taxable"),el("span",{class:"num"},inr(amt))),el("div",{class:"kv"},el("span",{},"Tax"),el("span",{class:"num"},inr(taxAmt))),el("div",{class:"kv"},el("span",{},"Total"),el("b",{class:"num"},inr(amt+taxAmt)))),
    ps.length?el("div",{class:"card",style:"margin:0 0 10px"},el("h4",{},"Parts"),...ps.map(p=>el("div",{class:"kv"},el("span",{},"Part "+p.n+" · "+fmtD(p.date)+(p.desc?" · "+p.desc:"")),el("span",{class:"num"},inr(p.amount))))):null,
    el("p",{class:"pre",style:"margin:0"},"Saving creates a draft awaiting approval. Approve → confirm sheet → Email + WhatsApp. No auto-send."));
  }
@@ -791,8 +795,8 @@ function renderWizard(){
 }
 function saveInvoice(c,tax,gst,amt,taxAmt){
  const parts=W.plan==="PART"?W.parts.map((p,i)=>({n:i+1,amount:W.partMode==="PERCENT"?(amt+taxAmt)*Number(p.v)/100:Number(p.v)*(1+gst/100),date:new Date(p.date+"T10:00:00").toISOString(),status:"SCHEDULED",desc:p.desc})):[];
- const inv={id:uid(),number:"DRAFT-"+uid().slice(0,4),docType:W.proforma?"PROFORMA":docFor(c),client:c.id,tdsApplicable:!!W.tds,amount:amt,gst,taxMode:tax,status:"AWAITING_APPROVAL",plan:W.plan,anchor:W.anchor,desc:W.desc,issued:null,due:W.plan==="PART"?parts[0].date:new Date(W.due+"T10:00:00").toISOString(),paid:0,remindAt:null,parts};
- S.invoices.unshift(inv);notify("u1","Invoice draft for "+c.name+" is awaiting your approval");save();toast("Draft saved · awaiting approval");openInvoice(inv);
+ const inv={id:uid(),number:"DRAFT-"+uid().slice(0,4),docType:W.proforma?"PROFORMA":docFor(c),client:c.id,tdsApplicable:!!W.tds,amount:amt,gst,taxMode:tax,status:"AWAITING_APPROVAL",plan:W.plan,anchor:W.anchor,billDay:W.billDay,billTime:W.billTime,remindAt:W.plan!=="RECURRING"&&W.remindDate?new Date(W.remindDate+"T"+W.remindTime+":00").toISOString():null,desc:W.desc,issued:null,due:W.plan==="PART"?parts[0].date:new Date(W.due+"T10:00:00").toISOString(),paid:0,parts};
+ S.invoices.unshift(inv);notify("u1",inv.remindAt?"Invoice for "+c.name+" will remind you on "+fmtDY(inv.remindAt)+" "+fmtT(inv.remindAt)+" to approve and send":"Invoice draft for "+c.name+" is awaiting your approval");save();toast("Draft saved · awaiting approval");openInvoice(inv);
 }
 /* ---------- invoice detail + actions ---------- */
 function openInvoice(i){
@@ -808,7 +812,7 @@ function openInvoice(i){
    el("div",{style:"font-size:18px;font-weight:800"},c.name),el("div",{style:"font-size:12px;color:var(--muted);margin-bottom:8px"},i.desc||"No description"),
    kv("Taxable",inr(i.amount)),i.taxMode==="CGST_SGST"?[kv("CGST "+gstHalf+"%",inr(i.amount*gstHalf/100)),kv("SGST "+gstHalf+"%",inr(i.amount*gstHalf/100))]:i.taxMode==="IGST"?kv("IGST "+i.gst+"%",inr(i.amount*i.gst/100)):kv("Tax",i.taxMode==="EXPORT_LUT"?"0% under LUT":"none"),
    kv("Total",el("b",{},inr(total(i)))),kv("TDS",i.tdsApplicable?"client deducts TDS":"not expected"),kv("Paid",inr(i.paid)),kv("Balance",el("b",{style:balance(i)?"color:#dc2626":""},inr(balance(i)))),
-   kv("Issued",fmtDY(i.issued)),kv("Due",fmtDY(i.due)),i.remindAt?kv("Reminder",fmtDY(i.remindAt)):null,i.emailAt?kv("Emailed",fmtDY(i.emailAt)):null,i.waAt?kv("WhatsApp",i.waStatus||"queued"):null,c.onHold?kv("Work",el("span",{style:"color:#dc2626"},"ON HOLD since "+fmtD(c.holdSince))):null),
+   kv("Issued",fmtDY(i.issued)),kv("Due",fmtDY(i.due)),i.remindAt?kv("Approval reminder",fmtDY(i.remindAt)+" "+fmtT(i.remindAt)):null,i.plan==="RECURRING"?kv("Next invoice",(i.anchor==="FIRST"?"1st":i.anchor==="LAST"?"last day":(i.billDay||"1")+"th")+" of next month · "+(i.billTime||"09:00")+" · you approve before it goes"):null,i.emailAt?kv("Emailed",fmtDY(i.emailAt)):null,i.waAt?kv("WhatsApp",i.waStatus||"queued"):null,c.onHold?kv("Work",el("span",{style:"color:#dc2626"},"ON HOLD since "+fmtD(c.holdSince))):null),
   i.parts.length?el("div",{class:"card"},el("h4",{},"Parts"),...i.parts.map(p=>el("div",{class:"kv"},el("span",{},"Part "+p.n+" · "+fmtD(p.date)+(p.desc?" · "+p.desc:"")),el("span",{style:"display:flex;gap:6px;align-items:center"},el("span",{class:"num"},inr(p.amount)),el("span",{class:"tag "+(STL[p.status]||["",""])[1]},(STL[p.status]||[p.status])[0]))))):null,
   el("div",{class:"card"},el("h4",{},"Payment via UPI"),el("div",{class:"qr"},...Array.from({length:144},(_,k)=>el("i",{class:((k*7+Math.floor(k/12)*3)%5<2)?"":"o"}))),el("div",{style:"text-align:center;font-size:12px"},S.settings.upi),el("div",{style:"text-align:center;font-size:11px;color:var(--muted)"},"Printed on the PDF with a public pay link")),
   el("div",{class:"card"},el("h4",{},"Payments"),...(S.payments.filter(p=>p.invoice===i.id).map(p=>kv(fmtD(p.date)+" · "+p.method+(p.tds?" · TDS "+inr(p.tds):""),inr(p.amount))).concat(S.payments.some(p=>p.invoice===i.id)?[]:[el("div",{class:"pre"},"No payments yet")])))
@@ -816,18 +820,19 @@ function openInvoice(i){
 }
 function approveSheet(i){
  const c=clientById(i.client);
- const em=el("input",{type:"checkbox",checked:c.email?true:null,disabled:!c.email||null}),wa=el("input",{type:"checkbox",checked:c.phone?true:null,disabled:!c.phone||null});
+ const em=el("input",{type:"checkbox",checked:c.email?true:null,disabled:!c.email||null}),wa=el("input",{type:"checkbox",checked:c.phone?true:null,disabled:!c.phone||null}),dl=el("input",{type:"checkbox"});
  const partDesc=i.plan==="PART"?el("input",{class:"in",placeholder:"Description for part 1 (optional)",value:i.parts[0]?.desc||""}):null;
  openSheet("Approve "+DOCL[i.docType].toLowerCase()+"?",
   el("p",{style:"font-size:13px;margin:0 0 10px"},"Number ",el("b",{},i.docType==="PROFORMA"?"PF-"+String(S.seq+1).padStart(4,"0"):S.settings.fyPrefix+"/"+fyKey()+"/"+String(S.seq+1).padStart(4,"0"))," will be assigned. Total ",el("b",{},inr(i.plan==="PART"?i.parts[0].amount:total(i)))),
   partDesc?field("Part 1 description",partDesc):null,
   el("label",{class:"check"},em,el("div",{},el("b",{},"Email the PDF"),el("small",{},c.email||"no email on the client"))),
-  el("label",{class:"check"},wa,el("div",{},el("b",{},"WhatsApp (Twilio)"),el("small",{},c.phone||"no WhatsApp number on the client"))),
+  el("label",{class:"check"},wa,el("div",{},el("b",{},"WhatsApp (Twilio)"),el("small",{},c.phone||"no WhatsApp number on the client"))),el("label",{class:"check"},dl,el("div",{},el("b",{},"Download the PDF"),el("small",{},"Save a copy on this phone to send yourself"))),el("p",{class:"pre",style:"margin:0 0 8px"},"Untick both channels to just approve and number it without sending."),
   el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Not now"),el("button",{class:"btn green",onclick:()=>{
    i.number=i.docType==="PROFORMA"?"PF-"+String(++S.seq).padStart(4,"0"):nextNumber();i.status="SENT";i.issued=new Date().toISOString();i.publicToken=uid()+uid();
    if(em.checked)i.emailAt=i.issued;if(wa.checked){i.waAt=i.issued;i.waStatus="delivered (mock)";}
    if(i.plan==="PART"&&i.parts[0]){i.parts[0].status="SENT";if(partDesc)i.parts[0].desc=partDesc.value;}
-   save();closeSheet();toast("Approved · "+[em.checked?"emailed":null,wa.checked?"WhatsApp sent":null].filter(Boolean).join(" + ")||"Approved");openInvoice(i);}},"Approve & send")));
+   i.remindAt=null;save();closeSheet();const done=[em.checked?"emailed":null,wa.checked?"WhatsApp sent":null,dl.checked?"PDF downloaded":null].filter(Boolean);toast(done.length?"Approved · "+done.join(" + "):"Approved · numbered, not sent");openInvoice(i);}},"Approve"+((em.checked||wa.checked)?" & send":""))));
+ const relabel=()=>{sheetEl.querySelector(".btn.green").textContent="Approve"+((em.checked||wa.checked)?" & send":"")+(dl.checked&&!(em.checked||wa.checked)?" & download":"");};[em,wa,dl].forEach(x=>x.onchange=relabel);
 }
 function paymentSheet(i){
  const c=clientById(i.client);const bal=balance(i);
@@ -895,14 +900,20 @@ PAGES.clients=function(arg){
   [zoneActions(el("button",{class:"btn blue",onclick:()=>clientForm()},"+ Add client"))]);
 };
 function clientForm(c){
- const v=c||{name:"",businessName:"",pan:"",email:"",phone:"",gstin:"",stateCode:"27",stateName:"Maharashtra",country:"IN",tdsPercent:0};
- const STATES={"07":"Delhi","27":"Maharashtra","29":"Karnataka","33":"Tamil Nadu","24":"Gujarat","36":"Telangana","19":"West Bengal","09":"Uttar Pradesh"};
- const inp=(k,ph,type="text")=>el("input",{class:"in",type,value:v[k]||"",placeholder:ph,oninput:e=>{v[k]=e.target.value;if(k==="gstin"&&e.target.value.length>=2&&STATES[e.target.value.slice(0,2)]){v.stateCode=e.target.value.slice(0,2);v.stateName=STATES[v.stateCode];hint.textContent="State "+v.stateName+" → "+TAXL[taxFor(v)];}}});
- const hint=el("div",{class:"hint"},v.country==="IN"?"State "+v.stateName+" → "+TAXL[taxFor(v)]:"Export invoice · 0% under LUT");
- const country=el("select",{class:"in",onchange:e=>{v.country=e.target.value;hint.textContent=v.country==="IN"?"State "+v.stateName+" → "+TAXL[taxFor(v)]:"Export invoice · 0% under LUT";}},...[["IN","India"],["US","United States"],["GB","United Kingdom"],["AE","UAE"],["SE","Sweden"],["SG","Singapore"]].map(([k,l])=>el("option",{value:k,selected:v.country===k||null},l)));
- page(c?c.name:"Add client",[el("div",{style:"padding:12px"},field("Name",inp("name","Client name")),field("Business name",inp("businessName","Legal name printed on invoices")),field("Email",inp("email","accounts@client.com","email")),field("WhatsApp number",inp("phone","+91 …","tel")),field("Country",country),field("GSTIN",inp("gstin","27AAACZ1234F1Z5")),hint,field("PAN",inp("pan","AAACZ1234F"),"5 letters, 4 digits, 1 letter · printed on invoices and needed for TDS credit"),field("TDS % this client usually deducts",inp("tdsPercent","0","number"),"Default for the per-invoice choice; you confirm the actual % when the payment arrives"),
-  el("p",{class:"pre"},"The tax type (CGST+SGST / IGST / Export) is picked automatically from the GSTIN state code against your company state "+S.settings.stateCode+"."))],
-  [zoneActions(el("button",{class:"btn ghost",onclick:()=>PAGES.clients()},"Cancel"),el("button",{class:"btn blue",onclick:()=>{if(!v.name.trim())return toast("Name is required","err");v.pan=(v.pan||"").toUpperCase().trim();if(v.pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v.pan))return toast("PAN must look like AAACZ1234F","err");v.tdsPercent=Number(v.tdsPercent)||0;if(!c){S.clients.push(Object.assign({id:uid(),onHold:false},v));}save();toast(c?"Client saved":"Client added · shows in filters once it has a task");PAGES.clients();}},"Save"))]);
+ const v=c?Object.assign({},c):{name:"",businessName:"",pan:"",email:"",phone:"",gstin:"",stateCode:S.settings.stateCode,stateName:GST_STATES[S.settings.stateCode]||"",country:"IN",tdsPercent:0};
+ const taxHint=()=>v.country==="IN"?"State "+(GST_STATES[v.stateCode]||"—")+" → "+TAXL[taxFor(v)]+(v.stateCode===S.settings.stateCode?" (same state as you)":" (other state)"):"Export invoice · 0% under LUT";
+ const hint=el("div",{class:"hint",style:"margin:-8px 0 12px"},taxHint());
+ const stateSel=el("select",{class:"in",onchange:e=>{v.stateCode=e.target.value;v.stateName=GST_STATES[v.stateCode];hint.textContent=taxHint();}},...Object.entries(GST_STATES).map(([k,l])=>el("option",{value:k,selected:v.stateCode===k||null},k+" · "+l)));
+ const stateHint=el("div",{class:"hint"});
+ const syncState=()=>{const code=(v.gstin||"").slice(0,2);if(v.gstin&&v.gstin.length>=2&&GST_STATES[code]){v.stateCode=code;v.stateName=GST_STATES[code];stateSel.value=code;stateSel.disabled=true;stateHint.textContent="Taken from the GSTIN";}else{stateSel.disabled=false;stateHint.textContent="Pick the state for an unregistered client";}hint.textContent=taxHint();};
+ const inp=(k,ph,type="text")=>el("input",{class:"in",type,value:v[k]||"",placeholder:ph,oninput:e=>{v[k]=e.target.value;if(k==="gstin")syncState();}});
+ const indiaWrap=el("div");
+ const country=el("select",{class:"in",onchange:e=>{v.country=e.target.value;indiaWrap.hidden=v.country!=="IN";hint.textContent=taxHint();}},...[["IN","India"],["US","United States"],["GB","United Kingdom"],["AE","UAE"],["SE","Sweden"],["SG","Singapore"],["AU","Australia"],["ZZ","Other (outside India)"]].map(([k,l])=>el("option",{value:k,selected:v.country===k||null},l)));
+ indiaWrap.append(field("GSTIN",inp("gstin","27AAACZ1234F1Z5"),"Leave empty if the client is not GST registered"),field("State",stateSel),stateHint);stateHint.style.cssText="margin:-8px 0 12px";
+ indiaWrap.hidden=v.country!=="IN";syncState();
+ page(c?c.name:"Add client",[el("div",{style:"padding:12px"},field("Name",inp("name","Client name")),field("Business name",inp("businessName","Legal name printed on invoices")),field("Email",inp("email","accounts@client.com","email")),field("WhatsApp number",inp("phone","+91 …","tel")),field("Country",country),indiaWrap,hint,field("PAN",inp("pan","AAACZ1234F"),"5 letters, 4 digits, 1 letter · printed on invoices and needed for TDS credit"),field("TDS % this client usually deducts",inp("tdsPercent","0","number"),"Default for the per-invoice choice; you confirm the actual % when the payment arrives"),field("Billing address",el("textarea",{class:"in",oninput:e=>{v.address=e.target.value;}},v.address||"")),
+  el("p",{class:"pre"},"Tax type is picked automatically: same state as your company ("+(GST_STATES[S.settings.stateCode]||S.settings.stateCode)+") → CGST+SGST, another Indian state → IGST, outside India → export invoice at 0% under LUT."))],
+  [zoneActions(el("button",{class:"btn ghost",onclick:()=>PAGES.clients()},"Cancel"),el("button",{class:"btn blue",onclick:()=>{if(!v.name.trim())return toast("Name is required","err");v.pan=(v.pan||"").toUpperCase().trim();if(v.pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v.pan))return toast("PAN must look like AAACZ1234F","err");v.gstin=(v.gstin||"").toUpperCase().trim();v.tdsPercent=Number(v.tdsPercent)||0;if(v.country!=="IN"){v.stateCode="";v.stateName="";}if(c)Object.assign(c,v);else S.clients.push(Object.assign({id:uid(),onHold:false},v));save();toast(c?"Client saved":"Client added · shows in filters once it has a task");PAGES.clients();}},"Save"))]);
 }
 /* ---------- requests ---------- */
 PAGES.requests=function(){
@@ -997,7 +1008,9 @@ PAGES.finance=function(){
 };
 PAGES.settings=function(){
  const s=S.settings;const inp=(k,type="text")=>el("input",{class:"in",type,value:s[k],oninput:e=>{s[k]=type==="number"?Number(e.target.value):e.target.value;}});
- page("Settings",[el("div",{style:"padding:12px"},field("Company",inp("company")),field("GSTIN",inp("gstin")),field("Company state code",inp("stateCode"),"Decides CGST+SGST vs IGST"),field("LUT number",inp("lut"),"Printed on export invoices"),field("Invoice prefix",inp("fyPrefix"),"Numbers: "+s.fyPrefix+"/"+fyKey()+"/0001, reset every 1 April"),field("UPI ID",inp("upi"),"QR printed on invoices"),field("Half day = minutes of inventory",inp("halfDayMinutes","number")),field("TDS threshold per payee (₹ per FY)",inp("tdsThreshold","number"),"You are warned when payments to one payee cross this in a financial year; resets every 1 April"),
+ const stSel=el("select",{class:"in",onchange:e=>{s.stateCode=e.target.value;s.stateName=GST_STATES[s.stateCode];}},...Object.entries(GST_STATES).map(([k,l])=>el("option",{value:k,selected:s.stateCode===k||null},k+" · "+l)));
+ const gstIn=el("input",{class:"in",value:s.gstin,oninput:e=>{s.gstin=e.target.value.toUpperCase();const code=s.gstin.slice(0,2);if(GST_STATES[code]){s.stateCode=code;s.stateName=GST_STATES[code];stSel.value=code;}}});
+ page("Settings",[el("div",{style:"padding:12px"},el("div",{style:"font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px"},"Your company (printed on every invoice)"),field("Company / brand name",inp("company")),field("Legal name",inp("legalName"),"As registered under GST"),field("GSTIN",gstIn,"State is read from the first two digits"),field("State",stSel,"Clients in this state get CGST+SGST, other states IGST"),field("PAN",inp("pan")),field("LUT number",inp("lut"),"Printed on export invoices (0% under LUT)"),field("IEC code",inp("iec"),"Import Export Code, printed on export invoices"),field("Billing address",el("textarea",{class:"in",oninput:e=>{s.address=e.target.value;}},s.address||"")),field("Billing email",inp("email","email"),"Invoices are sent from and replied to here"),field("Phone",inp("phone","tel")),field("Bank details",inp("bank"),"Printed under the UPI QR"),el("div",{style:"font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:8px 0"},"Numbering & payments"),field("Invoice prefix",inp("fyPrefix"),"Numbers: "+s.fyPrefix+"/"+fyKey()+"/0001, reset every 1 April"),field("UPI ID",inp("upi"),"QR printed on invoices"),field("Half day = minutes of inventory",inp("halfDayMinutes","number")),field("TDS threshold per payee (₹ per FY)",inp("tdsThreshold","number"),"You are warned when payments to one payee cross this in a financial year; resets every 1 April"),
   field("Expense categories",el("textarea",{class:"in",oninput:e=>{s.expenseCategories=e.target.value.split("\n").map(x=>x.trim()).filter(Boolean);}},s.expenseCategories.join("\n")),"One per line"),
   el("label",{class:"check"},el("input",{type:"checkbox",checked:s.notifyChat||null,onchange:e=>{s.notifyChat=e.target.checked;}}),el("div",{},el("b",{},"Also post notifications to Google Chat"),el("small",{},"In-app + push are always on"))),
   el("div",{class:"card",style:"margin:0"},el("h4",{},"Integrations"),...[["Google Workspace","service account · domain-wide delegation"],["Twilio WhatsApp","mock in demo"],["Web push","VAPID keys set"],["Google Sheets","push only"]].map(([k,v])=>el("div",{class:"kv"},el("span",{},k),el("span",{},v)))))],
