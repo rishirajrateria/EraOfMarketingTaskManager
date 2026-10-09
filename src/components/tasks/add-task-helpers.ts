@@ -1,20 +1,16 @@
 import { addDays, differenceInCalendarDays } from "date-fns";
 import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
-import { DEFAULT_TZ, zonedDayAt } from "@/lib/time";
+import { DEFAULT_TZ, dateChip, dateKey, fmtTime, zonedDayAt } from "@/lib/time";
 import type { DashboardData } from "@/server/tasks/types";
+import type { RepeatRule } from "@/server/tasks/repeat-rule";
 
 /** Pure helpers for the Add-task sheet (SPEC §6). No React, no server access — unit-tested in tests/ui. */
 
 export type TaskMode = "WORK" | "MEETING";
 export type Person = DashboardData["people"][number];
 
-export type Recurrence = {
-  frequency: "DAILY" | "WEEKLY" | "MONTHLY" | "CUSTOM";
-  interval: number;
-  byWeekday: number[];
-  trigger: "ON_SCHEDULE" | "ON_COMPLETE";
-  endDate: string | null; // yyyy-MM-dd, null = infinite
-};
+/** "Repeat this task" rule (ADR 0010); the server anchors it on the first occurrence's day. */
+export type Recurrence = RepeatRule;
 
 export type AddTaskForm = {
   type: TaskMode;
@@ -26,13 +22,13 @@ export type AddTaskForm = {
   tagIds: string[]; // the WORK row: exactly one work type for work tasks
   /** Admin's PREFER row: suggested executives; the Team Leader decides (ADR 0008). */
   preferredAssigneeIds: string[];
-  allocatedHours: string; // "1.5"
-  scheduledStart: string; // datetime-local value or ""
-  scheduledEnd: string;
+  /** "How long": hours in 15-minute steps (min ¼h). */
+  hours: number;
+  /** datetime-local value (company tz) set from the calendar icon / Tom / today; "" = next free slot (upnext). */
+  scheduledStart: string;
   important: boolean;
   priority: "LOW" | "NORMAL" | "HIGH" | "URGENT";
   recurrence: Recurrence | null;
-  acceptProposedSlot: boolean;
 };
 
 export type PeriodLoad = { minutes: number; count: number };
@@ -43,8 +39,6 @@ export const EMPTY_LOADS: PeriodLoads = {
   week: { minutes: 0, count: 0 },
   month: { minutes: 0, count: 0 },
 };
-
-export const DEFAULT_RECURRENCE: Recurrence = { frequency: "WEEKLY", interval: 1, byWeekday: [], trigger: "ON_SCHEDULE", endDate: null };
 
 /**
  * Fresh form. Admin and Team Leader start with nobody picked (Admin: the chosen team's Team Leader gets it;
@@ -60,13 +54,11 @@ export function emptyForm(type: TaskMode, meId: string, role?: string): AddTaskF
     teamIds: [],
     tagIds: [],
     preferredAssigneeIds: [],
-    allocatedHours: "1",
+    hours: 2,
     scheduledStart: "",
-    scheduledEnd: "",
     important: false,
     priority: "NORMAL",
     recurrence: null,
-    acceptProposedSlot: false, // becomes true once the creator taps Accept on the proposed slot
   };
 }
 
@@ -91,6 +83,58 @@ export function hoursToMinutes(hours: string | number): number {
   const h = typeof hours === "number" ? hours : Number.parseFloat(hours);
   if (!Number.isFinite(h) || h <= 0) return 5;
   return Math.max(5, Math.round(h * 60));
+}
+
+/** "How long" quick pills (prototype `renderAdd`). */
+export const HOUR_PRESETS = [0.5, 1, 2, 3, 4, 6, 8] as const;
+
+/** 0.5 → "½h", 2 → "2h", 1.25 → "1.25h", 1.5 → "1.5h". */
+export function fmtHours(h: number): string {
+  if (h === 0.5) return "½h";
+  return `${Number.isInteger(h) ? h : h.toFixed(2).replace(/0$/, "")}h`;
+}
+
+/** − / + stepper: 15-minute steps, never below 15 minutes. */
+export function stepHours(h: number, dir: 1 | -1): number {
+  return Math.max(0.25, Math.round((h + dir * 0.25) * 4) / 4);
+}
+
+/** Seconds → "1:05" (voice-note timer and chips). */
+export const fmtSecs = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+/** Day key the repeat presets are based on: the picked start day, else today (company tz). */
+export function repeatBaseDay(form: Pick<AddTaskForm, "scheduledStart">, now = new Date(), tz = DEFAULT_TZ): string {
+  return /^\d{4}-\d{2}-\d{2}/.test(form.scheduledStart) ? form.scheduledStart.slice(0, 10) : dateKey(now, tz);
+}
+
+/** Prototype `nextSlot()` fallback: next full hour; before 10:00 → 10:00; after 18:00 → tomorrow 10:00 (company tz). */
+export function fallbackNextSlot(now = new Date(), tz = DEFAULT_TZ): Date {
+  const hour = toZonedTime(now, tz).getHours() + 1;
+  if (hour >= 18) return zonedDayAt(addDays(now, 1), 10 * 60, tz);
+  return zonedDayAt(now, Math.max(10, hour) * 60, tz);
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** "2026-10-09" → "09 Oct 2026" (prototype `fmtDY`). */
+export const fmtDayLong = (key: string) => `${key.slice(8, 10)} ${MONTHS[Number(key.slice(5, 7)) - 1]} ${key.slice(0, 4)}`;
+
+/** Who the task is for, as the prototype's summary line says it ("Priya", "me, Arjun", "whole team"); null = no team yet. */
+export function forWhom(form: Pick<AddTaskForm, "teamIds" | "assigneeIds">, data: Pick<DashboardData, "people" | "me">): string | null {
+  const first = (id: string) => (id === data.me.id ? "me" : (data.people.find((p) => p.id === id)?.name ?? "?").split(" ")[0]);
+  if (data.me.role === "ADMIN") return form.teamIds.length ? teamLeadersOf(data, form.teamIds).map((p) => first(p.id)).join(", ") || null : null;
+  if (data.me.role === "TEAM_LEADER") return form.assigneeIds.length ? form.assigneeIds.map(first).join(", ") : "whole team";
+  return "me";
+}
+
+/**
+ * One-line schedule summary under the body: "📅 09 Oct 2026 at 10:00 · 2h · for Priya · change with the calendar icon
+ * below" or "📅 Next free slot: Tom 10:00am · …". `nextSlot` = the slot the server would pick (null while unknown).
+ */
+export function scheduleLine(form: Pick<AddTaskForm, "scheduledStart" | "hours">, who: string | null, nextSlot: Date | null, now = new Date(), tz = DEFAULT_TZ): string {
+  const when = form.scheduledStart
+    ? `📅 ${fmtDayLong(form.scheduledStart.slice(0, 10))} at ${form.scheduledStart.slice(11, 16)}`
+    : `📅 Next free slot: ${nextSlot ? `${dateChip(nextSlot, now, tz)} ${fmtTime(nextSlot, tz)}` : "finding…"}`;
+  return `${when} · ${fmtHours(form.hours)}${who ? ` · for ${who}` : ""} · change with the calendar icon below`;
 }
 
 /** Minutes → "5.5 Hours" / "1 Hour" for the header tiles. */
@@ -149,7 +193,6 @@ export function formatSlot(slot: { start: Date | string; end: Date | string }, t
 /** Form state → payload for `createTask` (matches `taskInputSchema`). */
 export function toTaskInput(form: AddTaskForm, tz = DEFAULT_TZ) {
   const scheduledStart = fromDatetimeLocal(form.scheduledStart, tz);
-  const scheduledEnd = scheduledStart ? fromDatetimeLocal(form.scheduledEnd, tz) : null;
   const meeting = form.type === "MEETING";
   return {
     type: form.type,
@@ -160,17 +203,16 @@ export function toTaskInput(form: AddTaskForm, tz = DEFAULT_TZ) {
     teamIds: form.teamIds,
     tagIds: meeting ? [] : form.tagIds,
     preferredAssigneeIds: form.preferredAssigneeIds ?? [],
-    allocatedMinutes: hoursToMinutes(form.allocatedHours),
+    allocatedMinutes: hoursToMinutes(form.hours),
     scheduledStart,
-    scheduledEnd: scheduledEnd && scheduledEnd > scheduledStart! ? scheduledEnd : null,
+    scheduledEnd: null, // the server ends it after the allocated time
     important: form.important,
     priority: form.priority,
-    recurrence: meeting ? null : form.recurrence,
-    acceptProposedSlot: !scheduledStart && form.acceptProposedSlot,
+    recurrence: meeting || !form.recurrence ? null : { ...form.recurrence, trigger: "ON_SCHEDULE" as const },
   };
 }
 
-export type AddTaskErrorKey = "title" | "teamIds" | "tagIds" | "clientId" | "assigneeIds" | "allocatedHours";
+export type AddTaskErrorKey = "title" | "teamIds" | "tagIds" | "clientId" | "assigneeIds" | "hours";
 export type AddTaskErrors = Partial<Record<AddTaskErrorKey, string>>;
 
 /**
@@ -189,7 +231,7 @@ export function validateForm(form: AddTaskForm, data?: AddTaskData): AddTaskErro
   if (!assignees.length && !errors.teamIds) {
     errors.assigneeIds = data?.me.role === "ADMIN" ? "That team has no Team Leader yet (Menu → Add teamleader)" : "At least one assignee is required";
   }
-  if (!Number.isFinite(Number.parseFloat(form.allocatedHours)) || Number.parseFloat(form.allocatedHours) <= 0) errors.allocatedHours = "Allocated time must be positive";
+  if (!Number.isFinite(form.hours) || form.hours < 0.25) errors.hours = "Pick how long it takes (at least 15 minutes)";
   return errors;
 }
 
@@ -197,16 +239,9 @@ export function toggleId(list: string[], id: string): string[] {
   return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
 }
 
-export const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"] as const;
-
 /** The Team Leader of a team (Admin tag row auto-assigns them when the team pill is tapped). */
 export function teamLeaderId(data: Pick<DashboardData, "people">, teamId: string): string | null {
   return data.people.find((p) => p.role === "TEAM_LEADER" && p.teamId === teamId)?.id ?? null;
-}
-
-/** Which validation errors live in the details sheet (title, team, work and client are in the body / green rows). */
-export function needsDetailsSheet(errors: AddTaskErrors): boolean {
-  return !!errors.allocatedHours;
 }
 
 /** `?add=WORK|MEETING|CHOOSE` → sheet mode (used to deep-link the add sheet). */

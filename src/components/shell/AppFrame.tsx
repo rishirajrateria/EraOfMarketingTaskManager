@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Role } from "@prisma/client";
+import { Bell, ChevronLeft, Inbox, Menu } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { MenuTray } from "@/components/shell/MenuTray";
 import { menuStore, useMenuOpen } from "@/components/shell/menu-store";
@@ -50,35 +51,35 @@ export function AppFrame({
   return (
     <div className="phone-frame">
       {showHeader ? (
-        <header className="sticky top-0 z-30 flex items-center gap-2 bg-gradient-to-r from-[#174ea6]/90 to-[#1e63d6]/85 px-3 py-2 text-white shadow-[inset_0_-1px_0_rgba(255,255,255,.25)] backdrop-blur-xl">
+        <header className="sticky top-0 z-30 flex min-h-14 items-center gap-1 border-b border-hair bg-glass px-2 pt-[env(safe-area-inset-top)] text-ink backdrop-blur-[22px] backdrop-saturate-[1.8]">
           {user.role === "ADMIN" ? (
-            <button className="touch-target -ml-2 text-2xl" onClick={() => menuStore.open()} aria-label="Menu">
-              ☰
+            <button className="flex h-10 w-10 items-center justify-center rounded-xl" onClick={() => menuStore.open()} aria-label="Menu">
+              <Menu size={18} strokeWidth={2.5} />
             </button>
           ) : (
-            <Link href={HOME[user.role]} className="touch-target -ml-2 flex items-center text-2xl" aria-label="Home">
-              ⌂
+            <Link href={HOME[user.role]} className="flex h-10 w-10 items-center justify-center rounded-xl" aria-label="Home">
+              <ChevronLeft size={22} strokeWidth={2.25} />
             </Link>
           )}
-          <Link href={HOME[user.role]} className="flex-1 truncate text-base font-semibold capitalize">
+          <Link href={HOME[user.role]} className="flex-1 truncate text-[17px] font-bold capitalize tracking-[-.015em]">
             {title}
           </Link>
           {(user.role === "ADMIN" || user.role === "HR") && (
-            <Link href={requestsHref} className="touch-target relative flex items-center text-xl" aria-label="Requests">
-              📥
+            <Link href={requestsHref} className="relative flex h-10 w-10 items-center justify-center rounded-xl" aria-label="Requests">
+              <Inbox size={18} strokeWidth={2.25} />
               {reqBadge > 0 ? (
-                <span className="absolute -right-1 -top-0.5 rounded-full bg-red-500 px-1.5 text-[10px] font-bold">{reqBadge}</span>
+                <span className="absolute right-0.5 top-0.5 min-w-[14px] rounded-full bg-red-500 px-1 text-center text-[9px] font-bold leading-[14px] text-white">{reqBadge}</span>
               ) : null}
             </Link>
           )}
-          <Link href="/notifications" className="touch-target relative flex items-center text-xl" aria-label="Notifications">
-            🔔
+          <Link href="/notifications" className="relative flex h-10 w-10 items-center justify-center rounded-xl" aria-label="Notifications">
+            <Bell size={18} strokeWidth={2.25} />
             {badge > 0 ? (
-              <span className="absolute -right-1 -top-0.5 rounded-full bg-red-500 px-1.5 text-[10px] font-bold">{badge}</span>
+              <span className="absolute right-0.5 top-0.5 min-w-[14px] rounded-full bg-red-500 px-1 text-center text-[9px] font-bold leading-[14px] text-white">{badge}</span>
             ) : null}
           </Link>
-            <Link href="/me" aria-label="Profile">
-              <Avatar name={user.name} src={user.image} size={30} />
+            <Link href="/me" aria-label="Profile" className="px-1">
+              <Avatar name={user.name} src={user.image} size={28} />
             </Link>
         </header>
       ) : null}

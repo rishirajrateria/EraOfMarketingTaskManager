@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import type { SessionUser } from "@/lib/rbac";
 import { getSettings } from "@/lib/settings";
 import { rowColour, ACTIVE_STATUSES } from "@/server/tasks/state";
+import { describeRecord } from "@/server/tasks/recurrence";
+import { DEFAULT_TZ } from "@/lib/time";
 import type { DashboardData, PillGroup, TaskRow } from "@/server/tasks/types";
 
 export const taskInclude = {
@@ -12,7 +14,9 @@ export const taskInclude = {
   tags: { include: { workType: { select: { id: true, name: true, colour: true } } }, orderBy: { workType: { name: "asc" } } },
   attachments: { select: { id: true, name: true, kind: true, url: true, driveFileId: true, durationSec: true } },
   children: { select: { id: true }, take: 1, orderBy: { createdAt: "desc" as const } },
-  recurrenceRule: { select: { id: true, stopped: true } },
+  recurrenceRule: {
+    select: { id: true, stopped: true, frequency: true, interval: true, byWeekday: true, endDate: true, repeatFreq: true, monthDay: true, nthWeek: true, nthWeekday: true, yearMonth: true, yearDay: true, endAfterCount: true, anchorDate: true },
+  },
 } satisfies Prisma.TaskInclude;
 
 export type TaskWithRelations = Prisma.TaskGetPayload<{ include: typeof taskInclude }>;
@@ -34,6 +38,7 @@ export function toRow(t: TaskWithRelations): TaskRow {
     reviewNote: t.reviewNote,
     paused: t.status === "PAUSED",
     recurring: !!t.recurrenceRule && !t.recurrenceRule.stopped,
+    repeatText: t.recurrenceRule && !t.recurrenceRule.stopped ? describeRecord(t.recurrenceRule, t.scheduledStart, DEFAULT_TZ) : null,
     selfAssigned: t.selfAssigned,
     protected: t.protected,
     client: t.client,

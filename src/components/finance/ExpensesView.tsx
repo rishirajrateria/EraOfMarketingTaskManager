@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { BarChip, BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
 import { useToast } from "@/components/ui/Toast";
+import { ScreenHeader } from "@/components/admin/AdminUi";
 import { exportExpensesCsv } from "@/server/finance/expenses";
 import type { BillRow } from "@/server/finance/payables-queries";
 import type { VendorTdsSummary } from "@/server/finance/tds";
@@ -62,11 +63,8 @@ export function ExpensesView({ bills, today, tab: initialTab, gstMonth, tds, tds
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 px-4 pb-3 pt-3 text-white backdrop-blur-xl">
-        <h1 className="text-base font-semibold">Expenses</h1>
-        <div className="text-xs opacity-85">{due.length} to pay · {bills.length} bill{bills.length === 1 ? "" : "s"}</div>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto bg-white/55 pb-4 backdrop-blur-md">{body}</div>
+      <ScreenHeader title="Expenses" subtitle={`${due.length} to pay · ${bills.length} bill${bills.length === 1 ? "" : "s"}`} />
+      <div className="min-h-0 flex-1 overflow-y-auto pb-4">{body}</div>
       <BottomZone
         rows={
           <ZoneRow label="Expense tabs">
@@ -79,9 +77,9 @@ export function ExpensesView({ bills, today, tab: initialTab, gstMonth, tds, tds
           tab === "GST" ? (
             <>
               {itcFolderUrl ? (
-                <a href={itcFolderUrl} target="_blank" rel="noreferrer" className="no-select flex h-[22px] shrink-0 items-center rounded-full bg-green-pill px-2.5 text-[11px] text-[#111]">Drive</a>
+                <a href={itcFolderUrl} target="_blank" rel="noreferrer" className="no-select flex h-7 shrink-0 items-center whitespace-nowrap rounded-full bg-green-pill px-[13px] text-xs font-medium">Drive</a>
               ) : null}
-              <a href={`/api/finance/gst-pack?month=${gstMonth}`} className="no-select flex h-[22px] shrink-0 items-center rounded-full bg-green-pill px-2.5 text-[11px] text-[#111]">Download</a>
+              <a href={`/api/finance/gst-pack?month=${gstMonth}`} className="no-select flex h-7 shrink-0 items-center whitespace-nowrap rounded-full bg-green-pill px-[13px] text-xs font-medium">Download</a>
             </>
           ) : (
             <ZonePill onClick={onExport} label="Export paid payments as CSV">Export</ZonePill>

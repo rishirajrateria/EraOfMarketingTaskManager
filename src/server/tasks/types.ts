@@ -18,6 +18,8 @@ export type TaskRow = {
   reviewNote: string | null;
   paused: boolean;
   recurring: boolean;
+  /** "Every Fri · 10 times" (ADR 0010); null when not repeating. */
+  repeatText?: string | null;
   selfAssigned: boolean;
   protected: boolean;
   client: { id: string; name: string };

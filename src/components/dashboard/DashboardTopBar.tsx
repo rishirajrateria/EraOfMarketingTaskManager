@@ -12,7 +12,7 @@ export type TopBarUser = { id: string; name: string; image: string | null; role:
 
 function Badged({ href, label, count, children }: { href: string; label: string; count: number; children: React.ReactNode }) {
   return (
-    <Link href={href} aria-label={label} title={label} className="relative flex h-[26px] w-6 items-center justify-center text-white/70">
+    <Link href={href} aria-label={label} title={label} className="relative flex h-9 w-7 items-center justify-center text-z1icon">
       {children}
       {count > 0 ? (
         <span className="absolute -right-1 top-0 min-w-[14px] rounded-full bg-red-500 px-1 text-center text-[9px] font-bold leading-[14px] text-white">{count}</span>
@@ -37,9 +37,9 @@ export function DashboardTopBar({ user, unread, openRequests }: { user: TopBarUs
   });
   const isAdmin = user.role === "ADMIN";
   return (
-    <div className="flex h-[26px] items-center justify-between">
+    <div className="flex h-9 items-center justify-between">
       {isAdmin ? (
-        <button type="button" aria-label="Menu" onClick={() => menuStore.open()} className="-ml-1 flex h-[26px] w-7 items-center justify-center text-white/70">
+        <button type="button" aria-label="Menu" onClick={() => menuStore.open()} className="-ml-1 flex h-9 w-8 items-center justify-center text-z1icon">
           <Menu size={17} strokeWidth={2.5} />
         </button>
       ) : (
@@ -54,7 +54,7 @@ export function DashboardTopBar({ user, unread, openRequests }: { user: TopBarUs
         <Badged href="/notifications" label="Notifications" count={badge}>
           <Bell size={15} strokeWidth={2.25} />
         </Badged>
-        <Link href="/me" aria-label="Profile" className="flex items-center opacity-70">
+        <Link href="/me" aria-label="Profile" className="flex items-center rounded-full opacity-95 shadow-[0_0_0_2px_rgba(255,255,255,.35)]">
           <Avatar name={user.name} src={user.image} size={22} />
         </Link>
       </div>

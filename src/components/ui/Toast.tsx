@@ -16,7 +16,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] flex flex-col items-center gap-2 px-4">
         {toasts.map((t) => (
-          <div key={t.id} className={`rounded-xl px-4 py-2 text-sm text-white shadow-lg backdrop-blur-md ${t.tone === "ok" ? "bg-gray-900/85" : "bg-red-600/90"}`}>
+          <div key={t.id} className={`max-w-[90%] rounded-[14px] px-4 py-2.5 text-center text-[13px] font-medium text-white ${t.tone === "ok" ? "toast-glass" : "bg-[#b91c1c] shadow-lg"}`}>
             {t.text}
           </div>
         ))}

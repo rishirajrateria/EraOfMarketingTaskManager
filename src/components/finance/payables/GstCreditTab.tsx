@@ -17,12 +17,12 @@ export function GstCreditTab({ paid, month, onMonth, onOpen }: { paid: Item[]; m
     <li key={x.occ.id} className="flex cursor-pointer items-start gap-3 px-3 py-2.5" onClick={() => onOpen(x)}>
       <div className="min-w-0 flex-1">
         <b className="block truncate text-sm">{x.bill.payee}</b>
-        <small className="block truncate text-xs text-gray-500">{dLong(x.occ.paidKey)} · {x.occ.vendorGstin || "no GSTIN"} · bill {inr(x.occ.amount)}</small>
+        <small className="block truncate text-xs text-muted">{dLong(x.occ.paidKey)} · {x.occ.vendorGstin || "no GSTIN"} · bill {inr(x.occ.amount)}</small>
         <div className="mt-1">{x.occ.hasBill ? <span className={TAG.paid}>📎 {x.occ.billName || "bill"}</span> : <span className={TAG.over}>bill missing · tap to attach</span>}</div>
       </div>
       <div className="shrink-0 text-right">
         <div className="text-sm font-bold">{inr(x.occ.gstAmount)}</div>
-        <small className="block text-[10px] text-gray-500">{x.occ.gstRate ?? "—"}% GST</small>
+        <small className="block text-[10px] text-muted">{x.occ.gstRate ?? "—"}% GST</small>
       </div>
     </li>
   );
@@ -35,16 +35,16 @@ export function GstCreditTab({ paid, month, onMonth, onOpen }: { paid: Item[]; m
       </div>
       <Tiles tiles={[["GST you'll get back", inr(claim.reduce((s, x) => s + x.occ.gstAmount, 0))], ["Bills attached", `${claim.length - missing.length} / ${claim.length}`, missing.length > 0]]} />
       {missing.length ? (
-        <div className="mx-3 mt-3 rounded-2xl border border-white/60 bg-amber-100/80 px-3 py-2 text-xs text-amber-900">
+        <div className="mx-3 mt-3 rounded-2xl border border-hair bg-amber-100/80 px-3 py-2 text-xs text-amber-900">
           {missing.length}
           {missing.length > 1 ? " claimable bills are" : " claimable bill is"} missing. Tap to attach before sending to your finance person.
         </div>
       ) : null}
       {claim.length ? <div className={sectionHead}>Claimable · {claim.length}</div> : null}
-      <ul className="divide-y divide-white/60">{claim.map(row)}</ul>
+      <ul className="divide-y divide-line">{claim.map(row)}</ul>
       {notClaim.length ? <div className={sectionHead}>GST paid, not claimable · {notClaim.length}</div> : null}
-      <ul className="divide-y divide-white/60">{notClaim.map(row)}</ul>
-      {inMonth.length ? null : <div className="px-4 py-10 text-center text-sm text-gray-500">No bills with GST in {monthLong(month)}. Add GST details when you mark a payment paid.</div>}
+      <ul className="divide-y divide-line">{notClaim.map(row)}</ul>
+      {inMonth.length ? null : <div className="px-4 py-10 text-center text-sm text-muted">No bills with GST in {monthLong(month)}. Add GST details when you mark a payment paid.</div>}
     </>
   );
 }

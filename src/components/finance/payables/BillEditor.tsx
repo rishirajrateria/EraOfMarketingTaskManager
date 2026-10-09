@@ -3,7 +3,8 @@ import { useState } from "react";
 import { BarChip, BottomZone } from "@/components/ui/BottomZone";
 import { Sheet } from "@/components/ui/Sheet";
 import { Field, btnDanger, btnSecondary, inputCls } from "@/components/ui/Field";
-import { segActive, segIdle } from "@/components/finance/finance-ui";
+import { SegButton } from "@/components/ui/Controls";
+import { ScreenHeader } from "@/components/admin/AdminUi";
 import { useAction } from "@/components/finance/useAction";
 import { createBill, deleteBill, updateBill } from "@/server/finance/payables";
 import type { BillRow } from "@/server/finance/payables-queries";
@@ -16,12 +17,12 @@ import { METHODS, REMIND_OPTIONS, TIMING, inr, planText } from "@/components/fin
 type Part = { v: string; due: string; note: string };
 type Props = { bill: BillRow | null; categories: string[]; staff: { id: string; name: string; role: string }[]; payees: string[]; today: string };
 
-const sec = "mb-1.5 mt-4 text-[11px] font-bold uppercase tracking-wide text-gray-500";
+const sec = "mb-1.5 mt-4 text-[10.5px] font-bold uppercase tracking-[.07em] text-muted";
 function Seg<T extends string | number>({ opts, cur, on }: { opts: [T, string][]; cur: T; on: (k: T) => void }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {opts.map(([k, l]) => (
-        <button key={String(k)} type="button" onClick={() => on(k)} className={`rounded-full px-3 py-1 text-xs font-medium ${cur === k ? segActive : segIdle}`}>{l}</button>
+        <SegButton key={String(k)} on={cur === k} onClick={() => on(k)}>{l}</SegButton>
       ))}
     </div>
   );
@@ -108,14 +109,14 @@ export function BillEditor({ bill, categories: initialCats, staff, payees, today
   };
 
   let sched: React.ReactNode;
-  if (hasPaid) sched = <p className="text-xs text-gray-600">Schedule: {bill ? planText(bill) : ""} · payments already recorded, so the schedule can&apos;t change. Edit the amount for future payments above.</p>;
+  if (hasPaid) sched = <p className="text-xs text-muted">Schedule: {bill ? planText(bill) : ""} · payments already recorded, so the schedule can&apos;t change. Edit the amount for future payments above.</p>;
   else if (plan === "ONE_TIME")
     sched = (
       <div className="space-y-3">
         <Field label="Due on"><input type="date" className={inputCls} value={first} onChange={(e) => setFirst(e.target.value)} /></Field>
         <label className="glass flex items-start gap-3 rounded-2xl px-3 py-2 text-sm">
           <input type="checkbox" className="mt-1 h-4 w-4 accent-brand-blue" checked={already} onChange={(e) => setAlready(e.target.checked)} />
-          <span><b className="block">Already paid</b><span className="block text-[11px] text-gray-500">Record it as paid right away</span></span>
+          <span><b className="block">Already paid</b><span className="block text-[11px] text-muted">Record it as paid right away</span></span>
         </label>
         {already ? <Field label="Paid by"><Seg opts={METHODS} cur={pmethod} on={setPmethod} /></Field> : null}
       </div>
@@ -142,16 +143,14 @@ export function BillEditor({ bill, categories: initialCats, staff, payees, today
           </div>
         ))}
         <button type="button" className="glass-chip rounded-full px-3 py-1 text-xs" onClick={() => setParts([...parts, { v: "", due: addDaysKey(today, 60), note: "" }])}>+ add part</button>
-        <p className="text-xs text-gray-600">{partMode === "PERCENT" ? `Parts add up to ${partSum}% (must be 100%).` : `Parts add up to ${inr(partSum)} of ${inr(total)}.`}</p>
+        <p className="text-xs text-muted">{partMode === "PERCENT" ? `Parts add up to ${partSum}% (must be 100%).` : `Parts add up to ${inr(partSum)} of ${inr(total)}.`}</p>
       </div>
     );
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 px-4 pb-3 pt-3 text-white backdrop-blur-xl">
-        <h1 className="text-base font-semibold">{isNew ? "Add expense" : `Edit · ${bill.payee}`}</h1>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto bg-white/55 px-4 pb-6 pt-3 backdrop-blur-md">
+      <ScreenHeader title={isNew ? "Add expense" : `Edit · ${bill.payee}`} subtitle={hasPaid ? "Payments recorded · the schedule is fixed" : "A bill and when it is paid"} />
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-3">
         <Field label="Amount (₹)" hint={plan === "RECURRING" ? "Each payment" : plan === "PART" ? "Total of all parts" : undefined}>
           <input className={`${inputCls} text-xl font-bold`} type="number" inputMode="decimal" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} />
         </Field>
@@ -174,7 +173,7 @@ export function BillEditor({ bill, categories: initialCats, staff, payees, today
         </div>
         <div className={sec}>Paid when</div>
         <Seg opts={Object.entries(TIMING).map(([k, [l]]) => [k as typeof timing, l])} cur={timing} on={setTiming} />
-        <p className="mt-1 text-[11px] text-gray-500">{TIMING[timing][1]}</p>
+        <p className="mt-1 text-[11px] text-muted">{TIMING[timing][1]}</p>
         <div className={sec}>Schedule</div>
         {hasPaid ? null : <Seg opts={[["ONE_TIME", "One time"], ["RECURRING", "Recurring"], ["PART", "Part payments"]]} cur={plan} on={setPlan} />}
         <div className="mt-3">{sched}</div>
@@ -186,9 +185,9 @@ export function BillEditor({ bill, categories: initialCats, staff, payees, today
       <BottomZone
         left={
           isNew ? (
-            <button type="button" className="text-[12px] text-white" onClick={() => router.push("/admin/expenses")}>Cancel</button>
+            <button type="button" className="text-[13px] font-medium text-white" onClick={() => router.push("/admin/expenses")}>Cancel</button>
           ) : (
-            <button type="button" className="text-[12px] font-semibold text-red-100" onClick={() => setConfirmDelete(true)}>Delete</button>
+            <button type="button" className="text-[13px] font-semibold text-white" onClick={() => setConfirmDelete(true)}>Delete</button>
           )
         }
         right={<BarChip onClick={pending ? undefined : save} label="Save" className="font-semibold">{pending ? "Saving…" : "Save"}</BarChip>}
@@ -197,7 +196,7 @@ export function BillEditor({ bill, categories: initialCats, staff, payees, today
       {confirmDelete && bill ? (
         <Sheet open onClose={() => setConfirmDelete(false)} title="Delete this bill?">
           <div className="space-y-3 px-4 py-4">
-            <p className="text-sm text-gray-700">Removes {bill.payee} and all its payments from the books.</p>
+            <p className="text-sm text-ink">Removes {bill.payee} and all its payments from the books.</p>
             <div className="flex gap-2">
               <button type="button" className={`${btnSecondary} flex-1`} onClick={() => setConfirmDelete(false)}>Keep</button>
               <button type="button" className={`${btnDanger} flex-1`} onClick={() => run(() => deleteBill(bill.id), () => { router.push("/admin/expenses"); return "Deleted"; })}>Delete</button>

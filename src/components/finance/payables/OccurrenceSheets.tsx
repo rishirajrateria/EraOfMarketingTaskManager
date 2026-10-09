@@ -11,7 +11,7 @@ import { TIMING, dLong, dueWords, inr, methodLabel, monthLong, planText, type It
 function Kv({ k, v }: { k: string; v: React.ReactNode }) {
   return (
     <div className="flex justify-between gap-3 py-0.5 text-sm">
-      <span className="text-gray-500">{k}</span>
+      <span className="text-muted">{k}</span>
       <span className="text-right">{v}</span>
     </div>
   );
@@ -52,7 +52,7 @@ export function OccurrenceSheet({ item, today, onClose, onMarkPaid, onBillDetail
   const isImage = occ.billMime?.startsWith("image/");
   return (
     <Sheet open onClose={onClose} title={`${bill.payee} · ${inr(occ.amount)}`}>
-      <div className="glass mx-4 mt-3 rounded-2xl px-3 py-2">
+      <div className="glass-card mx-4 mt-3 px-3 py-2">
         <Kv k="For" v={bill.note || bill.category} />
         <Kv k="Category" v={bill.category} />
         <Kv k="Type" v={`${bill.kind === "SALARY" ? "Salary" : "Regular"} · ${TIMING[bill.timing][0]}`} />
@@ -66,7 +66,7 @@ export function OccurrenceSheet({ item, today, onClose, onMarkPaid, onBillDetail
       </div>
       {occ.hasBill && isImage ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={`/api/files/bill/${occ.id}`} alt="Bill" className="mx-4 mt-2 max-h-44 rounded-xl border border-white/60 object-contain" />
+        <img src={`/api/files/bill/${occ.id}`} alt="Bill" className="mx-4 mt-2 max-h-44 rounded-xl border border-hair object-contain" />
       ) : null}
       <div className="mt-2">
         <ActionList items={items} />
@@ -106,7 +106,7 @@ export function SendPackSheet({ month, claim, financeEmail, onClose }: { month: 
   return (
     <Sheet open onClose={onClose} title={`Send ${monthLong(month)} GST pack`}>
       <div className="space-y-3 px-4 py-4">
-        <div className="glass rounded-2xl px-3 py-2">
+        <div className="glass-card px-3 py-2">
           <Kv k="Bills" v={`${files} attached${claim.length > files ? ` · ${claim.length - files} missing` : ""}`} />
           <Kv k="GST to claim" v={<b>{inr(claim.reduce((s, x) => s + x.occ.gstAmount, 0))}</b>} />
           <Kv k="Includes" v="ZIP of bills + summary sheet" />

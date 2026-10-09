@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Field, inputCls } from "@/components/ui/Field";
-import { segActive, segIdle } from "@/components/finance/finance-ui";
+import { SegButton } from "@/components/ui/Controls";
 import type { OccRow } from "@/server/finance/payables-queries";
 import { TAG, autoGst } from "@/components/finance/payables/payables-ui";
 
@@ -45,7 +45,7 @@ export function GstBlock({ s, set, amount, onError }: { s: GstState; set: (s: Gs
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <label className="glass-chip flex h-[34px] cursor-pointer items-center rounded-full px-3 text-xs font-medium text-gray-800">
+        <label className="glass-chip flex h-[34px] cursor-pointer items-center rounded-full px-3 text-xs font-medium text-ink">
           {shownName ? "📎 Replace bill" : "📎 Attach the bill (PDF / photo)"}
           <input
             type="file"
@@ -70,7 +70,7 @@ export function GstBlock({ s, set, amount, onError }: { s: GstState; set: (s: Gs
         <input type="checkbox" className="mt-1 h-4 w-4 accent-brand-blue" checked={s.has} onChange={(e) => up({ has: e.target.checked, manual: false })} />
         <span>
           <b className="block">This bill includes GST</b>
-          <span className="block text-[11px] text-gray-500">GST is part of the amount above</span>
+          <span className="block text-[11px] text-muted">GST is part of the amount above</span>
         </span>
       </label>
       {s.has ? (
@@ -78,9 +78,7 @@ export function GstBlock({ s, set, amount, onError }: { s: GstState; set: (s: Gs
           <Field label="GST rate">
             <div className="flex gap-1.5">
               {[5, 12, 18, 28].map((r) => (
-                <button key={r} type="button" onClick={() => up({ rate: r, manual: false })} className={`rounded-full px-3 py-1 text-xs font-medium ${s.rate === r ? segActive : segIdle}`}>
-                  {r}%
-                </button>
+                <SegButton key={r} on={s.rate === r} onClick={() => up({ rate: r, manual: false })}>{r}%</SegButton>
               ))}
             </div>
           </Field>
@@ -96,7 +94,7 @@ export function GstBlock({ s, set, amount, onError }: { s: GstState; set: (s: Gs
             <input type="checkbox" className="mt-1 h-4 w-4 accent-brand-blue" checked={s.itc} onChange={(e) => up({ itc: e.target.checked })} />
             <span>
               <b className="block">I&apos;ll get this GST back</b>
-              <span className="block text-[11px] text-gray-500">Input tax credit · goes into the month&apos;s GST pack for your finance person</span>
+              <span className="block text-[11px] text-muted">Input tax credit · goes into the month&apos;s GST pack for your finance person</span>
             </span>
           </label>
           {s.itc && !shownName ? <p className="-mt-1 text-[11px] text-amber-700">Attach the bill: the claim needs the vendor&apos;s tax invoice in your business name</p> : null}

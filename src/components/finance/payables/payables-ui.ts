@@ -68,10 +68,10 @@ export const allItems = (bills: BillRow[]): Item[] => bills.flatMap((bill) => bi
 /** Auto GST when the bill includes GST: amount × rate / (100 + rate), rounded to the rupee (prototype). */
 export const autoGst = (amount: number, rate: number) => Math.round((amount * rate) / (100 + rate));
 
-export const sectionHead = "px-3 pb-1 pt-3 text-[11px] font-bold uppercase tracking-wide text-gray-500";
-export const tagCls = "inline-flex items-center rounded-full border border-white/60 px-2 py-0.5 text-[10px] font-medium backdrop-blur-sm";
+export const sectionHead = "px-4 pb-1 pt-4 text-[10.5px] font-bold uppercase tracking-[.07em] text-muted";
+export const tagCls = "inline-flex h-[22px] items-center rounded-full border border-hair px-[9px] text-[10.5px] font-semibold";
 export const TAG = {
-  draft: `${tagCls} bg-white/60 text-gray-700`,
+  draft: `${tagCls} bg-chip text-ink`,
   salary: `${tagCls} bg-violet-100/70 text-violet-900`,
   sched: `${tagCls} bg-sky-100/70 text-sky-900`,
   paid: `${tagCls} bg-green-100/70 text-green-800`,

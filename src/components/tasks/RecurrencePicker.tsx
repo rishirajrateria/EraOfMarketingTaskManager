@@ -1,132 +1,197 @@
 "use client";
+import { useEffect, useState } from "react";
 import { clsx } from "@/lib/clsx";
-import { inputCls } from "@/components/ui/Field";
-import { DEFAULT_RECURRENCE, WEEKDAYS, type Recurrence } from "@/components/tasks/add-task-helpers";
+import { Sheet } from "@/components/ui/Sheet";
+import { Field, btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
+import { GroupLabel, SegButton, Stepper } from "@/components/ui/Controls";
+import { NTH, WD, defaultRule, describeRule, ordinal, presetActive, repeatPresets, type RepeatFreq, type RepeatRule } from "@/server/tasks/repeat-rule";
 
-const FREQUENCIES: { id: Recurrence["frequency"]; label: string }[] = [
-  { id: "DAILY", label: "Daily" },
-  { id: "WEEKLY", label: "Weekly" },
-  { id: "MONTHLY", label: "Monthly" },
-  { id: "CUSTOM", label: "Custom" },
+const FREQS: [RepeatFreq, string][] = [
+  ["DAILY", "Daily"],
+  ["WEEKDAYS", "Weekdays"],
+  ["WEEKLY", "Weekly"],
+  ["MONTHLY", "Monthly"],
+  ["YEARLY", "Yearly"],
 ];
+const UNIT: Record<RepeatFreq, string> = { DAILY: "day", WEEKDAYS: "", WEEKLY: "week", MONTHLY: "month", YEARLY: "year" };
+const MON_FIRST = [1, 2, 3, 4, 5, 6, 0];
 
-function Chip({ active, onClick, children, label }: { active: boolean; onClick: () => void; children: React.ReactNode; label?: string }) {
+type Props = {
+  open: boolean;
+  onClose: () => void;
+  /** current rule (null = not repeating yet) */
+  value: RepeatRule | null;
+  /** yyyy-MM-dd the presets are based on: the picked start day, else today (company tz) */
+  base: string;
+  onDone: (rule: RepeatRule) => void;
+  /** "Don't repeat" — only offered when the task already repeats */
+  onClear?: () => void;
+  title?: string;
+};
+
+/**
+ * "Repeat this task" (prototype `recurPicker`): live summary, Quick pick presets, "Or set it yourself"
+ * (Daily / Weekdays / Weekly + Mo–Su / Monthly on a date or the nth weekday / Yearly, every N), and Ends.
+ */
+export function RepeatSheet({ open, onClose, value, base, onDone, onClear, title = "Repeat this task" }: Props) {
+  const [r, setR] = useState<RepeatRule>(() => value ?? defaultRule(base));
+  useEffect(() => {
+    if (open) setR(value ? { ...value, days: [...value.days] } : defaultRule(base));
+  }, [open, value, base]);
+  const set = (p: Partial<RepeatRule>) => setR((x) => ({ ...x, ...p }));
+  const wd = defaultRule(base).nthDay;
+  const unit = UNIT[r.freq];
+  const every = (n: number) => `every ${n === 1 ? unit : `${n} ${unit}s`}`;
+
+  const toggleDay = (d: number) => set({ days: r.days.includes(d) ? (r.days.length > 1 ? r.days.filter((x) => x !== d) : r.days) : [...new Set([...r.days, d])] });
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      aria-label={label}
-      className={clsx(
-        "touch-target rounded-full px-3 text-xs font-medium transition",
-        active ? "bg-brand-blue text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-/** "Loop" — recurrence rule editor (SPEC §6, §13): Daily / Weekly / Monthly / Custom, trigger, end date or Infinite. */
-export function RecurrencePicker({ value, onChange }: { value: Recurrence | null; onChange: (r: Recurrence | null) => void }) {
-  const set = (patch: Partial<Recurrence>) => onChange({ ...(value ?? DEFAULT_RECURRENCE), ...patch });
-  const summary = value ? describeRecurrence(value) : "Off";
-
-  return (
-    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-      <div className="flex items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={() => onChange(value ? null : DEFAULT_RECURRENCE)}
-          aria-pressed={!!value}
-          className={clsx("touch-target flex items-center gap-2 rounded-full px-3 text-sm font-semibold", value ? "bg-brand-blue text-white" : "bg-white text-gray-700 ring-1 ring-gray-300")}
-        >
-          <span aria-hidden>🔁</span> Loop
-        </button>
-        <span className="truncate text-xs text-gray-500">{summary}</span>
-      </div>
-
-      {value ? (
-        <div className="mt-3 space-y-3">
-          <div className="flex flex-wrap gap-2">
-            {FREQUENCIES.map((f) => (
-              <Chip key={f.id} active={value.frequency === f.id} onClick={() => set({ frequency: f.id, interval: 1 })}>
-                {f.label}
-              </Chip>
-            ))}
-          </div>
-
-          {value.frequency === "WEEKLY" ? (
-            <div className="flex gap-1" role="group" aria-label="Weekdays">
-              {WEEKDAYS.map((d, i) => (
-                <Chip
-                  key={i}
-                  label={["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][i]}
-                  active={value.byWeekday.includes(i)}
-                  onClick={() => set({ byWeekday: value.byWeekday.includes(i) ? value.byWeekday.filter((x) => x !== i) : [...value.byWeekday, i].sort() })}
-                >
-                  {d}
-                </Chip>
-              ))}
-            </div>
-          ) : null}
-
-          {value.frequency === "CUSTOM" ? (
-            <label className="flex items-center gap-2 text-sm">
-              Every
-              <input
-                type="number"
-                min={1}
-                max={365}
-                value={value.interval}
-                onChange={(e) => set({ interval: Math.min(365, Math.max(1, Number(e.target.value) || 1)) })}
-                className={clsx(inputCls, "w-20")}
-                aria-label="Interval in days"
-              />
-              days
-            </label>
-          ) : null}
-
-          <label className="block text-sm">
-            <span className="mb-1 block text-xs font-medium text-gray-600">Next occurrence</span>
-            <select value={value.trigger} onChange={(e) => set({ trigger: e.target.value as Recurrence["trigger"] })} className={inputCls}>
-              <option value="ON_SCHEDULE">On schedule (at the scheduled time)</option>
-              <option value="ON_COMPLETE">On complete (when approved complete)</option>
-            </select>
-          </label>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Chip active={value.endDate === null} onClick={() => set({ endDate: null })}>
-              ∞ Infinite
-            </Chip>
-            <label className="flex items-center gap-2 text-xs text-gray-600">
-              or until
-              <input
-                type="date"
-                value={value.endDate ?? ""}
-                onChange={(e) => set({ endDate: e.target.value || null })}
-                className={clsx(inputCls, "w-auto")}
-                aria-label="Recurrence end date"
-              />
-            </label>
-          </div>
+    <Sheet open={open} onClose={onClose} title={title}>
+      <div className="px-4 pb-5 pt-1 text-ink">
+        <div className="recsum mb-3 mt-1" aria-live="polite">
+          ⟳ {describeRule(r)}
         </div>
-      ) : null}
-    </div>
-  );
-}
 
-export function describeRecurrence(r: Recurrence): string {
-  const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const base =
-    r.frequency === "DAILY"
-      ? "Daily"
-      : r.frequency === "WEEKLY"
-        ? r.byWeekday.length
-          ? `Weekly on ${r.byWeekday.map((d) => names[d]).join(", ")}`
-          : "Weekly"
-        : r.frequency === "MONTHLY"
-          ? "Monthly"
-          : `Every ${r.interval} day${r.interval === 1 ? "" : "s"}`;
-  return `${base} · ${r.trigger === "ON_COMPLETE" ? "on complete" : "on schedule"} · ${r.endDate ? `until ${r.endDate}` : "infinite"}`;
+        <GroupLabel>Quick pick</GroupLabel>
+        <div className="mb-3 flex flex-wrap gap-2">
+          {repeatPresets(base).map((p) => (
+            <SegButton key={p.label} on={presetActive(r, p.patch)} onClick={() => set(p.patch)}>
+              {p.label}
+            </SegButton>
+          ))}
+        </div>
+
+        <GroupLabel className="mt-1">Or set it yourself</GroupLabel>
+        <div className="flex flex-wrap gap-2">
+          {FREQS.map(([k, label]) => (
+            <SegButton key={k} on={r.freq === k} onClick={() => set({ freq: k, days: k === "WEEKLY" && !r.days.length ? [wd] : r.days })}>
+              {label}
+            </SegButton>
+          ))}
+        </div>
+        {unit ? (
+          <div className="mt-2">
+            <Stepper onMinus={() => set({ interval: Math.max(1, r.interval - 1) })} onPlus={() => set({ interval: Math.min(12, r.interval + 1) })} valueClass="min-w-[110px]">
+              {every(r.interval)}
+            </Stepper>
+          </div>
+        ) : null}
+
+        {r.freq === "WEEKLY" ? (
+          <div className="mt-3">
+            <Field label="On">
+              <div className="flex gap-1.5" role="group" aria-label="Weekdays">
+                {MON_FIRST.map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    aria-pressed={r.days.includes(d)}
+                    aria-label={WD[d]}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      toggleDay(d);
+                    }}
+                    className={clsx("h-9 w-9 rounded-full border text-xs font-semibold", r.days.includes(d) ? "border-transparent bg-primary text-primary-ink" : "border-hair bg-chip text-ink")}
+                  >
+                    {WD[d].slice(0, 2)}
+                  </button>
+                ))}
+              </div>
+            </Field>
+          </div>
+        ) : null}
+
+        {r.freq === "MONTHLY" ? (
+          <div>
+            <div className="my-2.5 flex gap-2">
+              <SegButton on={r.monthMode === "DATE"} onClick={() => set({ monthMode: "DATE" })}>
+                On a date
+              </SegButton>
+              <SegButton on={r.monthMode === "NTH"} onClick={() => set({ monthMode: "NTH" })}>
+                On a weekday
+              </SegButton>
+            </div>
+            {r.monthMode === "DATE" ? (
+              <select className={inputCls} aria-label="Day of the month" value={r.monthDay} onChange={(e) => set({ monthDay: Number(e.target.value) })}>
+                {Array.from({ length: 31 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {ordinal(i + 1)}
+                  </option>
+                ))}
+                <option value={32}>Last day of the month</option>
+              </select>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <select className={inputCls} aria-label="Which week" value={r.nth} onChange={(e) => set({ nth: Number(e.target.value) })}>
+                  {NTH.map((n, i) => (
+                    <option key={n} value={i + 1}>
+                      The {n}
+                    </option>
+                  ))}
+                </select>
+                <select className={inputCls} aria-label="Weekday" value={r.nthDay} onChange={(e) => set({ nthDay: Number(e.target.value) })}>
+                  {MON_FIRST.map((d) => (
+                    <option key={d} value={d}>
+                      {WD[d]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        <GroupLabel className="mt-3">Ends</GroupLabel>
+        <div className="flex flex-wrap gap-2">
+          <SegButton on={r.ends === "NEVER"} onClick={() => set({ ends: "NEVER" })}>
+            Never ends
+          </SegButton>
+          <SegButton on={r.ends === "COUNT"} onClick={() => set({ ends: "COUNT" })}>
+            After…
+          </SegButton>
+          <SegButton on={r.ends === "UNTIL"} onClick={() => set({ ends: "UNTIL" })}>
+            Until a date
+          </SegButton>
+        </div>
+        {r.ends === "COUNT" ? (
+          <div className="mt-2">
+            <Stepper onMinus={() => set({ count: Math.max(2, r.count - 1) })} onPlus={() => set({ count: Math.min(365, r.count + 1) })} valueClass="min-w-[80px]">
+              {r.count} times
+            </Stepper>
+          </div>
+        ) : null}
+        {r.ends === "UNTIL" ? <input type="date" aria-label="Repeat until" className={clsx(inputCls, "mt-2")} value={r.until} min={base} onChange={(e) => set({ until: e.target.value })} /> : null}
+
+        <div className="mt-4 flex gap-2.5">
+          {onClear ? (
+            <button
+              type="button"
+              className={clsx(btnSecondary, "flex-1 text-[#dc2626]")}
+              onClick={() => {
+                onClose();
+                onClear();
+              }}
+            >
+              Don&apos;t repeat
+            </button>
+          ) : (
+            <button type="button" className={clsx(btnSecondary, "flex-1")} onClick={onClose}>
+              Cancel
+            </button>
+          )}
+          <button
+            type="button"
+            className={clsx(btnPrimary, "flex-1")}
+            disabled={r.ends === "UNTIL" && !r.until}
+            onClick={() => {
+              onClose();
+              onDone({ ...r, anchor: r.anchor ?? base });
+            }}
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </Sheet>
+  );
 }

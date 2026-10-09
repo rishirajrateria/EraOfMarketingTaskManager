@@ -6,14 +6,14 @@ import { shortcutStart, type AddTaskForm, type TaskMode } from "@/components/tas
 
 export type Shortcut = "upnext" | "tomorrow" | "today";
 
-/** Green tag pill (#A9E0AE; white when active). */
+/** Frosted green pill (28px; near-white when active). */
 function TagPill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={clsx("no-select h-[22px] shrink-0 rounded-full px-2.5 text-[11px] font-medium leading-none text-[#111] transition", active ? "bg-white" : "bg-[#A9E0AE]")}
+      className={clsx("no-select h-7 shrink-0 rounded-full px-[13px] text-xs font-medium leading-none transition", active ? "bg-green-pill-on" : "bg-green-pill")}
     >
       {children}
     </button>
@@ -49,7 +49,7 @@ export function TaskTypeSheet({ open, onClose, type, onType }: { open: boolean; 
   );
 }
 
-/** BOTTOM BAR: calendar + upnext/Tom/today (green 62%) · Meet / Work / type selector / X (white 38%). */
+/** BOTTOM BAR (56px): calendar (opens "When should it start?") + upnext/Tom/today (green 62%) · Meet / Work / type selector / X (glass 38%). */
 export function AddTaskBottomBar({
   form,
   type,
@@ -71,9 +71,9 @@ export function AddTaskBottomBar({
 }) {
   const startIs = (kind: "tomorrow" | "today") => !!form.scheduledStart && form.scheduledStart === shortcutStart(kind, new Date(), tz);
   return (
-    <div className="flex h-11 shrink-0 items-stretch">
-      <div className="bg-green-bar flex w-[62%] items-center gap-1.5 px-2 text-white">
-        <button type="button" onClick={onOpenSchedule} aria-label="Schedule" className="flex h-8 w-7 shrink-0 items-center justify-center">
+    <div className="flex h-14 shrink-0 items-stretch pb-[env(safe-area-inset-bottom)]">
+      <div className="bg-green-bar scrollbar-none flex w-[62%] items-center gap-2 overflow-x-auto px-3 text-white">
+        <button type="button" onClick={onOpenSchedule} aria-label="When should it start?" title="When should it start?" className="flex h-8 w-7 shrink-0 items-center justify-center">
           <CalendarDays size={22} aria-hidden />
         </button>
         <TagPill active={!form.scheduledStart} onClick={() => onShortcut("upnext")}>
@@ -86,24 +86,24 @@ export function AddTaskBottomBar({
           today
         </TagPill>
       </div>
-      <div className="flex w-[38%] items-center justify-between gap-1 bg-white/60 px-2 text-[#111] backdrop-blur-xl">
-        <button type="button" onClick={() => onType("MEETING")} aria-pressed={type === "MEETING"} aria-label="Meeting" className={clsx("flex h-8 w-7 items-center justify-center rounded", type === "MEETING" && "bg-[#E5E7EB]")}>
-          <MeetIcon size={26} />
+      <div className="bar-glass flex w-[38%] items-center justify-between gap-1 px-2">
+        <button type="button" onClick={() => onType("MEETING")} aria-pressed={type === "MEETING"} aria-label="Meeting" className={clsx("flex h-10 w-9 items-center justify-center rounded-xl", type === "MEETING" && "bg-chip")}>
+          <MeetIcon size={24} />
         </button>
         <button
           type="button"
           onClick={() => onType("WORK")}
           aria-pressed={type === "WORK"}
-          className={clsx("no-select glass-chip h-[22px] rounded-full px-2.5 text-[11px] font-medium leading-none", type === "WORK" ? "text-[#111] ring-1 ring-[#111]/60" : "text-[#4B5563]")}
+          className={clsx("no-select glass-chip h-[30px] rounded-full px-3 text-xs font-semibold leading-none text-ink", type === "WORK" && "ring-1 ring-ink/50")}
         >
           Work
         </button>
-        <button type="button" onClick={onOpenTypeChooser} aria-label="Choose task or meeting" title={type === "MEETING" ? "Meeting" : "Task / work"} className="relative flex h-8 w-7 items-center justify-center">
+        <button type="button" onClick={onOpenTypeChooser} aria-label="Choose task or meeting" title={type === "MEETING" ? "Meeting" : "Task / work"} className="relative flex h-10 w-8 items-center justify-center">
           <ClipboardList size={22} strokeWidth={1.75} aria-hidden />
-          <span className={clsx("absolute -bottom-0.5 right-0 h-2 w-2 rounded-full", type === "MEETING" ? "bg-[#00AC47]" : "bg-[#2563EB]")} aria-hidden />
+          <span className={clsx("absolute bottom-1.5 right-0.5 h-2 w-2 rounded-full", type === "MEETING" ? "bg-[#00AC47]" : "bg-[#2563EB]")} aria-hidden />
         </button>
-        <button type="button" onClick={onClose} aria-label="Close and go back to all tasks" className="flex h-8 w-7 items-center justify-center">
-          <X size={26} strokeWidth={2.25} aria-hidden />
+        <button type="button" onClick={onClose} aria-label="Close and go back to all tasks" className="flex h-10 w-8 items-center justify-center">
+          <X size={24} strokeWidth={2.25} aria-hidden />
         </button>
       </div>
     </div>

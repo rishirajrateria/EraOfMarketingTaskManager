@@ -107,6 +107,15 @@ month. Separately, a sent invoice sometimes has to be withdrawn (wrong amount) w
   "Expense bills attached".
 - Settings → "TDS & GST pack": finance person's email.
 
+### Relation to the task repeat rules (ADR 0010)
+- ADR 0010 landed in parallel with `src/server/tasks/repeat-rule.ts` (prototype field names: `days`, `nthDay`, `yMonth`
+  0–11, `ends` / `count` / `until`, `anchor`) and RecurrenceRule columns. The bill rule keeps the field names this ADR
+  was briefed with (`weekdays`, `nthWeekday`, `yearMonth` 1–12, `endsType` / `endsCount` / `endsUntil`, `anchorDate`)
+  in a JSON column; the calendar semantics are the same (both follow the prototype's `nextDate`). Converging the two
+  modules onto one shape is a follow-up (a small JSON migration of `Expense.repeatRule` + reusing one picker).
+- The finance screens added here use the ADR 0010 glass tokens and shared controls (`ScreenHeader`, `EmptyState`,
+  `SegButton`, `Stepper`, `GroupLabel`, `text-ink` / `text-muted` / `border-hair`).
+
 ## Consequences
 - `createExpense` / `updateExpense` / `deleteExpense` (FormData) and the old expense form are gone; tests and the seed use
   the bill API. `vendorFyTotal` / `tdsThresholdStatus` take an occurrence id to exclude (was an expense id).

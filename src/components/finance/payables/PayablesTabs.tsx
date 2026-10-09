@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { EmptyState } from "@/components/admin/AdminUi";
 import type { BillRow, OccRow } from "@/server/finance/payables-queries";
 import type { VendorTdsSummary } from "@/server/finance/tds";
 import { TAG, TIMING, dLong, dayOff, dueWords, inr, isOver, methodLabel, planText, sectionHead, type Item } from "@/components/finance/payables/payables-ui";
@@ -9,9 +10,9 @@ export function Tiles({ tiles }: { tiles: [string, string, boolean?][] }) {
   return (
     <div className="grid grid-cols-2 gap-2 px-3 pt-3">
       {tiles.map(([label, value, warn]) => (
-        <div key={label} className="glass rounded-2xl px-3 py-2">
-          <div className="truncate text-[10px] uppercase text-gray-500">{label}</div>
-          <div className={`text-base font-bold ${warn ? "text-red-700" : "text-gray-900"}`}>{value}</div>
+        <div key={label} className="glass-tile !px-3.5 !py-2.5">
+          <div className="truncate text-[10.5px] font-bold uppercase tracking-[.07em] text-muted">{label}</div>
+          <div className={`text-base font-bold ${warn ? "text-acc-red" : "text-ink"}`}>{value}</div>
         </div>
       ))}
     </div>
@@ -30,7 +31,7 @@ export function BillTags({ bill, occ }: { bill: BillRow; occ: OccRow | null }) {
 }
 
 const sum = (xs: Item[]) => xs.reduce((s, x) => s + x.occ.amount, 0);
-const Empty = ({ children }: { children: React.ReactNode }) => <div className="px-4 py-10 text-center text-sm text-gray-500">{children}</div>;
+const Empty = ({ children }: { children: React.ReactNode }) => <EmptyState>{children}</EmptyState>;
 
 export function DueTab({ due, paid, today, onOpen, onPay }: { due: Item[]; paid: Item[]; today: string; onOpen: (x: Item) => void; onPay: (x: Item) => void }) {
   const over = due.filter((x) => isOver(x.occ, today));
@@ -44,7 +45,7 @@ export function DueTab({ due, paid, today, onOpen, onPay }: { due: Item[]; paid:
       <li key={x.occ.id} className={`flex cursor-pointer items-start gap-3 px-3 py-2.5 ${late ? "bg-red-50/70" : ""}`} onClick={() => onOpen(x)}>
         <div className="min-w-0 flex-1">
           <b className="block truncate text-sm">{x.bill.payee}</b>
-          <small className="block truncate text-xs text-gray-500">{x.bill.note || x.bill.category}</small>
+          <small className="block truncate text-xs text-muted">{x.bill.note || x.bill.category}</small>
           <BillTags bill={x.bill} occ={x.occ} />
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
@@ -61,7 +62,7 @@ export function DueTab({ due, paid, today, onOpen, onPay }: { due: Item[]; paid:
     xs.length ? (
       <section key={title}>
         <div className={sectionHead}>{title} · {xs.length}</div>
-        <ul className="divide-y divide-white/60">{xs.map(row)}</ul>
+        <ul className="divide-y divide-line">{xs.map(row)}</ul>
       </section>
     ) : null;
   return (
@@ -90,8 +91,8 @@ export function PaidTab({ paid, today, tdsFy, fyKey, onOpen }: { paid: Item[]; t
     <>
       <Tiles tiles={[["Paid · 30 days", inr(sum(recent))], [`TDS deducted · FY ${fyKey}`, inr(tdsFy)]]} />
       {byCat.size ? (
-        <div className="glass mx-3 mt-3 rounded-2xl px-3 py-2">
-          <h4 className="mb-1 text-xs font-semibold uppercase text-gray-500">By category · 30 days</h4>
+        <div className="glass-card mx-3 mt-3 px-3 py-2">
+          <h4 className="mb-1 text-xs font-semibold uppercase text-muted">By category · 30 days</h4>
           {Array.from(byCat.entries())
             .sort((a, b) => b[1] - a[1])
             .map(([k, v]) => (
@@ -99,12 +100,12 @@ export function PaidTab({ paid, today, tdsFy, fyKey, onOpen }: { paid: Item[]; t
             ))}
         </div>
       ) : null}
-      <ul className="mt-2 divide-y divide-white/60">
+      <ul className="mt-2 divide-y divide-line">
         {paid.map((x) => (
           <li key={x.occ.id} className="flex cursor-pointer items-start gap-3 px-3 py-2.5" onClick={() => onOpen(x)}>
             <div className="min-w-0 flex-1">
               <b className="block truncate text-sm">{x.bill.payee}</b>
-              <small className="block truncate text-xs text-gray-500">{dLong(x.occ.paidKey)} · {methodLabel(x.occ.method)}{x.occ.reference ? ` · ${x.occ.reference}` : ""}</small>
+              <small className="block truncate text-xs text-muted">{dLong(x.occ.paidKey)} · {methodLabel(x.occ.method)}{x.occ.reference ? ` · ${x.occ.reference}` : ""}</small>
               <BillTags bill={x.bill} occ={x.occ} />
               <div className="mt-1 flex flex-wrap gap-1">
                 {x.occ.tdsAmount ? <span className={TAG.paid}>TDS {inr(x.occ.tdsAmount)} · net {inr(x.occ.amount - x.occ.tdsAmount)}</span> : null}
@@ -124,7 +125,7 @@ export function PaidTab({ paid, today, tdsFy, fyKey, onOpen }: { paid: Item[]; t
 export function BillsTab({ bills, today }: { bills: BillRow[]; today: string }) {
   if (!bills.length) return <Empty>No bills yet</Empty>;
   return (
-    <ul className="divide-y divide-white/60">
+    <ul className="divide-y divide-line">
       {bills
         .slice()
         .sort((a, b) => a.payee.localeCompare(b.payee))
@@ -136,9 +137,9 @@ export function BillsTab({ bills, today }: { bills: BillRow[]; today: string }) 
               <Link href={`/admin/expenses/${b.id}`} className="flex items-start gap-3 px-3 py-2.5 active:bg-white/70">
                 <div className="min-w-0 flex-1">
                   <b className="block truncate text-sm">{b.payee}</b>
-                  <small className="block truncate text-xs text-gray-500">{[b.note, paidN ? `paid ${paidN}×` : null].filter(Boolean).join(" · ")}</small>
+                  <small className="block truncate text-xs text-muted">{[b.note, paidN ? `paid ${paidN}×` : null].filter(Boolean).join(" · ")}</small>
                   <BillTags bill={b} occ={null} />
-                  <small className="mt-1 block text-xs text-gray-600">{next ? `Next: ${inr(next.amount)} ${dueWords(next, today)}${next.label ? ` · ${next.label}` : ""}` : "Nothing due"}</small>
+                  <small className="mt-1 block text-xs text-muted">{next ? `Next: ${inr(next.amount)} ${dueWords(next, today)}${next.label ? ` · ${next.label}` : ""}` : "Nothing due"}</small>
                 </div>
                 <span className="glass-chip shrink-0 rounded-full px-2.5 py-0.5 text-xs">edit</span>
               </Link>
@@ -152,17 +153,17 @@ export function BillsTab({ bills, today }: { bills: BillRow[]; today: string }) 
 export function TdsTab({ tds }: { tds: VendorTdsSummary }) {
   return (
     <>
-      <p className="px-3 pb-1 pt-3 text-xs text-gray-600">
+      <p className="px-3 pb-1 pt-3 text-xs text-muted">
         Paid per payee this financial year (1 Apr – 31 Mar). Threshold {inr(tds.threshold)} · change it in Settings. Salaries are not counted here.
       </p>
-      <ul className="divide-y divide-white/60">
+      <ul className="divide-y divide-line">
         {tds.vendors.map((r) => {
           const needs = r.crossed && r.tds === 0;
           return (
             <li key={r.vendor} className="flex items-start gap-3 px-3 py-2.5">
               <div className="min-w-0 flex-1">
                 <b className="block truncate text-sm">{r.vendor}</b>
-                <small className="block text-xs text-gray-500">{r.expenses} payment{r.expenses > 1 ? "s" : ""} · TDS deducted {inr(r.tds)}</small>
+                <small className="block text-xs text-muted">{r.expenses} payment{r.expenses > 1 ? "s" : ""} · TDS deducted {inr(r.tds)}</small>
                 <div className="mt-1">
                   {needs ? <span className={TAG.over}>over threshold · deduct TDS</span> : r.crossed ? <span className={TAG.paid}>over threshold · TDS being deducted</span> : <span className={TAG.draft}>{inr(tds.threshold - r.paid)} left before threshold</span>}
                 </div>

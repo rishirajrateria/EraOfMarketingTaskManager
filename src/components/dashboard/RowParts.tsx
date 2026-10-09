@@ -21,7 +21,7 @@ export function IconBtn({ label, onClick, disabled, children }: { label: string;
         e.stopPropagation();
         onClick();
       }}
-      className="touch-target-sm flex h-7 w-7 shrink-0 items-center justify-center text-gray-800 disabled:opacity-35"
+      className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] text-muted active:bg-chip disabled:opacity-35"
     >
       {children}
     </button>
@@ -33,7 +33,7 @@ export function RedDot({ corner, label }: { corner: "tl" | "tr"; label: string }
   return <span aria-label={label} title={label} className={clsx("absolute -top-1 h-[11px] w-[11px] rounded-full bg-[#EF4444]", corner === "tl" ? "-left-1" : "-right-1")} />;
 }
 
-const PILL = "glass-chip inline-flex h-[22px] items-center rounded-full px-2.5 text-[11px] leading-none whitespace-nowrap";
+const PILL = "glass-chip inline-flex h-[23px] items-center rounded-full px-[9px] text-[11px] leading-none whitespace-nowrap";
 
 /**
  * Right-hand column of pills (the design the client picked): allocated hours, scheduled start – end,
@@ -45,19 +45,19 @@ export function RightPills({ t, tz }: { t: Row; tz: string }) {
   const overdue = t.overdue && t.colour !== "grey";
   return (
     <div className="flex shrink-0 flex-col items-end gap-1">
-      <span className={clsx(PILL, "relative font-bold text-[#111]")}>
+      <span className={clsx(PILL, "relative font-bold text-ink")}>
         {t.type === "MEETING" ? "Meet" : fmtMinutes(t.allocatedMinutes)}
         {t.reviewRequested ? <RedDot corner="tl" label="Review requested" /> : null}
       </span>
-      <span className={clsx(PILL, overdue ? "text-[#DC2626]" : "text-[#111]")}>
+      <span className={clsx(PILL, overdue ? "font-medium text-acc-red" : "font-medium text-ink")}>
         {fmtTime(start, tz)} – {fmtTime(end, tz)}
       </span>
       {t.actualStart ? (
-        <span className={clsx(PILL, "text-[#6B7280] opacity-80")}>
+        <span className={clsx(PILL, "font-medium text-muted opacity-85")}>
           {fmtTime(new Date(t.actualStart), tz)} – {t.actualEnd ? fmtTime(new Date(t.actualEnd), tz) : "…"}
         </span>
       ) : null}
-      <span className={clsx(PILL, "relative text-[#111]")} title={fmtShortDate(start, tz)}>
+      <span className={clsx(PILL, "relative font-medium text-ink")} title={fmtShortDate(start, tz)}>
         {dateChip(start, new Date(), tz)}
         {t.doubtRaised && t.reviewRequested ? <RedDot corner="tr" label="Doubt and review" /> : null}
       </span>
@@ -66,7 +66,7 @@ export function RightPills({ t, tz }: { t: Row; tz: string }) {
 }
 
 /**
- * 30px completion circle (SPEC §5.2): black ring by default, filled yellow on doubt, green ring when started,
+ * 32px completion circle (SPEC §5.2): black ring by default, filled yellow on doubt, green ring when started,
  * ⏸ inside when paused; completed rows show a ring with a ⟳ glyph — the Restart button.
  */
 export function CompletionCircle({ t, onTap, onRestart }: { t: Row; onTap: () => void; onRestart: () => void }) {
@@ -82,13 +82,13 @@ export function CompletionCircle({ t, onTap, onRestart }: { t: Row; onTap: () =>
           e.stopPropagation();
           onRestart();
         }}
-        className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border-2 border-[#111] bg-white/40 text-[#111] shadow-sm backdrop-blur-sm"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-chip text-ink shadow-[0_2px_8px_-4px_rgba(0,0,0,.35)]"
       >
         <RotateCcw size={15} strokeWidth={2.5} />
       </button>
     );
   }
-  const ring = t.doubtRaised ? "bg-[#F5B800]" : t.colour === "green" ? "border-2 border-[#16A34A]" : "border-2 border-[#111]";
+  const ring = t.doubtRaised ? "bg-[#F5B800] text-[#0b1b2b]" : t.colour === "green" ? "border-2 border-[#16A34A]" : "border-2 border-ink";
   return (
     <button
       type="button"
@@ -100,7 +100,7 @@ export function CompletionCircle({ t, onTap, onRestart }: { t: Row; onTap: () =>
         e.stopPropagation();
         onTap();
       }}
-      className={clsx("flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full text-[#111] shadow-sm backdrop-blur-sm", t.doubtRaised ? "" : "bg-white/40", ring)}
+      className={clsx("flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-ink shadow-[0_2px_8px_-4px_rgba(0,0,0,.35)]", t.doubtRaised ? "" : "bg-chip", ring)}
     >
       {t.paused ? <Pause size={13} strokeWidth={3} /> : t.status === "FINISH_REQUESTED" ? <Check size={15} strokeWidth={3} aria-label="Finish requested" /> : null}
     </button>

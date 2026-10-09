@@ -21,7 +21,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {demo ? (
         <a
           href="/login?switch=1"
-          className="glass-chip fixed left-1/2 top-1 z-40 -translate-x-1/2 rounded-full px-2.5 py-0.5 text-[10px] font-semibold text-gray-800"
+          className="fixed left-1/2 top-2 z-40 flex h-[22px] -translate-x-1/2 items-center rounded-full border border-white/35 bg-[rgba(6,48,61,.35)] px-2.5 text-[10.5px] font-semibold text-white backdrop-blur-md"
           title="Demo mode: switch role"
         >
           Demo · {user.role.replace("_", " ").toLowerCase()} · switch
