@@ -1,33 +1,89 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import type { VaultItemKind } from "@prisma/client";
 import type { GrantedGroup, GrantedItem } from "@/server/vault/queries";
 import { KIND_LABEL } from "@/server/vault/queries";
+import { BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
+import { Screen, ScreenHeader } from "@/components/admin/AdminUi";
 import { RevealSecret } from "@/components/vault/RevealSecret";
 import { ExpiryLine } from "@/components/vault/ExpiryLine";
 
-/** /vault — items the signed-in user currently has an active grant for, grouped by client and kind. */
-export function GrantedVault({ groups }: { groups: GrantedGroup[] }) {
-  if (groups.length === 0) {
-    return <p className="px-4 py-10 text-center text-sm text-gray-500">You have no vault access right now. Ask Admin to grant it.</p>;
-  }
+const TABS: { kind: VaultItemKind; label: string }[] = [
+  { kind: "ASSET_DRIVE_LINK", label: "Assets Drive" },
+  { kind: "CREDENTIAL", label: "Credentials" },
+  { kind: "SHARED_DRIVE_LINK", label: "Shared Drive" },
+];
+
+/**
+ * /vault — items the signed-in user currently has an active grant for, grouped by client and kind.
+ * Client pills and section pills in the bottom zone narrow the list (default: everything).
+ */
+export function GrantedVault({ groups, isAdmin = false }: { groups: GrantedGroup[]; isAdmin?: boolean }) {
+  const [clientId, setClientId] = useState<string | null>(null);
+  const [kind, setKind] = useState<VaultItemKind | null>(null);
+
+  const visible = useMemo(
+    () =>
+      groups
+        .filter((g) => !clientId || g.clientId === clientId)
+        .map((g) => ({ ...g, kinds: g.kinds.filter((k) => !kind || k.kind === kind) }))
+        .filter((g) => g.kinds.length > 0),
+    [groups, clientId, kind],
+  );
+  const total = groups.reduce((n, g) => n + g.kinds.reduce((m, k) => m + k.items.length, 0), 0);
+
+  const zone = (
+    <BottomZone
+      menu={isAdmin}
+      rows={
+        <>
+          <ZoneRow label="Clients">
+            <ZonePill active={clientId === null} onClick={() => setClientId(null)}>
+              All
+            </ZonePill>
+            {groups.map((g) => (
+              <ZonePill key={g.clientId} active={clientId === g.clientId} onClick={() => setClientId(clientId === g.clientId ? null : g.clientId)}>
+                {g.clientName}
+              </ZonePill>
+            ))}
+          </ZoneRow>
+          <ZoneRow label="Sections">
+            <ZonePill active={kind === null} onClick={() => setKind(null)}>
+              All
+            </ZonePill>
+            {TABS.map((t) => (
+              <ZonePill key={t.kind} active={kind === t.kind} onClick={() => setKind(kind === t.kind ? null : t.kind)}>
+                {t.label}
+              </ZonePill>
+            ))}
+          </ZoneRow>
+        </>
+      }
+    />
+  );
+
   return (
-    <div className="space-y-4 px-3 py-3 pb-24">
-      {groups.map((g) => (
-        <section key={g.clientId}>
-          <h2 className="px-1 text-sm font-bold">{g.clientName}</h2>
-          {g.kinds.map((k) => (
-            <div key={k.kind} className="mt-2">
-              <h3 className="px-1 text-[11px] font-medium uppercase text-gray-400">{KIND_LABEL[k.kind]}</h3>
-              <ul className="mt-1 space-y-2">
-                {k.items.map((it) => (
-                  <GrantedRow key={it.id} item={it} />
-                ))}
-              </ul>
-            </div>
-          ))}
-        </section>
-      ))}
-    </div>
+    <Screen header={<ScreenHeader title="Client Vault" subtitle={`${total} item${total === 1 ? "" : "s"} shared with you · every reveal is logged`} />} zone={zone}>
+      {groups.length === 0 ? <p className="px-4 py-10 text-center text-sm text-gray-500">You have no vault access right now. Ask Admin to grant it.</p> : null}
+      {groups.length > 0 && visible.length === 0 ? <p className="px-4 py-10 text-center text-sm text-gray-400">Nothing in this section.</p> : null}
+      <div className="space-y-4 px-3 py-3">
+        {visible.map((g) => (
+          <section key={g.clientId}>
+            <h2 className="px-1 text-sm font-bold">{g.clientName}</h2>
+            {g.kinds.map((k) => (
+              <div key={k.kind} className="mt-2">
+                <h3 className="px-1 text-[11px] font-medium uppercase text-gray-400">{KIND_LABEL[k.kind]}</h3>
+                <ul className="mt-1 space-y-2">
+                  {k.items.map((it) => (
+                    <GrantedRow key={it.id} item={it} />
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </section>
+        ))}
+      </div>
+    </Screen>
   );
 }
 

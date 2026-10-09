@@ -2,8 +2,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
-import { btnSecondary } from "@/components/ui/Field";
-import { Toggle, WEEKDAYS, minutesToHours, useAdminAction } from "@/components/admin/AdminUi";
+import { BarChip, BottomZone } from "@/components/ui/BottomZone";
+import { Screen, Toggle, WEEKDAYS, minutesToHours, useAdminAction } from "@/components/admin/AdminUi";
 import { setNotifyByEmail } from "@/server/admin/me-actions";
 import type { MyProfile } from "@/server/admin/queries";
 
@@ -22,7 +22,7 @@ const ROLE_LABEL: Record<MyProfile["role"], string> = {
   CA: "CA (read-only finance)",
 };
 
-/** /me — own profile, notification preferences and sign-out. */
+/** /me — own profile and notification preferences; "Enable push" and "Sign out" sit in the bottom bar. */
 export function MeProfile({ me, defaultCapacityMinutes }: { me: MyProfile; defaultCapacityMinutes: number }) {
   const { busy, run } = useAdminAction();
   const [notify, setNotify] = useState(me.notifyByEmail);
@@ -47,17 +47,37 @@ export function MeProfile({ me, defaultCapacityMinutes }: { me: MyProfile; defau
     }
   };
 
-  return (
-    <div className="flex flex-1 flex-col pb-10">
-      <div className="flex items-center gap-4 bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 px-4 py-5 text-white backdrop-blur-xl">
-        <Avatar name={me.name} src={me.avatar} size={56} />
-        <div className="min-w-0">
-          <div className="truncate text-lg font-bold">{me.name}</div>
-          <div className="truncate text-xs text-white/80">{me.email}</div>
-          <div className="mt-1 inline-block rounded-full bg-white/25 px-2 py-0.5 text-[11px] font-medium backdrop-blur-md">{ROLE_LABEL[me.role]}</div>
-        </div>
-      </div>
+  const pushLabel = pushState === "busy" ? "Enabling…" : pushState === "done" ? "Push on" : "Enable push";
+  const zone = (
+    <BottomZone
+      menu={me.role === "ADMIN"}
+      right={
+        <>
+          <BarChip label="Enable push notifications" active={pushState === "done"} onClick={busy || pushState === "busy" || pushState === "done" ? undefined : () => void enablePush()}>
+            {pushLabel}
+          </BarChip>
+          <Link href="/api/auth/signout" className="no-select glass-chip flex h-[22px] items-center whitespace-nowrap rounded-full px-3 text-[11px] font-medium leading-none text-red-600">
+            Sign out
+          </Link>
+        </>
+      }
+    />
+  );
 
+  return (
+    <Screen
+      header={
+        <div className="flex items-center gap-4 bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 px-4 py-5 text-white backdrop-blur-xl">
+          <Avatar name={me.name} src={me.avatar} size={56} />
+          <div className="min-w-0">
+            <div className="truncate text-lg font-bold">{me.name}</div>
+            <div className="truncate text-xs text-white/80">{me.email}</div>
+            <div className="mt-1 inline-block rounded-full bg-white/25 px-2 py-0.5 text-[11px] font-medium backdrop-blur-md">{ROLE_LABEL[me.role]}</div>
+          </div>
+        </div>
+      }
+      zone={zone}
+    >
       <section className="border-b border-white/60 bg-white/55 px-4 py-3 text-sm backdrop-blur-md">
         <Row label="Team" value={me.team?.name ?? "—"} />
         {me.teamLeader ? <Row label="Reports to" value={me.teamLeader.name} /> : null}
@@ -67,25 +87,14 @@ export function MeProfile({ me, defaultCapacityMinutes }: { me: MyProfile; defau
 
       <section className="border-b border-white/60 bg-white/55 px-4 py-2 backdrop-blur-md">
         <Toggle label="Email me about task updates" hint="In-app and Chat notifications are always on" checked={notify} onChange={(v) => void toggleEmail(v)} />
-        <div className="flex items-center justify-between gap-3 py-2">
-          <span>
-            <span className="block text-sm text-gray-900">Push notifications</span>
-            <span className="block text-[11px] text-gray-400">
-              {pushState === "done" ? "Enabled on this device" : pushState === "unavailable" ? "Not available in this browser yet" : "Get alerts even when the app is closed"}
-            </span>
+        <div className="py-2">
+          <span className="block text-sm text-gray-900">Push notifications</span>
+          <span className="block text-[11px] text-gray-400">
+            {pushState === "done" ? "Enabled on this device" : pushState === "unavailable" ? "Not available in this browser yet" : "Tap “Enable push” below to get alerts even when the app is closed"}
           </span>
-          <button type="button" className={btnSecondary} disabled={busy || pushState === "busy" || pushState === "done"} onClick={() => void enablePush()}>
-            {pushState === "busy" ? "Enabling…" : "Enable"}
-          </button>
         </div>
       </section>
-
-      <div className="px-4 py-4">
-        <Link href="/api/auth/signout" className="glass block rounded-2xl px-4 py-3 text-center text-sm font-medium text-red-600">
-          Sign out
-        </Link>
-      </div>
-    </div>
+    </Screen>
   );
 }
 

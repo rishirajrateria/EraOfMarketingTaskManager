@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { Sheet } from "@/components/ui/Sheet";
 import { Field, inputCls, btnSecondary } from "@/components/ui/Field";
-import { ColourInput, EmptyState, Fab, FormFooter, ListRow, ScreenHeader, StatusPill, useAdminAction } from "@/components/admin/AdminUi";
+import { BarChip, BottomZone } from "@/components/ui/BottomZone";
+import { ColourInput, EmptyState, FormFooter, ListRow, Screen, ScreenHeader, StatusPill, useAdminAction } from "@/components/admin/AdminUi";
 import { createWorkType, setWorkTypeActive, updateWorkType } from "@/server/admin/actions";
 import type { WorkTypeRow } from "@/server/admin/queries";
 import type { WorkTypeInput } from "@/server/admin/schemas";
@@ -26,10 +27,20 @@ export function WorkTypesManager({ workTypes }: { workTypes: WorkTypeRow[] }) {
     if (res) close();
   };
 
+  const zone = (
+    <BottomZone
+      menu
+      right={
+        <BarChip label="Add work type" onClick={() => setOpen(true)}>
+          + Add
+        </BarChip>
+      }
+    />
+  );
+
   return (
-    <div className="flex flex-1 flex-col pb-24">
-      <ScreenHeader title="Add Work" subtitle="Work-type tags, e.g. Pharma bag, Robam" />
-      {workTypes.length === 0 ? <EmptyState>No work types yet. Tap ＋ to add one.</EmptyState> : null}
+    <Screen header={<ScreenHeader title="Add Work" subtitle={`${workTypes.filter((w) => w.active).length} active · tags such as Pharma bag, Robam`} />} zone={zone} className="pb-3">
+      {workTypes.length === 0 ? <EmptyState>No work types yet. Tap ＋ Add to add one.</EmptyState> : null}
       {workTypes.map((w) => (
         <ListRow
           key={w.id}
@@ -48,11 +59,10 @@ export function WorkTypesManager({ workTypes }: { workTypes: WorkTypeRow[] }) {
           }}
         />
       ))}
-      <Fab onClick={() => setOpen(true)} label="Add work type" />
       <Sheet open={open} onClose={close} title={editing ? "Edit work type" : "Add work type"}>
         {open ? <WorkTypeForm key={editing?.id ?? "new"} workType={editing} busy={busy} onSubmit={submit} onCancel={close} onToggle={editing ? () => toggle(editing) : undefined} /> : null}
       </Sheet>
-    </div>
+    </Screen>
   );
 }
 

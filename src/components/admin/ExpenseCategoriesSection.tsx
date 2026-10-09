@@ -30,7 +30,7 @@ export function ExpenseCategoriesSection({ v, patch }: { v: SettingsValues; patc
   };
 
   return (
-    <Section title="Expenses">
+    <Section id="expenses" title="Expenses">
       <p className="text-[11px] text-gray-500">Expense categories are a fixed list — the expense form only offers these. Existing expenses keep their category even if it is removed here.</p>
       <div className="flex gap-2">
         <input

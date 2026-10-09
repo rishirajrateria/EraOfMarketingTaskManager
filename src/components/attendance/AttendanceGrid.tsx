@@ -1,11 +1,12 @@
 "use client";
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { Download } from "lucide-react";
 import type { MonthGrid } from "@/server/attendance/queries";
 import { exportAttendanceCsv } from "@/server/attendance/actions";
-import { btnSecondary, inputCls } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
+import { BarChip, BarIcon, BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
+import { PeriodNav, Screen, ScreenHeader } from "@/components/admin/AdminUi";
 import { clsx } from "@/lib/clsx";
 import { STATUS_ORDER, STATUS_STYLE } from "@/components/attendance/status";
 import { MarkAttendanceSheet, type MarkTarget } from "@/components/attendance/MarkAttendanceSheet";
@@ -13,14 +14,17 @@ import { MarkAttendanceSheet, type MarkTarget } from "@/components/attendance/Ma
 const WEEKDAY = ["S", "M", "T", "W", "T", "F", "S"];
 
 /**
- * Monthly attendance grid. With `canMark` (HR/Admin) each cell opens the marking sheet; otherwise the
- * grid is read-only (staff viewing their own month).
+ * Monthly attendance screen. With `canMark` (HR/Admin) each cell opens the marking sheet; otherwise the
+ * grid is read-only (staff viewing their own month). Month navigation, the person filter, CSV export and
+ * "Request leave" live in the bottom zone (SPEC §5.4).
  */
 export function AttendanceGrid({
   grid,
   canMark,
   filterUsers,
   selectedUserId,
+  hint,
+  isAdmin,
 }: {
   grid: MonthGrid;
   /** HR/Admin: tapping a cell opens the marking sheet. */
@@ -28,6 +32,10 @@ export function AttendanceGrid({
   /** People selectable in the per-user filter (Admin/HR only). */
   filterUsers: { id: string; name: string }[];
   selectedUserId?: string;
+  /** One-line explanation shown under the title. */
+  hint: string;
+  /** Shows the ☰ menu button in the bar. */
+  isAdmin: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -50,45 +58,41 @@ export function AttendanceGrid({
       URL.revokeObjectURL(url);
     });
 
-  return (
-    <section className="glass mx-3 mt-3 rounded-2xl p-3">
-      <div className="flex items-center justify-between gap-2">
-        <Link href={href(grid.prevMonth)} className="touch-target flex items-center px-2 text-lg" aria-label="Previous month">
-          ‹
-        </Link>
-        <div className="text-sm font-semibold">{grid.label}</div>
-        <Link href={href(grid.nextMonth)} className="touch-target flex items-center px-2 text-lg" aria-label="Next month">
-          ›
-        </Link>
-      </div>
-      {filterUsers.length > 0 ? (
-        <div className="mt-2 flex items-center gap-2">
-          <select
-            className={inputCls}
-            value={selectedUserId ?? ""}
-            onChange={(e) => router.push(href(grid.month, e.target.value || undefined))}
-            aria-label="Filter by person"
-          >
-            <option value="">Everyone</option>
+  const zone = (
+    <BottomZone
+      menu={isAdmin}
+      rows={
+        filterUsers.length > 0 ? (
+          <ZoneRow label="Person">
+            <ZonePill active={!selectedUserId} onClick={() => router.push(href(grid.month, undefined))}>
+              Everyone
+            </ZonePill>
             {filterUsers.map((u) => (
-              <option key={u.id} value={u.id}>
+              <ZonePill key={u.id} active={selectedUserId === u.id} onClick={() => router.push(href(grid.month, selectedUserId === u.id ? undefined : u.id))}>
                 {u.name}
-              </option>
+              </ZonePill>
             ))}
-          </select>
-          <button className={btnSecondary} onClick={download} disabled={pending}>
-            CSV
-          </button>
-        </div>
-      ) : (
-        <div className="mt-2 flex justify-end">
-          <button className={btnSecondary} onClick={download} disabled={pending}>
-            CSV
-          </button>
-        </div>
-      )}
+          </ZoneRow>
+        ) : undefined
+      }
+      left={<PeriodNav label={grid.label} prevLabel="Previous month" nextLabel="Next month" onPrev={() => router.push(href(grid.prevMonth))} onNext={() => router.push(href(grid.nextMonth))} />}
+      right={
+        <>
+          <BarIcon tone="white" label={pending ? "Exporting CSV" : "Export CSV"} onClick={pending ? undefined : download}>
+            <Download size={20} />
+          </BarIcon>
+          <BarChip label="Request leave" onClick={() => router.push("/leave")}>
+            + Leave
+          </BarChip>
+        </>
+      }
+    />
+  );
 
-      <div className="mt-3 overflow-x-auto">
+  return (
+    <Screen header={<ScreenHeader title="Attendance" subtitle={`${grid.label} · ${hint}`} />} zone={zone}>
+      <section className="glass mx-3 my-3 rounded-2xl p-3">
+      <div className="overflow-x-auto">
         <table className="border-separate border-spacing-0.5 text-[10px]">
           <thead>
             <tr>
@@ -154,6 +158,7 @@ export function AttendanceGrid({
         </span>
       </div>
       {canMark && target ? <MarkAttendanceSheet key={`${target.userId}-${target.date}`} target={target} onClose={() => setTarget(null)} /> : null}
-    </section>
+      </section>
+    </Screen>
   );
 }

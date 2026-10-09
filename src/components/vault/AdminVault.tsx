@@ -2,8 +2,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { VaultItemKind } from "@prisma/client";
-import { Pill } from "@/components/ui/Pill";
+import { FolderPlus, Plus, Share2 } from "lucide-react";
 import { Sheet, ActionList } from "@/components/ui/Sheet";
+import { BarIcon, BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
+import { Screen, ScreenHeader } from "@/components/admin/AdminUi";
 import { btnSecondary } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
 import { clsx } from "@/lib/clsx";
@@ -65,67 +67,50 @@ export function AdminVault({
     router.refresh();
   }
 
+  const subtitle = client ? `${client.name} · ${items.length} item${items.length === 1 ? "" : "s"}` : clients.length === 0 ? "No clients yet — tap the folder icon to add one." : "Pick a client to see its vault.";
+
+  const zone = (
+    <BottomZone
+      menu
+      rows={
+        <>
+          <ZoneRow label="Clients">
+            {clients.length === 0 ? <span className="text-[11px] text-white/90">No clients yet</span> : null}
+            {clients.map((c) => (
+              <ZonePill key={c.id} active={c.id === clientId} onClick={() => go({ clientId: c.id })}>
+                {c.name}
+              </ZonePill>
+            ))}
+          </ZoneRow>
+          <ZoneRow label="Sections">
+            {TABS.map((t) => (
+              <ZonePill key={t.kind} active={t.kind === tab} onClick={() => go({ tab: t.kind })}>
+                {t.label}
+              </ZonePill>
+            ))}
+          </ZoneRow>
+        </>
+      }
+      right={
+        <>
+          <BarIcon tone="white" label="Add Client" onClick={() => setClientSheet(true)}>
+            <FolderPlus size={20} />
+          </BarIcon>
+          <BarIcon tone="white" label="Grant whole client" onClick={() => (client ? setGrantTarget({ clientId: client.id, label: `all of ${client.name}` }) : toast("Pick a client first", "err"))}>
+            <Share2 size={20} />
+          </BarIcon>
+          <BarIcon tone="white" label="Add item" onClick={() => (client ? setItemSheet({ open: true, item: null }) : toast("Pick a client first", "err"))}>
+            <Plus size={24} strokeWidth={2.75} />
+          </BarIcon>
+        </>
+      }
+    />
+  );
+
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 px-3 pb-3 text-white backdrop-blur-xl">
-        <div className="flex items-center justify-between py-1">
-          <h1 className="text-base font-semibold">Client Vault</h1>
-          <div className="flex items-center gap-1">
-            <button type="button" className="touch-target rounded-full px-2 text-sm font-medium hover:bg-white/15" onClick={() => setClientSheet(true)}>
-              Add Client
-            </button>
-            <button
-              type="button"
-              aria-label="Add item"
-              title={client ? "Add item" : "Pick a client first"}
-              disabled={!client}
-              className="touch-target rounded-full text-2xl leading-none hover:bg-white/15 disabled:opacity-40"
-              onClick={() => setItemSheet({ open: true, item: null })}
-            >
-              +
-            </button>
-          </div>
-        </div>
-        <div className="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3 py-1">
-          {clients.length === 0 ? <span className="text-xs text-white/70">No clients yet — use &ldquo;Add Client&rdquo;.</span> : null}
-          {clients.map((c) => (
-            <Pill key={c.id} active={c.id === clientId} onClick={() => go({ clientId: c.id })}>
-              {c.name}
-            </Pill>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex border-b border-white/60 bg-white/55 backdrop-blur-md">
-        {TABS.map((t) => (
-          <button
-            key={t.kind}
-            type="button"
-            onClick={() => go({ tab: t.kind })}
-            className={clsx(
-              "touch-target flex-1 border-b-2 py-2 text-xs font-medium",
-              t.kind === tab ? "border-brand-blue text-brand-blue" : "border-transparent text-gray-500",
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {client ? (
-        <div className="flex items-center justify-between px-4 py-2 text-xs text-gray-500">
-          <span>
-            {client.name} · {items.length} item{items.length === 1 ? "" : "s"}
-          </span>
-          <button type="button" className="font-medium text-brand-blue" onClick={() => setGrantTarget({ clientId: client.id, label: `all of ${client.name}` })}>
-            Grant whole client
-          </button>
-        </div>
-      ) : (
-        <p className="px-4 py-6 text-center text-sm text-gray-500">Pick a client to see its vault.</p>
-      )}
-
-      <ul className="space-y-2 px-3 pb-24">
+    <Screen header={<ScreenHeader title="Client Vault" subtitle={subtitle} />} zone={zone}>
+      <ul className="space-y-2 px-3 py-3">
+        {!client ? <li className="py-6 text-center text-sm text-gray-500">Pick a client in the green area to see its vault.</li> : null}
         {client && items.length === 0 ? <li className="py-6 text-center text-sm text-gray-400">Nothing here yet. Tap + to add.</li> : null}
         {items.map((it) => (
           <li key={it.id} className="glass rounded-2xl p-3">
@@ -207,6 +192,6 @@ export function AdminVault({
           ]}
         />
       </Sheet>
-    </div>
+    </Screen>
   );
 }

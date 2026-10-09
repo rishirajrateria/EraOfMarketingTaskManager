@@ -1,9 +1,10 @@
 "use client";
 import { useState } from "react";
-import { btnPrimary } from "@/components/ui/Field";
-import { ScreenHeader, useAdminAction } from "@/components/admin/AdminUi";
+import { BarChip, BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
+import { Screen, ScreenHeader, useAdminAction } from "@/components/admin/AdminUi";
 import {
   BankSection,
+  SETTINGS_SECTIONS,
   CompanySection,
   GoogleStatusSection,
   HolidaysSection,
@@ -27,6 +28,11 @@ export function SettingsForm({ settings, google }: { settings: SettingsDto; goog
   const { busy, run } = useAdminAction();
   const [v, setV] = useState<SettingsValues>(() => toValues(settings));
   const [dirty, setDirty] = useState(false);
+  const [section, setSection] = useState<string | null>(null);
+  const jump = (id: string) => {
+    setSection(id);
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   const patch = (p: Partial<SettingsValues>) => {
     setV((s) => ({ ...s, ...p }));
     setDirty(true);
@@ -42,29 +48,45 @@ export function SettingsForm({ settings, google }: { settings: SettingsDto; goog
     await run(uploadLogo(fd), "Logo updated");
   };
 
+  const zone = (
+    <BottomZone
+      menu
+      rows={
+        <ZoneRow label="Jump to section">
+          {SETTINGS_SECTIONS.map((s) => (
+            <ZonePill key={s.id} active={section === s.id} onClick={() => jump(s.id)}>
+              {s.label}
+            </ZonePill>
+          ))}
+        </ZoneRow>
+      }
+      right={
+        <BarChip label={dirty ? "Save settings" : "Settings saved"} active={dirty} className={dirty ? "font-semibold" : "opacity-60"} onClick={busy || !dirty ? undefined : () => void save()}>
+          {busy ? "Saving…" : dirty ? "Save settings" : "Saved"}
+        </BarChip>
+      }
+    />
+  );
+
   return (
     <form
-      className="flex flex-1 flex-col pb-24"
+      className="flex min-h-0 flex-1 flex-col"
       onSubmit={(e) => {
         e.preventDefault();
         void save();
       }}
     >
-      <ScreenHeader title="Settings" subtitle="Company profile, invoicing, expenses, working time and integrations" />
-      <CompanySection v={v} patch={patch} />
-      <LogoSection logoUrl={settings.hasLogo ? settings.logoUrl : null} version={settings.updatedAt} busy={busy} onUpload={upload} onRemove={() => void run(removeLogo(), "Logo removed")} />
-      <BankSection v={v} patch={patch} />
-      <WorkingTimeSection v={v} patch={patch} />
-      <HolidaysSection v={v} patch={patch} />
-      <InvoicingSection v={v} patch={patch} />
-      <ExpenseCategoriesSection v={v} patch={patch} />
-      <NotificationsSection v={v} patch={patch} />
-      <GoogleStatusSection status={google} />
-      <div className="fixed bottom-0 z-30 w-full max-w-[480px] border-t border-white/60 bg-white/70 px-4 py-3 backdrop-blur-xl" style={{ left: "50%", transform: "translateX(-50%)" }}>
-        <button type="submit" className={`${btnPrimary} w-full`} disabled={busy || !dirty}>
-          {busy ? "Saving…" : dirty ? "Save settings" : "Saved"}
-        </button>
-      </div>
+      <Screen header={<ScreenHeader title="Settings" subtitle={dirty ? "Unsaved changes" : "Company profile, invoicing, expenses, working time and integrations"} />} zone={zone}>
+        <CompanySection v={v} patch={patch} />
+        <LogoSection logoUrl={settings.hasLogo ? settings.logoUrl : null} version={settings.updatedAt} busy={busy} onUpload={upload} onRemove={() => void run(removeLogo(), "Logo removed")} />
+        <BankSection v={v} patch={patch} />
+        <WorkingTimeSection v={v} patch={patch} />
+        <HolidaysSection v={v} patch={patch} />
+        <InvoicingSection v={v} patch={patch} />
+        <ExpenseCategoriesSection v={v} patch={patch} />
+        <NotificationsSection v={v} patch={patch} />
+        <GoogleStatusSection status={google} />
+      </Screen>
     </form>
   );
 }

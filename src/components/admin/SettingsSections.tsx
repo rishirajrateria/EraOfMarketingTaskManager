@@ -11,9 +11,22 @@ import type { SettingsInput } from "@/server/admin/schemas";
 export type SettingsValues = Required<SettingsInput>;
 export type Patch = (p: Partial<SettingsValues>) => void;
 
-export function Section({ title, children }: { title: string; children: React.ReactNode }) {
+/** Jump targets for the bottom-zone section pills (SettingsForm). */
+export const SETTINGS_SECTIONS: { id: string; label: string }[] = [
+  { id: "company", label: "Company" },
+  { id: "logo", label: "Logo" },
+  { id: "bank", label: "Bank" },
+  { id: "working-time", label: "Working time" },
+  { id: "holidays", label: "Holidays" },
+  { id: "invoicing", label: "Invoicing" },
+  { id: "expenses", label: "Expenses" },
+  { id: "notifications", label: "Notifications" },
+  { id: "google", label: "Google" },
+];
+
+export function Section({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) {
   return (
-    <section className="border-b border-white/60 bg-white/55 px-4 py-4 backdrop-blur-md">
+    <section id={id} className="scroll-mt-2 border-b border-white/60 bg-white/55 px-4 py-4 backdrop-blur-md">
       <h2 className="mb-3 text-sm font-semibold text-gray-900">{title}</h2>
       <div className="flex flex-col gap-3">{children}</div>
     </section>
@@ -42,7 +55,7 @@ function TimeInput({ label, value, onChange }: { label: string; value: number; o
 
 export function CompanySection({ v, patch }: { v: SettingsValues; patch: Patch }) {
   return (
-    <Section title="Company profile">
+    <Section id="company" title="Company profile">
       <Text label="Company name" value={v.companyName} onChange={(companyName) => patch({ companyName })} />
       <Text label="Address" value={v.address} rows={3} onChange={(address) => patch({ address })} />
       <Text label="GST number" value={v.gstNumber} onChange={(gstNumber) => patch({ gstNumber })} />
@@ -53,7 +66,7 @@ export function CompanySection({ v, patch }: { v: SettingsValues; patch: Patch }
 
 export function BankSection({ v, patch }: { v: SettingsValues; patch: Patch }) {
   return (
-    <Section title="Bank details (printed on invoices)">
+    <Section id="bank" title="Bank details (printed on invoices)">
       <Text label="Bank name" value={v.bankName} onChange={(bankName) => patch({ bankName })} />
       <Text label="Account name" value={v.bankAccountName} onChange={(bankAccountName) => patch({ bankAccountName })} />
       <Text label="Account number" value={v.bankAccountNumber} onChange={(bankAccountNumber) => patch({ bankAccountNumber })} />
@@ -78,7 +91,7 @@ export function LogoSection({
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   return (
-    <Section title="Logo">
+    <Section id="logo" title="Logo">
       <div className="flex items-center gap-4">
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -116,7 +129,7 @@ export function LogoSection({
 export function WorkingTimeSection({ v, patch }: { v: SettingsValues; patch: Patch }) {
   const productive = Math.max(0, v.workEndMinutes - v.workStartMinutes - (v.lunchEndMinutes - v.lunchStartMinutes));
   return (
-    <Section title="Working time (SPEC §9.1 defaults)">
+    <Section id="working-time" title="Working time (SPEC §9.1 defaults)">
       <div className="grid grid-cols-2 gap-3">
         <TimeInput label="Work start" value={v.workStartMinutes} onChange={(workStartMinutes) => patch({ workStartMinutes })} />
         <TimeInput label="Work end" value={v.workEndMinutes} onChange={(workEndMinutes) => patch({ workEndMinutes })} />
@@ -151,7 +164,7 @@ export function HolidaysSection({ v, patch }: { v: SettingsValues; patch: Patch 
     setDraft("");
   };
   return (
-    <Section title="Company holidays">
+    <Section id="holidays" title="Company holidays">
       <div className="flex gap-2">
         <input className={inputCls} type="date" value={draft} onChange={(e) => setDraft(e.target.value)} />
         <button type="button" className={btnSecondary} onClick={add} disabled={!draft}>
@@ -179,7 +192,7 @@ export function HolidaysSection({ v, patch }: { v: SettingsValues; patch: Patch 
 export function InvoicingSection({ v, patch }: { v: SettingsValues; patch: Patch }) {
   const num = (s: string, fallback: number) => (s === "" ? fallback : Number(s));
   return (
-    <Section title="Invoicing">
+    <Section id="invoicing" title="Invoicing">
       <div className="grid grid-cols-2 gap-3">
         <Text label="Invoice prefix" value={v.invoicePrefix} onChange={(invoicePrefix) => patch({ invoicePrefix })} />
         <Field label="Next invoice #">
@@ -211,7 +224,7 @@ export function InvoicingSection({ v, patch }: { v: SettingsValues; patch: Patch
 
 export function NotificationsSection({ v, patch }: { v: SettingsValues; patch: Patch }) {
   return (
-    <Section title="Notifications & workspaces">
+    <Section id="notifications" title="Notifications & workspaces">
       <Toggle label="Email notifications by default" hint="Users can override on their profile" checked={v.notifyEmailDefault} onChange={(notifyEmailDefault) => patch({ notifyEmailDefault })} />
       <Toggle label="Post notifications into task Chat spaces" hint="Off by default; in-app and push notifications are always sent" checked={v.notifyChatDefault} onChange={(notifyChatDefault) => patch({ notifyChatDefault })} />
       <Toggle label="Restart creates a new workspace" hint="New Drive folder / Chat space when a task is restarted" checked={v.restartCreatesNewWorkspace} onChange={(restartCreatesNewWorkspace) => patch({ restartCreatesNewWorkspace })} />
@@ -228,7 +241,7 @@ export function GoogleStatusSection({ status }: { status: GoogleStatus }) {
     </div>
   );
   return (
-    <Section title="Google integration status (read-only)">
+    <Section id="google" title="Google integration status (read-only)">
       {row(
         "Mode",
         <span className={status.mode === "Live" ? "text-green-700" : "text-amber-600"}>{status.mode}</span>,

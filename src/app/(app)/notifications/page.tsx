@@ -4,6 +4,8 @@ import { requireUser } from "@/lib/rbac";
 import { fmtDateTime } from "@/lib/time";
 import { getSettings } from "@/lib/settings";
 import { markAllRead } from "@/server/notifications";
+import { BottomZone } from "@/components/ui/BottomZone";
+import { Screen, ScreenHeader } from "@/components/admin/AdminUi";
 
 export default async function NotificationsPage() {
   const user = await requireUser();
@@ -11,14 +13,26 @@ export default async function NotificationsPage() {
     prisma.notification.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 100 }),
     getSettings(),
   ]);
-  return (
-    <main className="flex-1 bg-white/55 backdrop-blur-md">
-      <div className="flex items-center justify-between border-b border-white/60 px-4 py-2">
-        <h1 className="font-semibold">Notifications</h1>
-        <form action={async () => { "use server"; await markAllRead(); }}>
-          <button className="text-xs text-brand-blue">Mark all read</button>
+  const unread = rows.filter((n) => !n.readAt).length;
+  const zone = (
+    <BottomZone
+      menu={user.role === "ADMIN"}
+      right={
+        <form
+          action={async () => {
+            "use server";
+            await markAllRead();
+          }}
+        >
+          <button type="submit" className="no-select glass-chip flex h-[22px] items-center whitespace-nowrap rounded-full px-3 text-[11px] leading-none text-[#111]">
+            Mark all read
+          </button>
         </form>
-      </div>
+      }
+    />
+  );
+  return (
+    <Screen header={<ScreenHeader title="Notifications" subtitle={`${unread} unread · ${rows.length} shown`} />} zone={zone} className="bg-white/55 backdrop-blur-md">
       {rows.length === 0 ? <p className="p-6 text-center text-sm text-gray-500">Nothing yet.</p> : null}
       <ul className="divide-y divide-white/60">
         {rows.map((n) => (
@@ -31,6 +45,6 @@ export default async function NotificationsPage() {
           </li>
         ))}
       </ul>
-    </main>
+    </Screen>
   );
 }

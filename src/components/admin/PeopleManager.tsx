@@ -4,7 +4,8 @@ import type { Role } from "@prisma/client";
 import { Sheet } from "@/components/ui/Sheet";
 import { Avatar } from "@/components/ui/Avatar";
 import { btnDanger, btnSecondary } from "@/components/ui/Field";
-import { EmptyState, Fab, ListRow, ScreenHeader, SectionLabel, StatusPill, useAdminAction } from "@/components/admin/AdminUi";
+import { BarChip, BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
+import { EmptyState, ListRow, Screen, ScreenHeader, SectionLabel, StatusPill, useAdminAction } from "@/components/admin/AdminUi";
 import { PeopleForm, type PeopleFormValues } from "@/components/admin/PeopleForm";
 import { createUser, deactivateUser, reactivateUser, updateUser } from "@/server/admin/actions";
 import type { LeaderOption, PersonRow, TeamOption } from "@/server/admin/queries";
@@ -39,6 +40,7 @@ export function PeopleManager({
   const { busy, run } = useAdminAction();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<PersonRow | null>(null);
+  const [filter, setFilter] = useState<Role | null>(null);
   const close = () => {
     setOpen(false);
     setEditing(null);
@@ -54,14 +56,37 @@ export function PeopleManager({
   };
 
   const ordered = [...GROUPS].sort((a, b) => (a.role === initialRole ? -1 : b.role === initialRole ? 1 : 0));
+  const present = ordered.filter((g) => users.some((u) => u.role === g.role));
+
+  const zone = (
+    <BottomZone
+      menu
+      rows={
+        <ZoneRow label="Role">
+          <ZonePill active={filter === null} onClick={() => setFilter(null)}>
+            All
+          </ZonePill>
+          {present.map((g) => (
+            <ZonePill key={g.role} active={filter === g.role} onClick={() => setFilter(filter === g.role ? null : g.role)}>
+              {g.role === "CA" ? "CA (parked)" : g.label}
+            </ZonePill>
+          ))}
+        </ZoneRow>
+      }
+      right={
+        <BarChip label={TITLE[initialRole] ?? "Add person"} onClick={() => setOpen(true)}>
+          + Add
+        </BarChip>
+      }
+    />
+  );
 
   return (
-    <div className="flex flex-1 flex-col pb-24">
-      <ScreenHeader title={TITLE[initialRole] ?? "People"} subtitle={`${users.filter((u) => u.active).length} active · tap a person to edit`} />
-      {users.length === 0 ? <EmptyState>No people yet. Tap ＋ to add the first one.</EmptyState> : null}
+    <Screen header={<ScreenHeader title={TITLE[initialRole] ?? "People"} subtitle={`${users.filter((u) => u.active).length} active · tap a person to edit`} />} zone={zone} className="pb-3">
+      {users.length === 0 ? <EmptyState>No people yet. Tap ＋ Add to add the first one.</EmptyState> : null}
       {ordered.map((g) => {
         const rows = users.filter((u) => u.role === g.role);
-        if (rows.length === 0) return null;
+        if (rows.length === 0 || (filter && filter !== g.role)) return null;
         return (
           <section key={g.role}>
             <SectionLabel>
@@ -90,8 +115,6 @@ export function PeopleManager({
         );
       })}
 
-      <Fab onClick={() => setOpen(true)} label={TITLE[initialRole] ?? "Add person"} />
-
       <Sheet open={open} onClose={close} title={editing ? "Edit person" : (TITLE[initialRole] ?? "Add person")}>
         {open ? (
           <>
@@ -119,7 +142,7 @@ export function PeopleManager({
           </>
         ) : null}
       </Sheet>
-    </div>
+    </Screen>
   );
 }
 

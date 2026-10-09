@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { Sheet } from "@/components/ui/Sheet";
 import { Field, inputCls, btnSecondary } from "@/components/ui/Field";
-import { ColourDot, ColourInput, EmptyState, Fab, FormFooter, ListRow, ScreenHeader, StatusPill, useAdminAction } from "@/components/admin/AdminUi";
+import { BarChip, BottomZone } from "@/components/ui/BottomZone";
+import { ColourDot, ColourInput, EmptyState, FormFooter, ListRow, Screen, ScreenHeader, StatusPill, useAdminAction } from "@/components/admin/AdminUi";
 import { createTeam, setTeamActive, updateTeam } from "@/server/admin/actions";
 import type { LeaderOption, TeamRow } from "@/server/admin/queries";
 import type { TeamInput } from "@/server/admin/schemas";
@@ -26,10 +27,20 @@ export function TeamsManager({ teams, leaders }: { teams: TeamRow[]; leaders: Le
     if (res) close();
   };
 
+  const zone = (
+    <BottomZone
+      menu
+      right={
+        <BarChip label="Add designation" onClick={() => setOpen(true)}>
+          + Add
+        </BarChip>
+      }
+    />
+  );
+
   return (
-    <div className="flex flex-1 flex-col pb-24">
-      <ScreenHeader title="Add Designation" subtitle="Teams such as Graphic, Finance, Website, Video, Write" />
-      {teams.length === 0 ? <EmptyState>No designations yet. Tap ＋ to add one.</EmptyState> : null}
+    <Screen header={<ScreenHeader title="Add Designation" subtitle={`${teams.filter((t) => t.active).length} active · Graphic, Finance, Website, Video, Write…`} />} zone={zone} className="pb-3">
+      {teams.length === 0 ? <EmptyState>No designations yet. Tap ＋ Add to add one.</EmptyState> : null}
       {teams.map((t) => (
         <ListRow
           key={t.id}
@@ -44,13 +55,12 @@ export function TeamsManager({ teams, leaders }: { teams: TeamRow[]; leaders: Le
           }}
         />
       ))}
-      <Fab onClick={() => setOpen(true)} label="Add designation" />
       <Sheet open={open} onClose={close} title={editing ? "Edit designation" : "Add designation"}>
         {open ? (
           <TeamForm key={editing?.id ?? "new"} team={editing} leaders={leaders} busy={busy} onSubmit={submit} onCancel={close} onToggle={editing ? () => toggle(editing) : undefined} />
         ) : null}
       </Sheet>
-    </div>
+    </Screen>
   );
 }
 

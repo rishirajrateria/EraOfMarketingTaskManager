@@ -1,12 +1,13 @@
 "use client";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import { CalendarRange } from "lucide-react";
 import type { HourlyBreakdown, InventoryResult } from "@/server/inventory/queries";
 import { INVENTORY_VIEWS, shiftRange, stripGranularity, type InventoryView } from "@/server/inventory/ranges";
-import { btnSecondary, inputCls } from "@/components/ui/Field";
-import { Pill } from "@/components/ui/Pill";
-import { clsx } from "@/lib/clsx";
+import { Field, btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
+import { Sheet } from "@/components/ui/Sheet";
+import { BarChip, BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
+import { PeriodNav, Screen } from "@/components/admin/AdminUi";
 import { InventoryTable, RemainingStrip, hrs } from "@/components/inventory/InventoryTable";
 import { HourlyGrid } from "@/components/inventory/HourlyGrid";
 
@@ -17,6 +18,7 @@ export type InventoryRangeProps = { from: string; to: string; label: string };
 /**
  * Admin inventory screen (SPEC §9.3 / §11.6). Day view shows the hourly breakdown; Week / Month / Quarter /
  * Year / Custom show the per-person table, team totals and the per-period "remaining" strip.
+ * View pills, team pills, prev/next and the custom-range sheet live in the bottom zone (SPEC §5.4).
  */
 export function InventoryPanel({
   inv,
@@ -37,6 +39,7 @@ export function InventoryPanel({
   const pathname = usePathname();
   const [cFrom, setCFrom] = useState(range.from);
   const [cTo, setCTo] = useState(range.to);
+  const [rangeSheet, setRangeSheet] = useState(false);
 
   const href = (q: { view?: InventoryView; from?: string; to?: string; teamId?: string | undefined }) => {
     const v = q.view ?? view;
@@ -56,55 +59,61 @@ export function InventoryPanel({
   const prev = shiftRange(view, range, -1);
   const next = shiftRange(view, range, 1);
 
-  return (
-    <div className="pb-6">
-      <div className="bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 px-3 pb-3 pt-2 text-white backdrop-blur-xl">
-        <div className="scrollbar-none flex gap-2 overflow-x-auto">
-          {INVENTORY_VIEWS.map((v) => (
-            <Link key={v.id} href={href({ view: v.id })}>
-              <Pill active={view === v.id}>{v.label}</Pill>
-            </Link>
-          ))}
-        </div>
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <Link href={href(prev)} className="touch-target flex items-center px-2 text-lg" aria-label={`Previous ${view}`}>
-            ‹
-          </Link>
-          <div className="text-sm font-semibold">{range.label}</div>
-          <Link href={href(next)} className="touch-target flex items-center px-2 text-lg" aria-label={`Next ${view}`}>
-            ›
-          </Link>
-        </div>
-        {view === "custom" ? (
-          <div className="mt-2 flex items-center gap-2">
-            <input type="date" className={clsx(inputCls, "text-gray-900")} value={cFrom} onChange={(e) => setCFrom(e.target.value)} aria-label="From" />
-            <input type="date" className={clsx(inputCls, "text-gray-900")} value={cTo} min={cFrom} onChange={(e) => setCTo(e.target.value)} aria-label="To" />
-            <button className={btnSecondary} onClick={() => router.push(href({ from: cFrom, to: cTo }))}>
-              Go
-            </button>
-          </div>
-        ) : null}
-        <div className="mt-2 flex items-center gap-2">
-          <select className={clsx(inputCls, "text-gray-900")} value={teamId ?? ""} onChange={(e) => router.push(href({ teamId: e.target.value || undefined }))} aria-label="Team">
-            <option value="">All teams</option>
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
+  const zone = (
+    <BottomZone
+      menu
+      rows={
+        <>
+          <ZoneRow label="View">
+            {INVENTORY_VIEWS.map((v) => (
+              <ZonePill key={v.id} active={view === v.id} onClick={() => router.push(href({ view: v.id }))}>
+                {v.label}
+              </ZonePill>
             ))}
-          </select>
-        </div>
-        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-          <Stat label="Capacity" value={hrs(inv.total.capacityMinutes)} />
-          <Stat label="Assigned" value={hrs(inv.total.assignedMinutes)} />
-          <Stat label="Sellable" value={hrs(inv.total.sellableMinutes)} />
-        </div>
-        <div className="mt-1 text-center text-[10px] text-white/70">
-          {inv.days[0]}
-          {inv.days.length > 1 ? ` → ${inv.days[inv.days.length - 1]}` : ""} · hours
-        </div>
-      </div>
+          </ZoneRow>
+          <ZoneRow label="Team">
+            <ZonePill active={!teamId} onClick={() => router.push(href({ teamId: undefined }))}>
+              All teams
+            </ZonePill>
+            {teams.map((t) => (
+              <ZonePill key={t.id} active={teamId === t.id} onClick={() => router.push(href({ teamId: teamId === t.id ? undefined : t.id }))}>
+                {t.name}
+              </ZonePill>
+            ))}
+          </ZoneRow>
+        </>
+      }
+      left={<PeriodNav label={range.label} prevLabel={`Previous ${view}`} nextLabel={`Next ${view}`} onPrev={() => router.push(href(prev))} onNext={() => router.push(href(next))} />}
+      right={
+        view === "custom" ? (
+          <BarChip label="Pick custom dates" onClick={() => setRangeSheet(true)}>
+            <CalendarRange size={14} className="mr-1" />
+            Dates
+          </BarChip>
+        ) : undefined
+      }
+    />
+  );
 
+  return (
+    <Screen
+      header={
+        <div className="bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 px-3 pb-3 pt-2 text-white backdrop-blur-xl">
+          <h1 className="text-base font-semibold">Inventory</h1>
+          <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+            <Stat label="Capacity" value={hrs(inv.total.capacityMinutes)} />
+            <Stat label="Assigned" value={hrs(inv.total.assignedMinutes)} />
+            <Stat label="Sellable" value={hrs(inv.total.sellableMinutes)} />
+          </div>
+          <div className="mt-1 text-center text-[10px] text-white/70">
+            {inv.days[0]}
+            {inv.days.length > 1 ? ` → ${inv.days[inv.days.length - 1]}` : ""} · hours
+          </div>
+        </div>
+      }
+      zone={zone}
+      className="pb-3"
+    >
       {view === "day" && hourly ? (
         <HourlyGrid hourly={hourly} />
       ) : (
@@ -113,7 +122,34 @@ export function InventoryPanel({
           <InventoryTable inv={inv} />
         </>
       )}
-    </div>
+      <Sheet open={rangeSheet} onClose={() => setRangeSheet(false)} title="Custom range">
+        <form
+          className="space-y-3 px-4 py-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setRangeSheet(false);
+            router.push(href({ view: "custom", from: cFrom, to: cTo }));
+          }}
+        >
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="From">
+              <input type="date" className={inputCls} value={cFrom} onChange={(e) => setCFrom(e.target.value)} aria-label="From" />
+            </Field>
+            <Field label="To">
+              <input type="date" className={inputCls} value={cTo} min={cFrom} onChange={(e) => setCTo(e.target.value)} aria-label="To" />
+            </Field>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" className={btnSecondary} onClick={() => setRangeSheet(false)}>
+              Cancel
+            </button>
+            <button type="submit" className={btnPrimary}>
+              Go
+            </button>
+          </div>
+        </form>
+      </Sheet>
+    </Screen>
   );
 }
 

@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { ActionResult } from "@/lib/action-result";
 import { clsx } from "@/lib/clsx";
 import { useToast } from "@/components/ui/Toast";
@@ -37,7 +38,39 @@ export function useAdminAction() {
   return { busy, run };
 }
 
-/** Floating "＋" button pinned to the bottom-right of the phone frame. */
+/**
+ * Thumb-reach page layout (SPEC §5.4): header (shrink-0) · scrolling content (flex-1) · BottomZone (sticky bottom-0).
+ * `zone` should be a <BottomZone>; it sits after the content so the last rows are never covered.
+ */
+export function Screen({ header, zone, children, className }: { header?: React.ReactNode; zone?: React.ReactNode; children: React.ReactNode; className?: string }) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      {header ? <div className="shrink-0">{header}</div> : null}
+      <div className={clsx("min-h-0 flex-1 overflow-y-auto", className)}>{children}</div>
+      {zone}
+    </div>
+  );
+}
+
+/** Compact prev · label · next control for the green part of the bottom bar (month / period navigation). */
+export function PeriodNav({ label, prevLabel, nextLabel, onPrev, onNext }: { label: string; prevLabel: string; nextLabel: string; onPrev: () => void; onNext: () => void }) {
+  const btn = "flex h-11 w-7 shrink-0 items-center justify-center text-white";
+  return (
+    <>
+      <button type="button" onClick={onPrev} aria-label={prevLabel} title={prevLabel} className={btn}>
+        <ChevronLeft size={22} />
+      </button>
+      <span className="no-select inline-block h-[22px] max-w-[6.5rem] shrink-0 truncate rounded-full bg-white/90 px-2 text-[11px] font-semibold leading-[22px] text-[#111] shadow-sm" title={label}>
+        {label}
+      </span>
+      <button type="button" onClick={onNext} aria-label={nextLabel} title={nextLabel} className={btn}>
+        <ChevronRight size={22} />
+      </button>
+    </>
+  );
+}
+
+/** Floating "＋" button pinned to the bottom-right of the phone frame. Kept for ad-hoc use; screens now put "+ Add" in the BottomZone. */
 export function Fab({ onClick, label = "Add" }: { onClick: () => void; label?: string }) {
   return (
     <button

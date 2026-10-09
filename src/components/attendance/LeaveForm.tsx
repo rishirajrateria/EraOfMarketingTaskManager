@@ -2,10 +2,11 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { requestLeave } from "@/server/leave/actions";
-import { Field, btnPrimary, inputCls } from "@/components/ui/Field";
+import { Field, btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
 
-export function LeaveForm({ defaultDate }: { defaultDate: string }) {
+/** Request-leave form; rendered inside a Sheet opened from the bottom bar on /leave. */
+export function LeaveForm({ defaultDate, onDone, onCancel }: { defaultDate: string; onDone?: () => void; onCancel?: () => void }) {
   const router = useRouter();
   const toast = useToast();
   const [pending, start] = useTransition();
@@ -21,12 +22,12 @@ export function LeaveForm({ defaultDate }: { defaultDate: string }) {
       toast("Leave requested — HR notified");
       setReason("");
       router.refresh();
+      onDone?.();
     });
   };
 
   return (
-    <form onSubmit={submit} className="glass mx-3 mt-3 space-y-3 rounded-2xl p-4">
-      <h2 className="text-sm font-semibold">Request leave</h2>
+    <form onSubmit={submit} className="space-y-3 px-4 py-4">
       <div className="grid grid-cols-2 gap-3">
         <Field label="From">
           <input type="date" required className={inputCls} value={from} onChange={(e) => setFrom(e.target.value)} />
@@ -38,7 +39,12 @@ export function LeaveForm({ defaultDate }: { defaultDate: string }) {
       <Field label="Reason">
         <textarea className={inputCls} rows={2} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Optional" />
       </Field>
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        {onCancel ? (
+          <button type="button" className={btnSecondary} disabled={pending} onClick={onCancel}>
+            Cancel
+          </button>
+        ) : null}
         <button type="submit" className={btnPrimary} disabled={pending}>
           Send to HR
         </button>

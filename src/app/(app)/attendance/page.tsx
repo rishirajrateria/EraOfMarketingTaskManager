@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { requireUser } from "@/lib/rbac";
 import { prisma } from "@/lib/db";
 import { attendanceMonth, canMarkAttendance, canSeeAllAttendance } from "@/server/attendance/queries";
@@ -20,14 +19,13 @@ export default async function AttendancePage({ searchParams }: { searchParams: S
   ]);
 
   return (
-    <div className="pb-6">
-      <div className="mx-3 mt-3 flex items-center justify-between text-xs">
-        <span className="text-gray-500">{all ? "Tap a cell to mark or correct a day." : "Your attendance is marked by HR."}</span>
-        <Link href="/leave" className="text-brand-blue underline">
-          Request leave
-        </Link>
-      </div>
-      <AttendanceGrid grid={grid} canMark={canMarkAttendance(user)} filterUsers={filterUsers} selectedUserId={all ? sp.userId : undefined} />
-    </div>
+    <AttendanceGrid
+      grid={grid}
+      canMark={canMarkAttendance(user)}
+      filterUsers={filterUsers}
+      selectedUserId={all ? sp.userId : undefined}
+      hint={all ? "Tap a cell to mark or correct a day." : "Your attendance is marked by HR."}
+      isAdmin={user.role === "ADMIN"}
+    />
   );
 }

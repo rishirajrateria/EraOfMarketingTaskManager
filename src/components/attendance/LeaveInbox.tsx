@@ -7,9 +7,19 @@ import { hrApprove, hrReject, resolveLeaveChange, shiftLeaveTasks } from "@/serv
 import { btnDanger, btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
 import { clsx } from "@/lib/clsx";
+import { BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
+import { Screen, ScreenHeader } from "@/components/admin/AdminUi";
 import { LeaveStatusPill, fmtLeaveRange } from "@/components/attendance/LeaveList";
 
 type Result = { ok: true; data: unknown } | { ok: false; error: string };
+
+type SectionId = "pending" | "shift" | "changes" | "recent";
+const SECTIONS: { id: SectionId; label: string }[] = [
+  { id: "pending", label: "Leave requests" },
+  { id: "shift", label: "Needs shifting" },
+  { id: "changes", label: "Changes" },
+  { id: "recent", label: "Recent" },
+];
 
 function Section({ title, children, empty }: { title: string; children: React.ReactNode; empty?: string }) {
   return (
@@ -26,6 +36,8 @@ export function LeaveInbox({ inbox, isAdmin, highlightLeaveId }: { inbox: Inbox;
   const toast = useToast();
   const [pending, start] = useTransition();
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [section, setSection] = useState<SectionId | null>(null);
+  const show = (id: SectionId) => section === null || section === id;
 
   const run = (fn: () => Promise<Result>, okText: string) =>
     start(async () => {
@@ -36,9 +48,34 @@ export function LeaveInbox({ inbox, isAdmin, highlightLeaveId }: { inbox: Inbox;
     });
   const hl = (id: string) => clsx("px-4 py-3", id === highlightLeaveId && "bg-blue-100/50");
 
+  const counts: Record<SectionId, number> = { pending: inbox.pending.length, shift: inbox.needsShift.length, changes: inbox.changeRequests.length, recent: inbox.recent.length };
+  const zone = (
+    <BottomZone
+      menu={isAdmin}
+      rows={
+        <ZoneRow label="Section">
+          <ZonePill active={section === null} onClick={() => setSection(null)}>
+            All
+          </ZonePill>
+          {SECTIONS.map((s) => (
+            <ZonePill key={s.id} active={section === s.id} onClick={() => setSection(section === s.id ? null : s.id)}>
+              {s.label}
+              {counts[s.id] > 0 ? ` · ${counts[s.id]}` : ""}
+            </ZonePill>
+          ))}
+        </ZoneRow>
+      }
+    />
+  );
+
   return (
-    <div className="pb-6">
-      <Section title="Leave requests" empty={inbox.pending.length === 0 ? "Nothing pending." : undefined}>
+    <Screen
+      header={<ScreenHeader title="Leave requests" subtitle={`${inbox.pending.length} pending · ${inbox.needsShift.length} need task shifting · ${inbox.changeRequests.length} change${inbox.changeRequests.length === 1 ? "" : "s"}`} />}
+      zone={zone}
+      className="pb-3"
+    >
+      {show("pending") ? (
+        <Section title="Leave requests" empty={inbox.pending.length === 0 ? "Nothing pending." : undefined}>
         {inbox.pending.map((l) => (
           <div key={l.id} className={hl(l.id)}>
             <div className="text-sm font-medium">
@@ -61,9 +98,11 @@ export function LeaveInbox({ inbox, isAdmin, highlightLeaveId }: { inbox: Inbox;
             </div>
           </div>
         ))}
-      </Section>
+        </Section>
+      ) : null}
 
-      <Section title="Approved leaves with affected tasks" empty={inbox.needsShift.length === 0 ? "No tasks need shifting." : undefined}>
+      {show("shift") ? (
+        <Section title="Approved leaves with affected tasks" empty={inbox.needsShift.length === 0 ? "No tasks need shifting." : undefined}>
         {inbox.needsShift.map((l) => (
           <div key={l.id} className={hl(l.id)}>
             <div className="text-sm font-medium">
@@ -86,9 +125,11 @@ export function LeaveInbox({ inbox, isAdmin, highlightLeaveId }: { inbox: Inbox;
             </div>
           </div>
         ))}
-      </Section>
+        </Section>
+      ) : null}
 
-      <Section title="Changes to approved leaves" empty={inbox.changeRequests.length === 0 ? "None pending." : undefined}>
+      {show("changes") ? (
+        <Section title="Changes to approved leaves" empty={inbox.changeRequests.length === 0 ? "None pending." : undefined}>
         {inbox.changeRequests.map((c) => (
           <div key={c.requestId} className={hl(c.id)}>
             <div className="text-sm font-medium">
@@ -114,9 +155,11 @@ export function LeaveInbox({ inbox, isAdmin, highlightLeaveId }: { inbox: Inbox;
             </div>
           </div>
         ))}
-      </Section>
+        </Section>
+      ) : null}
 
-      <Section title="Recent" empty={inbox.recent.length === 0 ? "No history yet." : undefined}>
+      {show("recent") ? (
+        <Section title="Recent" empty={inbox.recent.length === 0 ? "No history yet." : undefined}>
         {inbox.recent.map((l) => (
           <div key={l.id} className={clsx(hl(l.id), "flex items-center justify-between gap-2")}>
             <div className="min-w-0">
@@ -128,7 +171,8 @@ export function LeaveInbox({ inbox, isAdmin, highlightLeaveId }: { inbox: Inbox;
             <LeaveStatusPill status={l.status} />
           </div>
         ))}
-      </Section>
-    </div>
+        </Section>
+      ) : null}
+    </Screen>
   );
 }

@@ -9,7 +9,8 @@ import { resolveRequest } from "@/server/requests/actions";
 import { useToast } from "@/components/ui/Toast";
 import { Sheet } from "@/components/ui/Sheet";
 import { btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
-import { Pill } from "@/components/ui/Pill";
+import { BarChip, BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
+import { Screen, ScreenHeader } from "@/components/admin/AdminUi";
 import { fmtDateTime } from "@/lib/time";
 
 const LABEL: Record<string, string> = {
@@ -42,18 +43,29 @@ export function RequestsInbox({ items, showAll, tz }: { items: RequestItem[]; sh
       router.refresh();
     });
 
-  return (
-    <main className="flex flex-1 flex-col bg-white/55 backdrop-blur-md">
-      <div className="scrollbar-none flex gap-2 overflow-x-auto border-b border-white/60 bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 px-3 py-2 backdrop-blur-xl">
-        {TYPES.map((t) => (
-          <Pill key={t} active={type === t} onClick={() => setType(t)}>
-            {t === "ALL" ? "All" : LABEL[t]}
-          </Pill>
-        ))}
-        <Link href={showAll ? "/requests" : "/requests?all=1"} className="ml-auto shrink-0 self-center text-xs text-white/80">
+  const openCount = items.filter((r) => r.status === "OPEN").length;
+  const zone = (
+    <BottomZone
+      menu
+      rows={
+        <ZoneRow label="Request type">
+          {TYPES.map((t) => (
+            <ZonePill key={t} active={type === t} onClick={() => setType(t)}>
+              {t === "ALL" ? "All" : LABEL[t]}
+            </ZonePill>
+          ))}
+        </ZoneRow>
+      }
+      right={
+        <BarChip active={showAll} label={showAll ? "Show open requests only" : "Show resolved requests too"} onClick={() => router.push(showAll ? "/requests" : "/requests?all=1")}>
           {showAll ? "Open only" : "Show resolved"}
-        </Link>
-      </div>
+        </BarChip>
+      }
+    />
+  );
+
+  return (
+    <Screen header={<ScreenHeader title="Requests" subtitle={`${openCount} open · ${visible.length} shown${showAll ? " (incl. resolved)" : ""}`} />} zone={zone} className="bg-white/55 backdrop-blur-md">
       {visible.length === 0 ? <p className="p-6 text-center text-sm text-gray-500">Inbox is empty.</p> : null}
       <ul className="divide-y divide-white/60">
         {visible.map((r) => (
@@ -125,6 +137,6 @@ export function RequestsInbox({ items, showAll, tz }: { items: RequestItem[]; sh
           </button>
         </div>
       </Sheet>
-    </main>
+    </Screen>
   );
 }
