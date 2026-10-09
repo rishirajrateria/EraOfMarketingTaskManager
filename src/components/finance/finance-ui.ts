@@ -15,16 +15,20 @@ export const BALANCE_MODE_LABEL: Record<BalanceMode, string> = {
 };
 
 export const STATUS_TONE: Record<InvoiceStatus, string> = {
-  DRAFT: "bg-gray-200 text-gray-800",
-  SCHEDULED: "bg-blue-100 text-blue-800",
-  SENT: "bg-indigo-100 text-indigo-800",
-  PARTIALLY_PAID: "bg-amber-100 text-amber-800",
-  PAID: "bg-green-100 text-green-800",
-  OVERDUE: "bg-red-100 text-red-800",
+  DRAFT: "glass-chip text-gray-800",
+  AWAITING_APPROVAL: "border border-white/60 bg-amber-100/70 text-amber-900 backdrop-blur-sm",
+  CANCELLED: "glass-chip text-gray-500 line-through",
+  SCHEDULED: "border border-white/60 bg-blue-100/70 text-blue-800 backdrop-blur-sm",
+  SENT: "border border-white/60 bg-indigo-100/70 text-indigo-800 backdrop-blur-sm",
+  PARTIALLY_PAID: "border border-white/60 bg-amber-100/70 text-amber-800 backdrop-blur-sm",
+  PAID: "border border-white/60 bg-green-100/70 text-green-800 backdrop-blur-sm",
+  OVERDUE: "border border-white/60 bg-red-100/70 text-red-800 backdrop-blur-sm",
 };
 
 export const STATUS_LABEL: Record<InvoiceStatus, string> = {
   DRAFT: "Draft",
+  AWAITING_APPROVAL: "Awaiting approval",
+  CANCELLED: "Cancelled",
   SCHEDULED: "Scheduled",
   SENT: "Sent",
   PARTIALLY_PAID: "Partially paid",
@@ -59,4 +63,4 @@ export function thisMonthKey(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export const inputSm = "w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-brand-blue focus:outline-none";
+export const inputSm = "w-full rounded-lg border border-white/70 bg-white/60 px-2 py-1.5 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,.8)] backdrop-blur-md focus:border-brand-blue/60 focus:bg-white/80 focus:outline-none";

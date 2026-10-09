@@ -91,11 +91,65 @@ enum PaymentMode {
 
 enum InvoiceStatus {
   DRAFT
+  AWAITING_APPROVAL // ready; Admin must approve before anything is sent
   SCHEDULED
   SENT
   PARTIALLY_PAID
   PAID
   OVERDUE
+  CANCELLED // offset by a credit note
+}
+
+enum InvoiceDocType {
+  TAX_INVOICE
+  EXPORT_INVOICE
+  PROFORMA
+  CREDIT_NOTE
+}
+
+enum TaxMode {
+  CGST_SGST // intra-state
+  IGST // inter-state
+  EXPORT_LUT // zero-rated under LUT
+  NONE // proforma
+}
+
+enum BillingPlan {
+  ONE_TIME
+  RECURRING
+  PART
+}
+
+enum MonthAnchor {
+  NONE
+  START // bill on the 1st
+  END // bill on the last day
+}
+
+enum PaymentMethod {
+  CASH
+  BANK
+  UPI
+  OTHER
+}
+
+enum PartKind {
+  PERCENT
+  FIXED
+}
+
+enum PartStatus {
+  PENDING
+  ISSUED
+  PAID
+  MERGED
+  CANCELLED
+}
+
+enum PlanStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
 }
 
 enum BalanceMode {
@@ -142,6 +196,9 @@ enum NotificationKind {
   LEAVE_REJECTED
   INVOICE_SENT
   INVOICE_PAID
+  INVOICE_APPROVAL_DUE
+  WORK_ON_HOLD
+  WORK_RESUMED
   VAULT_ACCESS_GRANTED
   VAULT_ACCESS_EXPIRING
   INTEGRATION_FAILED
@@ -266,14 +323,25 @@ model Client {
   email            String?
   gstNumber        String?
   address          String?
+  country          String            @default("IN") // ISO-3166 alpha-2; non-IN => Export Invoice
+  stateCode        String? // GST state code e.g. "29"; derived from GSTIN, editable for unregistered clients
+  stateName        String?
+  phone            String?
+  whatsapp         String? // E.164, e.g. +91XXXXXXXXXX
+  tdsPercent       Decimal?          @db.Decimal(5, 2)
+  workOnHold       Boolean           @default(false)
+  holdInvoiceId    String?
+  holdSince        DateTime?
   driveFolderId    String?
   visibleInFilters Boolean           @default(false)
   active           Boolean           @default(true)
   tasks            Task[]
   vaultItems       ClientVaultItem[]
   invoices         Invoice[]
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+
+  plans     InvoicePlan[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 }
 
 // Admin-managed tag labels ("Add Work")
@@ -409,17 +477,18 @@ model TaskAttachment {
 }
 
 model RecurrenceRule {
-  id        String              @id @default(cuid())
-  frequency RecurrenceFrequency
-  interval  Int                 @default(1)
-  byWeekday Int[]               @default([])
-  trigger   RecurrenceTrigger   @default(ON_SCHEDULE)
-  endDate   DateTime? // null = infinite
-  nextRunAt DateTime?
-  stopped   Boolean             @default(false)
-  tasks     Task[]
-  invoices  Invoice[]
-  createdAt DateTime            @default(now())
+  id          String              @id @default(cuid())
+  frequency   RecurrenceFrequency
+  interval    Int                 @default(1)
+  byWeekday   Int[]               @default([])
+  trigger     RecurrenceTrigger   @default(ON_SCHEDULE)
+  monthAnchor MonthAnchor         @default(NONE) // monthly billing on the 1st / last day
+  endDate     DateTime? // null = infinite
+  nextRunAt   DateTime?
+  stopped     Boolean             @default(false)
+  tasks       Task[]
+  invoices    Invoice[]
+  createdAt   DateTime            @default(now())
 }
 
 model Request {
@@ -494,6 +563,31 @@ model Invoice {
   clientId         String
   client           Client          @relation(fields: [clientId], references: [id])
   number           String          @unique
+  docType          InvoiceDocType  @default(TAX_INVOICE)
+  taxMode          TaxMode         @default(CGST_SGST)
+  placeOfSupply    String?
+  cgstAmount       Decimal         @default(0) @db.Decimal(12, 2)
+  sgstAmount       Decimal         @default(0) @db.Decimal(12, 2)
+  igstAmount       Decimal         @default(0) @db.Decimal(12, 2)
+  plan             BillingPlan     @default(ONE_TIME)
+  planId           String?
+  planRef          InvoicePlan?    @relation(fields: [planId], references: [id])
+  partSeq          Int?
+  description      String          @default("") // free text printed on the document
+  approvedAt       DateTime?
+  approvedById     String?
+  remindAt         DateTime? // "push forward": Admin is reminded to approve/send on this date
+  emailSentAt      DateTime?
+  whatsappSentAt   DateTime?
+  whatsappStatus   String?
+  publicToken      String?         @unique // signed public PDF link for WhatsApp media
+  proformaOfId     String?         @unique // tax invoice created from this proforma
+  proformaOf       Invoice?        @relation("ProformaConversion", fields: [proformaOfId], references: [id])
+  convertedTo      Invoice?        @relation("ProformaConversion")
+  creditNoteOfId   String? // credit notes point at the invoice they offset
+  creditNoteOf     Invoice?        @relation("CreditNotes", fields: [creditNoteOfId], references: [id])
+  creditNotes      Invoice[]       @relation("CreditNotes")
+  cancelledAt      DateTime?
   items            InvoiceItem[]
   subtotal         Decimal         @db.Decimal(12, 2)
   gstPercent       Decimal         @default(18) @db.Decimal(5, 2)
@@ -525,6 +619,41 @@ model Invoice {
   updatedAt        DateTime        @updatedAt
 
   @@index([clientId, status])
+  @@index([remindAt])
+}
+
+/// Part-payment plan: the schedule; each issued part becomes its own Invoice (own number, PDF, payments).
+model InvoicePlan {
+  id          String        @id @default(cuid())
+  clientId    String
+  client      Client        @relation(fields: [clientId], references: [id])
+  title       String
+  description String        @default("")
+  totalAmount Decimal       @db.Decimal(12, 2) // taxable total across all parts
+  gstPercent  Decimal       @default(18) @db.Decimal(5, 2)
+  status      PlanStatus    @default(ACTIVE)
+  createdById String
+  parts       InvoicePart[]
+  invoices    Invoice[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model InvoicePart {
+  id          String      @id @default(cuid())
+  planId      String
+  plan        InvoicePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  seq         Int
+  kind        PartKind    @default(PERCENT)
+  value       Decimal     @db.Decimal(12, 2) // percent or fixed amount as entered
+  amount      Decimal     @db.Decimal(12, 2) // resolved taxable amount
+  description String      @default("")
+  dueDate     DateTime
+  status      PartStatus  @default(PENDING)
+  invoiceId   String?     @unique
+  createdAt   DateTime    @default(now())
+
+  @@unique([planId, seq])
 }
 
 model InvoiceItem {
@@ -541,19 +670,22 @@ model InvoiceItem {
 }
 
 model Payment {
-  id                  String    @id @default(cuid())
+  id                  String        @id @default(cuid())
   invoiceId           String
-  invoice             Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  amount              Decimal   @db.Decimal(12, 2)
-  receivedAt          DateTime  @default(now())
-  method              String    @default("BANK_TRANSFER")
+  invoice             Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount              Decimal       @db.Decimal(12, 2)
+  receivedAt          DateTime      @default(now())
+  method              PaymentMethod @default(BANK)
+  tdsAmount           Decimal       @default(0) @db.Decimal(12, 2)
+  tdsPercent          Decimal?      @db.Decimal(5, 2)
+  notes               String?
   reference           String?
-  receiptNumber       String?   @unique
+  receiptNumber       String?       @unique
   receiptPdfId        String?
   receiptBackendPdfId String?
   receiptPdfData      Bytes?
   receiptSentAt       DateTime?
-  createdAt           DateTime  @default(now())
+  createdAt           DateTime      @default(now())
 }
 
 model Expense {
@@ -665,6 +797,14 @@ model CompanySettings {
   recurrenceCreatesNewWorkspace Boolean    @default(true)
   halfDayMinutes                Int        @default(240) // ADR 0004: half-day hours configurable in Settings
   numberingFyKey                String     @default("") // e.g. "25-26"; invoice/receipt counters reset when the financial year changes
+  stateCode                     String     @default("") // GST state code of the company (from GSTIN); decides CGST+SGST vs IGST
+  lutNumber                     String     @default("") // printed on export invoices (0% under LUT)
+  proformaPrefix                String     @default("EOM-PRO")
+  proformaNextNumber            Int        @default(1)
+  creditNotePrefix              String     @default("EOM-CN")
+  creditNoteNextNumber          Int        @default(1)
+  invoiceWhatsappTemplate       String     @default("Hi {{client}}, invoice {{number}} for INR {{total}} is due on {{dueDate}}. PDF: {{link}} — {{company}}")
+  reminderWhatsappTemplate      String     @default("Gentle reminder from {{company}}: invoice {{number}} (INR {{balance}} outstanding) was due on {{dueDate}}. PDF: {{link}}")
   expenseCategories             String[]   @default(["Travel", "Software", "Office", "Marketing", "Salaries", "Rent", "Utilities", "Other"]) // ADR 0004: fixed list, no free text
   updatedAt                     DateTime   @updatedAt
 }

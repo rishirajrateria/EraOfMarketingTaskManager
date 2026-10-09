@@ -64,7 +64,7 @@ export const paymentInputSchema = z.object({
   invoiceId: z.string().min(1),
   amount: z.coerce.number().positive("amount must be positive"),
   receivedAt: optionalDateInput,
-  method: z.string().trim().min(1).max(60).default("BANK_TRANSFER"),
+  method: z.enum(["CASH", "BANK", "UPI", "OTHER"]).default("BANK"),
   reference: optionalStr,
 });
 export type PaymentInput = z.infer<typeof paymentInputSchema>;
