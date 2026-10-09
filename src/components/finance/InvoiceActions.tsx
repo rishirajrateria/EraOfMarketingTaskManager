@@ -5,11 +5,14 @@ import { convertProforma, deleteInvoice, resumeWork, sendReminder, stopRecurrenc
 import type { InvoiceDetail } from "@/server/finance/queries";
 import { ApproveSheet, type Templates } from "@/components/finance/ApproveSheet";
 import { PaymentSheet } from "@/components/finance/PaymentSheet";
-import { CreditNoteSheet, HoldWorkSheet, PushForwardSheet } from "@/components/finance/InvoiceSheets";
+import { CancelInvoiceSheet, CreditNoteSheet, HoldWorkSheet, PushForwardSheet } from "@/components/finance/InvoiceSheets";
 import { useAction } from "@/components/finance/useAction";
 import { fmtDayTime } from "@/components/finance/finance-ui";
 
-type SheetKind = "approve" | "resend" | "pay" | "push" | "hold" | "credit" | null;
+type SheetKind = "approve" | "resend" | "pay" | "push" | "hold" | "credit" | "cancel" | null;
+
+/** ADR 0009 / prototype: shown for approved, unsettled tax / export invoices; with money against it a credit note is required. */
+export const HAS_PAYMENTS = "This invoice has payments. Use a credit note to reverse it.";
 
 /** Which actions make sense for this document right now (ADR 0005 status machine). */
 export function availableActions(inv: InvoiceDetail) {
@@ -29,12 +32,13 @@ export function availableActions(inv: InvoiceDetail) {
     convert: inv.docType === "PROFORMA" && !inv.convertedTo && inv.status !== "CANCELLED",
     stop: !!inv.schedule && !inv.schedule.stopped,
     delete: unapproved,
+    cancel: billed && !!inv.approvedAt && open,
   };
 }
 
 /** Bottom action zone of the invoice detail page: primary actions in the white part, the rest as green pills. */
-export function InvoiceActions({ inv, tz, templates, tdsPercent, openTasks }: { inv: InvoiceDetail; tz: string; templates: Templates; tdsPercent: number | null; openTasks: number }) {
-  const { pending, run, router } = useAction();
+export function InvoiceActions({ inv, tz, templates, tdsPercent, openTasks, nextNumber }: { inv: InvoiceDetail; tz: string; templates: Templates; tdsPercent: number | null; openTasks: number; nextNumber: string }) {
+  const { pending, run, router, toast } = useAction();
   const [sheet, setSheet] = useState<SheetKind>(null);
   const a = availableActions(inv);
   const close = () => setSheet(null);
@@ -60,6 +64,10 @@ export function InvoiceActions({ inv, tz, templates, tdsPercent, openTasks }: { 
   if (a.convert) pills.push({ key: "convert", label: "Convert to invoice", onClick: () => run(() => convertProforma(inv.id), (d) => { router.push(`/admin/invoices/${d.id}`); return "Tax invoice created — awaiting approval"; }) });
   if (a.stop) pills.push({ key: "stop", label: "Stop recurrence", onClick: () => { if (confirm("Stop creating future occurrences?")) run(() => stopRecurrence(inv.id), () => "Recurrence stopped"); } });
   if (a.delete) pills.push({ key: "delete", label: "Delete", onClick: onDelete, danger: true });
+  if (a.cancel) {
+    const hasMoney = inv.received > 0 || inv.tds > 0 || inv.credited > 0 || inv.creditNotes.some((c) => c.status !== "CANCELLED");
+    pills.push({ key: "cancel", label: "Cancel invoice", danger: true, onClick: () => (hasMoney ? toast(HAS_PAYMENTS, "err") : setSheet("cancel")) });
+  }
 
   const caption = a.remind && inv.reminderSentAt ? `Last reminder ${fmtDayTime(inv.reminderSentAt, tz)}` : inv.remindAt ? `Reminder on ${fmtDayTime(inv.remindAt, tz)}` : null;
 
@@ -91,6 +99,7 @@ export function InvoiceActions({ inv, tz, templates, tdsPercent, openTasks }: { 
       {sheet === "push" ? <PushForwardSheet inv={inv} open onClose={close} /> : null}
       {sheet === "hold" ? <HoldWorkSheet inv={inv} openTasks={openTasks} open onClose={close} /> : null}
       {sheet === "credit" ? <CreditNoteSheet inv={inv} open onClose={close} /> : null}
+      {sheet === "cancel" ? <CancelInvoiceSheet inv={inv} nextNumber={nextNumber} open onClose={close} /> : null}
     </>
   );
 }

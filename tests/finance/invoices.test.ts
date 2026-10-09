@@ -427,7 +427,8 @@ describe("invoicing v2", () => {
     if (!c.ok) throw new Error(c.error);
     await approveAndSend(c.data.id, { email: true });
     await recordPayment({ invoiceId: c.data.id, amount: 3600 });
-    await testDb.expense.create({ data: { date: new Date(), amount: 1000, category: "Travel", createdById: seed.admin.id } });
+    // ADR 0009: expenses count on a paid basis (PAID occurrences); a DUE one does not
+    await testDb.expense.create({ data: { date: new Date(), amount: 1000, category: "Travel", createdById: seed.admin.id, occurrences: { create: [{ seq: 1, amount: 1000, dueDate: new Date(), status: "PAID", paidAt: new Date() }, { seq: 2, amount: 1000, dueDate: new Date() }] } } });
     const s = await financeSummary();
     expect(s.totals).toEqual({ invoiced: 23600, received: 3600, outstanding: 20000, expenses: 1000, net: 2600 });
     expect(s.clients[0]).toMatchObject({ clientName: "Repo", invoiced: 23600, received: 3600, outstanding: 20000 });

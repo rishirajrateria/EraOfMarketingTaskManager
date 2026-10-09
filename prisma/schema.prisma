@@ -204,7 +204,33 @@ enum NotificationKind {
   VAULT_ACCESS_EXPIRING
   INTEGRATION_FAILED
   TDS_THRESHOLD
+  PAYMENT_DUE
   GENERIC
+}
+
+/// Payables (ADR 0009): an Expense is a bill; each payment due is an ExpenseOccurrence.
+enum ExpenseKind {
+  REGULAR
+  SALARY
+}
+
+enum ExpenseTiming {
+  PREPAID // paid before you get the service
+  POSTPAID // bill comes after the service
+  ADVANCE // paid ahead, adjusted against later work
+}
+
+enum OccurrenceStatus {
+  DUE
+  PAID
+}
+
+enum ExpenseMethod {
+  CASH
+  UPI
+  BANK
+  CARD
+  CHEQUE
 }
 
 enum IntegrationKind {
@@ -258,6 +284,7 @@ model User {
   vaultGrants       VaultAccessGrant[]  @relation("GrantUser")
   grantedVaultItems VaultAccessGrant[]  @relation("GrantedBy")
   expenses          Expense[]
+  salaryBills       Expense[]           @relation("SalaryBills")
   attendance        Attendance[]        @relation("AttendanceUser")
   markedAttendance  Attendance[]        @relation("AttendanceMarkedBy")
   leaves            Leave[]             @relation("LeaveUser")
@@ -605,6 +632,8 @@ model Invoice {
   creditNoteOf     Invoice?        @relation("CreditNotes", fields: [creditNoteOfId], references: [id])
   creditNotes      Invoice[]       @relation("CreditNotes")
   cancelledAt      DateTime?
+  cancelReason     String? // ADR 0009: why a sent invoice was cancelled (number stays used)
+  monthDriveFileId String? // ADR 0009: copy filed in Drive Finance/<issue month>/Sales invoices (or Cancelled invoices)
   tdsApplicable    Boolean         @default(false) // client deducts TDS on this invoice (ADR 0006)
   currency         String          @default("INR") // ISO 4217 code printed on the PDF; amounts are stored as entered (no FX)
   items            InvoiceItem[]
@@ -708,16 +737,28 @@ model Payment {
 }
 
 model Expense {
-  id                   String    @id @default(cuid())
-  date                 DateTime
-  amount               Decimal   @db.Decimal(12, 2)
+  id                   String              @id @default(cuid())
+  date                 DateTime // when the bill was added / first due (legacy: the expense date)
+  amount               Decimal             @db.Decimal(12, 2) // ONE_TIME: the bill · RECURRING: each payment · PART: total of all parts
   category             String
-  vendor               String?
+  vendor               String? // the payee (salary: the team member's name)
   note                 String?
-  tags                 String[]  @default([])
-  tdsApplied           Boolean   @default(false) // ADR 0006: TDS deducted when paying this payee
-  tdsPercent           Decimal?  @db.Decimal(5, 2)
-  tdsAmount            Decimal   @default(0) @db.Decimal(12, 2) // net paid = amount - tdsAmount
+  tags                 String[]            @default([])
+  /// ADR 0009: bill shape. Payments live in ExpenseOccurrence.
+  kind                 ExpenseKind         @default(REGULAR)
+  salaryUserId         String?
+  salaryUser           User?               @relation("SalaryBills", fields: [salaryUserId], references: [id])
+  timing               ExpenseTiming       @default(PREPAID)
+  plan                 BillingPlan         @default(ONE_TIME)
+  /// RECURRING only: repeat rule (zod `repeatRuleSchema` in src/server/finance/schemas.ts).
+  repeatRule           Json?
+  remindDays           Int                 @default(1)
+  vendorGstin          String?
+  occurrences          ExpenseOccurrence[]
+  /// Legacy (pre-ADR 0009) money/TDS/receipt columns: copied into one PAID occurrence by the migration; no longer written.
+  tdsApplied           Boolean             @default(false)
+  tdsPercent           Decimal?            @db.Decimal(5, 2)
+  tdsAmount            Decimal             @default(0) @db.Decimal(12, 2)
   receiptImageDriveId  String?
   receiptImageData     Bytes?
   receiptImageMime     String?
@@ -725,15 +766,59 @@ model Expense {
   voiceNoteData        Bytes?
   voiceNoteDurationSec Int?
   createdById          String
-  createdBy            User      @relation(fields: [createdById], references: [id])
+  createdBy            User                @relation(fields: [createdById], references: [id])
   sheetRowSyncedAt     DateTime?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
 
   @@index([date])
 }
 
-// ---------- Attendance / leave / inventory ----------
+/// One payment of a bill (ADR 0009): DUE until marked PAID; carries the payment, TDS, GST and the vendor's bill file.
+model ExpenseOccurrence {
+  id           String           @id @default(cuid())
+  expenseId    String
+  expense      Expense          @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  seq          Int
+  label        String? // "Part 1 of 2 · Advance", "Balance of …"
+  amount       Decimal          @db.Decimal(12, 2) // gross (incl. GST when the bill includes it)
+  dueDate      DateTime // start of the due day in the company timezone
+  status       OccurrenceStatus @default(DUE)
+  paidAt       DateTime?
+  method       ExpenseMethod?
+  reference    String?
+  tdsPercent   Decimal?         @db.Decimal(5, 2)
+  tdsAmount    Decimal          @default(0) @db.Decimal(12, 2)
+  gstAmount    Decimal          @default(0) @db.Decimal(12, 2)
+  gstRate      Decimal?         @db.Decimal(5, 2)
+  vendorGstin  String?
+  itcClaimable Boolean          @default(false)
+  billData     Bytes?
+  billMime     String?
+  billName     String?
+  billDriveId  String? // Drive Finance/<paid month>/Expense bills
+  itcDriveId   String? // Drive Finance/<paid month>/GST claimable
+  notifiedAt   DateTime? // payment reminder sent (once per occurrence)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([expenseId, seq])
+  @@index([status, dueDate])
+  @@index([paidAt])
+}
+
+/// Drive Finance/YYYY-MM folder + its four subfolders (ADR 0009), created on the 1st or on first use.
+model FinanceMonthFolder {
+  id          String   @id @default(cuid())
+  month       String   @unique // yyyy-MM
+  folderId    String
+  salesId     String
+  billsId     String
+  itcId       String
+  cancelledId String
+  createdAt   DateTime @default(now())
+}
+
 model Attendance {
   id         String           @id @default(cuid())
   userId     String
@@ -840,6 +925,7 @@ model CompanySettings {
   reminderWhatsappTemplate      String     @default("Gentle reminder from {{company}}: invoice {{number}} (INR {{balance}} outstanding) was due on {{dueDate}}. PDF: {{link}}")
   expenseCategories             String[]   @default(["Travel", "Software", "Office", "Marketing", "Salaries", "Rent", "Utilities", "Other"]) // ADR 0004: fixed list, no free text
   tdsThresholdAmount            Decimal    @default(20000) @db.Decimal(12, 2) // ADR 0006: per payee per financial year
+  financeEmail                  String     @default("") // ADR 0009: the monthly GST pack is emailed here
   updatedAt                     DateTime   @updatedAt
 }
 

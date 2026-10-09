@@ -33,10 +33,13 @@ function encodeMime(opts: { to: string; from: string; subject: string; text: str
 }
 
 export const sentMailLog: { to: string; subject: string; at: Date }[] = [];
+/** Mock mode: body + attachment names/sizes of every mail (tests that need more than to/subject). */
+export const sentMailDetails: { to: string; subject: string; text: string; attachments: { filename: string; mimeType: string; size: number }[] }[] = [];
 
 export async function sendMail(opts: { to: string; subject: string; text: string; attachments?: MailAttachment[] }) {
   if (isMock()) {
     sentMailLog.push({ to: opts.to, subject: opts.subject, at: new Date() });
+    sentMailDetails.push({ to: opts.to, subject: opts.subject, text: opts.text, attachments: (opts.attachments ?? []).map((a) => ({ filename: a.filename, mimeType: a.mimeType, size: a.data.length })) });
     return { id: `mock_mail_${sentMailLog.length}` };
   }
   const raw = encodeMime({ ...opts, from: env.impersonateUser });

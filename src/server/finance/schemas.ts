@@ -123,6 +123,13 @@ export const creditNoteInputSchema = z.object({
 });
 export type CreditNoteInput = z.infer<typeof creditNoteInputSchema>;
 
+/** ADR 0009: cancel a sent invoice (reason printed on the stamped copy). */
+export const cancelInvoiceSchema = z.object({
+  reason: z.string().trim().min(1, "Write a short reason").max(500),
+  email: z.boolean().default(false),
+  whatsapp: z.boolean().default(false),
+});
+
 export const paymentInputSchema = z.object({
   invoiceId: z.string().min(1),
   amount: z.coerce.number().positive("amount must be positive"),
@@ -140,45 +147,105 @@ export const checkboxInput = z
   .union([z.boolean(), z.string(), z.null(), z.undefined()])
   .transform((v) => v === true || v === "on" || v === "true" || v === "1");
 
-/** Optional number from a form field: "" / null / undefined → null. */
-const optionalNumber = z
-  .union([z.number(), z.string(), z.null(), z.undefined()])
-  .transform((v) => (v === "" || v == null ? null : Number(v)))
-  .refine((v) => v === null || Number.isFinite(v), "must be a number");
+// ---------- Payables (ADR 0009) ----------
 
-const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+const dateKeyStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be yyyy-MM-dd");
 
 /**
- * Expense fields (SPEC §11.2 + ADR 0006). `amount` is the gross bill; when `tdsApplied` the TDS amount is
- * computed from the % unless given explicitly, and net paid = amount − tdsAmount.
+ * Repeat rule shared by recurring bills (and, later, the task repeat picker). Weekdays are 0 = Sun … 6 = Sat;
+ * monthDay 32 = last day of the month; nth 1–5 (5 = last); yearMonth 1–12. `anchorDate` is the first due date.
  */
-export const expenseFieldsSchema = z
+export const repeatRuleSchema = z
   .object({
-    date: dateInput,
-    amount: z.coerce.number().min(0),
-    category: z.string().trim().min(1, "category required").max(100), // must also match CompanySettings.expenseCategories — see expenses.ts
-    vendor: optionalStr,
+    freq: z.enum(["DAILY", "WEEKDAYS", "WEEKLY", "MONTHLY", "YEARLY"]),
+    interval: z.coerce.number().int().min(1).max(365).default(1),
+    weekdays: z.array(z.coerce.number().int().min(0).max(6)).default([]),
+    monthMode: z.enum(["DATE", "NTH"]).default("DATE"),
+    monthDay: z.coerce.number().int().min(1).max(32).default(1),
+    nth: z.coerce.number().int().min(1).max(5).default(1),
+    nthWeekday: z.coerce.number().int().min(0).max(6).default(1),
+    yearMonth: z.coerce.number().int().min(1).max(12).default(1),
+    yearDay: z.coerce.number().int().min(1).max(31).default(1),
+    endsType: z.enum(["NEVER", "COUNT", "UNTIL"]).default("NEVER"),
+    endsCount: z.coerce.number().int().min(1).max(1000).optional().nullable(),
+    endsUntil: dateKeyStr.optional().nullable(),
+    anchorDate: dateKeyStr.optional().nullable(),
+  })
+  .superRefine((r, ctx) => {
+    if (r.freq === "WEEKLY" && r.weekdays.length === 0) ctx.addIssue({ code: "custom", path: ["weekdays"], message: "pick at least one weekday" });
+    if (r.endsType === "COUNT" && !r.endsCount) ctx.addIssue({ code: "custom", path: ["endsCount"], message: "how many times?" });
+    if (r.endsType === "UNTIL" && !r.endsUntil) ctx.addIssue({ code: "custom", path: ["endsUntil"], message: "pick the end date" });
+  });
+export type RepeatRule = z.output<typeof repeatRuleSchema>;
+export type RepeatRuleInput = z.input<typeof repeatRuleSchema>;
+
+export const EXPENSE_METHODS = ["CASH", "UPI", "BANK", "CARD", "CHEQUE"] as const;
+export type ExpenseMethodKey = (typeof EXPENSE_METHODS)[number];
+
+const money = z.coerce.number().finite();
+
+/** createBill / updateBill input. Amount: ONE_TIME the bill, RECURRING each payment, PART the total of all parts. */
+export const billInputSchema = z
+  .object({
+    payee: z.string().trim().max(200).default(""),
+    kind: z.enum(["REGULAR", "SALARY"]).default("REGULAR"),
+    salaryUserId: z.string().trim().optional().nullable(),
+    timing: z.enum(["PREPAID", "POSTPAID", "ADVANCE"]).default("PREPAID"),
+    category: z.string().trim().min(1, "category required").max(100),
     note: optionalStr,
-    tags: z
-      .string()
-      .optional()
-      .nullable()
-      .transform((s) =>
-        (s ?? "")
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean),
-      ),
-    tdsApplied: checkboxInput,
-    tdsPercent: optionalNumber.refine((v) => v === null || (v >= 0 && v <= 100), "tdsPercent must be between 0 and 100"),
-    tdsAmount: optionalNumber.refine((v) => v === null || v >= 0, "tdsAmount must be positive"),
+    plan: z.enum(["ONE_TIME", "RECURRING", "PART"]).default("ONE_TIME"),
+    amount: money.refine((n) => n > 0, "Enter the amount"),
+    remindDays: z.coerce.number().int().min(0).max(60).default(1),
+    vendorGstin: optionalStr,
+    /** ONE_TIME due date / RECURRING first due date (yyyy-MM-dd, company timezone). */
+    dueDate: dateKeyStr.optional().nullable(),
+    alreadyPaid: z.boolean().default(false),
+    paidMethod: z.enum(EXPENSE_METHODS).default("UPI"),
+    rule: repeatRuleSchema.optional().nullable(),
+    partMode: z.enum(["FIXED", "PERCENT"]).default("FIXED"),
+    parts: z
+      .array(z.object({ value: money.refine((n) => n > 0, "Fill every part's amount and date"), dueDate: dateKeyStr, note: z.string().trim().max(200).default("") }))
+      .default([]),
   })
-  .transform((f) => {
-    if (!f.tdsApplied) return { ...f, tdsPercent: null, tdsAmount: 0 };
-    const tdsAmount = f.tdsAmount ?? (f.tdsPercent != null ? round2((f.amount * f.tdsPercent) / 100) : 0);
-    return { ...f, tdsAmount: round2(tdsAmount) };
-  })
-  .refine((f) => f.tdsAmount <= f.amount + 0.005, { message: "TDS cannot exceed the bill amount", path: ["tdsAmount"] });
-export type ExpenseFields = z.infer<typeof expenseFieldsSchema>;
+  .superRefine((b, ctx) => {
+    if (b.kind === "SALARY" && !b.salaryUserId) ctx.addIssue({ code: "custom", path: ["salaryUserId"], message: "Pick the team member" });
+    if (b.kind === "REGULAR" && !b.payee) ctx.addIssue({ code: "custom", path: ["payee"], message: "Who are you paying?" });
+    if (b.plan !== "PART" && !b.dueDate) ctx.addIssue({ code: "custom", path: ["dueDate"], message: "Pick the due date" });
+    if (b.plan === "RECURRING" && !b.rule) ctx.addIssue({ code: "custom", path: ["rule"], message: "Choose how often it repeats" });
+    if (b.plan === "PART") {
+      if (b.parts.length < 1) ctx.addIssue({ code: "custom", path: ["parts"], message: "Add at least one part" });
+      const sum = b.parts.reduce((s, p) => s + p.value, 0);
+      if (b.partMode === "PERCENT" && Math.abs(sum - 100) > 0.01) ctx.addIssue({ code: "custom", path: ["parts"], message: "Parts must add up to 100%" });
+      if (b.partMode === "FIXED" && Math.abs(sum - b.amount) > 0.5) ctx.addIssue({ code: "custom", path: ["parts"], message: `Parts must add up to ₹${b.amount.toLocaleString("en-IN")}` });
+    }
+  });
+export type BillInput = z.output<typeof billInputSchema>;
+export type BillInputRaw = z.input<typeof billInputSchema>;
+
+/** "Bill & GST" block: GST included in the amount, rate, amount (auto = amount × rate / (100 + rate)), GSTIN, ITC. */
+export const gstFieldsSchema = z.object({
+  includesGst: z.boolean().default(false),
+  gstRate: z.coerce.number().min(0).max(100).optional().nullable(),
+  gstAmount: z.coerce.number().min(0).optional().nullable(),
+  vendorGstin: optionalStr,
+  itcClaimable: z.boolean().default(false),
+});
+export type GstFields = z.output<typeof gstFieldsSchema>;
+export type GstFieldsRaw = z.input<typeof gstFieldsSchema>;
+
+export const markPaidSchema = z.object({
+  amount: money.refine((n) => n > 0, "Enter the amount"),
+  paidOn: dateKeyStr,
+  method: z.enum(EXPENSE_METHODS),
+  reference: optionalStr,
+  tdsPercent: z.coerce.number().min(0).max(100).optional().nullable(),
+  tdsAmount: z.coerce.number().min(0).optional().nullable(),
+  gst: gstFieldsSchema.optional().nullable(),
+});
+export type MarkPaidInput = z.output<typeof markPaidSchema>;
+export type MarkPaidRaw = z.input<typeof markPaidSchema>;
+
+export const dateKeySchema = dateKeyStr;
+export const financeEmailSchema = z.string().trim().refine((v) => z.email().safeParse(v).success, "Enter a valid email");
 
 export const monthKeySchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "month must be yyyy-MM");

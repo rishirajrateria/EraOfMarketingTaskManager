@@ -94,14 +94,29 @@ async function main() {
     ),
   );
 
-  // Demo expenses (ADR 0006): one payee over the TDS threshold with TDS deducted, one under it.
-  const demoExpenses = [
-    { note: "[demo] Studio rent — this month", vendor: "Skyline Spaces", category: "Rent", amount: 25000, tdsApplied: true, tdsPercent: 10, tdsAmount: 2500 },
-    { note: "[demo] Design tool subscription", vendor: "Figma", category: "Software", amount: 1800, tdsApplied: false, tdsPercent: null, tdsAmount: 0 },
+  // Demo bills (ADR 0006 + 0009): monthly rent paid this month with TDS (over the threshold) and a GST bill to claim,
+  // the next rent due; a one-time design tool subscription already paid.
+  const seedNow = new Date();
+  const ymd = (d: Date) => d.toISOString().slice(0, 10);
+  const day = (offset: number) => new Date(Date.UTC(seedNow.getUTCFullYear(), seedNow.getUTCMonth(), seedNow.getUTCDate() + offset, 6, 30));
+  const demoBills = [
+    {
+      note: "[demo] Studio rent",
+      bill: { vendor: "Skyline Spaces", category: "Rent", amount: 25000, plan: "RECURRING" as const, timing: "PREPAID" as const, vendorGstin: "29ABCDE1234F1Z5", repeatRule: { freq: "MONTHLY", interval: 1, weekdays: [], monthMode: "DATE", monthDay: 1, nth: 1, nthWeekday: 1, yearMonth: 1, yearDay: 1, endsType: "NEVER", anchorDate: ymd(day(-5)) } },
+      occ: [
+        { seq: 1, amount: 25000, dueDate: day(-5), status: "PAID" as const, paidAt: day(-4), method: "BANK" as const, tdsPercent: 10, tdsAmount: 2500, gstAmount: 3814, gstRate: 18, vendorGstin: "29ABCDE1234F1Z5", itcClaimable: true },
+        { seq: 2, amount: 25000, dueDate: day(26), status: "DUE" as const },
+      ],
+    },
+    {
+      note: "[demo] Design tool subscription",
+      bill: { vendor: "Figma", category: "Software", amount: 1800, plan: "ONE_TIME" as const, timing: "PREPAID" as const },
+      occ: [{ seq: 1, amount: 1800, dueDate: day(-2), status: "PAID" as const, paidAt: day(-2), method: "CARD" as const }],
+    },
   ];
-  for (const e of demoExpenses) {
+  for (const e of demoBills) {
     const existing = await prisma.expense.findFirst({ where: { note: e.note } });
-    if (!existing) await prisma.expense.create({ data: { ...e, date: new Date(), createdById: admin.id } });
+    if (!existing) await prisma.expense.create({ data: { ...e.bill, note: e.note, date: e.occ[0].dueDate, createdById: admin.id, occurrences: { create: e.occ } } });
   }
 
   // Work types belong to teams (ADR 0008); "Reporting" is done by every team.

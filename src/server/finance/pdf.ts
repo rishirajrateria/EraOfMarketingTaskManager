@@ -6,6 +6,8 @@ import {
   COL2,
   FOOTER_Y,
   M,
+  PAGE_H,
+  PAGE_W,
   PT,
   W,
   amount,
@@ -62,6 +64,9 @@ export type PdfInvoice = {
   notes?: string | null;
   paymentTerms?: string | null;
   status?: string;
+  /** ADR 0009: a cancelled invoice is re-rendered with a rotated red CANCELLED stamp and this reason. */
+  cancelReason?: string | null;
+  cancelledAt?: Date | null;
 };
 
 const DRAFT = /^DRAFT-/;
@@ -241,11 +246,35 @@ function totalsBlock(c: Ctx, lines: TotalLine[], top: number): number {
 
 const blockHeight = (lines: TotalLine[]) => lines.reduce((h, l) => h + 24 + (l.gapBefore ?? 0), 0);
 
+const STAMP_RED = "#dc2626";
+
+/** Big rotated red "CANCELLED" across the page plus the date and reason under the meta line (every page). */
+function cancelStamp(c: Ctx): void {
+  const { doc, inv, tz } = c;
+  const range = doc.bufferedPageRange();
+  for (let i = range.start; i < range.start + range.count; i++) {
+    doc.switchToPage(i);
+    doc.save();
+    doc.rotate(-32, { origin: [PAGE_W / 2, PAGE_H / 2] });
+    doc.fillColor(STAMP_RED).fillOpacity(0.28).strokeColor(STAMP_RED).strokeOpacity(0.5).lineWidth(4);
+    doc.rect(PAGE_W / 2 - 230, PAGE_H / 2 - 62, 460, 124).stroke();
+    doc.font("Helvetica-Bold").fontSize(92).text("CANCELLED", PAGE_W / 2 - 230, PAGE_H / 2 - 44, { width: 460, align: "center", lineBreak: false });
+    doc.restore();
+    const when = inv.cancelledAt ? `Cancelled on ${fmtDMY(inv.cancelledAt, tz)}` : "Cancelled";
+    doc.save();
+    doc.fillColor(STAMP_RED).fillOpacity(1).font("Helvetica-Bold").fontSize(9);
+    const reason = inv.cancelReason ? ` · Reason: ${inv.cancelReason.length > 110 ? `${inv.cancelReason.slice(0, 107)}...` : inv.cancelReason}` : "";
+    doc.text(`${when}${reason}`, M, 40, { width: W, align: "right", lineBreak: false });
+    doc.restore();
+  }
+}
+
 export async function renderInvoicePdf(inv: PdfInvoice, client: PdfParty, company: PdfCompany): Promise<Buffer> {
   if (inv.docType === "EXPORT_INVOICE" && !company.lutNumber?.trim()) throw new Error("Export invoices need the LUT number — add it in Settings → Company");
   const title = documentTitle(inv);
   const qr = await qrFor(inv, company);
-  const doc = new PDFDocument({ size: "A4", margins: { top: M, left: M, right: M, bottom: 0 }, info: { Title: `${title} ${inv.number}`, Author: company.companyName } });
+  const cancelled = inv.status === "CANCELLED";
+  const doc = new PDFDocument({ size: "A4", margins: { top: M, left: M, right: M, bottom: 0 }, bufferPages: cancelled, info: { Title: `${title} ${inv.number}${cancelled ? " (cancelled)" : ""}`, Author: company.companyName } });
   const out = collect(doc);
   const c: Ctx = { doc, inv, company, cur: (inv.currency || "INR").toUpperCase(), sym: registerFonts(doc), title, tz: company.timezone || "Asia/Kolkata", now: new Date() };
 
@@ -269,6 +298,7 @@ export async function renderInvoicePdf(inv: PdfInvoice, client: PdfParty, compan
   const bottom = totalsBlock(c, lines, top);
   signatureBlock(doc, company, bottom - 24);
   footer(doc, company, c.now);
+  if (cancelled) cancelStamp(c);
   doc.end();
   return out;
 }

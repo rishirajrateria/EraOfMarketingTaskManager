@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { requireFinancePage } from "@/server/finance/guard";
 import { getInvoiceDetail } from "@/server/finance/queries";
 import { getSettings } from "@/lib/settings";
+import { fmtDate } from "@/lib/time";
+import { peekNextNumber } from "@/server/finance/numbering";
 import { InvoiceActions } from "@/components/finance/InvoiceActions";
 import { ScheduleBlock } from "@/components/finance/ScheduleBlock";
 import { AmountsBlock, ClientBlock, DetailHeader, NotesBlock, PaymentsBlock, RelatedDocsBlock, SendStateBlock } from "@/components/finance/InvoiceDetailSections";
@@ -16,9 +18,10 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const [inv, settings] = await Promise.all([getInvoiceDetail(id), getSettings()]);
   if (!inv) notFound();
-  const [client, openTasks] = await Promise.all([
+  const [client, openTasks, nextNumber] = await Promise.all([
     prisma.client.findUnique({ where: { id: inv.clientId }, select: { tdsPercent: true } }),
     prisma.task.count({ where: { clientId: inv.clientId, deletedAt: null, status: { in: [...OPEN_TASKS] } } }),
+    peekNextNumber(inv.docType === "PROFORMA" || inv.docType === "CREDIT_NOTE" ? "TAX_INVOICE" : inv.docType),
   ]);
   const tz = settings.timezone;
   return (
@@ -28,6 +31,15 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
         {inv.status === "AWAITING_APPROVAL" ? (
           <div role="status" className="mx-4 mb-3 rounded-xl border border-white/60 bg-amber-100/70 px-3 py-2 text-sm text-amber-900 backdrop-blur-sm">
             <b>Awaiting your approval.</b> Nothing has been sent. Review, then tap <b>Approve &amp; send</b> below to allocate the number and deliver it.
+          </div>
+        ) : null}
+        {inv.status === "CANCELLED" && inv.cancelReason ? (
+          <div role="status" className="mx-4 mb-3 rounded-xl border border-white/60 bg-red-100/75 px-3 py-2 text-sm text-red-900 backdrop-blur-sm">
+            <b className="block">Cancelled on {fmtDate(new Date(inv.cancelledAt ?? inv.createdAt), tz, "dd MMM yyyy")}</b>
+            <div>Reason: {inv.cancelReason}</div>
+            <div className="mt-1 text-xs text-red-800/90">
+              Number {inv.number} stays used and is never given to another invoice. Filed in Drive › Finance › {fmtDate(new Date(inv.approvedAt ?? inv.cancelledAt ?? inv.createdAt), tz, "yyyy-MM")} › Cancelled invoices.
+            </div>
           </div>
         ) : null}
         <AmountsBlock inv={inv} />
@@ -45,6 +57,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
           templates={{ email: settings.invoiceEmailTemplate, whatsapp: settings.invoiceWhatsappTemplate, companyName: settings.companyName }}
           tdsPercent={client?.tdsPercent?.toNumber() ?? null}
           openTasks={openTasks}
+          nextNumber={nextNumber}
         />
       ) : null}
     </div>

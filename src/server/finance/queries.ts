@@ -11,67 +11,9 @@ import { SETTLEMENT_INCLUDE, settleInvoice } from "@/server/finance/settlement";
 export { awaitingApproval, clientLedger, paymentsDashboard } from "@/server/finance/dashboard-queries";
 export type { AwaitingRow, ClientLedger, DashboardClientGroup, LedgerEntry, PaymentsDashboard } from "@/server/finance/dashboard-queries";
 
-export type ExpenseRow = {
-  id: string;
-  date: string;
-  amount: number;
-  category: string;
-  vendor: string | null;
-  note: string | null;
-  tags: string[];
-  tdsApplied: boolean;
-  tdsPercent: number | null;
-  tdsAmount: number;
-  hasReceipt: boolean;
-  hasVoice: boolean;
-  voiceDurationSec: number | null;
-  receiptDriveId: string | null;
-  createdBy: string;
-};
-
-export type ExpenseFilter = { month?: string | null; category?: string | null };
-
 export function monthRange(month: string, tz: string) {
   const start = parseDateKey(`${month}-01`, tz);
   return { gte: start, lt: addMonths(start, 1) };
-}
-
-export async function expenseWhere(f: ExpenseFilter): Promise<Prisma.ExpenseWhereInput> {
-  const tz = (await getSettings()).timezone;
-  const where: Prisma.ExpenseWhereInput = {};
-  if (f.month) where.date = monthRange(f.month, tz);
-  if (f.category) where.category = { equals: f.category, mode: "insensitive" };
-  return where;
-}
-
-export async function listExpenses(f: ExpenseFilter = {}): Promise<{ rows: ExpenseRow[]; total: number }> {
-  const rows = await prisma.expense.findMany({
-    where: await expenseWhere(f),
-    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-    select: {
-      id: true, date: true, amount: true, category: true, vendor: true, note: true, tags: true, tdsApplied: true, tdsPercent: true, tdsAmount: true,
-      receiptImageMime: true, receiptImageDriveId: true, voiceNoteDurationSec: true, voiceNoteDriveId: true,
-      createdBy: { select: { name: true } },
-    },
-  });
-  const mapped = rows.map<ExpenseRow>((e) => ({
-    id: e.id,
-    date: e.date.toISOString(),
-    amount: e.amount.toNumber(),
-    category: e.category,
-    vendor: e.vendor,
-    note: e.note,
-    tags: e.tags,
-    tdsApplied: e.tdsApplied,
-    tdsPercent: e.tdsPercent?.toNumber() ?? null,
-    tdsAmount: e.tdsAmount.toNumber(),
-    hasReceipt: !!e.receiptImageMime,
-    hasVoice: e.voiceNoteDurationSec != null || !!e.voiceNoteDriveId,
-    voiceDurationSec: e.voiceNoteDurationSec,
-    receiptDriveId: e.receiptImageDriveId,
-    createdBy: e.createdBy.name,
-  }));
-  return { rows: mapped, total: round2(mapped.reduce((s, r) => s + r.amount, 0)) };
 }
 
 export async function expenseCategories(): Promise<string[]> {
@@ -151,6 +93,8 @@ export type InvoiceDetail = InvoiceRow & {
   whatsappStatus: string | null;
   publicUrl: string | null;
   cancelledAt: string | null;
+  /** ADR 0009: reason given when a sent invoice was cancelled (the number stays used). */
+  cancelReason: string | null;
   reminderSentAt: string | null;
   reminderCount: number;
   schedule: { frequency: string; interval: number; monthAnchor: string; dayOfMonth: number | null; notifyMinutes: number; nextRunAt: string | null; endDate: string | null; stopped: boolean } | null;
@@ -208,6 +152,7 @@ export async function getInvoiceDetail(id: string): Promise<InvoiceDetail | null
     whatsappStatus: i.whatsappStatus,
     publicUrl: publicInvoiceUrl(i.publicToken),
     cancelledAt: iso(i.cancelledAt),
+    cancelReason: i.cancelReason,
     reminderSentAt: iso(i.reminderSentAt),
     reminderCount: i.reminderCount,
     schedule: i.schedule
@@ -258,7 +203,8 @@ export async function financeSummary(now = new Date()): Promise<FinanceSummary> 
   const [invoices, payments, expenses] = await Promise.all([
     prisma.invoice.findMany({ where: BILLED_WHERE, select: { clientId: true, total: true, approvedAt: true, sentAt: true, createdAt: true, client: { select: { name: true } }, ...SETTLEMENT_INCLUDE } }),
     prisma.payment.findMany({ select: { amount: true, receivedAt: true, invoice: { select: { clientId: true, client: { select: { name: true } } } } } }),
-    prisma.expense.findMany({ where: { date: { gte: since } }, select: { amount: true, date: true } }),
+    // ADR 0009: expenses on a paid basis (PAID bill occurrences by paid date).
+    prisma.expenseOccurrence.findMany({ where: { status: "PAID", paidAt: { gte: since } }, select: { amount: true, paidAt: true } }),
   ]);
   const months = new Map<string, MonthSummary>();
   for (let k = 11; k >= 0; k--) {
@@ -282,7 +228,7 @@ export async function financeSummary(now = new Date()): Promise<FinanceSummary> 
     if (m) m.received += amt;
   }
   for (const e of expenses) {
-    const m = months.get(fmtDate(e.date, tz, "yyyy-MM"));
+    const m = months.get(fmtDate(e.paidAt!, tz, "yyyy-MM"));
     if (m) m.expenses += e.amount.toNumber();
   }
   const monthRows = Array.from(months.values()).map((m) => ({ ...m, invoiced: round2(m.invoiced), received: round2(m.received), expenses: round2(m.expenses), net: round2(m.received - m.expenses) }));

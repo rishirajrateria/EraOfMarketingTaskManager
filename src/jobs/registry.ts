@@ -5,6 +5,8 @@ export const JOBS = {
   "vault-expiry": () => import("@/jobs/vault-expiry"),
   inventory: () => import("@/jobs/inventory"),
   "leave-sync": () => import("@/jobs/leave-sync"),
+  payables: () => import("@/jobs/payables"),
+  "month-folders": () => import("@/jobs/month-folders"),
 } as const;
 
 export type JobName = keyof typeof JOBS;

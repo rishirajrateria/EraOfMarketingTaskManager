@@ -93,3 +93,17 @@ export async function deleteFile(fileId: string) {
     if ((e as { code?: number }).code !== 404) throw e;
   });
 }
+
+/** Mock-mode log of trashed file ids (tests). */
+export const trashedMockFiles: string[] = [];
+
+/** Move a file to the Drive trash (recoverable for 30 days); a missing file is ignored. */
+export async function trashFile(fileId: string) {
+  if (isMock()) {
+    trashedMockFiles.push(fileId);
+    return;
+  }
+  await withRetry(() => drive().files.update({ fileId, requestBody: { trashed: true }, supportsAllDrives: true })).catch((e: unknown) => {
+    if ((e as { code?: number }).code !== 404) throw e;
+  });
+}

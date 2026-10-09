@@ -3,7 +3,8 @@ import { env } from "@/lib/env";
 import { getSettings } from "@/lib/settings";
 import { fmtDate } from "@/lib/time";
 import { ensureSpreadsheet, writeTable } from "@/google/sheets";
-import { financeSummary, listExpenses, listInvoices } from "@/server/finance/queries";
+import { financeSummary, listInvoices } from "@/server/finance/queries";
+import { listPaidOccurrences, type PaidRow } from "@/server/finance/payables-queries";
 import { audit } from "@/lib/audit";
 
 /**
@@ -15,16 +16,21 @@ export type SheetSyncResult = { spreadsheetId: string; created: boolean; rows: n
 
 const PAYMENT_HEADERS = ["invoiceNumber", "amount", "tdsAmount", "receivedAt", "method", "reference", "receiptNumber", "client"];
 
-export async function syncExpensesSheet(actorId: string | null): Promise<SheetSyncResult> {
-  const tz = (await getSettings()).timezone;
-  const { rows } = await listExpenses();
-  const spreadsheetId = await ensureSpreadsheet("Expenses", env.expensesSheetId || undefined);
-  const table: (string | number)[][] = [
-    ["date", "amount", "category", "vendor", "note", "tags", "tdsAmount", "netPaid", "receiptDriveId", "createdBy", "id"],
-    ...rows.map((e) => [fmtDate(new Date(e.date), tz, "yyyy-MM-dd"), e.amount, e.category, e.vendor ?? "", e.note ?? "", e.tags.join(", "), e.tdsAmount, e.amount - e.tdsAmount, e.receiptDriveId ?? "", e.createdBy, e.id]),
+/** ADR 0009: one row per PAID bill payment (paid basis) with TDS and GST columns. */
+export const EXPENSE_SHEET_HEADERS = ["paidOn", "payee", "category", "type", "label", "amount", "tdsAmount", "netPaid", "method", "reference", "gstRate", "gstAmount", "vendorGstin", "gstClaimable", "billDriveId", "note", "billId", "paymentId"];
+
+function expenseRow(r: PaidRow): (string | number)[] {
+  return [
+    r.paidKey ?? "", r.payee, r.category, r.kind === "SALARY" ? "salary" : "regular", r.label ?? "", r.amount, r.tdsAmount, r.amount - r.tdsAmount, r.method ?? "", r.reference ?? "",
+    r.gstRate ?? "", r.gstAmount, r.vendorGstin ?? "", r.itcClaimable ? "yes" : "no", r.billDriveId ?? "", r.note ?? "", r.billId, r.id,
   ];
-  await writeTable(spreadsheetId, "Expenses", table);
-  await prisma.expense.updateMany({ where: { id: { in: rows.map((r) => r.id) } }, data: { sheetRowSyncedAt: new Date() } });
+}
+
+export async function syncExpensesSheet(actorId: string | null): Promise<SheetSyncResult> {
+  const { rows } = await listPaidOccurrences();
+  const spreadsheetId = await ensureSpreadsheet("Expenses", env.expensesSheetId || undefined);
+  await writeTable(spreadsheetId, "Expenses", [EXPENSE_SHEET_HEADERS, ...rows.map(expenseRow)]);
+  await prisma.expense.updateMany({ where: { id: { in: Array.from(new Set(rows.map((r) => r.billId))) } }, data: { sheetRowSyncedAt: new Date() } });
   await audit(actorId, "expenses.sheet_sync", "Spreadsheet", spreadsheetId, undefined, { rows: rows.length });
   return { spreadsheetId, created: !env.expensesSheetId, rows: rows.length };
 }
@@ -36,7 +42,7 @@ export async function syncFinanceSheet(actorId: string | null): Promise<SheetSyn
   const [invoices, payments, expenses, summary] = await Promise.all([
     listInvoices(),
     prisma.payment.findMany({ include: { invoice: { select: { number: true, client: { select: { name: true } } } } }, orderBy: { receivedAt: "asc" } }),
-    listExpenses(),
+    listPaidOccurrences(),
     financeSummary(),
   ]);
   const d = (x: string | Date | null) => (x ? fmtDate(new Date(x), tz, "yyyy-MM-dd") : "");
@@ -48,10 +54,7 @@ export async function syncFinanceSheet(actorId: string | null): Promise<SheetSyn
     PAYMENT_HEADERS,
     ...payments.map((p) => [p.invoice.number, p.amount.toNumber(), p.tdsAmount.toNumber(), d(p.receivedAt), p.method, p.reference ?? "", p.receiptNumber ?? "", p.invoice.client.name]),
   ]);
-  await writeTable(spreadsheetId, "Expenses", [
-    ["date", "amount", "category", "vendor", "note", "tags", "tdsAmount"],
-    ...expenses.rows.map((e) => [d(e.date), e.amount, e.category, e.vendor ?? "", e.note ?? "", e.tags.join(", "), e.tdsAmount]),
-  ]);
+  await writeTable(spreadsheetId, "Expenses", [EXPENSE_SHEET_HEADERS, ...expenses.rows.map(expenseRow)]);
   await writeTable(spreadsheetId, "Summary", [
     ["month", "invoiced", "received", "expenses", "net"],
     ...summary.months.map((m) => [m.month, m.invoiced, m.received, m.expenses, m.net]),

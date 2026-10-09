@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireFinancePage } from "@/server/finance/guard";
 import { financeSummary } from "@/server/finance/queries";
 import { fyRange, tdsSummary } from "@/server/finance/tds";
+import { payablesTiles } from "@/server/finance/payables-queries";
 import { getSettings } from "@/lib/settings";
 import { formatINR } from "@/server/finance/money";
 import { env } from "@/lib/env";
@@ -20,14 +21,18 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
   const tz = (await getSettings()).timezone;
   const now = new Date();
   const tdsAt = previous ? new Date(fyRange(now, tz).start.getTime() - 1) : now;
-  const [summary, tds] = await Promise.all([financeSummary(), tdsSummary(tdsAt)]);
+  const [summary, tds, pay] = await Promise.all([financeSummary(), tdsSummary(tdsAt), payablesTiles(now)]);
   const t = summary.totals;
   const tiles = [
     { label: "Invoiced", value: t.invoiced, cls: "text-brand-blue" },
     { label: "Received", value: t.received, cls: "text-brand-green" },
     { label: "Outstanding", value: t.outstanding, cls: "text-amber-600" },
-    { label: "Expenses", value: t.expenses, cls: "text-red-600" },
+    { label: "Expenses paid", value: t.expenses, cls: "text-red-600" },
     { label: "Net", value: t.net, cls: t.net >= 0 ? "text-gray-900" : "text-red-700" },
+    // ADR 0009: payables
+    { label: "To pay · 30 days", value: pay.toPay30, cls: "text-gray-900" },
+    { label: "Overdue to pay", value: pay.overdue, cls: pay.overdue > 0 ? "text-red-700" : "text-gray-900" },
+    { label: `GST to claim · ${pay.monthShort}`, value: pay.gstToClaim, cls: "text-teal-700" },
   ];
   return (
     <Screen
@@ -41,6 +46,10 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
                 <div className={`text-base font-bold ${x.cls}`}>{formatINR(x.value)}</div>
               </div>
             ))}
+            <Link href={`/admin/expenses?tab=GST&month=${pay.month}`} className="rounded-lg border border-white/60 bg-white/85 px-3 py-2 backdrop-blur-md">
+              <div className="text-[11px] uppercase text-gray-600">Expense bills attached</div>
+              <div className="text-base font-bold text-gray-900">{pay.billsAttached} this month</div>
+            </Link>
           </div>
         </div>
       }
@@ -118,6 +127,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
           <Link href="/admin/invoices" className="text-brand-blue underline">Invoices</Link>
           <Link href="/admin/payments" className="text-brand-blue underline">Payments</Link>
           <Link href="/admin/expenses" className="text-brand-blue underline">Expenses</Link>
+          <Link href="/admin/drive-folders" className="text-brand-blue underline">Drive folders</Link>
         </div>
       </section>
     </Screen>

@@ -113,3 +113,16 @@ export function allocateNumberFor(docType: "TAX_INVOICE" | "EXPORT_INVOICE" | "P
   if (docType === "CREDIT_NOTE") return allocate(tx, "creditNote", now);
   return allocate(tx, "invoice", now);
 }
+
+/**
+ * Read-only preview of the number the next approval of `docType` would take (ADR 0009 cancel sheet: "Next invoice …").
+ * Never consumes the counter; mirrors `allocate` including the FY rollover (a new FY starts at 0001).
+ */
+export async function peekNextNumber(docType: "TAX_INVOICE" | "EXPORT_INVOICE" | "PROFORMA" | "CREDIT_NOTE" = "TAX_INVOICE", now: Date = new Date(), tx: Tx = prisma): Promise<string> {
+  const kind: Kind = docType === "PROFORMA" ? "proforma" : docType === "CREDIT_NOTE" ? "creditNote" : "invoice";
+  const s = await tx.companySettings.upsert({ where: { id: "default" }, update: {}, create: { id: "default" } });
+  const key = financialYearKey(now, s.timezone);
+  const counter = s[COLUMN[kind].counter as "invoiceNextNumber" | "receiptNextNumber" | "proformaNextNumber" | "creditNoteNextNumber"];
+  const n = s.numberingFyKey === "" || s.numberingFyKey === key ? counter : 1;
+  return formatNumber(s[COLUMN[kind].prefix], key, n);
+}

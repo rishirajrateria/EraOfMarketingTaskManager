@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
 import { Sheet } from "@/components/ui/Sheet";
-import { Field, btnDanger, btnPrimary, inputCls } from "@/components/ui/Field";
+import { Field, btnDanger, btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
 import { formatINR } from "@/server/finance/money";
-import { createCreditNote, holdWork, pushForward } from "@/server/finance/invoices";
+import { cancelInvoice, createCreditNote, holdWork, pushForward } from "@/server/finance/invoices";
 import type { InvoiceDetail } from "@/server/finance/queries";
 import { addDaysKey } from "@/components/finance/finance-ui";
 import { useAction } from "@/components/finance/useAction";
@@ -94,6 +94,62 @@ export function CreditNoteSheet({ inv, open, onClose }: { inv: InvoiceDetail; op
         </Field>
         <button type="submit" className={`${btnPrimary} w-full`} disabled={pending}>{pending ? "Creating…" : "Create credit note"}</button>
       </form>
+    </Sheet>
+  );
+}
+
+/**
+ * Cancel a sent invoice (ADR 0009, prototype `cancelSheet`): the number stays used, the next invoice continues the
+ * series; a reason is required and printed on the stamped copy; the client can be told by email / WhatsApp.
+ */
+export function CancelInvoiceSheet({ inv, nextNumber, open, onClose }: { inv: InvoiceDetail; nextNumber: string; open: boolean; onClose: () => void }) {
+  const { pending, run, toast } = useAction();
+  const [reason, setReason] = useState("");
+  const [email, setEmail] = useState(!!inv.client.email);
+  const [whatsapp, setWhatsapp] = useState(false);
+  const submit = () => {
+    if (!reason.trim()) return toast("Write a short reason", "err");
+    run(
+      () => cancelInvoice(inv.id, { reason, email, whatsapp }),
+      (d) => {
+        onClose();
+        if (d.errors.length) toast(d.errors.join("; "), "err");
+        return `${d.number} cancelled${d.emailed || d.whatsapped ? " · client informed" : ""} · next invoice will be ${d.nextNumber}`;
+      },
+    );
+  };
+  const kv = (k: React.ReactNode, v: React.ReactNode) => (
+    <div className="flex justify-between gap-3 py-0.5 text-sm">
+      <span className="text-gray-600">{k}</span>
+      <span className="text-right">{v}</span>
+    </div>
+  );
+  return (
+    <Sheet open={open} onClose={onClose} title={`Cancel ${inv.number}?`}>
+      <div className="space-y-3 px-4 py-4">
+        <div className="glass rounded-2xl px-3 py-2">
+          {kv("Client", inv.clientName)}
+          {kv("Amount", <b>{formatINR(inv.total)}</b>)}
+          {kv(`Number ${inv.number}`, "stays used")}
+          {kv("Next invoice", nextNumber)}
+        </div>
+        <Field label="Reason" hint="Printed on the cancelled copy and kept in the log">
+          <textarea rows={3} className={inputCls} placeholder="e.g. Wrong amount, will reissue" value={reason} onChange={(e) => setReason(e.target.value)} />
+        </Field>
+        <label className="glass flex items-start gap-3 rounded-2xl px-3 py-2 text-sm">
+          <input type="checkbox" className="mt-1 h-4 w-4 accent-brand-blue" checked={email} disabled={!inv.client.email} onChange={(e) => setEmail(e.target.checked)} />
+          <span><b className="block">Tell the client by email</b><span className="block text-[11px] text-gray-500">{inv.client.email || "no email on file"}</span></span>
+        </label>
+        <label className="glass flex items-start gap-3 rounded-2xl px-3 py-2 text-sm">
+          <input type="checkbox" className="mt-1 h-4 w-4 accent-brand-blue" checked={whatsapp} disabled={!inv.client.whatsapp} onChange={(e) => setWhatsapp(e.target.checked)} />
+          <span><b className="block">Tell the client on WhatsApp</b><span className="block text-[11px] text-gray-500">{inv.client.whatsapp || "no WhatsApp number"}</span></span>
+        </label>
+        <p className="text-xs text-gray-600">Already reported this invoice in your GST return? Issue a credit note instead of cancelling.</p>
+        <div className="flex gap-2">
+          <button type="button" className={`${btnSecondary} flex-1`} onClick={onClose}>Keep it</button>
+          <button type="button" className={`${btnDanger} flex-1`} disabled={pending} onClick={submit}>{pending ? "Cancelling…" : "Cancel invoice"}</button>
+        </div>
+      </div>
     </Sheet>
   );
 }

@@ -20,7 +20,8 @@ Sign in as **Admin** from the demo chooser. Everything below is in the order a r
   email, WhatsApp, TDS %. With an empty GSTIN the **State** select is still there ("Same state as you (West Bengal) →
   CGST+SGST · other state → IGST") and the badge flips live as you pick a state. Pick a country outside India → the state
   select becomes a **Currency** select (USD / AED / …) and the badge reads Export Invoice.
-- **Settings → TDS** → threshold on expenses (default ₹20,000; "per payee, per financial year").
+- **Settings → TDS & GST pack** → threshold on expenses (default ₹20,000; "per payee, per financial year"; salaries not
+  counted) and **Finance person's email** (where the monthly GST pack goes).
 
 ## 2. Tasks (dashboard)
 - **+** → task: title, description (mic for dictation), record a voice note (mic on the dark bar). Green rows (labels on
@@ -75,15 +76,45 @@ Sign in as **Admin** from the demo chooser. Everything below is in the order a r
 - **Credit note** (reduce or cancel) → approve & send it. Try **Proforma** on step 4 and **Convert to invoice** later.
 - Part plan: **Issue now**, **Edit schedule**, **Merge remaining into one**.
 - ☰ → **Payments**: tiles, awaiting approval, due soon, upcoming parts, outstanding by client, client ledger.
+- **Cancel a sent invoice** (ADR 0009): on a Sent / Overdue invoice with no payments → green pill **Cancel invoice** →
+  sheet shows Client, Amount, "Number EOM/…/0003 · stays used", "Next invoice EOM/…/0004", a required Reason, "Tell the
+  client by email" / "on WhatsApp", and "Already reported this invoice in your GST return? Issue a credit note instead of
+  cancelling." → **Keep it** / **Cancel invoice**. The page shows the red banner (Cancelled on …, Reason, "Number … stays
+  used …", filed in Drive › Finance › YYYY-MM › Cancelled invoices); **Preview** has the big rotated CANCELLED stamp and
+  the reason. The next approved invoice takes the "Next invoice" number. On an invoice with a payment or credit note the
+  pill toasts "This invoice has payments. Use a credit note to reverse it." A part-plan invoice cancels its pending parts;
+  a hold tied to it is released. Invoice list: the **Cancelled** tab has it; **All** and the tiles leave it out.
 
 ## 4. Back office
-- **Expense** → add with photo + voice note, filter by month/category, export CSV (has tds columns).
-- **Expense TDS** → add ₹12,000 then ₹8,000 to the same vendor (vary the case): the amber banner "Paid ₹20,000 to … this FY
-  (threshold ₹20,000). TDS applies." appears live; saving without **Deduct TDS** toasts the warning and drops a 🔔
-  "TDS threshold crossed" notification. Tick **Deduct TDS** → % → amount auto-fills, "Net payable" shown; the row gets a
-  "TDS ₹…" chip. **TDS** zone pill → per-payee FY sheet (paid / TDS deducted / status).
-- **Finance sheet** → tiles, charts, push to Google Sheet (mock); **TDS · FY** section: receivable, deducted on expenses,
-  by client; **Previous FY** toggle.
+- **Expenses = payables** (ADR 0009). Tabs in the green zone: **To pay · Paid · GST credit · All bills · TDS by payee**.
+  - **+ Add expense** opens the bill editor page: amount, Regular / Salary (salary → team member, "Salaries", Postpaid,
+    monthly on the last day), payee (suggests earlier payees), category with **+ New** (appears in Settings → Expenses),
+    Prepaid / Postpaid / Advance, schedule **One time** (due on, "Already paid" + method) / **Recurring** (first due + the
+    ⟳ repeat picker: quick picks, Daily…Yearly, every N, weekdays, "On a date" incl. last day or "On a weekday" incl.
+    last, ends never / after N / until) / **Part payments** (fixed ₹ or %, must add up), Remind me (on the day … 1 week).
+  - **To pay**: tiles Overdue / Due in 7 days / Due this month / Paid this month; groups Overdue (red rows), Next 7 days,
+    Later; each row has category / Salary / timing / schedule tags, "due in N days" and **Mark paid**.
+  - **Mark paid** sheet: amount (pay less → "Part paid · balance ₹… still due" and a "Balance of …" row stays), paid on,
+    Cash / UPI / Bank transfer / Card / Cheque, reference, **Bill & GST** (attach PDF/photo ≤ 12 MB, "This bill includes
+    GST", 5/12/18/28 % → GST auto = amount × rate / (100 + rate), editable, vendor GSTIN, "I'll get this GST back"; without
+    a file: "Attach the bill: the claim needs …"), TDS toggle (% → amount). Paying a recurring bill shows "· next ₹… on dd
+    Mon"; a part plan "· next: Part 2 of 2 … " / "· all parts paid".
+  - Tap a row → sheet with details + Mark paid / Move the due date / Skip this one (recurring) / Undo paid / Bill & GST
+    details / Edit schedule. After a payment the editor says the schedule can't change; a new amount updates future dues.
+  - **Paid**: Paid · 30 days, TDS deducted · FY, by category; rows with method, TDS · net, GST · claimable, 📎 bill / no bill.
+  - **GST credit**: month ‹ › navigator, "GST you'll get back", "Bills attached n / m", amber missing-bill warning,
+    Claimable vs "GST paid, not claimable"; bar: **Drive** (opens Finance › YYYY-MM › GST claimable), **Download** (ZIP of
+    bills + summary.csv), **Send** (finance email, saved in Settings; mock mail in GOOGLE_MOCK).
+  - **TDS by payee**: paid basis this FY, salaries excluded, "over threshold · deduct TDS" / "₹… left before threshold".
+    Paying a payee over the threshold without TDS toasts the warning and drops a 🔔 "TDS threshold crossed".
+  - Reminders: the payables job (`/api/jobs/payables`) sends 🔔 "Payment due in 3 days: Skyline Spaces ₹25,000 · Rent" /
+    "Overdue: …" once per payment, `remindDays` before the due date.
+  - **Export** (Paid basis CSV with TDS + GST columns) and the Expenses sheet mirror.
+- ☰ → **Monthly Drive folders**: this FY's months newest first, each with Sales invoices / Expense bills / GST claimable
+  (₹) / Cancelled invoices counts, **Open in Drive** and **GST pack ›** (jumps to the GST credit tab for that month).
+- **Finance sheet** → tiles (expenses on a paid basis, plus **To pay · 30 days**, **Overdue to pay**, **GST to claim ·
+  <Mon>**, **Expense bills attached · n this month**), charts, push to Google Sheet (mock); **TDS · FY** section:
+  receivable, deducted on expenses, by client; **Previous FY** toggle.
 - **Attendance** (HR/Admin mark cells), **Leave** (request as a demo Executive, approve as HR, then "shift tasks" as Admin).
 - **Inventory** → Day (hourly grid), Week, Month, Quarter, Year.
 - **Client vault** → add a credential, grant a Team Leader access for 10 minutes after first open, switch role and reveal it.

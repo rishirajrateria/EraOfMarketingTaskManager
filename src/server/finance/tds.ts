@@ -10,7 +10,8 @@ import { financialYearKey } from "@/server/finance/numbering";
  * TDS helpers (ADR 0006). The financial year runs 1 April – 31 March in the company timezone.
  * - Receivable: TDS the clients deduct on our invoices (Payment.tdsAmount) — a credit at year end.
  * - On expenses: TDS we must deduct when paying a payee once the FY total reaches the threshold
- *   (CompanySettings.tdsThresholdAmount, per payee, resets every 1 April).
+ *   (CompanySettings.tdsThresholdAmount, per payee, resets every 1 April). ADR 0009: computed from PAID bill
+ *   occurrences by paid date; salary bills are excluded from the payee threshold.
  */
 export type FyRange = { start: Date; end: Date; key: string };
 
@@ -31,22 +32,28 @@ async function tz(): Promise<string> {
   return (await getSettings()).timezone;
 }
 
-/** Sum of Expense.amount (gross) for `vendor` in the FY that contains `date`, excluding one expense (when editing). */
-export async function vendorFyTotal(vendor: string, date: Date, excludeExpenseId?: string | null): Promise<number> {
-  const key = vendorKey(vendor);
-  if (!key) return 0;
+/** PAID occurrences of regular (non-salary) bills paid to `vendor` (case-insensitive) within `range` (ADR 0009: paid basis). */
+function payeeWhere(vendor: string, range: { gte: Date; lt: Date }, excludeOccurrenceId?: string | null): Prisma.ExpenseOccurrenceWhereInput {
+  return {
+    status: "PAID",
+    paidAt: range,
+    expense: { kind: "REGULAR", vendor: { equals: vendor.trim(), mode: "insensitive" } },
+    ...(excludeOccurrenceId ? { id: { not: excludeOccurrenceId } } : {}),
+  };
+}
+
+/** Gross paid to `vendor` in the FY that contains `date` (paid occurrences, salaries excluded), optionally excluding one payment. */
+export async function vendorFyTotal(vendor: string, date: Date, excludeOccurrenceId?: string | null): Promise<number> {
+  if (!vendorKey(vendor)) return 0;
   const fy = fyRange(date, await tz());
-  const agg = await prisma.expense.aggregate({
-    where: { vendor: { equals: key, mode: "insensitive" }, date: { gte: fy.start, lt: fy.end }, ...(excludeExpenseId ? { id: { not: excludeExpenseId } } : {}) },
-    _sum: { amount: true },
-  });
+  const agg = await prisma.expenseOccurrence.aggregate({ where: payeeWhere(vendor, { gte: fy.start, lt: fy.end }, excludeOccurrenceId), _sum: { amount: true } });
   return round2(agg._sum.amount?.toNumber() ?? 0);
 }
 
 export type TdsThresholdStatus = {
   vendor: string;
   fyKey: string;
-  /** Gross paid to this payee so far in the FY (other expenses). */
+  /** Gross paid to this payee so far in the FY (other payments). */
   paidSoFar: number;
   /** paidSoFar + the amount being recorded. */
   withThis: number;
@@ -57,12 +64,12 @@ export type TdsThresholdStatus = {
   alreadyCrossed: boolean;
 };
 
-/** Where `vendor` stands against the threshold once `amount` (dated `date`) is added. */
-export async function tdsThresholdStatus(vendor: string, amount: number, date: Date, excludeExpenseId?: string | null): Promise<TdsThresholdStatus> {
+/** Where `vendor` stands against the threshold once `amount` (paid on `date`) is added. */
+export async function tdsThresholdStatus(vendor: string, amount: number, date: Date, excludeOccurrenceId?: string | null): Promise<TdsThresholdStatus> {
   const settings = await getSettings();
   const threshold = Number(settings.tdsThresholdAmount);
   const fy = fyRange(date, settings.timezone);
-  const paidSoFar = await vendorFyTotal(vendor, date, excludeExpenseId);
+  const paidSoFar = await vendorFyTotal(vendor, date, excludeOccurrenceId);
   const withThis = round2(paidSoFar + (Number.isFinite(amount) ? amount : 0));
   return { vendor: vendor.trim(), fyKey: fy.key, paidSoFar, withThis, threshold, crossed: withThis >= threshold, alreadyCrossed: paidSoFar >= threshold };
 }
@@ -76,17 +83,21 @@ export function tdsWarningText(s: TdsThresholdStatus, tdsApplied: boolean): stri
 export type VendorTdsRow = { vendor: string; paid: number; tds: number; expenses: number; crossed: boolean };
 export type VendorTdsSummary = { fyKey: string; threshold: number; vendors: VendorTdsRow[] };
 
-/** Per-payee totals for the FY containing `now`: gross paid, TDS deducted, and whether the threshold is reached. */
+/** Per-payee totals for the FY containing `now` on a paid basis (salaries excluded): gross paid, TDS deducted, payments, threshold reached. */
 export async function vendorTdsSummary(now = new Date()): Promise<VendorTdsSummary> {
   const settings = await getSettings();
   const fy = fyRange(now, settings.timezone);
   const threshold = Number(settings.tdsThresholdAmount);
-  const rows = await prisma.expense.findMany({ where: { date: { gte: fy.start, lt: fy.end }, vendor: { not: null } }, select: { vendor: true, amount: true, tdsAmount: true }, orderBy: { date: "asc" } });
+  const rows = await prisma.expenseOccurrence.findMany({
+    where: { status: "PAID", paidAt: { gte: fy.start, lt: fy.end }, expense: { kind: "REGULAR", vendor: { not: null } } },
+    select: { amount: true, tdsAmount: true, expense: { select: { vendor: true } } },
+    orderBy: { paidAt: "asc" },
+  });
   const map = new Map<string, VendorTdsRow>();
   for (const r of rows) {
-    const key = vendorKey(r.vendor);
+    const key = vendorKey(r.expense.vendor);
     if (!key) continue;
-    const v = map.get(key) ?? { vendor: r.vendor!.trim(), paid: 0, tds: 0, expenses: 0, crossed: false };
+    const v = map.get(key) ?? { vendor: r.expense.vendor!.trim(), paid: 0, tds: 0, expenses: 0, crossed: false };
     v.paid = round2(v.paid + r.amount.toNumber());
     v.tds = round2(v.tds + r.tdsAmount.toNumber());
     v.expenses++;
@@ -102,7 +113,7 @@ export type TdsSummary = {
   end: string;
   /** TDS clients deducted on payments received in the FY (credit due to the company). */
   receivable: number;
-  /** TDS the company deducted on expenses dated in the FY. */
+  /** TDS the company deducted on bill payments made in the FY (paid occurrences, salaries included). */
   onExpenses: number;
   byClient: { clientId: string; clientName: string; tds: number; payments: number }[];
 };
@@ -113,7 +124,7 @@ export async function tdsSummary(at = new Date()): Promise<TdsSummary> {
   const range = { gte: fy.start, lt: fy.end };
   const [payments, expenses] = await Promise.all([
     prisma.payment.findMany({ where: { receivedAt: range, tdsAmount: { gt: new Prisma.Decimal(0) } }, select: { tdsAmount: true, invoice: { select: { clientId: true, client: { select: { name: true } } } } } }),
-    prisma.expense.aggregate({ where: { date: range }, _sum: { tdsAmount: true } }),
+    prisma.expenseOccurrence.aggregate({ where: { status: "PAID", paidAt: range }, _sum: { tdsAmount: true } }),
   ]);
   const clients = new Map<string, TdsSummary["byClient"][number]>();
   for (const p of payments) {

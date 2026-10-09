@@ -165,6 +165,7 @@ export async function getSettingsDto() {
     halfDayMinutes: s.halfDayMinutes,
     expenseCategories: s.expenseCategories,
     tdsThresholdAmount: Number(s.tdsThresholdAmount),
+    financeEmail: s.financeEmail,
     updatedAt: s.updatedAt.toISOString(),
   };
 }

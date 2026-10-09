@@ -1,170 +1,110 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
-import { Sheet } from "@/components/ui/Sheet";
 import { BarChip, BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
 import { useToast } from "@/components/ui/Toast";
-import { formatINR } from "@/server/finance/money";
-import type { ExpenseRow } from "@/server/finance/queries";
-import { deleteExpense, exportExpensesCsv, syncExpensesToSheet } from "@/server/finance/expenses";
-import { ExpenseForm } from "@/components/finance/ExpenseForm";
-import { VendorTdsSheet } from "@/components/finance/VendorTdsSheet";
+import { exportExpensesCsv } from "@/server/finance/expenses";
+import type { BillRow } from "@/server/finance/payables-queries";
 import type { VendorTdsSummary } from "@/server/finance/tds";
-import { downloadText, fmtDay, monthLabel, shiftMonthKey } from "@/components/finance/finance-ui";
+import { downloadText } from "@/components/finance/finance-ui";
+import { allItems, type Item } from "@/components/finance/payables/payables-ui";
+import { BillsTab, DueTab, PaidTab, TdsTab } from "@/components/finance/payables/PayablesTabs";
+import { GstCreditTab, gstMonthItems } from "@/components/finance/payables/GstCreditTab";
+import { MarkPaidSheet } from "@/components/finance/payables/MarkPaidSheet";
+import { BillDetailsSheet, OccurrenceSheet, SendPackSheet } from "@/components/finance/payables/OccurrenceSheets";
 
-type Props = { rows: ExpenseRow[]; total: number; categories: string[]; month: string; category: string | null; canWrite: boolean; tz: string; tds: VendorTdsSummary };
+export const EXPENSE_TABS = [
+  ["DUE", "To pay"],
+  ["PAID", "Paid"],
+  ["GST", "GST credit"],
+  ["BILLS", "All bills"],
+  ["TDS", "TDS by payee"],
+] as const;
+export type ExpenseTab = (typeof EXPENSE_TABS)[number][0];
+
+type Props = { bills: BillRow[]; today: string; tab: ExpenseTab; gstMonth: string; tds: VendorTdsSummary; tdsFy: number; financeEmail: string; itcFolderUrl: string | null; canWrite: boolean };
+type SheetState = { kind: "occ" | "pay" | "bill" | "pack"; item?: Item } | null;
 
 /**
- * Expense log (SPEC §11.2): month + category filters, totals, CSV export, Sheet sync, add/edit/delete.
- * `categories` is the fixed list from Settings (ADR 0004); a filter on a removed category still shows as a chip.
+ * Expenses = payables (ADR 0009, prototype PAGES.expenses): bills with scheduled payments. Tabs in the bottom zone —
+ * To pay · Paid · GST credit · All bills · TDS by payee — with per-tab actions in the bar.
  */
-export function ExpensesView({ rows, total, categories, month, category, canWrite, tz, tds }: Props) {
+export function ExpensesView({ bills, today, tab: initialTab, gstMonth, tds, tdsFy, financeEmail, itcFolderUrl, canWrite }: Props) {
   const router = useRouter();
-  const chips = category && !categories.some((c) => c.toLowerCase() === category.toLowerCase()) ? [...categories, category] : categories;
   const toast = useToast();
-  const [editing, setEditing] = useState<ExpenseRow | null | "new">(null);
-  const [tdsOpen, setTdsOpen] = useState(false);
-  const [busy, setBusy] = useState<string | null>(null);
-
-  function navigate(next: { month?: string; category?: string | null }) {
-    const p = new URLSearchParams();
-    const m = next.month ?? month;
-    const c = next.category === undefined ? category : next.category;
-    if (m) p.set("month", m);
-    if (c) p.set("category", c);
-    router.push(`/admin/expenses?${p.toString()}`);
-  }
+  const [tab, setTab] = useState<ExpenseTab>(initialTab);
+  const [sheet, setSheet] = useState<SheetState>(null);
+  const items = useMemo(() => allItems(bills), [bills]);
+  const due = useMemo(() => items.filter((x) => x.occ.status === "DUE").sort((a, b) => a.occ.dueKey.localeCompare(b.occ.dueKey)), [items]);
+  const paid = useMemo(() => items.filter((x) => x.occ.status === "PAID").sort((a, b) => (b.occ.paidKey ?? "").localeCompare(a.occ.paidKey ?? "")), [items]);
+  const close = () => setSheet(null);
+  const open = (x: Item) => setSheet({ kind: "occ", item: x });
+  const pay = (x: Item) => (canWrite ? setSheet({ kind: "pay", item: x }) : undefined);
+  const pickTab = (k: ExpenseTab) => {
+    setTab(k);
+    window.history.replaceState(null, "", k === "GST" ? `/admin/expenses?tab=GST&month=${gstMonth}` : `/admin/expenses?tab=${k}`);
+  };
+  const claim = gstMonthItems(paid, gstMonth).claim;
 
   async function onExport() {
-    setBusy("csv");
-    const res = await exportExpensesCsv({ month, category });
-    setBusy(null);
+    const res = await exportExpensesCsv({});
     if (!res.ok) return toast(res.error, "err");
-    downloadText(`expenses-${month || "all"}.csv`, res.data);
+    downloadText("expenses-paid.csv", res.data);
   }
-  async function onSync() {
-    setBusy("sync");
-    const res = await syncExpensesToSheet();
-    setBusy(null);
-    if (!res.ok) return toast(res.error, "err");
-    toast(res.data.created ? `Sheet created: ${res.data.spreadsheetId} — set GOOGLE_EXPENSES_SHEET_ID` : `Synced ${res.data.rows} rows`);
-  }
-  async function onDelete(row: ExpenseRow) {
-    if (!confirm(`Delete ${row.category} ${formatINR(row.amount)}?`)) return;
-    const res = await deleteExpense(row.id);
-    if (!res.ok) return toast(res.error, "err");
-    toast("Deleted");
-    router.refresh();
-  }
+
+  const body =
+    tab === "DUE" ? <DueTab due={due} paid={paid} today={today} onOpen={open} onPay={pay} />
+    : tab === "PAID" ? <PaidTab paid={paid} today={today} tdsFy={tdsFy} fyKey={tds.fyKey} onOpen={open} />
+    : tab === "GST" ? <GstCreditTab paid={paid} month={gstMonth} onMonth={(m) => router.push(`/admin/expenses?tab=GST&month=${m}`)} onOpen={(x) => setSheet({ kind: "bill", item: x })} />
+    : tab === "BILLS" ? <BillsTab bills={bills} today={today} />
+    : <TdsTab tds={tds} />;
 
   return (
     <div className="flex flex-1 flex-col">
       <div className="bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 px-4 pb-3 pt-3 text-white backdrop-blur-xl">
-        <div className="flex items-end justify-between">
-          <div>
-            <div className="text-[11px] uppercase opacity-80">{month ? monthLabel(month) : "All time"}{category ? ` · ${category}` : ""}</div>
-            <div className="text-xs opacity-80">{rows.length} expense{rows.length === 1 ? "" : "s"}</div>
-          </div>
-          <div className="text-right">
-            <div className="text-[11px] uppercase opacity-80">Total</div>
-            <div className="text-lg font-bold">{formatINR(total)}</div>
-          </div>
-        </div>
+        <h1 className="text-base font-semibold">Expenses</h1>
+        <div className="text-xs opacity-85">{due.length} to pay · {bills.length} bill{bills.length === 1 ? "" : "s"}</div>
       </div>
-
-      <ul className="min-h-0 flex-1 divide-y divide-white/60 overflow-y-auto bg-white/55 backdrop-blur-md">
-        {rows.length === 0 ? <li className="px-4 py-8 text-center text-sm text-gray-500">No expenses in this period.</li> : null}
-        {rows.map((r) => (
-          <li key={r.id} className="px-4 py-3">
-            <div className="flex items-start gap-3">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="truncate text-sm font-semibold">{r.category}</span>
-                  {r.vendor ? <span className="truncate text-xs text-gray-500">· {r.vendor}</span> : null}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {fmtDay(r.date, tz)} · {r.createdBy}
-                  {r.tags.length ? ` · ${r.tags.map((t) => `#${t}`).join(" ")}` : ""}
-                </div>
-                {r.note ? <div className="mt-0.5 text-xs text-gray-700">{r.note}</div> : null}
-                <div className="mt-1 flex gap-3 text-xs">
-                  {r.hasReceipt ? (
-                    <a href={`/api/files/expense/${r.id}/receipt`} target="_blank" rel="noreferrer" className="text-brand-blue underline">
-                      🧾 bill
-                    </a>
-                  ) : null}
-                  {r.hasVoice ? (
-                    <a href={`/api/files/expense/${r.id}/voice`} target="_blank" rel="noreferrer" className="text-brand-blue underline">
-                      🎤 voice {r.voiceDurationSec ? `${r.voiceDurationSec}s` : ""}
-                    </a>
-                  ) : null}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-bold">{formatINR(r.amount)}</div>
-                {r.tdsAmount > 0 ? <span className="inline-block rounded-full bg-amber-100/80 px-2 py-0.5 text-[10px] font-semibold text-amber-800">TDS {formatINR(r.tdsAmount)}</span> : null}
-                {canWrite ? (
-                  <div className="mt-1 flex justify-end gap-2 text-xs">
-                    <button type="button" className="text-brand-blue" onClick={() => setEditing(r)}>
-                      Edit
-                    </button>
-                    <button type="button" className="text-red-600" onClick={() => onDelete(r)}>
-                      Delete
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
-
+      <div className="min-h-0 flex-1 overflow-y-auto bg-white/55 pb-4 backdrop-blur-md">{body}</div>
       <BottomZone
         rows={
-          <>
-            <ZoneRow label="Month">
-              <ZonePill onClick={() => navigate({ month: shiftMonthKey(month || new Date().toISOString().slice(0, 7), -1) })} label="Previous month">‹</ZonePill>
-              <ZonePill active={!!month}>{month ? monthLabel(month) : "Pick month"}</ZonePill>
-              <ZonePill onClick={() => navigate({ month: shiftMonthKey(month || new Date().toISOString().slice(0, 7), 1) })} label="Next month">›</ZonePill>
-              <ZonePill active={!month} onClick={() => navigate({ month: "" })}>All time</ZonePill>
-            </ZoneRow>
-            <ZoneRow label="Category">
-              <ZonePill active={!category} onClick={() => navigate({ category: null })}>All</ZonePill>
-              {chips.map((c) => (
-                <ZonePill key={c} active={category?.toLowerCase() === c.toLowerCase()} onClick={() => navigate({ category: c })}>{c}</ZonePill>
-              ))}
-            </ZoneRow>
-          </>
+          <ZoneRow label="Expense tabs">
+            {EXPENSE_TABS.map(([k, l]) => (
+              <ZonePill key={k} active={tab === k} onClick={() => pickTab(k)}>{l}</ZonePill>
+            ))}
+          </ZoneRow>
         }
         left={
-          <>
-            <ZonePill onClick={onExport} className={busy === "csv" ? "opacity-60" : ""}>Export CSV</ZonePill>
-            <ZonePill onClick={() => setTdsOpen(true)} label="TDS by payee">TDS</ZonePill>
-            {canWrite ? <ZonePill onClick={onSync} className={busy === "sync" ? "opacity-60" : ""}>{busy === "sync" ? "Syncing…" : "Sync to Sheet"}</ZonePill> : null}
-          </>
+          tab === "GST" ? (
+            <>
+              {itcFolderUrl ? (
+                <a href={itcFolderUrl} target="_blank" rel="noreferrer" className="no-select flex h-[22px] shrink-0 items-center rounded-full bg-green-pill px-2.5 text-[11px] text-[#111]">Drive</a>
+              ) : null}
+              <a href={`/api/finance/gst-pack?month=${gstMonth}`} className="no-select flex h-[22px] shrink-0 items-center rounded-full bg-green-pill px-2.5 text-[11px] text-[#111]">Download</a>
+            </>
+          ) : (
+            <ZonePill onClick={onExport} label="Export paid payments as CSV">Export</ZonePill>
+          )
         }
         right={
           canWrite ? (
-            <BarChip onClick={() => setEditing("new")} label="Add expense" className="font-semibold">
-              <Plus size={12} className="mr-0.5" /> Add expense
-            </BarChip>
+            tab === "GST" ? (
+              <BarChip onClick={() => setSheet({ kind: "pack" })} label="Send GST pack" className="font-semibold">Send</BarChip>
+            ) : (
+              <BarChip onClick={() => router.push("/admin/expenses/new")} label="Add expense" className="font-semibold">
+                <Plus size={12} className="mr-0.5" /> Add expense
+              </BarChip>
+            )
           ) : null
         }
       />
-      <VendorTdsSheet summary={tds} open={tdsOpen} onClose={() => setTdsOpen(false)} />
-      <Sheet open={editing !== null} onClose={() => setEditing(null)} title={editing === "new" ? "Add expense" : "Edit expense"}>
-        {editing !== null ? (
-          <ExpenseForm
-            initial={editing === "new" ? null : editing}
-            categories={categories}
-            onDone={() => {
-              setEditing(null);
-              router.refresh();
-            }}
-          />
-        ) : null}
-      </Sheet>
+      {sheet?.kind === "occ" && sheet.item ? (
+        <OccurrenceSheet item={sheet.item} today={today} onClose={close} onMarkPaid={() => setSheet({ kind: "pay", item: sheet.item })} onBillDetails={() => setSheet({ kind: "bill", item: sheet.item })} />
+      ) : null}
+      {sheet?.kind === "pay" && sheet.item ? <MarkPaidSheet item={sheet.item} today={today} onClose={close} /> : null}
+      {sheet?.kind === "bill" && sheet.item ? <BillDetailsSheet item={sheet.item} onClose={close} /> : null}
+      {sheet?.kind === "pack" ? <SendPackSheet month={gstMonth} claim={claim} financeEmail={financeEmail} onClose={close} /> : null}
     </div>
   );
 }

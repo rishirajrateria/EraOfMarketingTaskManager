@@ -21,7 +21,7 @@ describe("finance sheet push-only sync", () => {
     expect((await approveAndSend(c.data.id, {})).ok).toBe(true);
     const p = await recordPayment({ invoiceId: c.data.id, amount: 1000, receivedAt: "2026-09-05", reference: "UTR1" });
     if (!p.ok) throw new Error(p.error);
-    await testDb.expense.create({ data: { date: new Date(), amount: 250, category: "Travel", createdById: seed.admin.id } });
+    await testDb.expense.create({ data: { date: new Date(), amount: 250, category: "Travel", createdById: seed.admin.id, occurrences: { create: { seq: 1, amount: 250, dueDate: new Date(), status: "PAID", paidAt: new Date() } } } });
     const sync = await syncFinanceSheet(seed.admin.id);
     expect(sync).toEqual({ spreadsheetId: "mock_sheet_finance", created: expect.any(Boolean), rows: 3 });
     expect(sync).not.toHaveProperty("imported");

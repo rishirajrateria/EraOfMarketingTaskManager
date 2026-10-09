@@ -18,6 +18,7 @@ export const MENU_GROUPS: { href: string; label: string }[][] = [
     { href: "/admin/invoices", label: "PAYMENT Creator" },
     { href: "/admin/payments", label: "Payments" },
     { href: "/admin/finance", label: "Finance sheet" },
+    { href: "/admin/drive-folders", label: "Monthly Drive folders" },
   ],
   [
     { href: "/attendance", label: "Attendance" },

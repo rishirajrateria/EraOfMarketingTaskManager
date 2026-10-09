@@ -10,7 +10,8 @@ import { issuePartCore, mergeRemainingPartsCore, updatePartScheduleCore } from "
 import { convertProformaCore, createCreditNoteCore } from "@/server/finance/credit-notes";
 import { holdWorkCore, resumeWorkCore, type HoldResult, type ResumeResult } from "@/server/finance/hold-work";
 import { sendReminderCore } from "@/server/finance/reminder-core";
-import { approveOptionsSchema, creditNoteInputSchema, dateInput, invoiceInputSchema, mergePartsSchema, parseInput, partScheduleSchema } from "@/server/finance/schemas";
+import { cancelInvoiceCore, type CancelResult } from "@/server/finance/cancel-core";
+import { approveOptionsSchema, cancelInvoiceSchema, creditNoteInputSchema, dateInput, invoiceInputSchema, mergePartsSchema, parseInput, partScheduleSchema } from "@/server/finance/schemas";
 
 /** Invoicing v2 server actions (ADR 0005). All mutations are ADMIN-only; nothing here sends without approval. */
 const LIST = "/admin/invoices";
@@ -174,5 +175,19 @@ export async function deleteInvoice(id: string): Promise<ActionResult<undefined>
     await audit(actor.id, "invoice.delete", "Invoice", id, { number: inv.number, status: inv.status }, null);
     safeRevalidate(LIST, "/admin/finance", "/admin/payments");
     return undefined;
+  });
+}
+
+/**
+ * ADR 0009: cancel a SENT / OVERDUE invoice with no payments or credit notes. The number stays used; the next
+ * approval continues the series. Optional email / WhatsApp notice to the client.
+ */
+export async function cancelInvoice(id: string, raw: unknown): Promise<ActionResult<CancelResult>> {
+  return wrap(async () => {
+    const actor = await requireWrite();
+    const opts = parseInput(cancelInvoiceSchema, raw);
+    const res = await cancelInvoiceCore(id, opts, actor.id);
+    safeRevalidate(...paths(id), "/admin/drive-folders", "/dashboard");
+    return res;
   });
 }

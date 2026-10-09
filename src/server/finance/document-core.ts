@@ -215,6 +215,8 @@ export function toPdfInvoice(inv: InvoiceFull): PdfInvoice {
     notes: inv.notes,
     paymentTerms: inv.paymentTerms,
     status: inv.status,
+    cancelReason: inv.cancelReason,
+    cancelledAt: inv.cancelledAt,
   };
 }
 

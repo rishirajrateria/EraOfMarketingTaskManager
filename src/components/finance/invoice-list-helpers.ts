@@ -10,6 +10,7 @@ export const INVOICE_TABS = [
   { key: "overdue", label: "Overdue" },
   { key: "proforma", label: "Proforma" },
   { key: "credit", label: "Credit notes" },
+  { key: "cancelled", label: "Cancelled" },
 ] as const;
 export type InvoiceTab = (typeof INVOICE_TABS)[number]["key"];
 
@@ -25,7 +26,8 @@ export function filterRows(rows: InvoiceRow[], tab: InvoiceTab): InvoiceRow[] {
     case "overdue": return rows.filter((r) => r.status === "OVERDUE");
     case "proforma": return rows.filter((r) => r.docType === "PROFORMA");
     case "credit": return rows.filter((r) => r.docType === "CREDIT_NOTE");
-    default: return rows;
+    case "cancelled": return rows.filter((r) => r.status === "CANCELLED");
+    default: return rows.filter((r) => r.status !== "CANCELLED"); // ADR 0009: cancelled invoices only under "Cancelled"
   }
 }
 

@@ -11,6 +11,7 @@ import { renderInvoicePdf } from "@/server/finance/pdf";
 import { FULL_INCLUDE, loadCompany, loadInvoiceFull, toPdfInvoice, type CompanyInfo, type InvoiceFull } from "@/server/finance/document-core";
 import { renderTemplate, storeForClientAndFinance, toBytes } from "@/server/finance/drive-store";
 import { publicInvoiceUrl } from "@/server/finance/links";
+import { fileSalesInvoice } from "@/server/finance/month-folders";
 import { loadSettlement } from "@/server/finance/settlement";
 import { applyCreditNoteEffect } from "@/server/finance/credit-notes";
 import type { ApproveOptions } from "@/server/finance/schemas";
@@ -104,6 +105,7 @@ export async function approveAndSendCore(id: string, opts: ApproveOptions, actor
   const fileName = `${inv.number}.pdf`;
   const { clientFileId, backendFileId } = await storeForClientAndFinance(inv.client, inv.docType === "CREDIT_NOTE" ? "CreditNotes" : "Invoices", { name: fileName, mimeType: "application/pdf", data: pdf });
   await prisma.invoice.update({ where: { id }, data: { pdfData: toBytes(pdf), pdfDriveFileId: clientFileId, pdfBackendFileId: backendFileId } });
+  await fileSalesInvoice(inv, pdf); // ADR 0009: Finance/<issue month>/Sales invoices (once)
   if (inv.docType === "CREDIT_NOTE" && firstApproval) await applyCreditNoteEffect(inv.id, actorId);
 
   const d = await deliver(inv, company, pdf, opts);

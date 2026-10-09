@@ -205,6 +205,8 @@ export const settingsInputSchema = z
     expenseCategories: expenseCategoryListSchema,
     /** ADR 0006: TDS applies once payments to one payee reach this amount within a financial year. */
     tdsThresholdAmount: z.number().min(0).max(1_000_000_000).default(20000),
+    /** ADR 0009: the finance person who receives the monthly GST pack. */
+    financeEmail: shortText(160).refine((v) => v === "" || z.email().safeParse(v).success, "Enter a valid finance email"),
   })
   .refine((s) => s.workStartMinutes < s.workEndMinutes, { message: "Work start must be before work end", path: ["workEndMinutes"] })
   .refine((s) => s.lunchStartMinutes <= s.lunchEndMinutes, { message: "Lunch start must be before lunch end", path: ["lunchEndMinutes"] })

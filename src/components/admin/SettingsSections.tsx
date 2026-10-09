@@ -210,11 +210,14 @@ export function InvoicingSection({ v, patch }: { v: SettingsValues; patch: Patch
 /** ADR 0006: TDS threshold on expenses — per payee, per financial year. */
 export function TdsSection({ v, patch }: { v: SettingsValues; patch: Patch }) {
   return (
-    <Section id="tds" title="TDS">
+    <Section id="tds" title="TDS & GST pack">
       <Field label="TDS threshold on expenses (₹)" hint="Per payee, per financial year (resets every 1 April)">
         <input className={inputCls} type="number" min={0} step={1} inputMode="decimal" value={v.tdsThresholdAmount} onChange={(e) => patch({ tdsThresholdAmount: e.target.value === "" ? 0 : Number(e.target.value) })} />
       </Field>
-      <p className="text-[11px] text-gray-400">Once payments to one payee reach this amount within the financial year, the expense form warns and admins are notified to deduct TDS.</p>
+      <p className="text-[11px] text-gray-400">Once payments to one payee reach this amount within the financial year, the mark-paid sheet warns and admins are notified to deduct TDS. Salaries are not counted.</p>
+      <Field label="Finance person's email" hint="The monthly GST pack (claimable expense bills) is sent here">
+        <input className={inputCls} type="email" value={v.financeEmail} placeholder="finance@yourca.in" onChange={(e) => patch({ financeEmail: e.target.value })} />
+      </Field>
     </Section>
   );
 }
