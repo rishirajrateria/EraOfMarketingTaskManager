@@ -4,7 +4,8 @@ import { tdsSummary, vendorTdsSummary } from "@/server/finance/tds";
 import { ensureMonthFolder, monthFolderUrls } from "@/server/finance/month-folders";
 import { getSettings } from "@/lib/settings";
 import { dateKey } from "@/lib/time";
-import { EXPENSE_TABS, ExpensesView, type ExpenseTab } from "@/components/finance/ExpensesView";
+import { ExpensesView } from "@/components/finance/ExpensesView";
+import { EXPENSE_TABS, type ExpenseTab } from "@/components/finance/payables/payables-ui";
 
 export const dynamic = "force-dynamic";
 

@@ -23,7 +23,7 @@ export async function vendorTdsStatus(vendor: string, amount: number, date: stri
   });
 }
 
-export const CSV_HEADERS = ["paidOn", "payee", "category", "type", "label", "amount", "tdsPercent", "tdsAmount", "netPaid", "method", "reference", "gstRate", "gstAmount", "vendorGstin", "gstClaimable", "bill", "note"];
+const CSV_HEADERS = ["paidOn", "payee", "category", "type", "label", "amount", "tdsPercent", "tdsAmount", "netPaid", "method", "reference", "gstRate", "gstAmount", "vendorGstin", "gstClaimable", "bill", "note"];
 
 /** CSV of the paid payments (optionally one month by paid date and/or one category); the client turns it into a download. */
 export async function exportExpensesCsv(filter: { month?: string | null; category?: string | null } = {}): Promise<ActionResult<string>> {

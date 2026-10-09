@@ -15,14 +15,8 @@ import { GstCreditTab, gstMonthItems } from "@/components/finance/payables/GstCr
 import { MarkPaidSheet } from "@/components/finance/payables/MarkPaidSheet";
 import { BillDetailsSheet, OccurrenceSheet, SendPackSheet } from "@/components/finance/payables/OccurrenceSheets";
 
-export const EXPENSE_TABS = [
-  ["DUE", "To pay"],
-  ["PAID", "Paid"],
-  ["GST", "GST credit"],
-  ["BILLS", "All bills"],
-  ["TDS", "TDS by payee"],
-] as const;
-export type ExpenseTab = (typeof EXPENSE_TABS)[number][0];
+import { EXPENSE_TABS, type ExpenseTab } from "@/components/finance/payables/payables-ui";
+export { EXPENSE_TABS, type ExpenseTab };
 
 type Props = { bills: BillRow[]; today: string; tab: ExpenseTab; gstMonth: string; tds: VendorTdsSummary; tdsFy: number; financeEmail: string; itcFolderUrl: string | null; canWrite: boolean };
 type SheetState = { kind: "occ" | "pay" | "bill" | "pack"; item?: Item } | null;

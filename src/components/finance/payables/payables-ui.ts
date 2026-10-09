@@ -79,3 +79,13 @@ export const TAG = {
   await: `${tagCls} bg-amber-100/70 text-amber-900`,
   exp: `${tagCls} bg-teal-100/70 text-teal-900`,
 };
+
+/** Expenses screen tabs. Lives here (not in the "use client" view) so the server page can read the list. */
+export const EXPENSE_TABS = [
+  ["DUE", "To pay"],
+  ["PAID", "Paid"],
+  ["GST", "GST credit"],
+  ["BILLS", "All bills"],
+  ["TDS", "TDS by payee"],
+] as const;
+export type ExpenseTab = (typeof EXPENSE_TABS)[number][0];
