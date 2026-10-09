@@ -346,10 +346,10 @@ function seed(){
  const teams=[{id:"t1",name:"Social"},{id:"t2",name:"Design"},{id:"t3",name:"SEO"}];
  const workTypes=[{id:"w1",name:"Content"},{id:"w2",name:"Design"},{id:"w3",name:"Ads"},{id:"w4",name:"Reporting"}];
  const clients=[
-  {id:"c1",name:"Zenith Foods",email:"accounts@zenithfoods.in",phone:"+91 98765 11111",gstin:"27AAACZ1234F1Z5",stateCode:"27",stateName:"Maharashtra",country:"IN",tdsPercent:10,onHold:false},
-  {id:"c2",name:"Bluewave Realty",email:"finance@bluewave.in",phone:"+91 98765 22222",gstin:"29AABCB5678G1Z2",stateCode:"29",stateName:"Karnataka",country:"IN",tdsPercent:10,onHold:false},
-  {id:"c3",name:"Nordic Labs",email:"ap@nordiclabs.se",phone:"+46 70 123 4567",gstin:"",stateCode:"",stateName:"",country:"SE",tdsPercent:0,onHold:false},
-  {id:"c4",name:"Pulse Fitness",email:"owner@pulsefit.in",phone:"+91 98765 44444",gstin:"27AAHCP9876K1Z8",stateCode:"27",stateName:"Maharashtra",country:"IN",tdsPercent:0,onHold:false},
+  {id:"c1",name:"Zenith Foods",businessName:"Zenith Foods Pvt Ltd",pan:"AAACZ1234F",email:"accounts@zenithfoods.in",phone:"+91 98765 11111",gstin:"27AAACZ1234F1Z5",stateCode:"27",stateName:"Maharashtra",country:"IN",tdsPercent:10,onHold:false},
+  {id:"c2",name:"Bluewave Realty",businessName:"Bluewave Realty LLP",pan:"AABCB5678G",email:"finance@bluewave.in",phone:"+91 98765 22222",gstin:"29AABCB5678G1Z2",stateCode:"29",stateName:"Karnataka",country:"IN",tdsPercent:10,onHold:false},
+  {id:"c3",name:"Nordic Labs",businessName:"Nordic Labs AB",pan:"",email:"ap@nordiclabs.se",phone:"+46 70 123 4567",gstin:"",stateCode:"",stateName:"",country:"SE",tdsPercent:0,onHold:false},
+  {id:"c4",name:"Pulse Fitness",businessName:"Pulse Fitness Studio",pan:"AAHCP9876K",email:"owner@pulsefit.in",phone:"+91 98765 44444",gstin:"27AAHCP9876K1Z8",stateCode:"27",stateName:"Maharashtra",country:"IN",tdsPercent:0,onHold:false},
  ];
  const T=(o)=>Object.assign({id:uid(),type:"WORK",status:"NOT_STARTED",paused:false,important:false,recurring:false,doubt:false,review:false,protected:false,parent:false,voice:false,createdBy:"u1",actualStart:null,actualEnd:null,work:"w1",team:"t1",desc:""},o);
  const tasks=[
@@ -367,21 +367,23 @@ function seed(){
   T({title:"Social media — team sync",client:"c1",assignees:["u2","u3","u4"],mins:30,start:at(1,9,30),end:at(1,10),type:"MEETING",createdBy:"u2",meet:true}),
  ];
  const invoices=[
-  {id:"i1",number:"EOM/26-27/0007",docType:"TAX_INVOICE",client:"c1",amount:60000,gst:18,taxMode:"CGST_SGST",status:"SENT",plan:"ONE_TIME",desc:"Social media management — September 2026",issued:at(-20,10),due:at(-5,10),paid:0,remindAt:at(2,10),parts:[]},
-  {id:"i2",number:"EOM/26-27/0008",docType:"TAX_INVOICE",client:"c2",amount:120000,gst:18,taxMode:"IGST",status:"PARTIALLY_PAID",plan:"PART",desc:"Website redesign — 3 part payment",issued:at(-30,10),due:at(10,10),paid:40000,remindAt:null,parts:[{n:1,amount:40000,date:at(-30,10),status:"PAID",desc:"Advance 33%"},{n:2,amount:40000,date:at(10,10),status:"SCHEDULED",desc:"On design approval"},{n:3,amount:40000,date:at(40,10),status:"SCHEDULED",desc:"On go-live"}]},
+  {id:"i1",number:"EOM/26-27/0007",docType:"TAX_INVOICE",client:"c1",amount:60000,gst:18,taxMode:"CGST_SGST",tdsApplicable:true,status:"SENT",plan:"ONE_TIME",desc:"Social media management — September 2026",issued:at(-20,10),due:at(-5,10),paid:0,remindAt:at(2,10),parts:[]},
+  {id:"i2",number:"EOM/26-27/0008",docType:"TAX_INVOICE",client:"c2",amount:120000,gst:18,taxMode:"IGST",tdsApplicable:true,status:"PARTIALLY_PAID",plan:"PART",desc:"Website redesign — 3 part payment",issued:at(-30,10),due:at(10,10),paid:44000,remindAt:null,parts:[{n:1,amount:40000,date:at(-30,10),status:"PAID",desc:"Advance 33%"},{n:2,amount:40000,date:at(10,10),status:"SCHEDULED",desc:"On design approval"},{n:3,amount:40000,date:at(40,10),status:"SCHEDULED",desc:"On go-live"}]},
   {id:"i3",number:"EOM/26-27/0009",docType:"EXPORT_INVOICE",client:"c3",amount:250000,gst:0,taxMode:"EXPORT_LUT",status:"OVERDUE",plan:"RECURRING",desc:"Content retainer — monthly",issued:at(-40,10),due:at(-10,10),paid:0,remindAt:null,parts:[]},
   {id:"i4",number:"DRAFT-1",docType:"PROFORMA",client:"c4",amount:35000,gst:0,taxMode:"NONE",status:"AWAITING_APPROVAL",plan:"ONE_TIME",desc:"Festive ads — proforma",issued:null,due:at(15,10),paid:0,remindAt:null,parts:[]},
   {id:"i5",number:"EOM/26-27/0005",docType:"TAX_INVOICE",client:"c4",amount:25000,gst:18,taxMode:"CGST_SGST",status:"PAID",plan:"ONE_TIME",desc:"Logo refresh",issued:at(-50,10),due:at(-35,10),paid:29500,remindAt:null,parts:[]},
  ];
  const payments=[
-  {id:uid(),invoice:"i2",amount:40000,tds:0,method:"BANK",date:at(-28,10),note:"NEFT ref 4471"},
+  {id:uid(),invoice:"i2",amount:40000,tds:4000,method:"BANK",date:at(-28,10),note:"NEFT ref 4471"},
   {id:uid(),invoice:"i5",amount:29500,tds:0,method:"UPI",date:at(-36,10),note:""},
  ];
  const expenses=[
-  {id:uid(),cat:"Software",amount:4999,date:at(-3,10),note:"Canva Teams"},
-  {id:uid(),cat:"Ads spend",amount:38000,date:at(-6,10),note:"Meta — Pulse Fitness (billable)"},
-  {id:uid(),cat:"Office",amount:12000,date:at(-12,10),note:"Co-working October"},
-  {id:uid(),cat:"Travel",amount:1800,date:at(-1,10),note:"Client visit — Zenith"},
+  {id:uid(),cat:"Software",amount:4999,date:at(-3,10),note:"Canva Teams",payee:"Canva",tds:0,tdsPct:0},
+  {id:uid(),cat:"Ads spend",amount:38000,date:at(-6,10),note:"Meta — Pulse Fitness (billable)",payee:"Meta Platforms",tds:0,tdsPct:0},
+  {id:uid(),cat:"Office",amount:12000,date:at(-12,10),note:"Co-working October",payee:"WorkNest Spaces",tds:1200,tdsPct:10},
+  {id:uid(),cat:"Office",amount:12000,date:at(-42,10),note:"Co-working September",payee:"WorkNest Spaces",tds:0,tdsPct:0},
+  {id:uid(),cat:"Freelancers",amount:15000,date:at(-20,10),note:"Reel editing — 6 reels",payee:"Rohan Edits",tds:0,tdsPct:0},
+  {id:uid(),cat:"Travel",amount:1800,date:at(-1,10),note:"Client visit — Zenith",payee:"Uber",tds:0,tdsPct:0},
  ];
  const requests=[
   {id:uid(),kind:"REVIEW",task:tasks[5].id,by:"u4",note:"Need the keyword sheet before I can finish.",status:"OPEN",at:at(0,9)},
@@ -405,7 +407,7 @@ function seed(){
   {id:uid(),client:"c2",kind:"SHARED_DRIVE_LINK",label:"Website assets",value:"drive.google.com/…/bluewave",expires:null},
   {id:uid(),client:"c3",kind:"CREDENTIAL",label:"WordPress admin",value:"nordic-admin / ••••••••",expires:at(-2,0)},
  ];
- const settings={company:"EraOfMarketing",gstin:"27AAECE1234A1Z9",stateCode:"27",lut:"AD270326000123",fyPrefix:"EOM",halfDayMinutes:240,tz:"Asia/Kolkata",expenseCategories:["Software","Ads spend","Office","Travel","Salaries","Other"],notifyChat:false,upi:"eraofmarketing@upi"};
+ const settings={company:"EraOfMarketing",gstin:"27AAECE1234A1Z9",stateCode:"27",lut:"AD270326000123",fyPrefix:"EOM",halfDayMinutes:240,tz:"Asia/Kolkata",expenseCategories:["Software","Ads spend","Office","Travel","Freelancers","Salaries","Other"],tdsThreshold:20000,notifyChat:false,upi:"eraofmarketing@upi"};
  return {users,teams,workTypes,clients,tasks,invoices,payments,expenses,requests,notifs,attendance,inventory,vault,settings,filters:{},me:null,seq:10};
 }
 let S=null;
@@ -426,6 +428,11 @@ const fmtH=m=>{const h=m/60;return (Number.isInteger(h)?h:h.toFixed(1))+" Hours"
 const fmtT=iso=>iso?new Date(iso).toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit"}).replace(" ","").toLowerCase():"—";
 const fmtD=iso=>iso?new Date(iso).toLocaleDateString("en-IN",{day:"2-digit",month:"short"}):"—";
 const fmtDY=iso=>iso?new Date(iso).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}):"—";
+const fyStart=(d=new Date())=>{const y=d.getMonth()>=3?d.getFullYear():d.getFullYear()-1;return new Date(y,3,1);};
+const fyEnd=(d=new Date())=>{const s=fyStart(d);return new Date(s.getFullYear()+1,2,31,23,59,59);};
+const inFY=(iso,ref=new Date())=>{const t=new Date(iso);return t>=fyStart(ref)&&t<=fyEnd(ref);};
+const payeeKey=s=>(s||"").trim().toLowerCase();
+const payeeFyTotal=(payee,ref=new Date(),excl=null)=>S.expenses.filter(e=>e!==excl&&payeeKey(e.payee)===payeeKey(payee)&&inFY(e.date,ref)).reduce((s,e)=>s+e.amount,0);
 const inr=n=>"₹"+Math.round(n).toLocaleString("en-IN");
 const dayOff=iso=>Math.round((new Date(iso).setHours(0,0,0,0)-today0().getTime())/DAY);
 const dateChip=iso=>{const o=dayOff(iso);return o===0?"Today":o===1?"Tom":o===-1?"Yest":fmtD(iso);};
@@ -738,7 +745,7 @@ const tile=(l,v)=>el("div",{class:"tile"},el("small",{},l),el("b",{},v));
 /* ---------- wizard: client → amount → plan → review ---------- */
 let W=null;
 function openWizard(preset){
- W=Object.assign({step:0,client:"",amount:"",desc:"",gst:18,plan:"ONE_TIME",anchor:"FIRST",partMode:"PERCENT",parts:[{v:50,date:dk(),desc:"Advance"},{v:50,date:dk(new Date(Date.now()+30*DAY)),desc:"On delivery"}],due:dk(new Date(Date.now()+15*DAY)),proforma:false},preset||{});
+ W=Object.assign({step:0,client:"",tds:null,amount:"",desc:"",gst:18,plan:"ONE_TIME",anchor:"FIRST",partMode:"PERCENT",parts:[{v:50,date:dk(),desc:"Advance"},{v:50,date:dk(new Date(Date.now()+30*DAY)),desc:"On delivery"}],due:dk(new Date(Date.now()+15*DAY)),proforma:false},preset||{});
  renderWizard();
 }
 function renderWizard(){
@@ -750,8 +757,9 @@ function renderWizard(){
  let body;
  if(W.step===0){
   body=el("div",{style:"padding:12px"},el("div",{style:"font-size:12px;color:var(--muted);margin-bottom:8px"},"Who is this invoice for?"),
-   el("div",{class:"cl"},...S.clients.map(x=>el("button",{class:x.id===W.client?"on":"",onclick:()=>{W.client=x.id;renderWizard();}},x.name))),
-   c?el("div",{class:"card",style:"margin:12px 0 0"},el("div",{style:"display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px"},el("span",{class:"tag "+DOCC[docFor(c)]},DOCL[docFor(c)]),el("span",{class:"tag draft"},TAXL[taxFor(c)])),el("div",{class:"kv"},el("span",{},"GSTIN"),el("span",{},c.gstin||"— (export)")),el("div",{class:"kv"},el("span",{},"Place of supply"),el("span",{},c.country==="IN"?c.stateName+" ("+c.stateCode+")":c.country)),el("div",{class:"kv"},el("span",{},"Email / WhatsApp"),(c.email?"✓":"missing")+" / "+(c.phone?"✓":"missing")),c.tdsPercent?el("div",{class:"kv"},el("span",{},"TDS"),el("span",{},c.tdsPercent+"% deducted on payment")):null):null,
+   el("div",{class:"cl"},...S.clients.map(x=>el("button",{class:x.id===W.client?"on":"",onclick:()=>{W.client=x.id;W.tds=!!clientById(x.id).tdsPercent;renderWizard();}},x.name))),
+   c?el("div",{class:"card",style:"margin:12px 0 0"},el("div",{style:"display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px"},el("span",{class:"tag "+DOCC[docFor(c)]},DOCL[docFor(c)]),el("span",{class:"tag draft"},TAXL[taxFor(c)])),el("div",{class:"kv"},el("span",{},"GSTIN"),el("span",{},c.gstin||"— (export)")),el("div",{class:"kv"},el("span",{},"Place of supply"),el("span",{},c.country==="IN"?c.stateName+" ("+c.stateCode+")":c.country)),el("div",{class:"kv"},el("span",{},"Email / WhatsApp"),(c.email?"✓":"missing")+" / "+(c.phone?"✓":"missing")),el("div",{class:"kv"},el("span",{},"PAN"),el("span",{},c.pan||"—"))):null,
+   c?el("label",{class:"check",style:"margin-top:12px"},el("input",{type:"checkbox",checked:W.tds||null,onchange:e=>{W.tds=e.target.checked;renderWizard();}}),el("div",{},el("b",{},"This client will deduct TDS"),el("small",{},W.tds?"When the payment comes in you enter the % cut; it adds to your FY TDS total":"No TDS expected on this invoice"+(c.tdsPercent?" (client default "+c.tdsPercent+"%)":"")))):null,
    el("div",{class:"check",style:"margin-top:12px"},el("input",{type:"checkbox",checked:W.proforma||null,onchange:e=>{W.proforma=e.target.checked;renderWizard();}}),el("div",{},el("b",{},"Proforma first"),el("small",{},"No tax, no number; converts to a tax invoice later"))));
  }else if(W.step===1){
   body=el("div",{style:"padding:12px"},
@@ -774,7 +782,7 @@ function renderWizard(){
   const ps=W.plan==="PART"?W.parts.map((p,i)=>({n:i+1,amount:W.partMode==="PERCENT"?(amt+taxAmt)*Number(p.v)/100:Number(p.v)*(1+gst/100),date:new Date(p.date+"T10:00:00").toISOString(),status:i===0?"AWAITING_APPROVAL":"SCHEDULED",desc:p.desc})):[];
   body=el("div",{style:"padding:12px"},
    el("div",{class:"card",style:"margin:0 0 10px"},el("div",{style:"display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px"},el("span",{class:"tag "+DOCC[W.proforma?"PROFORMA":docFor(c)]},DOCL[W.proforma?"PROFORMA":docFor(c)]),el("span",{class:"tag draft"},TAXL[tax]),el("span",{class:"tag draft"},W.plan==="ONE_TIME"?"One time":W.plan==="RECURRING"?"Recurring · "+(W.anchor==="FIRST"?"1st":"last day"):"Part payment · "+W.parts.length+" parts")),
-    el("div",{class:"kv"},el("span",{},"Client"),el("span",{},c.name)),el("div",{class:"kv"},el("span",{},"Number"),el("span",{},"assigned on approval ("+S.settings.fyPrefix+"/"+fyKey()+"/…)")),el("div",{class:"kv"},el("span",{},"Description"),el("span",{style:"text-align:right"},W.desc||"—")),el("div",{class:"kv"},el("span",{},"Taxable"),el("span",{class:"num"},inr(amt))),el("div",{class:"kv"},el("span",{},"Tax"),el("span",{class:"num"},inr(taxAmt))),el("div",{class:"kv"},el("span",{},"Total"),el("b",{class:"num"},inr(amt+taxAmt)))),
+    el("div",{class:"kv"},el("span",{},"Client"),el("span",{},c.businessName||c.name)),el("div",{class:"kv"},el("span",{},"TDS"),el("span",{},W.tds?"client deducts TDS":"no TDS")),el("div",{class:"kv"},el("span",{},"Number"),el("span",{},"assigned on approval ("+S.settings.fyPrefix+"/"+fyKey()+"/…)")),el("div",{class:"kv"},el("span",{},"Description"),el("span",{style:"text-align:right"},W.desc||"—")),el("div",{class:"kv"},el("span",{},"Taxable"),el("span",{class:"num"},inr(amt))),el("div",{class:"kv"},el("span",{},"Tax"),el("span",{class:"num"},inr(taxAmt))),el("div",{class:"kv"},el("span",{},"Total"),el("b",{class:"num"},inr(amt+taxAmt)))),
    ps.length?el("div",{class:"card",style:"margin:0 0 10px"},el("h4",{},"Parts"),...ps.map(p=>el("div",{class:"kv"},el("span",{},"Part "+p.n+" · "+fmtD(p.date)+(p.desc?" · "+p.desc:"")),el("span",{class:"num"},inr(p.amount))))):null,
    el("p",{class:"pre",style:"margin:0"},"Saving creates a draft awaiting approval. Approve → confirm sheet → Email + WhatsApp. No auto-send."));
  }
@@ -783,7 +791,7 @@ function renderWizard(){
 }
 function saveInvoice(c,tax,gst,amt,taxAmt){
  const parts=W.plan==="PART"?W.parts.map((p,i)=>({n:i+1,amount:W.partMode==="PERCENT"?(amt+taxAmt)*Number(p.v)/100:Number(p.v)*(1+gst/100),date:new Date(p.date+"T10:00:00").toISOString(),status:"SCHEDULED",desc:p.desc})):[];
- const inv={id:uid(),number:"DRAFT-"+uid().slice(0,4),docType:W.proforma?"PROFORMA":docFor(c),client:c.id,amount:amt,gst,taxMode:tax,status:"AWAITING_APPROVAL",plan:W.plan,anchor:W.anchor,desc:W.desc,issued:null,due:W.plan==="PART"?parts[0].date:new Date(W.due+"T10:00:00").toISOString(),paid:0,remindAt:null,parts};
+ const inv={id:uid(),number:"DRAFT-"+uid().slice(0,4),docType:W.proforma?"PROFORMA":docFor(c),client:c.id,tdsApplicable:!!W.tds,amount:amt,gst,taxMode:tax,status:"AWAITING_APPROVAL",plan:W.plan,anchor:W.anchor,desc:W.desc,issued:null,due:W.plan==="PART"?parts[0].date:new Date(W.due+"T10:00:00").toISOString(),paid:0,remindAt:null,parts};
  S.invoices.unshift(inv);notify("u1","Invoice draft for "+c.name+" is awaiting your approval");save();toast("Draft saved · awaiting approval");openInvoice(inv);
 }
 /* ---------- invoice detail + actions ---------- */
@@ -799,7 +807,7 @@ function openInvoice(i){
   el("div",{class:"card",style:"margin:12px 12px 10px"},el("div",{style:"display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"},docTag(i),stTag(i),el("span",{class:"tag draft"},TAXL[i.taxMode]),i.plan!=="ONE_TIME"?el("span",{class:"tag draft"},i.plan==="PART"?"Part payment":"Recurring"):null),
    el("div",{style:"font-size:18px;font-weight:800"},c.name),el("div",{style:"font-size:12px;color:var(--muted);margin-bottom:8px"},i.desc||"No description"),
    kv("Taxable",inr(i.amount)),i.taxMode==="CGST_SGST"?[kv("CGST "+gstHalf+"%",inr(i.amount*gstHalf/100)),kv("SGST "+gstHalf+"%",inr(i.amount*gstHalf/100))]:i.taxMode==="IGST"?kv("IGST "+i.gst+"%",inr(i.amount*i.gst/100)):kv("Tax",i.taxMode==="EXPORT_LUT"?"0% under LUT":"none"),
-   kv("Total",el("b",{},inr(total(i)))),kv("Paid",inr(i.paid)),kv("Balance",el("b",{style:balance(i)?"color:#dc2626":""},inr(balance(i)))),
+   kv("Total",el("b",{},inr(total(i)))),kv("TDS",i.tdsApplicable?"client deducts TDS":"not expected"),kv("Paid",inr(i.paid)),kv("Balance",el("b",{style:balance(i)?"color:#dc2626":""},inr(balance(i)))),
    kv("Issued",fmtDY(i.issued)),kv("Due",fmtDY(i.due)),i.remindAt?kv("Reminder",fmtDY(i.remindAt)):null,i.emailAt?kv("Emailed",fmtDY(i.emailAt)):null,i.waAt?kv("WhatsApp",i.waStatus||"queued"):null,c.onHold?kv("Work",el("span",{style:"color:#dc2626"},"ON HOLD since "+fmtD(c.holdSince))):null),
   i.parts.length?el("div",{class:"card"},el("h4",{},"Parts"),...i.parts.map(p=>el("div",{class:"kv"},el("span",{},"Part "+p.n+" · "+fmtD(p.date)+(p.desc?" · "+p.desc:"")),el("span",{style:"display:flex;gap:6px;align-items:center"},el("span",{class:"num"},inr(p.amount)),el("span",{class:"tag "+(STL[p.status]||["",""])[1]},(STL[p.status]||[p.status])[0]))))):null,
   el("div",{class:"card"},el("h4",{},"Payment via UPI"),el("div",{class:"qr"},...Array.from({length:144},(_,k)=>el("i",{class:((k*7+Math.floor(k/12)*3)%5<2)?"":"o"}))),el("div",{style:"text-align:center;font-size:12px"},S.settings.upi),el("div",{style:"text-align:center;font-size:11px;color:var(--muted)"},"Printed on the PDF with a public pay link")),
@@ -823,11 +831,15 @@ function approveSheet(i){
 }
 function paymentSheet(i){
  const c=clientById(i.client);const bal=balance(i);
- const amt=el("input",{class:"in",type:"number",inputmode:"decimal",value:bal.toFixed(0)}),tds=el("input",{class:"in",type:"number",value:c.tdsPercent||0}),date=el("input",{class:"in",type:"date",value:dk()}),note=el("input",{class:"in",placeholder:"Reference / notes"});
+ const tds=el("input",{class:"in",type:"number",value:i.tdsApplicable?(c.tdsPercent||10):0}),date=el("input",{class:"in",type:"date",value:dk()}),note=el("input",{class:"in",placeholder:"Reference / notes"});
+ const tdsAmt=()=>Math.round(i.amount*(Number(tds.value)||0)/100);const amt=el("input",{class:"in",type:"number",inputmode:"decimal",value:Math.max(0,bal-(i.tdsApplicable?tdsAmt():0)).toFixed(0)});
+ const tdsHint=el("div",{class:"hint"});const upd=()=>{tdsHint.textContent=(Number(tds.value)||0)>0?"TDS cut "+inr(tdsAmt())+" on taxable "+inr(i.amount)+" · counts toward settlement and your FY TDS total":"No TDS on this payment";};tds.oninput=()=>{amt.value=Math.max(0,bal-tdsAmt()).toFixed(0);upd();};upd();
+ const tdsOn=el("input",{type:"checkbox",checked:i.tdsApplicable||null,onchange:e=>{tdsWrap.hidden=!e.target.checked;if(!e.target.checked){tds.value=0;amt.value=bal.toFixed(0);}else{tds.value=c.tdsPercent||10;amt.value=Math.max(0,bal-tdsAmt()).toFixed(0);}upd();}});
+ const tdsWrap=el("div",{hidden:!i.tdsApplicable||null},field("TDS cut by client %",tds),tdsHint);
  let method="BANK";const seg=el("div",{class:"seg"});const rs=()=>seg.replaceChildren(...["CASH","BANK","UPI"].map(k=>el("button",{class:method===k?"on":"",onclick:()=>{method=k;rs();}},k==="BANK"?"Bank":k==="UPI"?"UPI":"Cash")));rs();
- openSheet("Record payment · "+i.number,field("Amount received (₹)",amt,"Balance "+inr(bal)),field("TDS deducted %",tds,"TDS counts toward settlement"),field("Method",seg),field("Date",date),field("Notes",note),
+ openSheet("Record payment · "+i.number,field("Amount received (₹)",amt,"Balance "+inr(bal)),el("label",{class:"check"},tdsOn,el("div",{},el("b",{},"Client cut TDS on this payment"),el("small",{},"Enter the % that was deducted"))),tdsWrap,field("Method",seg),field("Date",date),field("Notes",note),
   el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn blue",onclick:()=>{
-   const a=Number(amt.value)||0;if(a<=0)return toast("Enter an amount","err");const t=Math.round(a*(Number(tds.value)||0)/100);
+   const a=Number(amt.value)||0;if(a<=0)return toast("Enter an amount","err");const t=tdsOn.checked?tdsAmt():0;if(t>0)i.tdsApplicable=true;
    S.payments.unshift({id:uid(),invoice:i.id,amount:a,tds:t,method,date:new Date(date.value+"T10:00:00").toISOString(),note:note.value});
    i.paid+=a+t;i.status=balance(i)<=0?"PAID":"PARTIALLY_PAID";
    if(i.plan==="PART"){let rem=i.paid;for(const p of i.parts){if(rem>=p.amount-1){p.status="PAID";rem-=p.amount;}}}
@@ -879,18 +891,18 @@ PAGES.ledger=function(cid){
 /* ---------- clients ---------- */
 PAGES.clients=function(arg){
  if(arg==="add")return clientForm();
- page("Clients",S.clients.map(c=>el("div",{class:"item",onclick:()=>clientForm(c)},el("div",{class:"m"},el("b",{},c.name+(c.onHold?" · ON HOLD":"")),el("small",{},(c.country==="IN"?c.stateName+" · "+TAXL[taxFor(c)]:"Export · "+c.country)+" · "+c.email)),el("div",{class:"amt"},S.tasks.filter(t=>t.client===c.id&&t.status!=="COMPLETED").length+" tasks"))),
+ page("Clients",S.clients.map(c=>el("div",{class:"item",onclick:()=>clientForm(c)},el("div",{class:"m"},el("b",{},c.name+(c.onHold?" · ON HOLD":"")),el("small",{},(c.businessName?c.businessName+" · ":"")+(c.country==="IN"?c.stateName+" · "+TAXL[taxFor(c)]:"Export · "+c.country)+(c.pan?" · PAN "+c.pan:""))),el("div",{class:"amt"},S.tasks.filter(t=>t.client===c.id&&t.status!=="COMPLETED").length+" tasks"))),
   [zoneActions(el("button",{class:"btn blue",onclick:()=>clientForm()},"+ Add client"))]);
 };
 function clientForm(c){
- const v=c||{name:"",email:"",phone:"",gstin:"",stateCode:"27",stateName:"Maharashtra",country:"IN",tdsPercent:0};
+ const v=c||{name:"",businessName:"",pan:"",email:"",phone:"",gstin:"",stateCode:"27",stateName:"Maharashtra",country:"IN",tdsPercent:0};
  const STATES={"07":"Delhi","27":"Maharashtra","29":"Karnataka","33":"Tamil Nadu","24":"Gujarat","36":"Telangana","19":"West Bengal","09":"Uttar Pradesh"};
  const inp=(k,ph,type="text")=>el("input",{class:"in",type,value:v[k]||"",placeholder:ph,oninput:e=>{v[k]=e.target.value;if(k==="gstin"&&e.target.value.length>=2&&STATES[e.target.value.slice(0,2)]){v.stateCode=e.target.value.slice(0,2);v.stateName=STATES[v.stateCode];hint.textContent="State "+v.stateName+" → "+TAXL[taxFor(v)];}}});
  const hint=el("div",{class:"hint"},v.country==="IN"?"State "+v.stateName+" → "+TAXL[taxFor(v)]:"Export invoice · 0% under LUT");
  const country=el("select",{class:"in",onchange:e=>{v.country=e.target.value;hint.textContent=v.country==="IN"?"State "+v.stateName+" → "+TAXL[taxFor(v)]:"Export invoice · 0% under LUT";}},...[["IN","India"],["US","United States"],["GB","United Kingdom"],["AE","UAE"],["SE","Sweden"],["SG","Singapore"]].map(([k,l])=>el("option",{value:k,selected:v.country===k||null},l)));
- page(c?c.name:"Add client",[el("div",{style:"padding:12px"},field("Name",inp("name","Client name")),field("Email",inp("email","accounts@client.com","email")),field("WhatsApp number",inp("phone","+91 …","tel")),field("Country",country),field("GSTIN",inp("gstin","27AAACZ1234F1Z5"),hint.textContent),hint,field("TDS % the client deducts",inp("tdsPercent","0","number")),
+ page(c?c.name:"Add client",[el("div",{style:"padding:12px"},field("Name",inp("name","Client name")),field("Business name",inp("businessName","Legal name printed on invoices")),field("Email",inp("email","accounts@client.com","email")),field("WhatsApp number",inp("phone","+91 …","tel")),field("Country",country),field("GSTIN",inp("gstin","27AAACZ1234F1Z5")),hint,field("PAN",inp("pan","AAACZ1234F"),"5 letters, 4 digits, 1 letter · printed on invoices and needed for TDS credit"),field("TDS % this client usually deducts",inp("tdsPercent","0","number"),"Default for the per-invoice choice; you confirm the actual % when the payment arrives"),
   el("p",{class:"pre"},"The tax type (CGST+SGST / IGST / Export) is picked automatically from the GSTIN state code against your company state "+S.settings.stateCode+"."))],
-  [zoneActions(el("button",{class:"btn ghost",onclick:()=>PAGES.clients()},"Cancel"),el("button",{class:"btn blue",onclick:()=>{if(!v.name.trim())return toast("Name is required","err");v.tdsPercent=Number(v.tdsPercent)||0;if(!c){S.clients.push(Object.assign({id:uid(),onHold:false},v));}save();toast(c?"Client saved":"Client added · shows in filters once it has a task");PAGES.clients();}},"Save"))]);
+  [zoneActions(el("button",{class:"btn ghost",onclick:()=>PAGES.clients()},"Cancel"),el("button",{class:"btn blue",onclick:()=>{if(!v.name.trim())return toast("Name is required","err");v.pan=(v.pan||"").toUpperCase().trim();if(v.pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v.pan))return toast("PAN must look like AAACZ1234F","err");v.tdsPercent=Number(v.tdsPercent)||0;if(!c){S.clients.push(Object.assign({id:uid(),onHold:false},v));}save();toast(c?"Client saved":"Client added · shows in filters once it has a task");PAGES.clients();}},"Save"))]);
 }
 /* ---------- requests ---------- */
 PAGES.requests=function(){
@@ -938,23 +950,54 @@ PAGES.vault=function(tab){if(tab)vaultTab=tab;
  page("Client vault",[...(list.length?list.map(v=>el("div",{class:"item",onclick:()=>openSheet(v.label,el("div",{class:"card",style:"margin:0 0 10px"},el("div",{class:"kv"},el("span",{},"Client"),el("span",{},clientById(v.client).name)),el("div",{class:"kv"},el("span",{},"Value"),el("span",{style:"font-family:ui-monospace,monospace"},v.value)),el("div",{class:"kv"},el("span",{},"Expires"),el("span",{style:v.expires&&dayOff(v.expires)<0?"color:#dc2626":""},v.expires?fmtDY(v.expires)+(dayOff(v.expires)<0?" (expired)":""):"never"))),el("p",{class:"pre"},"Encrypted at rest. Reveal is audited and time-boxed by an access grant."),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Close"),el("button",{class:"btn",onclick:()=>{closeSheet();toast("Reveal logged in the audit trail");}},"Reveal")))},el("div",{class:"m"},el("b",{},v.label),el("small",{},clientById(v.client).name+(v.expires?" · expires "+fmtD(v.expires):""))),v.expires&&dayOff(v.expires)<0?el("span",{class:"tag over"},"expired"):v.expires&&dayOff(v.expires)<30?el("span",{class:"tag await"},"expiring"):null)):[el("div",{class:"empty"},"Nothing stored here yet")])],
   [zoneTabs(Object.entries(KL),vaultTab,k=>{vaultTab=k;PAGES.vault();}),zoneActions(el("button",{class:"btn blue",onclick:()=>{const l=el("input",{class:"in",placeholder:"Label"}),val=el("input",{class:"in",placeholder:vaultTab==="CREDENTIAL"?"user / password":"https://drive.google.com/…"}),cl=el("select",{class:"in"},...S.clients.map(c=>el("option",{value:c.id},c.name))),ex=el("input",{class:"in",type:"date"});openSheet("Add "+KL[vaultTab].toLowerCase(),field("Client",cl),field("Label",l),field("Value",val),vaultTab==="CREDENTIAL"?field("Expires",ex):null,el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>{if(!l.value.trim())return;S.vault.unshift({id:uid(),client:cl.value,kind:vaultTab,label:l.value,value:vaultTab==="CREDENTIAL"?val.value.replace(/\/.*$/," / ••••••••"):val.value,expires:ex.value?new Date(ex.value+"T00:00:00").toISOString():null});save();closeSheet();PAGES.vault();toast("Saved (encrypted)");}},"Save")));}},"+ Add"))]);
 };
+let expTab="LIST";
 PAGES.expenses=function(){
  const month=S.expenses.filter(e=>dayOff(e.date)>=-30);const byCat={};month.forEach(e=>byCat[e.cat]=(byCat[e.cat]||0)+e.amount);
- page("Expenses",[el("div",{class:"tiles"},tile("Last 30 days",inr(month.reduce((s,e)=>s+e.amount,0))),tile("Entries",month.length)),el("div",{class:"card"},el("h4",{},"By category"),...Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>el("div",{class:"kv"},el("span",{},k),el("span",{class:"num"},inr(v))))),
-  ...S.expenses.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).map(e=>el("div",{class:"item",onclick:()=>openSheet(e.note||e.cat,actionList([{label:"Delete",danger:true,onClick:()=>{S.expenses=S.expenses.filter(x=>x!==e);save();closeSheet();PAGES.expenses();}}]))},el("div",{class:"m"},el("b",{},e.note||e.cat),el("small",{},e.cat+" · "+fmtDY(e.date))),el("div",{class:"amt"},inr(e.amount))))],
-  [zoneActions(el("button",{class:"btn ghost",onclick:()=>toast("CSV exported (download in the real app)")},"Export CSV"),el("button",{class:"btn blue",onclick:()=>{const a=el("input",{class:"in",type:"number",inputmode:"decimal",placeholder:"0"}),cat=el("select",{class:"in"},...S.settings.expenseCategories.map(c=>el("option",{value:c},c))),n=el("input",{class:"in",placeholder:"What was it for?"}),d=el("input",{class:"in",type:"date",value:dk()});openSheet("Add expense",field("Amount (₹)",a),field("Category",cat,"Fixed list, edit in Settings"),field("Note",n),field("Date",d),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>{const v=Number(a.value)||0;if(v<=0)return toast("Enter an amount","err");S.expenses.unshift({id:uid(),cat:cat.value,amount:v,date:new Date(d.value+"T10:00:00").toISOString(),note:n.value});save();closeSheet();PAGES.expenses();toast("Expense added");}},"Save")));}},"+ Add"))]);
+ const thr=S.settings.tdsThreshold;
+ let body;
+ if(expTab==="LIST")body=[el("div",{class:"tiles"},tile("Last 30 days",inr(month.reduce((s,e)=>s+e.amount,0))),tile("TDS deducted · FY",inr(S.expenses.filter(e=>inFY(e.date)).reduce((s,e)=>s+e.tds,0)))),el("div",{class:"card"},el("h4",{},"By category · 30 days"),...Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>el("div",{class:"kv"},el("span",{},k),el("span",{class:"num"},inr(v))))),
+  ...S.expenses.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).map(e=>el("div",{class:"item",onclick:()=>openSheet(e.note||e.cat,el("div",{class:"card",style:"margin:0 0 10px"},el("div",{class:"kv"},el("span",{},"Payee"),el("span",{},e.payee||"—")),el("div",{class:"kv"},el("span",{},"Bill amount"),el("span",{class:"num"},inr(e.amount))),el("div",{class:"kv"},el("span",{},"TDS deducted"),el("span",{class:"num"},e.tds?inr(e.tds)+" ("+e.tdsPct+"%)":"none")),el("div",{class:"kv"},el("span",{},"Net paid"),el("b",{class:"num"},inr(e.amount-e.tds)))),actionList([{label:"Edit",onClick:()=>{closeSheet();expenseForm(e);}},{label:"Delete",danger:true,onClick:()=>{S.expenses=S.expenses.filter(x=>x!==e);save();closeSheet();PAGES.expenses();}}]))},el("div",{class:"m"},el("b",{},e.note||e.cat),el("small",{},e.cat+(e.payee?" · "+e.payee:"")+" · "+fmtDY(e.date)),e.tds?el("div",{style:"margin-top:3px"},el("span",{class:"tag paid"},"TDS "+inr(e.tds)+" · net "+inr(e.amount-e.tds))):null),el("div",{class:"amt"},inr(e.amount))))];
+ else{
+  const map={};S.expenses.filter(e=>inFY(e.date)).forEach(e=>{const k=payeeKey(e.payee);if(!k)return;map[k]=map[k]||{name:e.payee,paid:0,tds:0,n:0};map[k].paid+=e.amount;map[k].tds+=e.tds;map[k].n++;});
+  const rows=Object.values(map).sort((a,b)=>b.paid-a.paid);
+  body=[el("p",{class:"pre",style:"padding:12px 12px 4px"},"Paid per payee this financial year (1 Apr – 31 Mar). Threshold "+inr(thr)+" · change it in Settings. Totals reset every 1 April."),
+   ...rows.map(r=>{const crossed=r.paid>=thr;const needs=crossed&&r.tds===0;return el("div",{class:"item",style:"cursor:default"},el("div",{class:"m"},el("b",{},r.name),el("small",{},r.n+" payment"+(r.n>1?"s":"")+" · TDS deducted "+inr(r.tds)),el("div",{style:"margin-top:3px"},needs?el("span",{class:"tag over"},"over threshold · deduct TDS"):crossed?el("span",{class:"tag paid"},"over threshold · TDS being deducted"):el("span",{class:"tag draft"},inr(thr-r.paid)+" left before threshold"))),el("div",{class:"amt",style:needs?"color:#dc2626":""},inr(r.paid)));})];
+ }
+ page("Expenses",body,[zoneTabs([["LIST","Expenses"],["PAYEES","TDS by payee"]],expTab,k=>{expTab=k;PAGES.expenses();}),zoneActions(el("button",{class:"btn ghost",onclick:()=>toast("CSV exported (download in the real app)")},"Export CSV"),el("button",{class:"btn blue",onclick:()=>expenseForm()},"+ Add"))]);
 };
+function expenseForm(e){
+ const v=e?Object.assign({},e):{cat:S.settings.expenseCategories[0],amount:"",note:"",payee:"",date:dk(),tds:0,tdsPct:0};
+ const thr=S.settings.tdsThreshold;
+ const a=el("input",{class:"in",type:"number",inputmode:"decimal",placeholder:"0",value:v.amount||""}),cat=el("select",{class:"in"},...S.settings.expenseCategories.map(c=>el("option",{value:c,selected:c===v.cat||null},c))),n=el("input",{class:"in",placeholder:"What was it for?",value:v.note}),payee=el("input",{class:"in",placeholder:"Who did you pay? (vendor / freelancer)",value:v.payee||"",list:"payees"}),d=el("input",{class:"in",type:"date",value:v.date.slice(0,10)});
+ const dl=el("datalist",{id:"payees"},...[...new Set(S.expenses.map(x=>x.payee).filter(Boolean))].map(x=>el("option",{value:x})));
+ const on=el("input",{type:"checkbox",checked:v.tds>0||null}),pct=el("input",{class:"in",type:"number",value:v.tdsPct||10}),tamt=el("input",{class:"in",type:"number",value:v.tds||""});
+ const net=el("div",{class:"hint"});const warn=el("div",{class:"card",style:"margin:0 0 12px;background:rgba(254,243,199,.85);color:#92400e;font-size:12px",hidden:true});
+ const wrap=el("div",{hidden:!(v.tds>0)||null},el("div",{style:"display:grid;grid-template-columns:1fr 1fr;gap:8px"},field("TDS %",pct),field("TDS amount (₹)",tamt)),net);
+ const recalc=()=>{const amt=Number(a.value)||0;if(on.checked){if(document.activeElement!==tamt)tamt.value=Math.round(amt*(Number(pct.value)||0)/100);net.textContent="Net payable "+inr(amt-(Number(tamt.value)||0))+" · TDS "+inr(Number(tamt.value)||0)+" goes to the government in the payee's name";}
+  const before=payeeFyTotal(payee.value,new Date(d.value+"T10:00:00"),e||null);const withThis=before+amt;
+  if(payee.value.trim()&&withThis>=thr&&!on.checked){warn.hidden=false;warn.textContent=(before>=thr?"Already paid "+inr(before):"This takes "+payee.value.trim()+" to "+inr(withThis))+" this FY (threshold "+inr(thr)+"). TDS has to be deducted on payments to this payee.";}
+  else if(payee.value.trim()&&withThis>=thr){warn.hidden=false;warn.textContent="Over the "+inr(thr)+" FY threshold for "+payee.value.trim()+" · TDS is being deducted ✓";}
+  else warn.hidden=true;};
+ [a,pct,payee,d].forEach(x=>x.oninput=recalc);tamt.oninput=recalc;on.onchange=()=>{wrap.hidden=!on.checked;recalc();};recalc();
+ openSheet(e?"Edit expense":"Add expense",dl,field("Amount (₹)",a),field("Category",cat,"Fixed list, edit in Settings"),field("Payee",payee,"Used for the FY TDS threshold"),field("Note",n),field("Date",d),warn,el("label",{class:"check"},on,el("div",{},el("b",{},"Deduct TDS on this payment"),el("small",{},"Pick the % · amount auto-fills"))),wrap,
+  el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>{const amt=Number(a.value)||0;if(amt<=0)return toast("Enter an amount","err");const rec={id:e?e.id:uid(),cat:cat.value,amount:amt,date:new Date(d.value+"T10:00:00").toISOString(),note:n.value,payee:payee.value.trim(),tds:on.checked?(Number(tamt.value)||0):0,tdsPct:on.checked?(Number(pct.value)||0):0};
+   if(e)Object.assign(e,rec);else S.expenses.unshift(rec);
+   const tot=payeeFyTotal(rec.payee);if(rec.payee&&tot>=thr&&!rec.tds){notify("u1","TDS threshold crossed for "+rec.payee+": "+inr(tot)+" paid this FY (threshold "+inr(thr)+"). Deduct TDS on payments to this payee.");toast("Saved · TDS threshold crossed for "+rec.payee,"err");}else toast(e?"Expense updated":"Expense added");
+   save();closeSheet();PAGES.expenses();}},"Save")));
+}
 PAGES.finance=function(){
  const inv=S.invoices.filter(i=>i.docType!=="PROFORMA"&&i.docType!=="CREDIT_NOTE"&&!["AWAITING_APPROVAL","CANCELLED"].includes(i.status));
- const billed=inv.reduce((s,i)=>s+total(i),0),recv=S.payments.reduce((s,p)=>s+p.amount,0),tds=S.payments.reduce((s,p)=>s+p.tds,0),exp=S.expenses.reduce((s,e)=>s+e.amount,0);
- page("Finance sheet",[el("div",{class:"tiles"},tile("Billed",inr(billed)),tile("Received",inr(recv)),tile("TDS credits",inr(tds)),tile("Expenses",inr(exp)),tile("Outstanding",inr(inv.reduce((s,i)=>s+balance(i),0))),tile("Net (cash)",inr(recv-exp))),
+ const billed=inv.reduce((s,i)=>s+total(i),0),recv=S.payments.reduce((s,p)=>s+p.amount,0),tds=S.payments.filter(p=>inFY(p.date)).reduce((s,p)=>s+p.tds,0),exp=S.expenses.reduce((s,e)=>s+e.amount,0),tdsOut=S.expenses.filter(e=>inFY(e.date)).reduce((s,e)=>s+e.tds,0);
+ const fyk=fyKey();const byCl={};S.payments.filter(p=>inFY(p.date)&&p.tds>0).forEach(p=>{const i=S.invoices.find(x=>x.id===p.invoice);if(!i)return;byCl[i.client]=(byCl[i.client]||0)+p.tds;});
+ page("Finance sheet",[el("div",{class:"tiles"},tile("Billed",inr(billed)),tile("Received",inr(recv)),tile("Expenses",inr(exp)),tile("Outstanding",inr(inv.reduce((s,i)=>s+balance(i),0))),tile("TDS receivable · FY "+fyk,inr(tds)),tile("TDS deducted · FY "+fyk,inr(tdsOut))),
+  el("div",{class:"card"},el("h4",{},"TDS cut by clients this FY (your credit at year end)"),...(Object.keys(byCl).length?Object.entries(byCl).sort((a,b)=>b[1]-a[1]).map(([cid,v])=>el("div",{class:"kv"},el("span",{},clientById(cid).name+(clientById(cid).pan?" · "+clientById(cid).pan:"")),el("span",{class:"num"},inr(v)))):[el("div",{class:"pre"},"No TDS recorded yet this FY")]),el("div",{class:"kv"},el("b",{},"Total"),el("b",{class:"num"},inr(tds)))),
   el("div",{class:"card"},el("h4",{},"Google Sheets sync"),el("div",{class:"kv"},el("span",{},"Mode"),el("span",{},"Push only (app → sheet)")),el("div",{class:"kv"},el("span",{},"Last push"),el("span",{},fmtDY(new Date().toISOString())+" "+fmtT(new Date().toISOString()))),el("div",{class:"kv"},el("span",{},"Tabs"),el("span",{},"Invoices · Payments · Expenses"))),
   el("div",{class:"card"},el("h4",{},"GST summary · "+new Date().toLocaleDateString("en-IN",{month:"long"})),...["CGST_SGST","IGST","EXPORT_LUT"].map(k=>el("div",{class:"kv"},el("span",{},TAXL[k]),el("span",{class:"num"},inr(inv.filter(i=>i.taxMode===k).reduce((s,i)=>s+i.amount*i.gst/100,0))))))],
   [zoneActions(el("button",{class:"btn ghost",onclick:()=>toast("Pushed to Google Sheets (mock)")},"Push to Sheets"),el("button",{class:"btn",onclick:()=>nav("payments")},"Payments"))]);
 };
 PAGES.settings=function(){
  const s=S.settings;const inp=(k,type="text")=>el("input",{class:"in",type,value:s[k],oninput:e=>{s[k]=type==="number"?Number(e.target.value):e.target.value;}});
- page("Settings",[el("div",{style:"padding:12px"},field("Company",inp("company")),field("GSTIN",inp("gstin")),field("Company state code",inp("stateCode"),"Decides CGST+SGST vs IGST"),field("LUT number",inp("lut"),"Printed on export invoices"),field("Invoice prefix",inp("fyPrefix"),"Numbers: "+s.fyPrefix+"/"+fyKey()+"/0001, reset every 1 April"),field("UPI ID",inp("upi"),"QR printed on invoices"),field("Half day = minutes of inventory",inp("halfDayMinutes","number")),
+ page("Settings",[el("div",{style:"padding:12px"},field("Company",inp("company")),field("GSTIN",inp("gstin")),field("Company state code",inp("stateCode"),"Decides CGST+SGST vs IGST"),field("LUT number",inp("lut"),"Printed on export invoices"),field("Invoice prefix",inp("fyPrefix"),"Numbers: "+s.fyPrefix+"/"+fyKey()+"/0001, reset every 1 April"),field("UPI ID",inp("upi"),"QR printed on invoices"),field("Half day = minutes of inventory",inp("halfDayMinutes","number")),field("TDS threshold per payee (₹ per FY)",inp("tdsThreshold","number"),"You are warned when payments to one payee cross this in a financial year; resets every 1 April"),
   field("Expense categories",el("textarea",{class:"in",oninput:e=>{s.expenseCategories=e.target.value.split("\n").map(x=>x.trim()).filter(Boolean);}},s.expenseCategories.join("\n")),"One per line"),
   el("label",{class:"check"},el("input",{type:"checkbox",checked:s.notifyChat||null,onchange:e=>{s.notifyChat=e.target.checked;}}),el("div",{},el("b",{},"Also post notifications to Google Chat"),el("small",{},"In-app + push are always on"))),
   el("div",{class:"card",style:"margin:0"},el("h4",{},"Integrations"),...[["Google Workspace","service account · domain-wide delegation"],["Twilio WhatsApp","mock in demo"],["Web push","VAPID keys set"],["Google Sheets","push only"]].map(([k,v])=>el("div",{class:"kv"},el("span",{},k),el("span",{},v)))))],
