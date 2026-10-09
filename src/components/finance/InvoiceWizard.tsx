@@ -1,0 +1,146 @@
+"use client";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { ChevronLeft, Search, X } from "lucide-react";
+import { BarChip, BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
+import { useToast } from "@/components/ui/Toast";
+import { createInvoice } from "@/server/finance/invoices";
+import { dateKeyLocal } from "@/components/finance/finance-ui";
+import { buildInvoiceInput, defaultPartsFor, emptyForm, formTax, splitActionError, validateForm, type InvoiceFormState } from "@/components/finance/invoice-form-helpers";
+import { STEP_FIELDS, type ClientOpt } from "@/components/finance/wizard/types";
+import { StepClient } from "@/components/finance/wizard/StepClient";
+import { StepAmount } from "@/components/finance/wizard/StepAmount";
+import { PLAN_CARDS, StepPlan } from "@/components/finance/wizard/StepPlan";
+import { StepReview } from "@/components/finance/wizard/StepReview";
+
+const TITLES = ["Client", "Amount", "Plan", "Review"];
+
+/** "+ New invoice": four thumb-reach steps inside a full-screen Sheet; saves as AWAITING_APPROVAL (never sends). */
+export function InvoiceWizard({ clients, companyStateCode, defaults, onClose }: { clients: ClientOpt[]; companyStateCode: string | null; defaults: { gstPercent: number; paymentTerms: string }; onClose: () => void }) {
+  const router = useRouter();
+  const toast = useToast();
+  const [pending, start] = useTransition();
+  const [step, setStep] = useState(1);
+  const [query, setQuery] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [form, setForm] = useState<InvoiceFormState>(() => emptyForm({ gstPercent: defaults.gstPercent, paymentTerms: defaults.paymentTerms, today: dateKeyLocal() }));
+  const set = (patch: Partial<InvoiceFormState>) => {
+    setForm((f) => ({ ...f, ...patch }));
+    if (Object.keys(errors).length) setErrors({});
+  };
+  const tax = useMemo(() => formTax(form, clients, companyStateCode), [form, clients, companyStateCode]);
+
+  const check = (upTo: number) => {
+    const all = validateForm(form);
+    const keys = new Set(Object.values(STEP_FIELDS).slice(0, upTo).flat());
+    const errs = Object.fromEntries(Object.entries(all).filter(([k]) => upTo >= 4 || keys.has(k)));
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+  const next = () => {
+    if (!check(step)) return;
+    setStep((s) => Math.min(4, s + 1));
+  };
+  const save = () => {
+    if (!check(4)) return toast("Please fix the highlighted fields", "err");
+    start(async () => {
+      const res = await createInvoice(buildInvoiceInput(form));
+      if (!res.ok) {
+        const { fields, rest } = splitActionError(res.error);
+        setErrors(fields);
+        toast(rest || res.error, "err");
+        return;
+      }
+      toast(form.plan === "PART" ? "Part 1 saved — awaiting approval" : "Saved — awaiting approval");
+      onClose();
+      router.push(`/admin/invoices/${res.data.id}`);
+    });
+  };
+
+  const stepProps = { form, set, errors, clients, tax };
+  const rows =
+    step === 2 ? (
+      <ZoneRow label="Amount mode">
+        <ZonePill active={!form.useLines} onClick={() => set({ useLines: false })}>Single amount</ZonePill>
+        <ZonePill active={form.useLines} onClick={() => set({ useLines: true })}>Line items</ZonePill>
+      </ZoneRow>
+    ) : step === 3 ? (
+      <>
+        <ZoneRow label="Plan">
+          {PLAN_CARDS.map((c) => (
+            <ZonePill key={c.value} active={form.plan === c.value} onClick={() => set({ plan: c.value })}>{c.title}</ZonePill>
+          ))}
+        </ZoneRow>
+        {form.plan === "RECURRING" && form.frequency === "MONTHLY" ? (
+          <ZoneRow label="Bill on">
+            <ZonePill active={form.monthAnchor === "START"} onClick={() => set({ monthAnchor: "START" })}>Bill on 1st</ZonePill>
+            <ZonePill active={form.monthAnchor === "END"} onClick={() => set({ monthAnchor: "END" })}>Last day of month</ZonePill>
+          </ZoneRow>
+        ) : form.plan === "PART" ? (
+          <ZoneRow label="Part presets">
+            {[2, 3, 4].map((n) => (
+              <ZonePill key={n} active={form.parts.length === n && form.parts.every((p) => p.kind === "PERCENT")} onClick={() => set({ parts: defaultPartsFor(n, dateKeyLocal()) })}>{n} equal parts</ZonePill>
+            ))}
+          </ZoneRow>
+        ) : null}
+      </>
+    ) : step === 4 ? (
+      <ZoneRow label="Document type">
+        <ZonePill active={!form.proforma} onClick={() => set({ proforma: false })}>{tax?.docType === "EXPORT_INVOICE" || (form.proforma && tax?.placeOfSupply.startsWith("Outside")) ? "Export Invoice" : "Tax Invoice"}</ZonePill>
+        <ZonePill active={form.proforma} onClick={() => set({ proforma: true })}>Proforma</ZonePill>
+      </ZoneRow>
+    ) : null;
+
+  return (
+    <div className="flex h-full min-h-[100dvh] flex-col">
+      <div className="sticky top-0 z-10 flex items-center gap-2 bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 px-4 py-3 text-white backdrop-blur-xl">
+        <div className="flex-1">
+          <div className="text-[11px] uppercase opacity-80">New invoice · step {step} of 4</div>
+          <h2 className="text-base font-semibold">{TITLES[step - 1]}</h2>
+        </div>
+        <button type="button" className="touch-target" onClick={onClose} aria-label="Close"><X size={20} /></button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {step === 1 ? <StepClient {...stepProps} query={query} /> : null}
+        {step === 2 ? <StepAmount {...stepProps} /> : null}
+        {step === 3 ? <StepPlan {...stepProps} /> : null}
+        {step === 4 ? <StepReview {...stepProps} /> : null}
+      </div>
+      <BottomZone
+        menu={false}
+        strip={
+          step === 1 ? (
+            <label className="flex flex-1 items-center gap-2 rounded-full bg-white/70 px-3 py-1 text-sm">
+              <Search size={14} className="text-gray-500" />
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search clients" className="w-full bg-transparent text-sm outline-none" aria-label="Search clients" />
+            </label>
+          ) : undefined
+        }
+        rows={rows}
+        left={
+          <>
+            {step > 1 ? (
+              <button type="button" onClick={() => setStep((s) => s - 1)} className="touch-target flex items-center gap-0.5 pl-1 text-[12px] font-medium text-white" aria-label="Back">
+                <ChevronLeft size={16} /> Back
+              </button>
+            ) : (
+              <span className="w-2" />
+            )}
+            <span className="ml-auto flex items-center gap-1.5 pr-1" aria-label={`Step ${step} of 4`}>
+              {[1, 2, 3, 4].map((s) => (
+                <span key={s} className={`h-2 w-2 rounded-full ${s === step ? "bg-white" : s < step ? "bg-white/70" : "bg-white/30"}`} />
+              ))}
+            </span>
+          </>
+        }
+        right={
+          step < 4 ? (
+            <BarChip onClick={next} label="Next" className="font-semibold">Next →</BarChip>
+          ) : (
+            <BarChip onClick={save} label="Save (awaiting approval)" className={`font-semibold ${pending ? "opacity-60" : ""}`}>{pending ? "Saving…" : "Save (awaiting approval)"}</BarChip>
+          )
+        }
+      />
+    </div>
+  );
+}

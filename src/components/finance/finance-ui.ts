@@ -1,28 +1,21 @@
 /** Client-safe helpers shared by finance components (no server imports). */
-import type { BalanceMode, InvoiceStatus } from "@prisma/client";
+import type { InvoiceStatus } from "@prisma/client";
 
-/** How the balance invoice of an ADVANCE invoice is raised (create form radio + detail page). */
-export const BALANCE_MODE_OPTIONS: { value: BalanceMode; label: string }[] = [
-  { value: "DATE", label: "On a date" },
-  { value: "MANUAL", label: "Manually" },
-  { value: "AUTO", label: "Automatically when the client's tasks are complete (ask me before sending)" },
-];
+export type DocType = "TAX_INVOICE" | "EXPORT_INVOICE" | "PROFORMA" | "CREDIT_NOTE";
+export type TaxMode = "CGST_SGST" | "IGST" | "EXPORT_LUT" | "NONE";
+export type PlanKind = "ONE_TIME" | "RECURRING" | "PART";
 
-export const BALANCE_MODE_LABEL: Record<BalanceMode, string> = {
-  DATE: "on a date",
-  MANUAL: "manually",
-  AUTO: "automatically when the client's tasks are complete",
-};
+const soft = (c: string) => `border border-white/60 backdrop-blur-sm ${c}`;
 
 export const STATUS_TONE: Record<InvoiceStatus, string> = {
   DRAFT: "glass-chip text-gray-800",
-  AWAITING_APPROVAL: "border border-white/60 bg-amber-100/70 text-amber-900 backdrop-blur-sm",
+  AWAITING_APPROVAL: soft("bg-amber-100/70 text-amber-900"),
   CANCELLED: "glass-chip text-gray-500 line-through",
-  SCHEDULED: "border border-white/60 bg-blue-100/70 text-blue-800 backdrop-blur-sm",
-  SENT: "border border-white/60 bg-indigo-100/70 text-indigo-800 backdrop-blur-sm",
-  PARTIALLY_PAID: "border border-white/60 bg-amber-100/70 text-amber-800 backdrop-blur-sm",
-  PAID: "border border-white/60 bg-green-100/70 text-green-800 backdrop-blur-sm",
-  OVERDUE: "border border-white/60 bg-red-100/70 text-red-800 backdrop-blur-sm",
+  SCHEDULED: soft("bg-blue-100/70 text-blue-800"),
+  SENT: soft("bg-indigo-100/70 text-indigo-800"),
+  PARTIALLY_PAID: soft("bg-amber-100/70 text-amber-800"),
+  PAID: soft("bg-green-100/70 text-green-800"),
+  OVERDUE: soft("bg-red-100/70 text-red-800"),
 };
 
 export const STATUS_LABEL: Record<InvoiceStatus, string> = {
@@ -36,6 +29,36 @@ export const STATUS_LABEL: Record<InvoiceStatus, string> = {
   OVERDUE: "Overdue",
 };
 
+export const DOC_LABEL: Record<DocType, string> = {
+  TAX_INVOICE: "Tax Invoice",
+  EXPORT_INVOICE: "Export Invoice",
+  PROFORMA: "Proforma",
+  CREDIT_NOTE: "Credit note",
+};
+
+export const DOC_TONE: Record<DocType, string> = {
+  TAX_INVOICE: soft("bg-sky-100/70 text-sky-900"),
+  EXPORT_INVOICE: soft("bg-teal-100/70 text-teal-900"),
+  PROFORMA: soft("bg-violet-100/70 text-violet-900"),
+  CREDIT_NOTE: soft("bg-rose-100/70 text-rose-900"),
+};
+
+export const TAX_MODE_LABEL: Record<TaxMode, string> = {
+  CGST_SGST: "CGST+SGST",
+  IGST: "IGST",
+  EXPORT_LUT: "0% under LUT",
+  NONE: "No tax",
+};
+
+export const PAYMENT_METHODS = ["CASH", "BANK", "UPI", "OTHER"] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+export const METHOD_LABEL: Record<string, string> = { CASH: "Cash", BANK: "Bank", UPI: "UPI", OTHER: "Other" };
+
+/** "Draft" for unnumbered documents. */
+export function docNumber(number: string): string {
+  return number.startsWith("DRAFT-") ? "Draft" : number;
+}
+
 export function fmtDay(iso: string | null | undefined, tz: string): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: tz });
@@ -44,6 +67,23 @@ export function fmtDay(iso: string | null | undefined, tz: string): string {
 export function fmtDayTime(iso: string | null | undefined, tz: string): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "numeric", minute: "2-digit", timeZone: tz });
+}
+
+/** yyyy-MM-dd for <input type="date"> (local calendar day). */
+export function dateKeyLocal(d = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+export function addDaysKey(days: number, from = new Date()): string {
+  const d = new Date(from);
+  d.setDate(d.getDate() + days);
+  return dateKeyLocal(d);
+}
+
+/** ISO → yyyy-MM-dd for date inputs. */
+export function isoToDateKey(iso: string | null | undefined): string {
+  return iso ? iso.slice(0, 10) : "";
 }
 
 /** Turn a server-action CSV string into a browser download. */
@@ -63,4 +103,18 @@ export function thisMonthKey(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+export function shiftMonthKey(month: string, delta: number): string {
+  const [y, m] = month.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export function monthLabel(month: string): string {
+  const [y, m] = month.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString("en-IN", { month: "short", year: "numeric" });
+}
+
 export const inputSm = "w-full rounded-lg border border-white/70 bg-white/60 px-2 py-1.5 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,.8)] backdrop-blur-md focus:border-brand-blue/60 focus:bg-white/80 focus:outline-none";
+export const chipCls = "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium";
+export const segActive = "bg-gray-900/90 text-white backdrop-blur-md";
+export const segIdle = "glass-chip text-gray-800";

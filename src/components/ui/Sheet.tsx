@@ -1,8 +1,13 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { clsx } from "@/lib/clsx";
 
-/** Bottom sheet / full-screen sheet used for action menus and forms. */
+/**
+ * Bottom sheet / full-screen sheet used for action menus and forms.
+ * Portalled to <body>: `.phone-frame` and the glass cards use backdrop-filter, which would otherwise make the
+ * fixed overlay size itself to that ancestor instead of the viewport (same reason as MenuTray).
+ */
 export function Sheet({
   open,
   onClose,
@@ -16,14 +21,16 @@ export function Sheet({
   full?: boolean;
   title?: string;
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
-  if (!open) return null;
-  return (
+  if (!open || !mounted) return null;
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 backdrop-blur-[2px]" onClick={onClose} role="dialog" aria-modal>
       <div
         onClick={(e) => e.stopPropagation()}
@@ -42,7 +49,8 @@ export function Sheet({
         ) : null}
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

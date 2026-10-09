@@ -1,15 +1,15 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pill } from "@/components/ui/Pill";
+import { Plus } from "lucide-react";
 import { Sheet } from "@/components/ui/Sheet";
-import { btnPrimary, btnSecondary } from "@/components/ui/Field";
+import { BarChip, BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
 import { useToast } from "@/components/ui/Toast";
 import { formatINR } from "@/server/finance/money";
 import type { ExpenseRow } from "@/server/finance/queries";
 import { deleteExpense, exportExpensesCsv, syncExpensesToSheet } from "@/server/finance/expenses";
 import { ExpenseForm } from "@/components/finance/ExpenseForm";
-import { downloadText, fmtDay } from "@/components/finance/finance-ui";
+import { downloadText, fmtDay, monthLabel, shiftMonthKey } from "@/components/finance/finance-ui";
 
 type Props = { rows: ExpenseRow[]; total: number; categories: string[]; month: string; category: string | null; canWrite: boolean; tz: string };
 
@@ -58,45 +58,19 @@ export function ExpensesView({ rows, total, categories, month, category, canWrit
   return (
     <div className="flex flex-1 flex-col">
       <div className="bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 px-4 pb-3 pt-3 text-white backdrop-blur-xl">
-        <div className="flex items-center gap-2">
-          <input type="month" value={month} onChange={(e) => navigate({ month: e.target.value })} className="rounded-lg bg-white/25 px-2 py-1 text-sm text-white backdrop-blur-md" />
-          <button type="button" onClick={() => navigate({ month: "" })} className="text-xs underline opacity-80">
-            all time
-          </button>
-          <div className="ml-auto text-right">
+        <div className="flex items-end justify-between">
+          <div>
+            <div className="text-[11px] uppercase opacity-80">{month ? monthLabel(month) : "All time"}{category ? ` · ${category}` : ""}</div>
+            <div className="text-xs opacity-80">{rows.length} expense{rows.length === 1 ? "" : "s"}</div>
+          </div>
+          <div className="text-right">
             <div className="text-[11px] uppercase opacity-80">Total</div>
             <div className="text-lg font-bold">{formatINR(total)}</div>
           </div>
         </div>
-        <div className="scrollbar-none mt-2 flex gap-2 overflow-x-auto">
-          <Pill active={!category} onClick={() => navigate({ category: null })}>
-            All
-          </Pill>
-          {chips.map((c) => (
-            <Pill key={c} active={category?.toLowerCase() === c.toLowerCase()} onClick={() => navigate({ category: c })}>
-              {c}
-            </Pill>
-          ))}
-        </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 px-4 py-2">
-        {canWrite ? (
-          <button type="button" className={btnPrimary} onClick={() => setEditing("new")}>
-            + Add expense
-          </button>
-        ) : null}
-        <button type="button" className={btnSecondary} disabled={busy === "csv"} onClick={onExport}>
-          Export CSV
-        </button>
-        {canWrite ? (
-          <button type="button" className={btnSecondary} disabled={busy === "sync"} onClick={onSync}>
-            {busy === "sync" ? "Syncing…" : "Sync to Google Sheet"}
-          </button>
-        ) : null}
-      </div>
-
-      <ul className="divide-y divide-white/60 bg-white/55 backdrop-blur-md">
+      <ul className="min-h-0 flex-1 divide-y divide-white/60 overflow-y-auto bg-white/55 backdrop-blur-md">
         {rows.length === 0 ? <li className="px-4 py-8 text-center text-sm text-gray-500">No expenses in this period.</li> : null}
         {rows.map((r) => (
           <li key={r.id} className="px-4 py-3">
@@ -142,6 +116,37 @@ export function ExpensesView({ rows, total, categories, month, category, canWrit
         ))}
       </ul>
 
+      <BottomZone
+        rows={
+          <>
+            <ZoneRow label="Month">
+              <ZonePill onClick={() => navigate({ month: shiftMonthKey(month || new Date().toISOString().slice(0, 7), -1) })} label="Previous month">‹</ZonePill>
+              <ZonePill active={!!month}>{month ? monthLabel(month) : "Pick month"}</ZonePill>
+              <ZonePill onClick={() => navigate({ month: shiftMonthKey(month || new Date().toISOString().slice(0, 7), 1) })} label="Next month">›</ZonePill>
+              <ZonePill active={!month} onClick={() => navigate({ month: "" })}>All time</ZonePill>
+            </ZoneRow>
+            <ZoneRow label="Category">
+              <ZonePill active={!category} onClick={() => navigate({ category: null })}>All</ZonePill>
+              {chips.map((c) => (
+                <ZonePill key={c} active={category?.toLowerCase() === c.toLowerCase()} onClick={() => navigate({ category: c })}>{c}</ZonePill>
+              ))}
+            </ZoneRow>
+          </>
+        }
+        left={
+          <>
+            <ZonePill onClick={onExport} className={busy === "csv" ? "opacity-60" : ""}>Export CSV</ZonePill>
+            {canWrite ? <ZonePill onClick={onSync} className={busy === "sync" ? "opacity-60" : ""}>{busy === "sync" ? "Syncing…" : "Sync to Sheet"}</ZonePill> : null}
+          </>
+        }
+        right={
+          canWrite ? (
+            <BarChip onClick={() => setEditing("new")} label="Add expense" className="font-semibold">
+              <Plus size={12} className="mr-0.5" /> Add expense
+            </BarChip>
+          ) : null
+        }
+      />
       <Sheet open={editing !== null} onClose={() => setEditing(null)} title={editing === "new" ? "Add expense" : "Edit expense"}>
         {editing !== null ? (
           <ExpenseForm
