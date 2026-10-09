@@ -21,7 +21,7 @@ export function InvoiceListView({ rows, status, clients, defaultGst, defaultTerm
   const outstanding = rows.reduce((s, r) => s + (r.status === "DRAFT" || r.status === "SCHEDULED" ? 0 : r.balance), 0);
   return (
     <div className="flex flex-1 flex-col">
-      <div className="bg-brand-blue px-4 pb-3 pt-3 text-white">
+      <div className="bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 px-4 pb-3 pt-3 text-white backdrop-blur-xl">
         <div className="flex items-end justify-between">
           <div>
             <div className="text-[11px] uppercase opacity-80">Outstanding</div>
@@ -42,7 +42,7 @@ export function InvoiceListView({ rows, status, clients, defaultGst, defaultTerm
           {clients.length === 0 ? <span className="ml-2 text-xs text-gray-500">Add a client first.</span> : null}
         </div>
       ) : null}
-      <ul className="divide-y bg-white">
+      <ul className="divide-y divide-white/60 bg-white/55 backdrop-blur-md">
         {rows.length === 0 ? <li className="px-4 py-8 text-center text-sm text-gray-500">No invoices yet.</li> : null}
         {rows.map((r) => (
           <li key={r.id}>

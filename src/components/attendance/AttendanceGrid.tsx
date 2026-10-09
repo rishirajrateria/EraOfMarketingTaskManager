@@ -51,7 +51,7 @@ export function AttendanceGrid({
     });
 
   return (
-    <section className="mx-3 mt-3 rounded-xl bg-white p-3 shadow-sm">
+    <section className="glass mx-3 mt-3 rounded-2xl p-3">
       <div className="flex items-center justify-between gap-2">
         <Link href={href(grid.prevMonth)} className="touch-target flex items-center px-2 text-lg" aria-label="Previous month">
           ‹
@@ -92,7 +92,7 @@ export function AttendanceGrid({
         <table className="border-separate border-spacing-0.5 text-[10px]">
           <thead>
             <tr>
-              <th className="sticky left-0 bg-white pr-2 text-left text-xs font-medium text-gray-500">Person</th>
+              <th className="sticky left-0 bg-white/80 pr-2 text-left text-xs font-medium text-gray-600 backdrop-blur-md">Person</th>
               {grid.days.map((d) => (
                 <th key={d.key} className={clsx("min-w-6 text-center font-medium", d.working ? "text-gray-600" : "text-gray-400")}>
                   <div>{d.day}</div>
@@ -104,14 +104,14 @@ export function AttendanceGrid({
           <tbody>
             {grid.users.map((u) => (
               <tr key={u.id}>
-                <td className="sticky left-0 whitespace-nowrap bg-white pr-2 text-xs">{u.name}</td>
+                <td className="sticky left-0 whitespace-nowrap bg-white/80 pr-2 text-xs backdrop-blur-md">{u.name}</td>
                 {grid.days.map((d) => {
                   const c = grid.cells[u.id]?.[d.key];
                   const style = c ? STATUS_STYLE[c.status] : null;
                   const title = c ? `${style?.label}${c.checkIn ? ` · in ${c.checkIn}` : ""}${c.checkOut ? ` · out ${c.checkOut}` : ""}${c.note ? ` · ${c.note}` : ""}` : d.key;
                   const cellCls = clsx(
                     "flex h-6 w-6 items-center justify-center rounded font-bold",
-                    style ? style.cls : d.working ? "bg-gray-50 text-gray-300" : "bg-gray-200 text-gray-400",
+                    style ? style.cls : d.working ? "bg-white/50 text-gray-400" : "bg-gray-300/50 text-gray-500",
                   );
                   return (
                     <td key={d.key} className="p-0">
@@ -150,7 +150,7 @@ export function AttendanceGrid({
           </span>
         ))}
         <span className="inline-flex items-center gap-1">
-          <span className="rounded bg-gray-200 px-2 py-0.5" /> non-working
+          <span className="rounded bg-gray-300/50 px-2 py-0.5" /> non-working
         </span>
       </div>
       {canMark && target ? <MarkAttendanceSheet key={`${target.userId}-${target.date}`} target={target} onClose={() => setTarget(null)} /> : null}

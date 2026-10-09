@@ -57,9 +57,9 @@ export function ExpensesView({ rows, total, categories, month, category, canWrit
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="bg-brand-blue px-4 pb-3 pt-3 text-white">
+      <div className="bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 px-4 pb-3 pt-3 text-white backdrop-blur-xl">
         <div className="flex items-center gap-2">
-          <input type="month" value={month} onChange={(e) => navigate({ month: e.target.value })} className="rounded-lg bg-white/20 px-2 py-1 text-sm text-white" />
+          <input type="month" value={month} onChange={(e) => navigate({ month: e.target.value })} className="rounded-lg bg-white/25 px-2 py-1 text-sm text-white backdrop-blur-md" />
           <button type="button" onClick={() => navigate({ month: "" })} className="text-xs underline opacity-80">
             all time
           </button>
@@ -96,7 +96,7 @@ export function ExpensesView({ rows, total, categories, month, category, canWrit
         ) : null}
       </div>
 
-      <ul className="divide-y bg-white">
+      <ul className="divide-y divide-white/60 bg-white/55 backdrop-blur-md">
         {rows.length === 0 ? <li className="px-4 py-8 text-center text-sm text-gray-500">No expenses in this period.</li> : null}
         {rows.map((r) => (
           <li key={r.id} className="px-4 py-3">

@@ -13,7 +13,7 @@ export type Patch = (p: Partial<SettingsValues>) => void;
 
 export function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="border-b border-gray-200 bg-white px-4 py-4">
+    <section className="border-b border-white/60 bg-white/55 px-4 py-4 backdrop-blur-md">
       <h2 className="mb-3 text-sm font-semibold text-gray-900">{title}</h2>
       <div className="flex flex-col gap-3">{children}</div>
     </section>
@@ -82,9 +82,9 @@ export function LogoSection({
       <div className="flex items-center gap-4">
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={`${logoUrl}?v=${encodeURIComponent(version)}`} alt="Company logo" className="h-16 w-16 rounded-lg border bg-white object-contain" />
+          <img src={`${logoUrl}?v=${encodeURIComponent(version)}`} alt="Company logo" className="h-16 w-16 rounded-lg border border-white/70 bg-white/60 object-contain backdrop-blur-md" />
         ) : (
-          <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed text-xs text-gray-400">No logo</div>
+          <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-white/80 bg-white/30 text-xs text-gray-500">No logo</div>
         )}
         <div className="flex flex-col gap-2">
           <input
@@ -161,7 +161,7 @@ export function HolidaysSection({ v, patch }: { v: SettingsValues; patch: Patch 
       {v.holidays.length === 0 ? (
         <p className="text-xs text-gray-400">No holidays added.</p>
       ) : (
-        <ul className="divide-y rounded-lg border">
+        <ul className="glass divide-y divide-white/60 rounded-2xl">
           {v.holidays.map((h) => (
             <li key={h} className="flex items-center justify-between px-3 py-2 text-sm">
               <span>{h}</span>

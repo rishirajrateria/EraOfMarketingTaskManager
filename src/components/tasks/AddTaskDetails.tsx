@@ -19,7 +19,7 @@ function Chip({ active, onClick, children, colour }: { active: boolean; onClick:
       aria-pressed={active}
       className={clsx(
         "touch-target inline-flex items-center gap-1 rounded-full px-3 text-xs font-medium transition",
-        active ? "bg-brand-blue text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200",
+        active ? "bg-gradient-to-b from-[#2f74e6] to-[#1e63d6] text-white shadow-[0_4px_12px_rgba(30,99,214,.3),inset_0_1px_0_rgba(255,255,255,.35)]" : "glass-chip text-gray-800 hover:bg-white/80",
       )}
     >
       {colour ? <span className="h-2 w-2 rounded-full" style={{ background: colour }} aria-hidden /> : null}

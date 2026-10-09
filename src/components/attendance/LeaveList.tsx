@@ -8,10 +8,10 @@ import { Field, btnDanger, btnPrimary, btnSecondary, inputCls } from "@/componen
 import { useToast } from "@/components/ui/Toast";
 
 export const LEAVE_STATUS_STYLE: Record<LeaveSummary["status"], { label: string; cls: string }> = {
-  REQUESTED: { label: "Pending HR", cls: "bg-amber-100 text-amber-800" },
-  HR_APPROVED: { label: "Approved (HR)", cls: "bg-green-100 text-green-800" },
-  ADMIN_APPROVED: { label: "Approved (Admin)", cls: "bg-green-100 text-green-800" },
-  REJECTED: { label: "Rejected / cancelled", cls: "bg-red-100 text-red-800" },
+  REQUESTED: { label: "Pending HR", cls: "border border-white/60 bg-amber-100/70 text-amber-800 backdrop-blur-sm" },
+  HR_APPROVED: { label: "Approved (HR)", cls: "border border-white/60 bg-green-100/70 text-green-800 backdrop-blur-sm" },
+  ADMIN_APPROVED: { label: "Approved (Admin)", cls: "border border-white/60 bg-green-100/70 text-green-800 backdrop-blur-sm" },
+  REJECTED: { label: "Rejected / cancelled", cls: "border border-white/60 bg-red-100/70 text-red-800 backdrop-blur-sm" },
 };
 
 export const isApprovedLeave = (s: LeaveSummary["status"]) => s === "HR_APPROVED" || s === "ADMIN_APPROVED";
@@ -77,7 +77,7 @@ export function LeaveList({ leaves }: { leaves: LeaveSummary[] }) {
   const [editing, setEditing] = useState<LeaveSummary | null>(null);
   if (leaves.length === 0) return <p className="mx-3 mt-3 text-xs text-gray-400">No leaves yet.</p>;
   return (
-    <ul className="mx-3 mt-3 divide-y rounded-xl bg-white shadow-sm">
+    <ul className="glass mx-3 mt-3 divide-y divide-white/60 rounded-2xl">
       {leaves.map((l) => (
         <li key={l.id} className="flex items-center gap-3 px-4 py-3">
           <div className="min-w-0 flex-1">
@@ -86,7 +86,7 @@ export function LeaveList({ leaves }: { leaves: LeaveSummary[] }) {
             <div className="mt-1 flex flex-wrap items-center gap-1">
               <LeaveStatusPill status={l.status} />
               {l.pendingChange ? (
-                <span className="rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-semibold text-purple-800">
+                <span className="rounded border border-white/60 bg-purple-100/70 px-1.5 py-0.5 text-[10px] font-semibold text-purple-800 backdrop-blur-sm">
                   {"cancel" in l.pendingChange.payload ? "Cancellation" : "Change"} pending Admin
                 </span>
               ) : null}

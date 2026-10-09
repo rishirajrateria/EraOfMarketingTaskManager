@@ -5,10 +5,10 @@ import { clsx } from "@/lib/clsx";
 import { hrs } from "@/components/inventory/InventoryTable";
 
 const KIND_STYLE: Record<HourCellKind, { cls: string; label: string }> = {
-  free: { cls: "bg-green-100", label: "Free" },
-  assigned: { cls: "bg-blue-200", label: "Assigned" },
-  lunch: { cls: "bg-gray-200", label: "Lunch" },
-  off: { cls: "bg-gray-300", label: "Leave / holiday / absent" },
+  free: { cls: "border border-white/60 bg-green-100/70 backdrop-blur-sm", label: "Free" },
+  assigned: { cls: "border border-white/60 bg-blue-200/70 backdrop-blur-sm", label: "Assigned" },
+  lunch: { cls: "border border-white/60 bg-gray-200/70 backdrop-blur-sm", label: "Lunch" },
+  off: { cls: "border border-white/60 bg-gray-300/70 backdrop-blur-sm", label: "Leave / holiday / absent" },
 };
 
 const STATUS_LABEL: Record<HourlyRow["status"], string> = {
@@ -30,13 +30,13 @@ function cellTitle(cell: HourCell, lunch: { start: number; end: number }): strin
 /** Day view: one row per person, one cell per working hour, plus the day's capacity / assigned / sellable. */
 export function HourlyGrid({ hourly }: { hourly: HourlyBreakdown }) {
   return (
-    <section className="mx-3 mt-3 rounded-xl bg-white p-3 shadow-sm">
+    <section className="glass mx-3 mt-3 rounded-2xl p-3">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Hour by hour · {hourly.date}</h2>
       <div className="mt-2 overflow-x-auto">
         <table className="border-separate border-spacing-0.5 text-[10px]">
           <thead>
             <tr>
-              <th className="sticky left-0 bg-white pr-2 text-left text-xs font-medium text-gray-500">Person</th>
+              <th className="sticky left-0 bg-white/80 pr-2 text-left text-xs font-medium text-gray-600 backdrop-blur-md">Person</th>
               {hourly.hours.map((h) => (
                 <th key={h} className="min-w-7 text-center font-medium text-gray-500">
                   {String(Math.floor(h / 60)).padStart(2, "0")}
@@ -50,7 +50,7 @@ export function HourlyGrid({ hourly }: { hourly: HourlyBreakdown }) {
           <tbody>
             {hourly.rows.map((r) => (
               <tr key={r.userId}>
-                <td className="sticky left-0 whitespace-nowrap bg-white pr-2 text-xs">
+                <td className="sticky left-0 whitespace-nowrap bg-white/80 pr-2 text-xs backdrop-blur-md">
                   {r.name}
                   {STATUS_LABEL[r.status] ? <span className="ml-1 text-[9px] text-gray-400">{STATUS_LABEL[r.status]}</span> : null}
                 </td>

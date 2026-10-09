@@ -58,7 +58,7 @@ export function InventoryPanel({
 
   return (
     <div className="pb-6">
-      <div className="bg-brand-blue px-3 pb-3 pt-2 text-white">
+      <div className="bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 px-3 pb-3 pt-2 text-white backdrop-blur-xl">
         <div className="scrollbar-none flex gap-2 overflow-x-auto">
           {INVENTORY_VIEWS.map((v) => (
             <Link key={v.id} href={href({ view: v.id })}>
@@ -119,7 +119,7 @@ export function InventoryPanel({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-white/15 py-2">
+    <div className="rounded-lg border border-white/30 bg-white/20 py-2 backdrop-blur-md">
       <div className="text-lg font-bold leading-tight">{value}</div>
       <div className="text-[10px] uppercase tracking-wide text-white/80">{label}</div>
     </div>

@@ -43,8 +43,8 @@ export function RequestsInbox({ items, showAll, tz }: { items: RequestItem[]; sh
     });
 
   return (
-    <main className="flex flex-1 flex-col bg-white">
-      <div className="scrollbar-none flex gap-2 overflow-x-auto border-b bg-brand-blue px-3 py-2">
+    <main className="flex flex-1 flex-col bg-white/55 backdrop-blur-md">
+      <div className="scrollbar-none flex gap-2 overflow-x-auto border-b border-white/60 bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 px-3 py-2 backdrop-blur-xl">
         {TYPES.map((t) => (
           <Pill key={t} active={type === t} onClick={() => setType(t)}>
             {t === "ALL" ? "All" : LABEL[t]}
@@ -55,7 +55,7 @@ export function RequestsInbox({ items, showAll, tz }: { items: RequestItem[]; sh
         </Link>
       </div>
       {visible.length === 0 ? <p className="p-6 text-center text-sm text-gray-500">Inbox is empty.</p> : null}
-      <ul className="divide-y">
+      <ul className="divide-y divide-white/60">
         {visible.map((r) => (
           <li key={r.id} className="px-4 py-3">
             <div className="flex items-start justify-between gap-2">

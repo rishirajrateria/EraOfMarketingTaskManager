@@ -15,7 +15,7 @@ function Section({ title, children, empty }: { title: string; children: React.Re
   return (
     <section className="mx-3 mt-3">
       <h2 className="mb-1 px-1 text-xs font-semibold uppercase tracking-wide text-gray-500">{title}</h2>
-      <div className="divide-y rounded-xl bg-white shadow-sm">{children}</div>
+      <div className="glass divide-y divide-white/60 rounded-2xl">{children}</div>
       {empty ? <p className="px-1 pt-1 text-xs text-gray-400">{empty}</p> : null}
     </section>
   );
@@ -34,7 +34,7 @@ export function LeaveInbox({ inbox, isAdmin, highlightLeaveId }: { inbox: Inbox;
       toast(okText);
       router.refresh();
     });
-  const hl = (id: string) => clsx("px-4 py-3", id === highlightLeaveId && "bg-blue-50");
+  const hl = (id: string) => clsx("px-4 py-3", id === highlightLeaveId && "bg-blue-100/50");
 
   return (
     <div className="pb-6">

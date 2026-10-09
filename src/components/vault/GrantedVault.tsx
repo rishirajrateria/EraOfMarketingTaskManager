@@ -35,7 +35,7 @@ function GrantedRow({ item }: { item: GrantedItem }) {
   // Grant state is updated locally after the first reveal so the after-first-open countdown starts at once.
   const [grant, setGrant] = useState(item.grant);
   return (
-    <li className="rounded-xl bg-white p-3 shadow-sm">
+    <li className="glass rounded-2xl p-3">
       <div className="text-sm font-semibold">{item.label}</div>
       {item.url ? (
         <a href={item.url} target="_blank" rel="noreferrer" className="block truncate text-xs text-brand-blue underline">
@@ -53,7 +53,7 @@ function GrantedRow({ item }: { item: GrantedItem }) {
           }}
         />
       </div>
-      <div className="mt-2 border-t pt-1">
+      <div className="mt-2 border-t border-white/60 pt-1">
         <ExpiryLine grant={grant} />
       </div>
     </li>

@@ -107,7 +107,7 @@ export function ListRow({
 
 export function StatusPill({ active }: { active: boolean }) {
   return (
-    <span className={clsx("rounded-full px-2 py-0.5 text-[10px] font-semibold", active ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-600")}>
+    <span className={clsx("rounded-full px-2 py-0.5 text-[10px] font-semibold", active ? "border border-white/60 bg-green-100/70 text-green-700 backdrop-blur-sm" : "glass-chip text-gray-600")}>
       {active ? "Active" : "Inactive"}
     </span>
   );
@@ -140,7 +140,7 @@ export function WeekdayPicker({ value, onChange }: { value: number[]; onChange: 
           key={name}
           className={clsx(
             "cursor-pointer rounded-full border px-2.5 py-1 text-xs font-medium",
-            value.includes(d) ? "border-brand-blue bg-brand-blue text-white" : "border-gray-300 bg-white text-gray-700",
+            value.includes(d) ? "border-brand-blue/60 bg-gradient-to-b from-[#2f74e6] to-[#1e63d6] text-white" : "glass-chip border-white/70 text-gray-800",
           )}
         >
           <input type="checkbox" className="sr-only" checked={value.includes(d)} onChange={() => toggle(d)} />
@@ -154,7 +154,7 @@ export function WeekdayPicker({ value, onChange }: { value: number[]; onChange: 
 export function ColourInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <div className="flex items-center gap-2">
-      <input type="color" value={value} onChange={(e) => onChange(e.target.value)} className="h-9 w-12 cursor-pointer rounded border border-gray-300 bg-white p-0.5" />
+      <input type="color" value={value} onChange={(e) => onChange(e.target.value)} className="h-9 w-12 cursor-pointer rounded border border-white/70 bg-white/60 p-0.5 backdrop-blur-md" />
       <span className="font-mono text-xs text-gray-500">{value}</span>
     </div>
   );

@@ -60,7 +60,7 @@ export function SettingsForm({ settings, google }: { settings: SettingsDto; goog
       <ExpenseCategoriesSection v={v} patch={patch} />
       <NotificationsSection v={v} patch={patch} />
       <GoogleStatusSection status={google} />
-      <div className="fixed bottom-0 z-30 w-full max-w-[480px] border-t bg-white/95 px-4 py-3 backdrop-blur" style={{ left: "50%", transform: "translateX(-50%)" }}>
+      <div className="fixed bottom-0 z-30 w-full max-w-[480px] border-t border-white/60 bg-white/70 px-4 py-3 backdrop-blur-xl" style={{ left: "50%", transform: "translateX(-50%)" }}>
         <button type="submit" className={`${btnPrimary} w-full`} disabled={busy || !dirty}>
           {busy ? "Saving…" : dirty ? "Save settings" : "Saved"}
         </button>

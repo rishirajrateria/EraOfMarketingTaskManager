@@ -80,7 +80,7 @@ export function ExpenseForm({ initial, categories, onDone }: { initial?: Expense
         />
         {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt="Receipt" className="mt-2 max-h-40 rounded-lg border object-contain" />
+          <img src={preview} alt="Receipt" className="mt-2 max-h-40 rounded-lg border border-white/60 object-contain" />
         ) : null}
       </Field>
       <Field label="Voice note">

@@ -109,7 +109,7 @@ function ClientForm({
         <textarea className={inputCls} rows={3} value={v.address ?? ""} onChange={set("address")} />
       </Field>
       {client ? (
-        <div className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
+        <div className="glass rounded-2xl px-3 py-2 text-xs text-gray-700">
           <div>
             Drive folder:{" "}
             {client.driveFolderId ? (

@@ -53,7 +53,7 @@ export function ExpenseCategoriesSection({ v, patch }: { v: SettingsValues; patc
       {list.length === 0 ? (
         <p className="text-xs text-red-600">Add at least one category.</p>
       ) : (
-        <ul className="divide-y rounded-lg border">
+        <ul className="glass divide-y divide-white/60 rounded-2xl">
           {list.map((c, i) => {
             const duplicate = c.trim() !== "" && exists(c.trim(), i);
             return (

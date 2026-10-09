@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { btnDanger, btnSecondary } from "@/components/ui/Field";
 
 /** In-browser MediaRecorder → webm blob (SPEC §11.2 voice note per expense). */
 export function VoiceRecorder({ onChange, existingUrl }: { onChange: (blob: Blob | null, durationSec: number) => void; existingUrl?: string | null }) {
@@ -52,11 +53,11 @@ export function VoiceRecorder({ onChange, existingUrl }: { onChange: (blob: Blob
   return (
     <div className="flex flex-wrap items-center gap-2">
       {recording ? (
-        <button type="button" onClick={stop} className="touch-target rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white">
+        <button type="button" onClick={stop} className={btnDanger}>
           ■ Stop ({seconds}s)
         </button>
       ) : (
-        <button type="button" onClick={start} className="touch-target rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm">
+        <button type="button" onClick={start} className={btnSecondary}>
           🎤 {url ? "Re-record" : "Record voice note"}
         </button>
       )}

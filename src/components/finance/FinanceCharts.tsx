@@ -64,7 +64,7 @@ export function ClientBars({ clients }: { clients: { clientId: string; clientNam
       {clients.map((c) => (
         <li key={c.clientId}>
           <div className="flex justify-between text-xs"><span className="truncate font-medium">{c.clientName}</span><span className="text-gray-500">{formatINR(c.invoiced)}</span></div>
-          <div className="mt-1 flex h-2.5 w-full overflow-hidden rounded-full bg-gray-100">
+          <div className="mt-1 flex h-2.5 w-full overflow-hidden rounded-full bg-white/60">
             <div className="bg-brand-green" style={{ width: `${(c.received / max) * 100}%` }} title={`Received ${formatINR(c.received)}`} />
             <div className="bg-amber-400" style={{ width: `${(c.outstanding / max) * 100}%` }} title={`Outstanding ${formatINR(c.outstanding)}`} />
           </div>

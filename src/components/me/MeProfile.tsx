@@ -49,23 +49,23 @@ export function MeProfile({ me, defaultCapacityMinutes }: { me: MyProfile; defau
 
   return (
     <div className="flex flex-1 flex-col pb-10">
-      <div className="flex items-center gap-4 bg-brand-blue px-4 py-5 text-white">
+      <div className="flex items-center gap-4 bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 px-4 py-5 text-white backdrop-blur-xl">
         <Avatar name={me.name} src={me.avatar} size={56} />
         <div className="min-w-0">
           <div className="truncate text-lg font-bold">{me.name}</div>
           <div className="truncate text-xs text-white/80">{me.email}</div>
-          <div className="mt-1 inline-block rounded-full bg-white/25 px-2 py-0.5 text-[11px] font-medium">{ROLE_LABEL[me.role]}</div>
+          <div className="mt-1 inline-block rounded-full bg-white/25 px-2 py-0.5 text-[11px] font-medium backdrop-blur-md">{ROLE_LABEL[me.role]}</div>
         </div>
       </div>
 
-      <section className="border-b bg-white px-4 py-3 text-sm">
+      <section className="border-b border-white/60 bg-white/55 px-4 py-3 text-sm backdrop-blur-md">
         <Row label="Team" value={me.team?.name ?? "—"} />
         {me.teamLeader ? <Row label="Reports to" value={me.teamLeader.name} /> : null}
         <Row label="Daily capacity" value={`${minutesToHours(me.dailyCapacityMinutes ?? defaultCapacityMinutes)} h${me.dailyCapacityMinutes == null ? " (company default)" : ""}`} />
         <Row label="Working days" value={me.workingDays.map((d) => WEEKDAYS[d]).join(", ") || "—"} />
       </section>
 
-      <section className="border-b bg-white px-4 py-2">
+      <section className="border-b border-white/60 bg-white/55 px-4 py-2 backdrop-blur-md">
         <Toggle label="Email me about task updates" hint="In-app and Chat notifications are always on" checked={notify} onChange={(v) => void toggleEmail(v)} />
         <div className="flex items-center justify-between gap-3 py-2">
           <span>
@@ -81,7 +81,7 @@ export function MeProfile({ me, defaultCapacityMinutes }: { me: MyProfile; defau
       </section>
 
       <div className="px-4 py-4">
-        <Link href="/api/auth/signout" className="block rounded-lg border border-red-200 bg-white px-4 py-3 text-center text-sm font-medium text-red-600">
+        <Link href="/api/auth/signout" className="glass block rounded-2xl px-4 py-3 text-center text-sm font-medium text-red-600">
           Sign out
         </Link>
       </div>

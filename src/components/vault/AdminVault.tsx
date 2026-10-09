@@ -67,7 +67,7 @@ export function AdminVault({
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="bg-brand-blue-dark px-3 pb-3 text-white">
+      <div className="bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 px-3 pb-3 text-white backdrop-blur-xl">
         <div className="flex items-center justify-between py-1">
           <h1 className="text-base font-semibold">Client Vault</h1>
           <div className="flex items-center gap-1">
@@ -96,7 +96,7 @@ export function AdminVault({
         </div>
       </div>
 
-      <div className="flex border-b bg-white">
+      <div className="flex border-b border-white/60 bg-white/55 backdrop-blur-md">
         {TABS.map((t) => (
           <button
             key={t.kind}
@@ -128,7 +128,7 @@ export function AdminVault({
       <ul className="space-y-2 px-3 pb-24">
         {client && items.length === 0 ? <li className="py-6 text-center text-sm text-gray-400">Nothing here yet. Tap + to add.</li> : null}
         {items.map((it) => (
-          <li key={it.id} className="rounded-xl bg-white p-3 shadow-sm">
+          <li key={it.id} className="glass rounded-2xl p-3">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-semibold">{it.label}</div>
@@ -147,7 +147,7 @@ export function AdminVault({
             <div className="mt-2">
               <RevealSecret itemId={it.id} hasPassword={it.hasPassword} />
             </div>
-            <div className="mt-2 border-t pt-2">
+            <div className="mt-2 border-t border-white/60 pt-2">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-medium uppercase text-gray-400">Access</span>
                 <button type="button" className={`${btnSecondary} !min-h-8 !py-1 text-xs`} onClick={() => setGrantTarget({ itemId: it.id, label: it.label })}>

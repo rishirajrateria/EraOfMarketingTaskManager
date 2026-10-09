@@ -12,17 +12,17 @@ export default async function NotificationsPage() {
     getSettings(),
   ]);
   return (
-    <main className="flex-1 bg-white">
-      <div className="flex items-center justify-between border-b px-4 py-2">
+    <main className="flex-1 bg-white/55 backdrop-blur-md">
+      <div className="flex items-center justify-between border-b border-white/60 px-4 py-2">
         <h1 className="font-semibold">Notifications</h1>
         <form action={async () => { "use server"; await markAllRead(); }}>
           <button className="text-xs text-brand-blue">Mark all read</button>
         </form>
       </div>
       {rows.length === 0 ? <p className="p-6 text-center text-sm text-gray-500">Nothing yet.</p> : null}
-      <ul className="divide-y">
+      <ul className="divide-y divide-white/60">
         {rows.map((n) => (
-          <li key={n.id} className={n.readAt ? "bg-white" : "bg-blue-50"}>
+          <li key={n.id} className={n.readAt ? "" : "bg-blue-100/50"}>
             <Link href={n.href ?? "/"} className="block px-4 py-3">
               <div className="text-sm font-medium">{n.title}</div>
               {n.body ? <div className="text-xs text-gray-600">{n.body}</div> : null}

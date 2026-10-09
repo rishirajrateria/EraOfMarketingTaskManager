@@ -19,7 +19,7 @@ function LinkBtn({ href, label, icon, disabled }: { href: string | null; label: 
       target="_blank"
       rel="noopener noreferrer"
       aria-disabled={off}
-      className={clsx("flex flex-col items-center gap-1 rounded-lg border px-2 py-2 text-[11px]", off ? "pointer-events-none border-gray-200 text-gray-300" : "border-gray-300 text-gray-700 active:bg-gray-100")}
+      className={clsx("flex flex-col items-center gap-1 rounded-lg border px-2 py-2 text-[11px]", off ? "pointer-events-none border-white/50 bg-white/30 text-gray-400" : "glass-chip border-white/70 text-gray-800 active:bg-white/80")}
     >
       {icon}
       {label}
@@ -111,7 +111,7 @@ export function TaskDetailSheet({
         </div>
 
         {t.integrationError ? (
-          <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <div className="flex items-start gap-2 rounded-lg border border-white/60 bg-amber-100/70 px-3 py-2 text-xs text-amber-900 backdrop-blur-sm">
             <AlertTriangle size={16} className="mt-0.5 shrink-0" />
             <span className="flex-1 break-words">{t.integrationError}</span>
             {isAdmin ? (
@@ -139,7 +139,7 @@ export function TaskDetailSheet({
             v={
               <span className="flex flex-wrap justify-end gap-1">
                 {t.assignees.map((a) => (
-                  <span key={a.id} className="inline-flex items-center gap-1 rounded-full bg-gray-100 py-0.5 pl-0.5 pr-2 text-xs">
+                  <span key={a.id} className="glass-chip inline-flex items-center gap-1 rounded-full py-0.5 pl-0.5 pr-2 text-xs">
                     <Avatar name={a.name} src={a.avatar} size={18} />
                     {a.name}
                   </span>
@@ -169,13 +169,13 @@ export function TaskDetailSheet({
         {t.doubtNote || t.reviewNote ? (
           <section className="space-y-1">
             {t.doubtNote ? (
-              <p className="rounded-lg bg-yellow-50 px-3 py-2 text-xs text-yellow-900">
+              <p className="rounded-lg border border-white/60 bg-yellow-100/70 px-3 py-2 text-xs text-yellow-900 backdrop-blur-sm">
                 <span className="font-semibold">Doubt: </span>
                 {t.doubtNote}
               </p>
             ) : null}
             {t.reviewNote ? (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-900">
+              <p className="rounded-lg border border-white/60 bg-red-100/70 px-3 py-2 text-xs text-red-900 backdrop-blur-sm">
                 <span className="font-semibold">Request: </span>
                 {t.reviewNote}
               </p>

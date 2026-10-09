@@ -49,12 +49,12 @@ export function GrantSheet({ open, onClose, users, target }: { open: boolean; on
     <Sheet open={open} onClose={onClose} title={target ? `Grant access · ${target.label}` : "Grant access"}>
       <form onSubmit={submit} className="space-y-3 px-4 py-4">
         {target && "clientId" in target ? (
-          <p className="rounded-lg bg-yellow-50 px-3 py-2 text-[11px] text-yellow-800">
+          <p className="rounded-lg border border-white/60 bg-yellow-100/70 px-3 py-2 text-[11px] text-yellow-800 backdrop-blur-sm">
             Applies to every item this client has right now. Items added later need a new grant.
           </p>
         ) : null}
         <Field label="Users">
-          <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-gray-200 p-2">
+          <div className="glass max-h-48 space-y-1 overflow-y-auto rounded-2xl p-2">
             {users.length === 0 ? <span className="text-xs text-gray-400">No active users</span> : null}
             {users.map((u) => (
               <label key={u.id} className="flex items-center gap-2 py-1 text-sm">

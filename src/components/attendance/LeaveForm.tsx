@@ -25,7 +25,7 @@ export function LeaveForm({ defaultDate }: { defaultDate: string }) {
   };
 
   return (
-    <form onSubmit={submit} className="mx-3 mt-3 space-y-3 rounded-xl bg-white p-4 shadow-sm">
+    <form onSubmit={submit} className="glass mx-3 mt-3 space-y-3 rounded-2xl p-4">
       <h2 className="text-sm font-semibold">Request leave</h2>
       <div className="grid grid-cols-2 gap-3">
         <Field label="From">

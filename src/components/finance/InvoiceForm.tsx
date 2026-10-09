@@ -75,7 +75,7 @@ export function InvoiceForm({ clients, defaultGst, defaultTerms, onDone }: { cli
     router.push(`/admin/invoices/${res.data.id}`);
   }
 
-  const seg = (active: boolean) => `touch-target flex-1 rounded-lg px-3 py-1.5 text-center text-sm ${active ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-700"}`;
+  const seg = (active: boolean) => `touch-target flex-1 rounded-lg px-3 py-1.5 text-center text-sm ${active ? "bg-gray-900/90 text-white backdrop-blur-md" : "glass-chip text-gray-800"}`;
 
   return (
     <div className="space-y-4 px-4 py-4">
@@ -94,7 +94,7 @@ export function InvoiceForm({ clients, defaultGst, defaultTerms, onDone }: { cli
         <div className="mb-1 text-xs font-medium text-gray-600">Line items</div>
         <div className="space-y-2">
           {lines.map((l, i) => (
-            <div key={i} className="rounded-lg border border-gray-200 p-2">
+            <div key={i} className="glass rounded-2xl p-2">
               <input placeholder="Description" value={l.description} onChange={(e) => setLine(i, { description: e.target.value })} className={inputSm} />
               <div className="mt-2 grid grid-cols-4 gap-2">
                 <input placeholder="HSN/SAC" value={l.hsnSac} onChange={(e) => setLine(i, { hsnSac: e.target.value })} className={inputSm} />
@@ -137,7 +137,7 @@ export function InvoiceForm({ clients, defaultGst, defaultTerms, onDone }: { cli
         </div>
       </Field>
       {kind === "RECURRING" ? (
-        <div className="space-y-2 rounded-lg bg-gray-50 p-3">
+        <div className="glass space-y-2 rounded-2xl p-3">
           <div className="grid grid-cols-2 gap-2">
             <select value={freq} onChange={(e) => setFreq(e.target.value as typeof freq)} className={inputSm}>
               <option value="DAILY">Daily</option>
@@ -150,7 +150,7 @@ export function InvoiceForm({ clients, defaultGst, defaultTerms, onDone }: { cli
           {freq === "WEEKLY" ? (
             <div className="flex gap-1">
               {WEEKDAYS.map((d, i) => (
-                <button key={d} type="button" onClick={() => setByWeekday((w) => (w.includes(i) ? w.filter((x) => x !== i) : [...w, i]))} className={`h-8 w-8 rounded-full text-xs ${byWeekday.includes(i) ? "bg-gray-900 text-white" : "bg-white text-gray-700 border"}`}>
+                <button key={d} type="button" onClick={() => setByWeekday((w) => (w.includes(i) ? w.filter((x) => x !== i) : [...w, i]))} className={`h-8 w-8 rounded-full text-xs ${byWeekday.includes(i) ? "bg-gray-900/90 text-white backdrop-blur-md" : "glass-chip text-gray-800"}`}>
                   {d}
                 </button>
               ))}
@@ -169,7 +169,7 @@ export function InvoiceForm({ clients, defaultGst, defaultTerms, onDone }: { cli
         </div>
       </Field>
       {mode === "ADVANCE" ? (
-        <div className="space-y-3 rounded-lg bg-gray-50 p-3">
+        <div className="glass space-y-3 rounded-2xl p-3">
           <Field label="Advance %">
             <input type="number" min="1" max="99" value={advancePct} onChange={(e) => setAdvancePct(e.target.value)} className={inputSm} />
           </Field>
@@ -202,7 +202,7 @@ export function InvoiceForm({ clients, defaultGst, defaultTerms, onDone }: { cli
         <input type="datetime-local" value={sendAt} onChange={(e) => setSendAt(e.target.value)} className={inputCls} />
       </Field>
 
-      <div className="rounded-lg bg-gray-900 px-4 py-3 text-white">
+      <div className="glass-dark rounded-2xl px-4 py-3 text-white">
         <div className="flex justify-between text-xs opacity-80"><span>Subtotal</span><span>{formatINR(totals.subtotal)}</span></div>
         <div className="flex justify-between text-xs opacity-80"><span>GST {gst || 0}%</span><span>{formatINR(totals.gstAmount)}</span></div>
         <div className="mt-1 flex justify-between text-base font-bold"><span>Total{mode === "ADVANCE" ? ` (advance ${advancePct}%)` : ""}</span><span>{formatINR(totals.total)}</span></div>

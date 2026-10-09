@@ -14,7 +14,7 @@ export function RemainingStrip({ dayTotals, by }: { dayTotals: DayTotals[]; by: 
   const buckets = bucketByPeriod(dayTotals, by).map((b) => ({ ...b, ...sumTotals(b.items) }));
   const unit = by === "day" ? "day" : by === "week" ? "week" : "month";
   return (
-    <section className="mx-3 mt-3 rounded-xl bg-white p-3 shadow-sm">
+    <section className="glass mx-3 mt-3 rounded-2xl p-3">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
         Remaining after current assignments{by !== "day" ? ` · per ${unit}` : ""}
       </h2>
@@ -24,7 +24,7 @@ export function RemainingStrip({ dayTotals, by }: { dayTotals: DayTotals[]; by: 
           const span = b.from === b.to ? b.from : `${b.from} → ${b.to}`;
           return (
             <div key={b.key} className="flex w-11 shrink-0 flex-col items-center" title={`${span}: ${hrs(b.sellableMinutes)}h sellable of ${hrs(b.capacityMinutes)}h`}>
-              <div className="flex h-14 w-6 items-end rounded bg-gray-100">
+              <div className="flex h-14 w-6 items-end rounded bg-white/60">
                 <div
                   className={clsx("w-full rounded", b.capacityMinutes === 0 ? "bg-gray-300" : pct >= 100 ? "bg-red-400" : "bg-brand-green")}
                   style={{ height: `${b.capacityMinutes ? 100 - pct : 100}%` }}
@@ -43,10 +43,10 @@ export function RemainingStrip({ dayTotals, by }: { dayTotals: DayTotals[]; by: 
 /** Per-person table grouped by team with team subtotals and a grand total. */
 export function InventoryTable({ inv }: { inv: InventoryResult }) {
   return (
-    <section className="mx-3 mt-3 overflow-x-auto rounded-xl bg-white p-3 shadow-sm">
+    <section className="glass mx-3 mt-3 overflow-x-auto rounded-2xl p-3">
       <table className="w-full text-xs">
         <thead>
-          <tr className="text-left text-[10px] uppercase tracking-wide text-gray-500">
+          <tr className="bg-white/40 text-left text-[10px] uppercase tracking-wide text-gray-600">
             <th className="py-1">Person</th>
             <th className="py-1 text-right">Cap</th>
             <th className="py-1 text-right">Assigned</th>
@@ -66,7 +66,7 @@ export function InventoryTable({ inv }: { inv: InventoryResult }) {
           ) : null}
         </tbody>
         <tfoot>
-          <tr className="border-t font-semibold">
+          <tr className="border-t border-white/60 font-semibold">
             <td className="py-1.5">Total</td>
             <td className="py-1.5 text-right">{hrs(inv.total.capacityMinutes)}</td>
             <td className="py-1.5 text-right">{hrs(inv.total.assignedMinutes)}</td>
@@ -81,14 +81,14 @@ export function InventoryTable({ inv }: { inv: InventoryResult }) {
 function TeamRows({ team, users }: { team: InventoryResult["teams"][number]; users: InventoryResult["users"] }) {
   return (
     <>
-      <tr className="bg-gray-50 font-semibold">
+      <tr className="bg-white/40 font-semibold">
         <td className="py-1">{team.teamName}</td>
         <td className="py-1 text-right">{hrs(team.capacityMinutes)}</td>
         <td className="py-1 text-right">{hrs(team.assignedMinutes)}</td>
         <td className="py-1 text-right">{hrs(team.sellableMinutes)}</td>
       </tr>
       {users.map((u) => (
-        <tr key={u.userId} className="border-t border-gray-100">
+        <tr key={u.userId} className="border-t border-white/60">
           <td className="py-1 pl-3">{u.name}</td>
           <td className="py-1 text-right">{hrs(u.capacityMinutes)}</td>
           <td className="py-1 text-right">{hrs(u.assignedMinutes)}</td>

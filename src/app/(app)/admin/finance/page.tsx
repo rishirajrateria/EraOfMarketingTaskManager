@@ -21,11 +21,11 @@ export default async function FinancePage() {
     { label: "Net", value: t.net, cls: t.net >= 0 ? "text-gray-900" : "text-red-700" },
   ];
   return (
-    <main className="flex-1 bg-white pb-8">
-      <div className="grid grid-cols-2 gap-2 bg-brand-blue p-3 text-white">
+    <main className="flex-1 bg-white/55 pb-8 backdrop-blur-md">
+      <div className="grid grid-cols-2 gap-2 bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 p-3 text-white backdrop-blur-xl">
         {tiles.map((x) => (
-          <div key={x.label} className="rounded-lg bg-white/90 px-3 py-2">
-            <div className="text-[11px] uppercase text-gray-500">{x.label}</div>
+          <div key={x.label} className="rounded-lg border border-white/60 bg-white/85 px-3 py-2 backdrop-blur-md">
+            <div className="text-[11px] uppercase text-gray-600">{x.label}</div>
             <div className={`text-base font-bold ${x.cls}`}>{formatINR(x.value)}</div>
           </div>
         ))}
@@ -43,12 +43,12 @@ export default async function FinancePage() {
         <h2 className="mb-2 text-sm font-semibold">Per month</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
-            <thead className="text-left text-gray-500">
+            <thead className="bg-white/40 text-left text-gray-600">
               <tr><th className="py-1">Month</th><th className="text-right">Invoiced</th><th className="text-right">Received</th><th className="text-right">Expenses</th><th className="text-right">Net</th></tr>
             </thead>
             <tbody>
               {summary.months.map((m) => (
-                <tr key={m.month} className="border-t">
+                <tr key={m.month} className="border-t border-white/60">
                   <td className="py-1">{m.month}</td>
                   <td className="text-right">{formatINR(m.invoiced)}</td>
                   <td className="text-right">{formatINR(m.received)}</td>
@@ -60,7 +60,7 @@ export default async function FinancePage() {
           </table>
         </div>
       </section>
-      <section className="mx-4 mt-4 rounded-lg border bg-gray-50 p-3 text-xs">
+      <section className="glass mx-4 mt-4 rounded-2xl p-3 text-xs">
         <div className="flex gap-3">
           <Link href="/admin/invoices" className="text-brand-blue underline">Invoices</Link>
           <Link href="/admin/expenses" className="text-brand-blue underline">Expenses</Link>

@@ -26,7 +26,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   );
   return (
     <div className="flex flex-1 flex-col">
-      <div className="bg-brand-blue px-4 pb-4 pt-3 text-white">
+      <div className="bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 px-4 pb-4 pt-3 text-white backdrop-blur-xl">
         <Link href="/admin/invoices" className="text-xs opacity-80">← Invoices</Link>
         <div className="mt-1 flex items-center gap-2">
           <h1 className="text-lg font-bold">{inv.number}</h1>
@@ -47,7 +47,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
       </div>
 
       {autoDraft ? (
-        <div role="status" className="mx-4 mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <div role="status" className="mx-4 mt-3 rounded-lg border border-white/60 bg-amber-100/70 px-3 py-2 text-sm text-amber-900 backdrop-blur-sm">
           <b>Auto-generated balance invoice</b> — review and Send. Raised because {inv.clientName}&apos;s tasks are complete (balance of{" "}
           {inv.balanceOf ? <Link className="underline" href={`/admin/invoices/${inv.balanceOf.id}`}>{inv.balanceOf.number}</Link> : null}). Nothing has been emailed yet.
         </div>
@@ -59,9 +59,9 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
         </a>
       </div>
 
-      <section className="mx-4 mb-3 rounded-lg bg-white p-3 shadow-sm">
+      <section className="glass mx-4 mb-3 rounded-2xl p-3">
         <h2 className="mb-2 text-xs font-semibold uppercase text-gray-500">Line items</h2>
-        <ul className="divide-y">
+        <ul className="divide-y divide-white/60">
           {inv.items.map((it) => (
             <li key={it.id} className="flex items-start justify-between gap-3 py-2 text-sm">
               <div>
@@ -75,14 +75,14 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             </li>
           ))}
         </ul>
-        <div className="mt-2 space-y-1 border-t pt-2">
+        <div className="mt-2 space-y-1 border-t border-white/60 pt-2">
           <Row k="Subtotal" v={formatINR(inv.subtotal)} />
           <Row k={`GST ${inv.gstPercent}%`} v={formatINR(inv.gstAmount)} />
           <Row k="Total" v={<b>{formatINR(inv.total)}</b>} />
         </div>
       </section>
 
-      <section className="mx-4 mb-3 rounded-lg bg-white p-3 shadow-sm">
+      <section className="glass mx-4 mb-3 rounded-2xl p-3">
         <h2 className="mb-2 text-xs font-semibold uppercase text-gray-500">Details</h2>
         <div className="space-y-1">
           <Row k="Created" v={fmtDayTime(inv.createdAt, tz)} />
@@ -101,10 +101,10 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
         </div>
       </section>
 
-      <section className="mx-4 mb-6 rounded-lg bg-white p-3 shadow-sm">
+      <section className="glass mx-4 mb-6 rounded-2xl p-3">
         <h2 className="mb-2 text-xs font-semibold uppercase text-gray-500">Payments</h2>
         {inv.payments.length === 0 ? <div className="text-sm text-gray-500">No payments recorded.</div> : null}
-        <ul className="divide-y">
+        <ul className="divide-y divide-white/60">
           {inv.payments.map((p) => (
             <li key={p.id} className="flex items-center justify-between gap-3 py-2 text-sm">
               <div>
@@ -121,7 +121,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             </li>
           ))}
         </ul>
-        <div className="mt-2 border-t pt-2">
+        <div className="mt-2 border-t border-white/60 pt-2">
           <Row k="Received" v={formatINR(inv.received)} />
           <Row k="Outstanding" v={<b>{formatINR(inv.balance)}</b>} />
         </div>

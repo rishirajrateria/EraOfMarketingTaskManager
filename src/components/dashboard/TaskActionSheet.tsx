@@ -101,7 +101,7 @@ export function TaskActionSheet({
 
   return (
     <Sheet open={open} onClose={onClose}>
-      <div className="border-b px-5 py-3">
+      <div className="border-b border-white/60 px-5 py-3">
         <p className="truncate text-sm font-semibold">{t.title}</p>
         <p className="text-[11px] text-gray-500">
           {statusLabel(t)}
