@@ -188,6 +188,8 @@ textarea.in{resize:vertical;min-height:70px}
 .who{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .gpk{height:22px;border-radius:999px;padding:0 10px;font-size:11px;font-weight:500;line-height:1;color:#111;background:#a9e0ae;flex-shrink:0;white-space:nowrap}
 .gpk.on{background:#fff}
+.wrow .lbl{font-size:10px;font-weight:700;color:rgba(255,255,255,.95);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;min-width:44px}
+.gpk.pref.on{background:#fff;box-shadow:inset 0 0 0 1.5px #111}
 .wrow{height:34px;display:flex;align-items:center;gap:6px;overflow-x:auto;padding:0 12px;scrollbar-width:none}
 .steps{display:flex;gap:4px;padding:8px 12px 0}
 .steps i{flex:1;height:4px;border-radius:999px;background:var(--chip)}
@@ -296,13 +298,13 @@ svg{display:block}
         <button class="pill" id="tVoice">🎙 Voice note</button>
         <button class="pill" id="tProtect">🔒 Protected</button>
       </div>
-      <div class="hoursrow"><span style="font-size:12px;color:var(--muted)">Hours</span><input class="in" id="tHours" type="number" min="0.25" step="0.25" value="2"><span style="font-size:12px;color:var(--muted)">Work type</span><select class="in" id="tWork" style="flex:1"></select></div>
+      <div class="hoursrow"><span style="font-size:12px;color:var(--muted)">Hours</span><input class="in" id="tHours" type="number" min="0.25" step="0.25" value="2"></div>
       <div class="sched"><input class="in" id="tDate" type="date"><input class="in" id="tTime" type="time" value="10:00"></div>
       <div class="slot" id="tSlot"></div>
-      <div id="tAssignWrap"><div style="font-size:11px;color:var(--muted);margin-top:12px">Assign to (tap pills; whole visible team if none)</div><div class="who" id="tWho"></div></div>
+      <div id="tAssignWrap" class="card" style="margin:12px 0 0;padding:10px 12px;font-size:12.5px"></div>
       <div id="tRecurWrap" hidden style="margin-top:10px"><div class="seg" id="tRecurSeg"></div></div>
     </div>
-    <div class="greenarea" style="flex-shrink:0"><div class="wrow" id="tRow1"></div><div class="wrow" id="tRow2"></div></div>
+    <div class="greenarea" style="flex-shrink:0"><div class="wrow" id="tRow1"></div><div class="wrow" id="tRowPref"></div><div class="wrow" id="tRowWork"></div><div class="wrow" id="tRow2"></div></div>
     <div class="bar" style="flex-shrink:0">
       <div class="g" id="tBarG"></div>
       <div class="w">
@@ -394,6 +396,7 @@ function seed(){
   T({title:"Website audit fixes",client:"c2",assignees:["u3"],mins:120,start:at(-3,10),end:at(-3,12),status:"COMPLETED",actualStart:at(-3,10),actualEnd:at(-3,12,10)}),
   T({title:"Competitor research — snacks",client:"c1",assignees:["u4"],mins:120,start:at(-1,15),end:at(-1,17),status:"COMPLETED",actualStart:at(-1,15),actualEnd:at(-1,16,40),parent:true}),
   T({title:"Reel edit — Diwali teaser",client:"c1",assignees:["u3"],mins:60,start:at(0,15),end:at(0,16),status:"FINISH_REQUESTED",actualStart:at(0,15),actualEnd:at(0,15,50),voice:true}),
+  T({title:"Festive reel scripts — Zenith",client:"c1",assignees:["u2"],prefs:["u3"],mins:120,start:at(1,14),end:at(1,16),work:"w1",desc:"Admin task waiting for Priya to assign. Admin prefers Arjun."}),
   T({title:"Social media — team sync",client:"c1",assignees:["u2","u3","u4"],mins:30,start:at(1,9,30),end:at(1,10),type:"MEETING",createdBy:"u2",meet:true}),
  ];
  const invoices=[
@@ -583,7 +586,7 @@ function taskRow(t){
    r==="TEAM_LEADER"?el("span",{class:"names"},t.assignees.length===1&&t.assignees[0]===m.id?svg(I.user,14,0):t.assignees.map(id=>first(userById(id).name).toLowerCase()).join(", ")):null),
   el("div",{class:"body"},
    el("div",{class:"left"},
-    el("div",{class:"chips"},el("span",{class:"chip"},c.name),el("span",{class:"chip me"},assignee),t.type==="MEETING"?el("span",{class:"chip meet"},"Meeting"):null),
+    el("div",{class:"chips"},el("span",{class:"chip"},c.name),el("span",{class:"chip me"},assignee),(t.prefs&&t.prefs.length&&t.assignees.every(id=>userById(id)?.role==="TEAM_LEADER"))?el("span",{class:"chip",style:"color:#b45309",title:"Admin preference — Team Leader decides"},"pref: "+t.prefs.map(id=>first(userById(id).name).toLowerCase()).join(", ")):null,t.type==="MEETING"?el("span",{class:"chip meet"},"Meeting"):null),
     el("div",{class:"icons"},
      ib("Task details",I.info,()=>openDetail(t)),
      ib("Drive folder",I.folder,()=>toast("Opens the task's Drive folder"),t.type==="MEETING"),
@@ -615,6 +618,7 @@ function openActions(t){
  if(t.status==="NOT_STARTED"&&!t.paused&&r!=="EXECUTIVE")items.push({label:"Start",hint:"Marks the row green and records the start time",onClick:done(()=>{t.status="STARTED";t.actualStart=new Date().toISOString();},"Task started")});
  if(t.status==="STARTED"&&r!=="EXECUTIVE")items.push({label:"Request finish",hint:"Admin approves to complete",onClick:done(()=>{t.status="FINISH_REQUESTED";t.actualEnd=new Date().toISOString();},"Finish requested")});
  if(t.status==="FINISH_REQUESTED"&&r==="ADMIN"){items.push({label:"Approve finish",onClick:done(()=>{t.status="COMPLETED";t.doubt=false;t.review=false;},"Task completed")});items.push({label:"Reject finish",hint:"Sends the task back with a note",onClick:()=>noteSheet("Reject finish",t,txt=>{t.status="STARTED";t.actualEnd=null;t.assignees.forEach(id=>notify(id,`Finish rejected on ${t.title}: ${txt}`));})});}
+ if((r==="TEAM_LEADER"||r==="ADMIN")&&t.status!=="COMPLETED")items.push({label:"Assign executive",hint:t.prefs&&t.prefs.length?"Admin prefers "+t.prefs.map(id=>first(userById(id).name)).join(", ")+" · you decide":"Pick who does this task",onClick:()=>{closeSheet();assignSheet(t);}});
  if(r==="ADMIN"){items.push(t.paused?{label:"Resume",onClick:done(()=>{t.paused=false;},"Task resumed")}:{label:"Pause",hint:"Shows ⏸ in the circle; assignees are notified",onClick:done(()=>{t.paused=true;},"Task paused")});items.push({label:t.protected?"Unprotect":"Protect",hint:"Protected tasks are not shifted by leave",onClick:done(()=>{t.protected=!t.protected;},t.protected?"Task unprotected":"Task protected")});}
  if(t.doubt){if(r!=="EXECUTIVE")items.push({label:"Resolve doubt",onClick:done(()=>{t.doubt=false;},"Doubt resolved")});}else items.push({label:"Raise doubt",hint:"Row turns yellow until resolved",onClick:()=>noteSheet("Raise doubt",t,txt=>{t.doubt=true;notify("u1",`Doubt raised on “${t.title}”: ${txt}`);})});
  items.push({label:"Request review",hint:"Red dot on the hours pill; lands in Admin requests",onClick:()=>noteSheet("Request review",t,txt=>{t.review=true;S.requests.unshift({id:uid(),kind:"REVIEW",task:t.id,by:me().id,note:txt,status:"OPEN",at:new Date().toISOString()});})});
@@ -624,6 +628,13 @@ function openActions(t){
  if(r!=="EXECUTIVE")items.push({label:"Edit",onClick:()=>{closeSheet();openAdd(t.type,t);}});
  if(r==="ADMIN")items.push({label:"Delete",danger:true,hint:"Also removes Calendar event and Chat space in the real app",onClick:()=>{closeSheet();openSheet("Delete “"+t.title+"”?",el("p",{style:"font-size:13px;color:var(--muted);margin:0 0 10px"},"This cannot be undone."),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Keep"),el("button",{class:"btn red",onclick:()=>{S.tasks=S.tasks.filter(x=>x.id!==t.id);save();closeSheet();renderDash();toast("Task deleted");}},"Delete")));}});
  openSheet(t.title,actionList(items));
+}
+function assignSheet(t){
+ const tl=S.users.find(u=>u.role==="TEAM_LEADER"&&u.teamId===t.team);const ex=S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===t.team);
+ let pick=t.assignees.filter(id=>userById(id)?.role==="EXECUTIVE");if(!pick.length&&t.prefs)pick=[...t.prefs];
+ const box=el("div",{class:"seg"});const draw=()=>box.replaceChildren(...[...(tl?[tl]:[]),...ex].map(u=>el("button",{class:pick.includes(u.id)?"on":"",onclick:()=>{pick=tog(pick,u.id);draw();}},(t.prefs||[]).includes(u.id)?"★ "+first(u.name):u.id===tl?.id?"me ("+first(u.name)+")":first(u.name))));draw();
+ openSheet("Assign · "+t.title,t.prefs&&t.prefs.length?el("p",{style:"font-size:12px;margin:0 0 10px;color:var(--muted)"},"★ = Admin's preference. You decide."):null,box,
+  el("div",{class:"btnrow",style:"margin-top:14px"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>{if(!pick.length)return toast("Pick at least one person","err");t.assignees=[...pick];pick.filter(id=>id!==me().id).forEach(id=>notify(id,"New task from "+first(me().name)+": "+t.title));save();closeSheet();renderDash();toast("Assigned to "+pick.map(id=>first(userById(id).name)).join(", "));}},"Assign")));
 }
 function noteSheet(title,t,apply){
  const ta=el("textarea",{class:"in",placeholder:"Write a short note…"});
@@ -643,7 +654,7 @@ function openDetail(t,attach){
 let AF=null; // form
 function openAdd(mode,edit){
  const m=me(),r=role();
- AF={edit:edit||null,type:mode==="CHOOSE"?null:mode,title:edit?edit.title:"",desc:edit?edit.desc:"",hours:edit?edit.mins/60:2,work:edit?edit.work:S.workTypes[0].id,client:edit?edit.client:"",teams:edit?[edit.team]:[],assignees:edit?[...edit.assignees]:[],date:edit?dk(new Date(edit.start)):"",time:edit?fmtTimeInput(edit.start):"10:00",important:!!edit?.important,recurring:!!edit?.recurring,recur:"WEEKLY",voice:!!edit?.voice,protect:!!edit?.protected,shortcut:edit?null:"upnext"};
+ AF={prefs:edit?[...(edit.prefs||[])]:[],edit:edit||null,type:mode==="CHOOSE"?null:mode,title:edit?edit.title:"",desc:edit?edit.desc:"",hours:edit?edit.mins/60:2,work:edit?edit.work:S.workTypes[0].id,client:edit?edit.client:"",teams:edit?[edit.team]:[],assignees:edit?[...edit.assignees]:[],date:edit?dk(new Date(edit.start)):"",time:edit?fmtTimeInput(edit.start):"10:00",important:!!edit?.important,recurring:!!edit?.recurring,recur:"WEEKLY",voice:!!edit?.voice,protect:!!edit?.protected,shortcut:edit?null:"upnext"};
  if(r==="EXECUTIVE")AF.assignees=[m.id];
  show("add");renderAdd();
  if(mode==="CHOOSE")typeChooser();
@@ -652,7 +663,7 @@ const fmtTimeInput=iso=>{const d=new Date(iso);return String(d.getHours()).padSt
 function typeChooser(){openSheet("What do you want to add?",actionList([{label:"Add a task / work",hint:AF.type==="WORK"?"selected":"Drive folder, Meet, Chat space",onClick:()=>{AF.type="WORK";closeSheet();renderAdd();}},{label:"Schedule a meeting",hint:AF.type==="MEETING"?"selected":"Calendar event with Meet link",onClick:()=>{AF.type="MEETING";closeSheet();renderAdd();}}]));}
 function loads(){
  const r=role(),m=me();
- let people=AF.assignees.length?AF.assignees:S.users.filter(u=>u.role==="EXECUTIVE"&&(r==="ADMIN"?(!AF.teams.length||AF.teams.includes(u.teamId)):u.teamId===m.teamId)).map(u=>u.id);
+ let people=r==="ADMIN"?(AF.prefs.length?AF.prefs:S.users.filter(u=>u.role==="EXECUTIVE"&&(!AF.teams.length||AF.teams.includes(u.teamId))).map(u=>u.id)):(AF.assignees.length?AF.assignees:S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===m.teamId).map(u=>u.id));
  if(r==="EXECUTIVE")people=[m.id];
  const per=S.inventory.hours;const dayH=id=>(per[id]||40)/5;
  const periods={today:[0,0],tomorrow:[1,1],week:[0,6],month:[0,29]};
@@ -665,25 +676,31 @@ function renderAdd(){
  $("#addLoads").replaceChildren(...[["today","Today"],["tomorrow","Tom"],["week","Week"],["month","month"]].map(([k,l])=>el("div",{class:"ltile",title:`${L[k].left} hours left to assign · ${L[k].count} task(s) already assigned`},el("b",{},l),` - ${Number.isInteger(L[k].left)?L[k].left:L[k].left.toFixed(1)} Hours - `,el("b",{},L[k].count))));
  $("#tTitle").value=AF.title;$("#tTitle").placeholder=AF.type==="MEETING"?"Meeting title":"Task title";
  $("#tDesc").value=AF.desc;$("#tHours").value=AF.hours;
- const ws=$("#tWork");ws.replaceChildren(...S.workTypes.map(w=>el("option",{value:w.id,selected:w.id===AF.work||null},w.name)));ws.parentElement.hidden=AF.type==="MEETING";
  $("#tDate").value=AF.date;$("#tTime").value=AF.time;
  $("#tImportant").style.background=AF.important?"#fde68a":"";$("#tRecur").style.background=AF.recurring?"#bfdbfe":"";$("#tVoice").style.background=AF.voice?"#ddd6fe":"";$("#tProtect").style.background=AF.protect?"#d1fae5":"";
  $("#tProtect").hidden=r!=="ADMIN";
  $("#tRecurWrap").hidden=!AF.recurring;
  $("#tRecurSeg").replaceChildren(...["DAILY","WEEKLY","MONTHLY"].map(k=>el("button",{class:AF.recur===k?"on":"",onclick:()=>{AF.recur=k;renderAdd();}},k.toLowerCase())));
- // slot preview
- const people=AF.assignees.length?AF.assignees.map(id=>first(userById(id).name)).join(", "):(r==="EXECUTIVE"?"me":"whole visible team");
+ // slot preview + who gets it
+ const tlsOf=ids=>S.users.filter(u=>u.role==="TEAM_LEADER"&&ids.includes(u.teamId));
+ const people=r==="ADMIN"?(AF.teams.length?tlsOf(AF.teams).map(u=>first(u.name)).join(", "):"pick a team"):AF.assignees.length?AF.assignees.map(id=>id===m.id?"me":first(userById(id).name)).join(", "):(r==="EXECUTIVE"?"me":"whole team");
  $("#tSlot").textContent=AF.date?`Scheduled ${fmtDY(AF.date)} at ${AF.time} · for ${people}`:`Next available slot: ${nextSlot()} · for ${people}`;
- // assign pills
- const pool=r==="ADMIN"?S.users.filter(u=>["TEAM_LEADER","EXECUTIVE"].includes(u.role)&&(!AF.teams.length||AF.teams.includes(u.teamId))):r==="TEAM_LEADER"?S.users.filter(u=>u.id===m.id||(u.role==="EXECUTIVE"&&u.teamId===m.teamId)):[];
- $("#tAssignWrap").hidden=r==="EXECUTIVE";
- $("#tWho").replaceChildren(...pool.map(u=>el("button",{class:"gpk"+(AF.assignees.includes(u.id)?" on":""),onclick:()=>{AF.assignees=tog(AF.assignees,u.id);renderAdd();}},first(u.name)+(u.role==="TEAM_LEADER"?" (TL)":""))));
- // green rows
- const row1=$("#tRow1"),row2=$("#tRow2");
- if(r==="ADMIN"){row1.hidden=false;row1.replaceChildren(el("button",{class:"gpk"+(!AF.teams.length?" on":""),onclick:()=>{AF.teams=[];renderAdd();}},"All"),...S.teams.map(t=>el("button",{class:"gpk"+(AF.teams.includes(t.id)?" on":""),onclick:()=>{AF.teams=tog(AF.teams,t.id);const tl=S.users.find(u=>u.role==="TEAM_LEADER"&&u.teamId===t.id);if(tl)AF.assignees=AF.teams.includes(t.id)?[...new Set([...AF.assignees,tl.id])]:AF.assignees.filter(x=>x!==tl.id);renderAdd();}},t.name)));}
- else if(r==="TEAM_LEADER"){const ex=S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===m.teamId);row1.hidden=false;row1.replaceChildren(el("button",{class:"gpk"+(!ex.some(e=>AF.assignees.includes(e.id))?" on":""),onclick:()=>{AF.assignees=AF.assignees.filter(id=>!ex.some(e=>e.id===id));renderAdd();}},"All"),...ex.map(e=>el("button",{class:"gpk"+(AF.assignees.includes(e.id)?" on":""),onclick:()=>{AF.assignees=tog(AF.assignees,e.id);renderAdd();}},first(e.name))));}
- else row1.hidden=true;
- row2.replaceChildren(el("button",{class:"gpk"+(!AF.client?" on":""),onclick:()=>{AF.client="";renderAdd();}},"All"),...S.clients.filter(c=>!c.onHold||r==="ADMIN").map(c=>el("button",{class:"gpk"+(AF.client===c.id?" on":""),onclick:()=>{AF.client=AF.client===c.id?"":c.id;renderAdd();}},c.name+(c.onHold?" ⏸":""))));
+ const aw=$("#tAssignWrap");aw.hidden=r==="EXECUTIVE";
+ if(r==="ADMIN"){
+  if(!AF.teams.length)aw.replaceChildren(el("b",{},"Pick a team below."),el("div",{class:"pre"},"The task goes to that team's Team Leader. Then tap executives to say who you'd prefer; the Team Leader makes the final call."));
+  else{const tls=tlsOf(AF.teams);aw.replaceChildren(el("div",{},"Goes to ",el("b",{},tls.map(u=>first(u.name)+" (TL, "+S.teams.find(t=>t.id===u.teamId).name+")").join(", ")||"— no Team Leader in this team yet")),el("div",{style:"margin-top:4px"},AF.prefs.length?["Your preference: ",el("b",{},AF.prefs.map(id=>first(userById(id).name)).join(", ")),el("span",{class:"pre"}," · the Team Leader decides")]:el("span",{class:"pre"},"No executive preference · tap names in the PREFER row")));}
+ }else if(r==="TEAM_LEADER")aw.replaceChildren(AF.assignees.length?el("div",{},"Assigned to ",el("b",{},AF.assignees.map(id=>id===m.id?"me":first(userById(id).name)).join(", "))):el("div",{},el("b",{},"Your whole team"),el("span",{class:"pre"}," · tap names in the EXEC row to pick")));
+ // green rows: team (admin) / executives (TL) · prefer (admin) · work type · client
+ const row1=$("#tRow1"),rowPref=$("#tRowPref"),rowWork=$("#tRowWork"),row2=$("#tRow2");
+ const lbl=t=>el("span",{class:"lbl"},t);
+ if(r==="ADMIN"){row1.hidden=false;row1.replaceChildren(lbl("Team"),...S.teams.map(t=>el("button",{class:"gpk"+(AF.teams.includes(t.id)?" on":""),onclick:()=>{AF.teams=tog(AF.teams,t.id);AF.prefs=AF.prefs.filter(id=>AF.teams.includes(userById(id).teamId));renderAdd();}},t.name)));
+  const ex=S.users.filter(u=>u.role==="EXECUTIVE"&&AF.teams.includes(u.teamId));rowPref.hidden=!AF.teams.length;
+  rowPref.replaceChildren(...[lbl("Prefer"),el("button",{class:"gpk"+(!AF.prefs.length?" on":""),onclick:()=>{AF.prefs=[];renderAdd();}},"No preference"),...ex.map(e=>el("button",{class:"gpk pref"+(AF.prefs.includes(e.id)?" on":""),onclick:()=>{AF.prefs=tog(AF.prefs,e.id);renderAdd();}},(AF.prefs.includes(e.id)?"★ ":"")+first(e.name))),ex.length?null:el("span",{class:"lbl",style:"text-transform:none"},"no executives in this team yet")].filter(Boolean));}
+ else if(r==="TEAM_LEADER"){const ex=S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===m.teamId);row1.hidden=false;rowPref.hidden=true;row1.replaceChildren(lbl("Exec"),el("button",{class:"gpk"+(AF.assignees.includes(m.id)?" on":""),onclick:()=>{AF.assignees=tog(AF.assignees,m.id);renderAdd();}},"me"),...ex.map(e=>el("button",{class:"gpk"+(AF.assignees.includes(e.id)?" on":""),onclick:()=>{AF.assignees=tog(AF.assignees,e.id);renderAdd();}},first(e.name))));}
+ else{row1.hidden=true;rowPref.hidden=true;}
+ rowWork.hidden=AF.type==="MEETING";
+ rowWork.replaceChildren(lbl("Work"),...S.workTypes.map(w=>el("button",{class:"gpk"+(AF.work===w.id?" on":""),onclick:()=>{AF.work=w.id;renderAdd();}},w.name)));
+ row2.replaceChildren(lbl("Client"),...S.clients.filter(c=>!c.onHold||r==="ADMIN").map(c=>el("button",{class:"gpk"+(AF.client===c.id?" on":""),onclick:()=>{AF.client=AF.client===c.id?"":c.id;renderAdd();}},c.name+(c.onHold?" ⏸":""))));
  const sc=k=>{AF.shortcut=k;if(k==="upnext"){AF.date="";}else{AF.date=dk(new Date(Date.now()+(k==="tomorrow"?DAY:0)));AF.time="10:00";}renderAdd();};
  $("#tBarG").replaceChildren(el("button",{style:"display:flex;align-items:center;height:32px;width:28px;justify-content:center;color:#fff;flex-shrink:0",onclick:()=>$("#tDate").showPicker?$("#tDate").showPicker():$("#tDate").focus()},svg(I.cal,22,2)),
   el("button",{class:"gpk"+(!AF.date?" on":""),onclick:()=>sc("upnext")},"upnext"),el("button",{class:"gpk"+(AF.date&&AF.shortcut==="tomorrow"?" on":""),onclick:()=>sc("tomorrow")},"Tom"),el("button",{class:"gpk"+(AF.date&&AF.shortcut==="today"?" on":""),onclick:()=>sc("today")},"today"));
@@ -694,18 +711,20 @@ function renderAdd(){
 function nextSlot(){const d=new Date();d.setMinutes(0,0,0);d.setHours(d.getHours()+1);if(d.getHours()>=18){d.setDate(d.getDate()+1);d.setHours(10);}return `${dateChip(d.toISOString())} ${fmtT(d.toISOString())}`;}
 function saveTask(){
  const r=role(),m=me();
- AF.title=$("#tTitle").value.trim();AF.desc=$("#tDesc").value;AF.hours=Number($("#tHours").value)||1;AF.work=$("#tWork").value;AF.date=$("#tDate").value;AF.time=$("#tTime").value||"10:00";
+ AF.title=$("#tTitle").value.trim();AF.desc=$("#tDesc").value;AF.hours=Number($("#tHours").value)||1;AF.date=$("#tDate").value;AF.time=$("#tTime").value||"10:00";
  if(!AF.type){typeChooser();return;}
  if(!AF.title)return toast("Give it a title","err");
+ if(r==="ADMIN"&&!AF.teams.length)return toast("Pick a team in the green area","err");
  if(!AF.client)return toast("Pick a client in the green area","err");
  if(clientById(AF.client).onHold)return toast("Work for this client is on hold until payment","err");
- let assignees=AF.assignees.length?AF.assignees:(r==="EXECUTIVE"?[m.id]:S.users.filter(u=>u.role==="EXECUTIVE"&&(r==="ADMIN"?(!AF.teams.length||AF.teams.includes(u.teamId)):u.teamId===m.teamId)).map(u=>u.id));
+ let assignees=r==="ADMIN"?S.users.filter(u=>u.role==="TEAM_LEADER"&&AF.teams.includes(u.teamId)).map(u=>u.id):AF.assignees.length?AF.assignees:(r==="EXECUTIVE"?[m.id]:S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===m.teamId).map(u=>u.id));
+ if(!assignees.length)return toast("That team has no Team Leader yet (Menu → Add teamleader)","err");
  let start;if(AF.date){start=new Date(AF.date+"T"+AF.time+":00");}else{start=new Date();start.setMinutes(0,0,0);start.setHours(start.getHours()+1);}
  const end=new Date(start.getTime()+AF.hours*3600000);
  const team=AF.teams[0]||userById(assignees[0])?.teamId||m.teamId||"t1";
- const base={title:AF.title,desc:AF.desc,client:AF.client,assignees,mins:Math.round(AF.hours*60),start:start.toISOString(),end:end.toISOString(),type:AF.type,work:AF.work,team,important:AF.important,recurring:AF.recurring,voice:AF.voice,protected:AF.protect,meet:AF.type==="MEETING"};
+ const base={title:AF.title,desc:AF.desc,client:AF.client,assignees,mins:Math.round(AF.hours*60),start:start.toISOString(),end:end.toISOString(),type:AF.type,work:AF.work,team,prefs:r==="ADMIN"?[...AF.prefs]:(AF.edit?.prefs||[]),important:AF.important,recurring:AF.recurring,voice:AF.voice,protected:AF.protect,meet:AF.type==="MEETING"};
  if(AF.edit){Object.assign(AF.edit,base);toast("Task updated");}
- else{S.tasks.unshift(Object.assign({id:uid(),status:"NOT_STARTED",paused:false,doubt:false,review:false,parent:false,createdBy:m.id,actualStart:null,actualEnd:null},base));assignees.filter(id=>id!==m.id).forEach(id=>notify(id,`New ${AF.type==="MEETING"?"meeting":"task"} assigned: ${AF.title}`));toast(AF.type==="MEETING"?"Meeting scheduled · Calendar + Meet link queued":"Task added · Drive folder + Chat space queued");}
+ else{S.tasks.unshift(Object.assign({id:uid(),status:"NOT_STARTED",paused:false,doubt:false,review:false,parent:false,createdBy:m.id,actualStart:null,actualEnd:null},base));assignees.filter(id=>id!==m.id).forEach(id=>notify(id,`New ${AF.type==="MEETING"?"meeting":"task"} from ${first(m.name)}: ${AF.title}`+(r==="ADMIN"&&AF.prefs.length?` · prefers ${AF.prefs.map(x=>first(userById(x).name)).join(", ")} — assign it from the task`:"")));toast(AF.type==="MEETING"?"Meeting scheduled · Calendar + Meet link queued":"Task added · Drive folder + Chat space queued");}
  save();show("dash");renderDash();
 }
 $("#tClose").onclick=()=>{show("dash");renderDash();};
@@ -718,11 +737,11 @@ $("#tProtect").onclick=()=>{AF.protect=!AF.protect;renderAdd();};
 $("#tVoice").onclick=()=>{AF.voice=!AF.voice;renderAdd();toast(AF.voice?"Voice note attached (recorded via mic in the real app)":"Voice note removed");};
 $("#tDate").onchange=()=>{AF.date=$("#tDate").value;AF.shortcut=null;renderAdd();};
 $("#tTime").onchange=()=>{AF.time=$("#tTime").value;};
-$("#tTitle").oninput=()=>{AF.title=$("#tTitle").value;};$("#tDesc").oninput=()=>{AF.desc=$("#tDesc").value;};$("#tHours").oninput=()=>{AF.hours=Number($("#tHours").value)||AF.hours;};$("#tWork").onchange=()=>{AF.work=$("#tWork").value;};
+$("#tTitle").oninput=()=>{AF.title=$("#tTitle").value;};$("#tDesc").oninput=()=>{AF.desc=$("#tDesc").value;};$("#tHours").oninput=()=>{AF.hours=Number($("#tHours").value)||AF.hours;};
 $("#tTitle").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();saveTask();}};
 // save button lives in the header tiles area? No: the real app saves from the title row ✓ — add a floating save
-const saveBtn=el("button",{class:"btn",style:"position:absolute;right:12px;bottom:calc(96px + env(safe-area-inset-bottom,0px));flex:none;height:40px;border-radius:999px;padding:0 18px;box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:5",onclick:saveTask},"Save");
-$("#s-add").append(saveBtn);
+const saveBtn=el("button",{class:"btn",style:"flex:none;height:40px;border-radius:999px;padding:0 22px;box-shadow:0 8px 24px rgba(0,0,0,.2);pointer-events:auto",onclick:saveTask},"Save");
+$("#s-add .addbody").append(el("div",{style:"position:sticky;bottom:10px;display:flex;justify-content:flex-end;margin-top:12px;pointer-events:none"},saveBtn));
 $("#addMeet").onclick=()=>openAdd("MEETING");$("#addWork").onclick=()=>openAdd("WORK");$("#addChoose").onclick=()=>openAdd("CHOOSE");
 
 /* ---------- menu ---------- */
