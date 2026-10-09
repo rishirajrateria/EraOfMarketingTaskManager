@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Bell, Inbox, Menu } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { MenuTray } from "@/components/shell/MenuTray";
+import { menuStore, useMenuOpen } from "@/components/shell/menu-store";
 import { useLiveEvents } from "@/components/shell/useLiveEvents";
 import type { DashboardData } from "@/server/tasks/types";
 
@@ -25,7 +26,7 @@ function Badged({ href, label, count, children }: { href: string; label: string;
  * ☰ (Admin, opens the MenuTray) · 📥 requests (Admin) · 🔔 notifications · avatar → /me.
  */
 export function DashboardTopBar({ user, unread, openRequests }: { user: TopBarUser; unread: number; openRequests: number }) {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const menuOpen = useMenuOpen();
   const [badge, setBadge] = useState(unread);
   const [reqBadge, setReqBadge] = useState(openRequests);
   useEffect(() => setBadge(unread), [unread]);
@@ -38,7 +39,7 @@ export function DashboardTopBar({ user, unread, openRequests }: { user: TopBarUs
   return (
     <div className="flex h-[26px] items-center justify-between">
       {isAdmin ? (
-        <button type="button" aria-label="Menu" onClick={() => setMenuOpen(true)} className="-ml-1 flex h-[26px] w-7 items-center justify-center text-white/70">
+        <button type="button" aria-label="Menu" onClick={() => menuStore.open()} className="-ml-1 flex h-[26px] w-7 items-center justify-center text-white/70">
           <Menu size={17} strokeWidth={2.5} />
         </button>
       ) : (
@@ -57,7 +58,7 @@ export function DashboardTopBar({ user, unread, openRequests }: { user: TopBarUs
           <Avatar name={user.name} src={user.image} size={22} />
         </Link>
       </div>
-      {isAdmin ? <MenuTray open={menuOpen} onClose={() => setMenuOpen(false)} /> : null}
+      {isAdmin ? <MenuTray open={menuOpen} onClose={() => menuStore.close()} /> : null}
     </div>
   );
 }

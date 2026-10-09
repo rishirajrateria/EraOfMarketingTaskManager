@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import type { Role } from "@prisma/client";
 import { Avatar } from "@/components/ui/Avatar";
 import { MenuTray } from "@/components/shell/MenuTray";
+import { menuStore, useMenuOpen } from "@/components/shell/menu-store";
 import { useLiveEvents } from "@/components/shell/useLiveEvents";
 
 export type FrameUser = { id: string; name: string; role: Role; image: string | null };
@@ -28,7 +29,7 @@ export function AppFrame({
   openRequests: number;
   children: React.ReactNode;
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const menuOpen = useMenuOpen();
   const [badge, setBadge] = useState(unread);
   const [reqBadge, setReqBadge] = useState(openRequests);
   const pathname = usePathname();
@@ -50,7 +51,7 @@ export function AppFrame({
       {showHeader ? (
         <header className="sticky top-0 z-30 flex items-center gap-2 bg-gradient-to-r from-[#174ea6]/90 to-[#1e63d6]/85 px-3 py-2 text-white shadow-[inset_0_-1px_0_rgba(255,255,255,.25)] backdrop-blur-xl">
           {user.role === "ADMIN" ? (
-            <button className="touch-target -ml-2 text-2xl" onClick={() => setMenuOpen(true)} aria-label="Menu">
+            <button className="touch-target -ml-2 text-2xl" onClick={() => menuStore.open()} aria-label="Menu">
               ☰
             </button>
           ) : (
@@ -81,7 +82,7 @@ export function AppFrame({
         </header>
       ) : null}
       <div className="flex flex-1 flex-col">{children}</div>
-      {user.role === "ADMIN" ? <MenuTray open={menuOpen} onClose={() => setMenuOpen(false)} /> : null}
+      {user.role === "ADMIN" ? <MenuTray open={menuOpen} onClose={() => menuStore.close()} /> : null}
     </div>
   );
 }
