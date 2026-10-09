@@ -11,7 +11,18 @@ Next.js 15 (App Router, Server Actions) · TypeScript · Tailwind v4 · Prisma +
 googleapis (service account with domain-wide delegation) · pdfkit · web-push · vitest. Installable PWA with offline
 shell and push notifications. Jobs run either in-process (`JOBS_INLINE=true`) or via Vercel Cron (`vercel.json`).
 
-## Try the three dashboards in 5 minutes (no Google setup)
+## Get a public test link in 10 minutes (Render, free tier)
+
+1. Merge the pull request into your default branch (the Deploy button reads `render.yaml` from it).
+2. Click **[Deploy to Render](https://render.com/deploy?repo=https://github.com/rishirajrateria/EraOfMarketingTaskManager)**,
+   sign in to Render (free), and accept the blueprint. Leave the optional Google/Twilio fields blank for now.
+3. In 5–8 minutes the service is live at `https://eom-task-manager-xxxx.onrender.com`. Open it on your phone: the login
+   page shows **Try a demo role** (Admin / Team Leader / Executive / HR) with sample data. Google integrations are mocked.
+4. When you are ready for real use, set `DEMO_LOGIN=false`, `SEED_DEMO=false`, `GOOGLE_MOCK=false` in the Render
+   dashboard, fill in the Google and Twilio variables, and redeploy. Free-tier services sleep after 15 minutes idle
+   and the free database expires after 30 days, so upgrade both before going live.
+
+## Try the three dashboards on your laptop (no Google setup)
 
 Needs Docker Desktop (or Node 22 + Postgres, see below).
 

@@ -1,6 +1,6 @@
 "use server";
 import { randomBytes } from "crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
@@ -15,9 +15,11 @@ export async function demoLoginEnabled(): Promise<boolean> {
 
 const DEMO_ROLES: Role[] = ["ADMIN", "TEAM_LEADER", "EXECUTIVE", "HR"];
 
-function cookieName(): string {
-  const url = process.env.AUTH_URL ?? "";
-  return url.startsWith("https://") ? "__Secure-authjs.session-token" : "authjs.session-token";
+/** NextAuth uses the __Secure- cookie on HTTPS; detect it from the request (works behind Render/Vercel proxies). */
+async function cookieName(): Promise<string> {
+  const h = await headers();
+  const proto = h.get("x-forwarded-proto") ?? (process.env.AUTH_URL?.startsWith("https://") ? "https" : "http");
+  return proto.startsWith("https") ? "__Secure-authjs.session-token" : "authjs.session-token";
 }
 
 export async function demoLogin(formData: FormData): Promise<void> {
@@ -27,7 +29,7 @@ export async function demoLogin(formData: FormData): Promise<void> {
   const user = await prisma.user.findFirst({ where: { role, active: true }, orderBy: { createdAt: "asc" } });
   if (!user) throw new Error(`No ${role} user exists yet — run npm run db:seed`);
   const jar = await cookies();
-  const name = cookieName();
+  const name = await cookieName();
   const existing = jar.get(name)?.value;
   if (existing) await prisma.session.deleteMany({ where: { sessionToken: existing } });
   const token = randomBytes(32).toString("hex");
