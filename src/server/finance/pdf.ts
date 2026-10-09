@@ -1,36 +1,41 @@
 import PDFDocument from "pdfkit";
-import { formatINRPlain } from "@/server/finance/money";
+import { round2 } from "@/server/finance/money";
 import { upiQrPng } from "@/server/finance/qr";
 import type { DocType, TaxMode } from "@/server/finance/tax";
+import {
+  COL2,
+  FOOTER_Y,
+  M,
+  PT,
+  W,
+  amount,
+  collect,
+  companyLines,
+  fmtDMY,
+  footer,
+  heightOf,
+  metaLine,
+  partyColumns,
+  partyLines,
+  payToLines,
+  registerFonts,
+  rule,
+  signatureBlock,
+  text,
+  titleRow,
+  type Doc,
+  type PdfCompany,
+  type PdfParty,
+} from "@/server/finance/pdf-base";
 
 /**
- * Server-side invoice / receipt PDFs (SPEC §11.3, ADR 0005): GST-compliant template with company logo,
- * HSN/SAC column, CGST/SGST/IGST split, place of supply, bank details, UPI QR and terms. Returns a Buffer.
- * Standard PDF fonts have no ₹ glyph, so amounts are printed as "INR 1,23,456.00".
+ * Invoice / proforma / export invoice / credit note PDF in the owner's template (ADR 0007): meta line top right,
+ * logo + brand + title, Invoice To / Invoice From columns, Pay To block (UPI QR beside it when a UPI id is set),
+ * item table (Amount | Tax | Total for GST documents, Description | Total otherwise), totals block bottom right,
+ * signature bottom left, website / HSN / time footer. Returns a Buffer.
  */
-export type PdfCompany = {
-  companyName: string;
-  address: string;
-  gstNumber: string;
-  bankName: string;
-  bankAccountName: string;
-  bankAccountNumber: string;
-  bankIfsc: string;
-  upiId: string;
-  lutNumber?: string | null;
-  logoData?: Uint8Array | Buffer | null;
-};
-
-export type PdfParty = {
-  name: string;
-  /** Legal name printed in the bill-to block (ADR 0006); `name` is the display name and the fallback. */
-  businessName?: string | null;
-  pan?: string | null;
-  address?: string | null;
-  gstNumber?: string | null;
-  email?: string | null;
-  phone?: string | null;
-};
+export type { PdfCompany, PdfParty } from "@/server/finance/pdf-base";
+export { renderReceiptPdf, type PdfReceipt } from "@/server/finance/pdf-receipt";
 
 export type PdfInvoice = {
   number: string;
@@ -38,6 +43,8 @@ export type PdfInvoice = {
   dueDate?: Date | null;
   docType?: DocType;
   taxMode?: TaxMode;
+  /** ISO 4217; amounts are stored as entered (no FX). Default INR. */
+  currency?: string | null;
   placeOfSupply?: string | null;
   description?: string | null;
   /** "Part 2 of 3" for part-payment invoices. */
@@ -57,228 +64,53 @@ export type PdfInvoice = {
   status?: string;
 };
 
-export type PdfReceipt = {
-  receiptNumber: string;
-  receivedAt: Date;
-  amount: number;
-  tdsAmount?: number;
-  method: string;
-  reference?: string | null;
-  notes?: string | null;
-  invoiceNumber: string;
-  invoiceTotal: number;
-  totalReceived: number;
-  /** Outstanding after payments, TDS and credit notes; defaults to invoiceTotal − totalReceived. */
-  balance?: number;
-};
+const DRAFT = /^DRAFT-/;
+const TOTAL_ANCHOR_Y = 773; // y of the bold "Total amount to be paid" line when the table is short (as in the reference)
+const ROW_LIMIT_Y = 640; // start a new page when rows would run past this
 
-const PAGE_W = 595.28; // A4 points
-const M = 40;
-const W = PAGE_W - 2 * M;
-const GREY = "#6b7280";
-const DARK = "#111827";
-const BRAND = "#174ea6";
-
-function fmtDate(d: Date) {
-  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
-}
-
-function collect(doc: PDFKit.PDFDocument): Promise<Buffer> {
-  const chunks: Buffer[] = [];
-  return new Promise((resolve, reject) => {
-    doc.on("data", (c: Buffer) => chunks.push(c));
-    doc.on("end", () => resolve(Buffer.concat(chunks)));
-    doc.on("error", reject);
-  });
-}
-
-export function documentTitle(inv: Pick<PdfInvoice, "docType" | "creditNoteOf">, company: Pick<PdfCompany, "lutNumber">): { title: string; subtitle: string | null } {
+export function documentTitle(inv: Pick<PdfInvoice, "docType">): string {
   switch (inv.docType) {
     case "EXPORT_INVOICE":
-      return { title: "EXPORT INVOICE", subtitle: `Supply meant for export under LUT No. ${company.lutNumber || "—"}, without payment of IGST` };
+      return "Export Invoice";
     case "PROFORMA":
-      return { title: "PROFORMA INVOICE", subtitle: "Not a tax invoice — for approval / advance payment" };
+      return "Proforma Invoice";
     case "CREDIT_NOTE":
-      return { title: "CREDIT NOTE", subtitle: inv.creditNoteOf ? `Against invoice ${inv.creditNoteOf}` : null };
+      return "Credit Note";
     default:
-      return { title: "TAX INVOICE", subtitle: null };
+      return "Tax Invoice";
   }
 }
 
-function header(doc: PDFKit.PDFDocument, company: PdfCompany, title: string, subtitle: string | null, meta: [string, string][]) {
-  let y = M;
-  if (company.logoData && company.logoData.length > 0) {
-    try {
-      doc.image(Buffer.from(company.logoData), M, y, { fit: [110, 50] });
-      y += 56;
-    } catch {
-      /* unsupported image → skip logo */
-    }
-  }
-  doc.fillColor(DARK).font("Helvetica-Bold").fontSize(16).text(company.companyName, M, y, { width: W / 2 });
-  doc.font("Helvetica").fontSize(9).fillColor(GREY);
-  if (company.address) doc.text(company.address, { width: W / 2 });
-  if (company.gstNumber) doc.text(`GSTIN: ${company.gstNumber}`, { width: W / 2 });
-  const leftBottom = doc.y;
-
-  doc.fillColor(BRAND).font("Helvetica-Bold").fontSize(20).text(title, M + W / 2, M, { width: W / 2, align: "right" });
-  let my = doc.y + 4;
-  if (subtitle) {
-    doc.font("Helvetica").fontSize(8).fillColor(GREY).text(subtitle, M + W / 2 - 40, my, { width: W / 2 + 40, align: "right" });
-    my = doc.y + 4;
-  }
-  doc.font("Helvetica").fontSize(9).fillColor(DARK);
-  for (const [k, v] of meta) {
-    doc.text(`${k}: ${v}`, M + W / 2, my, { width: W / 2, align: "right" });
-    my += 13;
-  }
-  const bottom = Math.max(leftBottom, my) + 12;
-  doc.moveTo(M, bottom).lineTo(M + W, bottom).lineWidth(1).strokeColor("#e5e7eb").stroke();
-  doc.y = bottom + 12;
+/** "Invoice No. 45  08/10/2026" / "Proforma Invoice  08/10/2026" / "Credit Note CN-1  08/10/2026". */
+export function metaText(inv: Pick<PdfInvoice, "docType" | "number" | "issuedAt">, tz: string): string {
+  const date = fmtDMY(inv.issuedAt, tz);
+  const draft = DRAFT.test(inv.number);
+  if (inv.docType === "PROFORMA") return `Proforma Invoice  ${date}`;
+  if (inv.docType === "CREDIT_NOTE") return draft ? `Credit Note (draft)  ${date}` : `Credit Note ${inv.number}  ${date}`;
+  return draft ? `Draft invoice  ${date}` : `Invoice No. ${inv.number}  ${date}`;
 }
 
-function party(doc: PDFKit.PDFDocument, label: string, p: PdfParty) {
-  doc.font("Helvetica-Bold").fontSize(9).fillColor(GREY).text(label, M, doc.y);
-  doc.font("Helvetica-Bold").fontSize(11).fillColor(DARK).text(p.businessName?.trim() || p.name, { width: W });
-  doc.font("Helvetica").fontSize(9).fillColor(DARK);
-  if (p.address) doc.text(p.address, { width: W });
-  if (p.gstNumber) doc.text(`GSTIN: ${p.gstNumber}`);
-  if (p.pan) doc.text(`PAN: ${p.pan}`);
-  const contact = [p.phone, p.email].filter(Boolean).join(" · ");
-  if (contact) doc.text(contact);
-  doc.moveDown(0.8);
-}
+const pct = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/0+$/, "").replace(/\.$/, ""));
 
-function paragraph(doc: PDFKit.PDFDocument, label: string, text: string | null | undefined) {
-  if (!text) return;
-  doc.font("Helvetica-Bold").fontSize(9).fillColor(GREY).text(label, M, doc.y);
-  doc.font("Helvetica").fontSize(9).fillColor(DARK).text(text, { width: W });
-  doc.moveDown(0.8);
-}
-
-const COLS = [
-  { key: "idx", label: "#", w: 22, align: "left" },
-  { key: "description", label: "Description", w: 205, align: "left" },
-  { key: "hsnSac", label: "HSN/SAC", w: 60, align: "left" },
-  { key: "qty", label: "Qty", w: 45, align: "right" },
-  { key: "unit", label: "Unit", w: 45, align: "left" },
-  { key: "rate", label: "Rate", w: 68, align: "right" },
-  { key: "amount", label: "Amount", w: 70, align: "right" },
-] as const;
-
-function itemsTable(doc: PDFKit.PDFDocument, inv: PdfInvoice) {
-  let y = doc.y;
-  doc.rect(M, y, W, 18).fill("#f3f4f6");
-  doc.font("Helvetica-Bold").fontSize(8).fillColor(DARK);
-  let x = M + 4;
-  for (const c of COLS) {
-    doc.text(c.label, x, y + 5, { width: c.w - 8, align: c.align });
-    x += c.w;
-  }
-  y += 18;
-  doc.font("Helvetica").fontSize(9);
-  inv.items.forEach((it, i) => {
-    const cells: Record<(typeof COLS)[number]["key"], string> = {
-      idx: String(i + 1),
-      description: it.description,
-      hsnSac: it.hsnSac ?? "",
-      qty: it.unit === "HOURS" ? String(it.qty) : "1",
-      unit: it.unit === "HOURS" ? "Hrs" : "Fixed",
-      rate: formatINRPlain(it.rate).replace("INR ", ""),
-      amount: formatINRPlain(it.amount).replace("INR ", ""),
-    };
-    const h = Math.max(16, doc.heightOfString(cells.description, { width: COLS[1].w - 8 }) + 6);
-    if (y + h > 760) {
-      doc.addPage();
-      y = M;
-    }
-    x = M + 4;
-    for (const c of COLS) {
-      doc.text(cells[c.key], x, y + 3, { width: c.w - 8, align: c.align });
-      x += c.w;
-    }
-    y += h;
-    doc.moveTo(M, y).lineTo(M + W, y).lineWidth(0.5).strokeColor("#e5e7eb").stroke();
-  });
-  doc.y = y + 8;
-}
-
-function totals(doc: PDFKit.PDFDocument, rows: [string, string, boolean?][]) {
-  const x = M + W - 240;
-  let y = doc.y;
-  for (const [k, v, bold] of rows) {
-    doc.font(bold ? "Helvetica-Bold" : "Helvetica").fontSize(bold ? 11 : 9).fillColor(DARK);
-    doc.text(k, x, y, { width: 120, align: "right" });
-    doc.text(v, x + 124, y, { width: 116, align: "right" });
-    y += bold ? 18 : 14;
-  }
-  doc.y = y + 10;
-}
-
-/** Tax lines per mode (ADR 0005): CGST+SGST halves, IGST, or a zero-rated / no-tax line. */
-export function taxRows(inv: PdfInvoice): [string, string][] {
-  const half = inv.gstPercent / 2;
-  const pct = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/0+$/, "").replace(/\.$/, ""));
+/** Tax lines per mode (ADR 0005): CGST + SGST halves or IGST; zero-rated / no-tax documents have none. */
+export function taxRows(inv: PdfInvoice): [string, number][] {
   switch (inv.taxMode) {
     case "IGST":
-      return [[`IGST @ ${pct(inv.gstPercent)}%`, formatINRPlain(inv.igstAmount ?? inv.gstAmount)]];
-    case "EXPORT_LUT":
-      return [["IGST @ 0% (export under LUT)", formatINRPlain(0)]];
-    case "NONE":
-      return [["GST", "Not applicable"]];
+      return [[`IGST ${pct(inv.gstPercent)}%`, inv.igstAmount ?? inv.gstAmount]];
     case "CGST_SGST":
       return [
-        [`CGST @ ${pct(half)}%`, formatINRPlain(inv.cgstAmount ?? inv.gstAmount / 2)],
-        [`SGST @ ${pct(half)}%`, formatINRPlain(inv.sgstAmount ?? inv.gstAmount / 2)],
+        [`CGST ${pct(inv.gstPercent / 2)}%`, inv.cgstAmount ?? inv.gstAmount / 2],
+        [`SGST ${pct(inv.gstPercent / 2)}%`, inv.sgstAmount ?? inv.gstAmount / 2],
       ];
     default:
-      return [[`GST @ ${pct(inv.gstPercent)}%`, formatINRPlain(inv.gstAmount)]];
+      return [];
   }
 }
 
-function bankLines(company: PdfCompany): string[] {
-  return [
-    company.bankName && `Bank: ${company.bankName}`,
-    company.bankAccountName && `Account name: ${company.bankAccountName}`,
-    company.bankAccountNumber && `Account no: ${company.bankAccountNumber}`,
-    company.bankIfsc && `IFSC: ${company.bankIfsc}`,
-    company.upiId && `UPI: ${company.upiId}`,
-  ].filter(Boolean) as string[];
-}
-
-function footerBlocks(doc: PDFKit.PDFDocument, company: PdfCompany, blocks: [string, string | null | undefined][], qr?: Buffer | null) {
-  const bank = bankLines(company);
-  if (bank.length) {
-    const top = doc.y;
-    doc.font("Helvetica-Bold").fontSize(9).fillColor(GREY).text("Bank details", M, top);
-    doc.font("Helvetica").fontSize(9).fillColor(DARK).text(bank.join("\n"), { width: W - 130 });
-    let bottom = doc.y;
-    if (qr) {
-      try {
-        doc.image(qr, M + W - 100, top, { fit: [90, 90] });
-        doc.font("Helvetica").fontSize(7).fillColor(GREY).text("Scan to pay (UPI)", M + W - 110, top + 92, { width: 110, align: "center" });
-        bottom = Math.max(bottom, top + 104);
-      } catch {
-        /* QR unavailable → bank details only */
-      }
-    }
-    doc.y = bottom;
-    doc.moveDown(0.6);
-  }
-  for (const [k, v] of blocks) {
-    if (!v) continue;
-    doc.font("Helvetica-Bold").fontSize(9).fillColor(GREY).text(k, M, doc.y);
-    doc.font("Helvetica").fontSize(9).fillColor(DARK).text(v, { width: W });
-    doc.moveDown(0.6);
-  }
-  doc.font("Helvetica").fontSize(8).fillColor(GREY).text("This is a computer-generated document and does not require a signature.", M, 800, {
-    width: W,
-    align: "center",
-  });
-}
+const hasTaxColumns = (inv: PdfInvoice) => (inv.taxMode === "CGST_SGST" || inv.taxMode === "IGST") && inv.gstPercent > 0;
 
 async function qrFor(inv: PdfInvoice, company: PdfCompany): Promise<Buffer | null> {
-  if (!company.upiId || inv.docType === "CREDIT_NOTE" || inv.total <= 0) return null;
+  if (!company.upiId || inv.docType === "CREDIT_NOTE" || inv.total <= 0 || (inv.currency ?? "INR") !== "INR") return null;
   try {
     return await upiQrPng({ upiId: company.upiId, payeeName: company.companyName, amount: inv.total, note: inv.number });
   } catch {
@@ -286,64 +118,157 @@ async function qrFor(inv: PdfInvoice, company: PdfCompany): Promise<Buffer | nul
   }
 }
 
-export async function renderInvoicePdf(inv: PdfInvoice, client: PdfParty, company: PdfCompany): Promise<Buffer> {
-  const { title, subtitle } = documentTitle(inv, company);
-  const qr = await qrFor(inv, company);
-  const doc = new PDFDocument({ size: "A4", margin: M, info: { Title: `${title} ${inv.number}`, Author: company.companyName } });
-  const out = collect(doc);
-  const label = inv.docType === "CREDIT_NOTE" ? "Credit note no" : inv.docType === "PROFORMA" ? "Proforma no" : "Invoice no";
-  const meta: [string, string][] = [
-    [label, inv.number],
-    ["Date", fmtDate(inv.issuedAt)],
-  ];
-  if (inv.dueDate && inv.docType !== "CREDIT_NOTE") meta.push(["Due date", fmtDate(inv.dueDate)]);
-  if (inv.placeOfSupply) meta.push(["Place of supply", inv.placeOfSupply]);
-  if (inv.partLabel) meta.push(["Payment schedule", inv.partLabel]);
-  header(doc, company, title, subtitle, meta);
-  party(doc, inv.docType === "CREDIT_NOTE" ? "ISSUED TO" : "BILL TO", client);
-  paragraph(doc, "DESCRIPTION", inv.description);
-  itemsTable(doc, inv);
-  totals(doc, [["Subtotal", formatINRPlain(inv.subtotal)], ...taxRows(inv), ["Total", formatINRPlain(inv.total), true]]);
-  footerBlocks(
-    doc,
-    company,
-    [
-      ["Payment terms", inv.docType === "CREDIT_NOTE" ? null : inv.paymentTerms],
-      ["Notes", inv.notes],
-    ],
-    qr,
-  );
-  doc.end();
+type Ctx = { doc: Doc; inv: PdfInvoice; company: PdfCompany; cur: string; sym: boolean; title: string; tz: string; now: Date };
+
+function pageTop(c: Ctx): number {
+  metaLine(c.doc, metaText(c.inv, c.tz));
+  return titleRow(c.doc, c.company, c.title);
+}
+
+function payTo(c: Ctx, y: number, qr: Buffer | null): number {
+  const { doc, company } = c;
+  text(doc, "Pay To:", M, y, { bold: true });
+  const lines = payToLines(company);
+  let ly = y + 19;
+  for (const l of lines) {
+    text(doc, l, M, ly, { width: qr ? COL2 - M : W });
+    ly += 11.5;
+  }
+  let bottom = ly - 2;
+  if (qr) {
+    try {
+      doc.image(qr, M + W - 70, y, { fit: [70, 70] });
+      text(doc, "Scan to pay", M + W - 80, y + 72, { width: 90, align: "center", size: 7.5 });
+      bottom = Math.max(bottom, y + 84);
+    } catch {
+      /* QR unavailable → bank details only */
+    }
+  }
+  return bottom;
+}
+
+const COLS = { amount: COL2, tax: COL2 + 69, descW: COL2 - M - 24 };
+
+function tableHeader(c: Ctx, y: number): number {
+  const { doc } = c;
+  text(doc, "Description", M, y);
+  if (hasTaxColumns(c.inv)) {
+    text(doc, "Amount", COLS.amount, y);
+    text(doc, "Tax", COLS.tax, y);
+  }
+  text(doc, "Total Amount", COL2, y, { width: M + W - COL2, align: "right" });
+  rule(doc, y + 15, 1);
+  return y + 23;
+}
+
+function itemRows(c: Ctx, y: number): number {
+  const { doc, inv } = c;
+  const taxed = hasTaxColumns(inv);
+  const rowDescs = new Set(inv.items.map((i) => i.description.trim()));
+  if (inv.description?.trim() && !rowDescs.has(inv.description.trim())) {
+    text(doc, inv.description.trim(), M, y, { width: W });
+    y += heightOf(doc, inv.description.trim(), W) + 8;
+  }
+  for (const it of inv.items) {
+    const h = heightOf(doc, it.description, COLS.descW);
+    if (y + h > ROW_LIMIT_Y) {
+      doc.addPage();
+      y = tableHeader(c, pageTop(c) + 14);
+    }
+    text(doc, it.description, M, y, { width: COLS.descW });
+    if (taxed) {
+      amount(doc, it.amount, c.cur, COLS.amount, y, { width: 66, align: "left", symbolFont: c.sym });
+      text(doc, `${pct(inv.gstPercent)}%`, COLS.tax, y);
+      amount(doc, round2(it.amount * (1 + inv.gstPercent / 100)), c.cur, COL2, y, { width: M + W - COL2, align: "right", bold: true, symbolFont: c.sym });
+    } else {
+      amount(doc, it.amount, c.cur, COL2, y, { width: M + W - COL2, align: "right", bold: true, symbolFont: c.sym });
+    }
+    y += Math.max(h, PT) + 10;
+  }
+  rule(doc, y + 2, 1);
+  return y + 2;
+}
+
+/** Place of supply, due date, part label, terms and notes — small block under the table on the left. */
+function infoBlock(c: Ctx, y: number): number {
+  const { doc, inv, tz } = c;
+  const lines: string[] = [];
+  if (inv.creditNoteOf) lines.push(`Against invoice ${inv.creditNoteOf}`);
+  if (inv.placeOfSupply) lines.push(`Place of supply: ${inv.placeOfSupply}`);
+  if (inv.dueDate && inv.docType !== "CREDIT_NOTE") lines.push(`Due date: ${fmtDMY(inv.dueDate, tz)}`);
+  if (inv.partLabel) lines.push(`Payment schedule: ${inv.partLabel}`);
+  if (inv.paymentTerms && inv.docType !== "CREDIT_NOTE") lines.push(`Terms: ${inv.paymentTerms}`);
+  if (inv.notes) lines.push(`Notes: ${inv.notes}`);
+  const width = COL2 - M - 30;
+  for (const l of lines) {
+    text(doc, l, M, y, { width, size: 8 });
+    y += heightOf(doc, l, width, { size: 8 }) + 3;
+  }
+  return y;
+}
+
+type TotalLine = { label: string; value?: number; note?: string; bold?: boolean; gapBefore?: number };
+
+function totalLines(c: Ctx): TotalLine[] {
+  const { inv, company } = c;
+  const out: TotalLine[] = [{ label: "Total amount :", value: inv.subtotal }];
+  if (inv.taxMode === "EXPORT_LUT") {
+    out.push({ label: "", note: `Supply meant for export under LUT No. ${company.lutNumber || "—"}, without payment of IGST` });
+  } else {
+    const rows = taxRows(inv);
+    for (const [label, value] of rows) out.push({ label, value });
+    if (rows.length) out.push({ label: "Total Amount with tax", value: inv.total });
+  }
+  out.push({ label: inv.docType === "CREDIT_NOTE" ? "Total credit  :" : "Total amount to be paid  :", value: inv.total, bold: true, gapBefore: 50 });
   return out;
 }
 
-export async function renderReceiptPdf(r: PdfReceipt, client: PdfParty, company: PdfCompany): Promise<Buffer> {
-  const doc = new PDFDocument({ size: "A4", margin: M, info: { Title: `Receipt ${r.receiptNumber}`, Author: company.companyName } });
+function totalsBlock(c: Ctx, lines: TotalLine[], top: number): number {
+  const { doc } = c;
+  let y = top;
+  for (const l of lines) {
+    y += l.gapBefore ?? 0;
+    if (l.note) {
+      text(doc, l.note, M, y, { width: W, align: "right" });
+    } else {
+      text(doc, l.label, COL2, y, { bold: l.bold });
+      amount(doc, l.value ?? 0, c.cur, COL2 + 60, y, { width: M + W - COL2 - 60, align: "right", bold: l.bold, symbolFont: c.sym });
+    }
+    y += 24;
+  }
+  return y;
+}
+
+const blockHeight = (lines: TotalLine[]) => lines.reduce((h, l) => h + 24 + (l.gapBefore ?? 0), 0);
+
+export async function renderInvoicePdf(inv: PdfInvoice, client: PdfParty, company: PdfCompany): Promise<Buffer> {
+  if (inv.docType === "EXPORT_INVOICE" && !company.lutNumber?.trim()) throw new Error("Export invoices need the LUT number — add it in Settings → Company");
+  const title = documentTitle(inv);
+  const qr = await qrFor(inv, company);
+  const doc = new PDFDocument({ size: "A4", margins: { top: M, left: M, right: M, bottom: 0 }, info: { Title: `${title} ${inv.number}`, Author: company.companyName } });
   const out = collect(doc);
-  header(doc, company, "PAYMENT RECEIPT", null, [
-    ["Receipt no", r.receiptNumber],
-    ["Date", fmtDate(r.receivedAt)],
-    ["Against invoice", r.invoiceNumber],
-  ]);
-  party(doc, "RECEIVED FROM", client);
-  doc.font("Helvetica-Bold").fontSize(9).fillColor(GREY).text("PAYMENT DETAILS", M, doc.y);
-  doc.font("Helvetica").fontSize(9).fillColor(DARK);
-  doc.text(`Method: ${r.method}`);
-  if (r.reference) doc.text(`Reference: ${r.reference}`);
-  if (r.notes) doc.text(`Notes: ${r.notes}`);
-  doc.moveDown(0.8);
-  const tds = r.tdsAmount ?? 0;
-  const rows: [string, string, boolean?][] = [
-    ["Invoice total", formatINRPlain(r.invoiceTotal)],
-    ["Amount received", formatINRPlain(r.amount), true],
-  ];
-  if (tds > 0) rows.push(["TDS deducted", formatINRPlain(tds)]);
-  rows.push(["Total settled to date", formatINRPlain(r.totalReceived)]);
-  rows.push(["Balance outstanding", formatINRPlain(r.balance ?? Math.max(0, r.invoiceTotal - r.totalReceived))]);
-  totals(doc, rows);
-  doc.font("Helvetica").fontSize(10).fillColor(DARK).text(`Thank you for your payment.`, M, doc.y);
-  doc.moveDown(1);
-  footerBlocks(doc, company, []);
+  const c: Ctx = { doc, inv, company, cur: (inv.currency || "INR").toUpperCase(), sym: registerFonts(doc), title, tz: company.timezone || "Asia/Kolkata", now: new Date() };
+
+  let y = pageTop(c) + 21;
+  y = partyColumns(doc, y, { label: inv.docType === "CREDIT_NOTE" ? "Credit To:" : "Invoice To:", lines: partyLines(client) }, { label: "Invoice From:", lines: companyLines(company) });
+  rule(doc, y + 10);
+  y = payTo(c, y + 23, qr);
+  rule(doc, y + 8);
+  y = tableHeader(c, y + 22);
+  y = itemRows(c, y);
+  const infoBottom = infoBlock(c, y + 14);
+
+  const lines = totalLines(c);
+  const needed = blockHeight(lines);
+  let top = Math.max(y + 16, TOTAL_ANCHOR_Y + 24 - needed, infoBottom + 70 - needed);
+  if (top + needed > FOOTER_Y - 8) {
+    footer(doc, company, c.now);
+    doc.addPage();
+    top = pageTop(c) + 30;
+  }
+  const bottom = totalsBlock(c, lines, top);
+  signatureBlock(doc, company, bottom - 24);
+  footer(doc, company, c.now);
   doc.end();
   return out;
 }

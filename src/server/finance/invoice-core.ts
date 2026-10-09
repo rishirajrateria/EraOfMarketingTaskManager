@@ -31,6 +31,9 @@ export async function createInvoiceRecord(input: InvoiceInput, actorId: string):
     notes: input.notes,
     paymentTerms: input.paymentTerms ?? company.invoiceTerms,
     tdsApplicable: input.tdsApplicable ?? client.tdsPercent != null,
+    // ADR 0007: Indian clients are always billed in INR; export invoices may carry the client's / chosen currency.
+    currency: client.country.toUpperCase() === "IN" ? "INR" : input.currency ?? client.currency ?? "INR",
+    remindAt: input.plan === "RECURRING" ? null : input.remindAt ?? null,
   };
 
   if (input.plan === "PART") {
@@ -47,7 +50,7 @@ export async function createInvoiceRecord(input: InvoiceInput, actorId: string):
         createdById: actorId,
       }),
     );
-    return issuePartCore(plan.id, parts[0].seq, actorId, { description: input.description, tdsApplicable: base.tdsApplicable });
+    return issuePartCore(plan.id, parts[0].seq, actorId, { description: input.description, tdsApplicable: base.tdsApplicable, currency: base.currency, remindAt: base.remindAt });
   }
 
   const now = new Date();
@@ -56,7 +59,17 @@ export async function createInvoiceRecord(input: InvoiceInput, actorId: string):
     if (input.plan === "RECURRING" && input.recurrence) {
       const r = input.recurrence;
       const rule = await tx.recurrenceRule.create({
-        data: { frequency: r.frequency, interval: r.interval, byWeekday: r.byWeekday, monthAnchor: r.monthAnchor, endDate: r.endDate, trigger: "ON_SCHEDULE", nextRunAt: nextOccurrence(now, r, company.timezone) },
+        data: {
+          frequency: r.frequency,
+          interval: r.interval,
+          byWeekday: r.byWeekday,
+          monthAnchor: r.monthAnchor,
+          dayOfMonth: r.monthAnchor === "DAY" ? r.dayOfMonth : null,
+          notifyMinutes: r.notifyMinutes,
+          endDate: r.endDate,
+          trigger: "ON_SCHEDULE",
+          nextRunAt: nextOccurrence(now, r, company.timezone),
+        },
       });
       scheduleId = rule.id;
     }
@@ -84,6 +97,7 @@ export async function cloneRecurringOccurrence(template: InvoiceFull, occurrence
         paymentTerms: template.paymentTerms,
         dueDate: shiftedDueDate(template.approvedAt ?? template.sentAt ?? template.createdAt, template.dueDate, occurrenceAt),
         tdsApplicable: template.tdsApplicable,
+        currency: template.currency,
       },
       actorId,
       "invoice.recur_generate",

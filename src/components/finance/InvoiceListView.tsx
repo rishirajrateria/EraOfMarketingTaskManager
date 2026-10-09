@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Wallet } from "lucide-react";
 import { Sheet } from "@/components/ui/Sheet";
 import { BarChip, BarIcon, BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
-import { formatINR } from "@/server/finance/money";
+import { formatINR, formatMoney } from "@/server/finance/money";
 import type { InvoiceRow } from "@/server/finance/queries";
 import { InvoiceWizard } from "@/components/finance/InvoiceWizard";
 import type { ClientOpt } from "@/components/finance/wizard/types";
@@ -58,8 +58,8 @@ export function InvoiceListView({ rows, tab, clients, companyStateCode, defaultG
                   </div>
                 </div>
                 <div className="shrink-0 text-right">
-                  <div className="text-sm font-bold">{formatINR(r.total)}</div>
-                  {r.balance !== r.total && r.docType !== "CREDIT_NOTE" ? <div className="text-[11px] text-gray-500">bal {formatINR(r.balance)}</div> : null}
+                  <div className="text-sm font-bold">{formatMoney(r.total, r.currency)}</div>
+                  {r.balance !== r.total && r.docType !== "CREDIT_NOTE" ? <div className="text-[11px] text-gray-500">bal {formatMoney(r.balance, r.currency)}</div> : null}
                   <span className={`${chipCls} mt-1 ${STATUS_TONE[r.status]}`}>{STATUS_LABEL[r.status]}</span>
                 </div>
               </Link>

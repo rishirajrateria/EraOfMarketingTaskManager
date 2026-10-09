@@ -158,6 +158,9 @@ describe("invoicing v2", () => {
     expect(inv.status).toBe("AWAITING_APPROVAL");
     expect(inv.approvedAt).toBeTruthy();
     expect(inv.sentAt).toBeNull();
+    expect(inv.emailSentAt).toBeNull();
+    expect(inv.whatsappSentAt).toBeNull();
+    expect(inv.number).toBe(INV(1));
     expect(inv.pdfData).toBeTruthy();
     expect(sentMailLog).toHaveLength(0);
     expect(await awaitingApproval()).toEqual([]); // approved → no longer in the queue
@@ -201,7 +204,8 @@ describe("invoicing v2", () => {
     const rule = await testDb.recurrenceRule.findFirstOrThrow();
     expect(rule.monthAnchor).toBe("END");
     const expected = lastDayOfMonth(addMonths(new Date(formatInTimeZone(new Date(), TZ, "yyyy-MM-dd'T'00:00:00")), 1));
-    expect(formatInTimeZone(rule.nextRunAt!, TZ, "yyyy-MM-dd HH:mm")).toBe(`${formatInTimeZone(expected, "UTC", "yyyy-MM-dd")} 00:00`);
+    expect(rule.notifyMinutes).toBe(540);
+    expect(formatInTimeZone(rule.nextRunAt!, TZ, "yyyy-MM-dd HH:mm")).toBe(`${formatInTimeZone(expected, "UTC", "yyyy-MM-dd")} 09:00`);
 
     expect((await approveAndSend(created.data.id, { email: true })).ok).toBe(true);
     expect(sentMailLog).toHaveLength(1);
@@ -213,14 +217,82 @@ describe("invoicing v2", () => {
     expect(all[1]).toMatchObject({ status: "AWAITING_APPROVAL", number: `DRAFT-${all[1].id}`, plan: "RECURRING", scheduleId: rule.id, approvedAt: null, taxMode: "CGST_SGST" });
     expect(all[1].total.toNumber()).toBe(23600);
     expect(sentMailLog).toHaveLength(1); // the job never sends
+    expect(all[1].emailSentAt).toBeNull();
+    expect(all[1].whatsappSentAt).toBeNull();
     const notes = await testDb.notification.findMany({ where: { kind: "INVOICE_APPROVAL_DUE" } });
     expect(notes.map((n) => n.href)).toEqual([`/admin/invoices/${all[1].id}`]);
+    expect(notes[0].title).toBe("Invoice for Repo is ready — approve to send");
     const after = await testDb.recurrenceRule.findUniqueOrThrow({ where: { id: rule.id } });
     expect(after.nextRunAt!.getTime()).toBeGreaterThan(runAt.getTime());
-    expect(formatInTimeZone(after.nextRunAt!, TZ, "HH:mm")).toBe("00:00");
+    expect(formatInTimeZone(after.nextRunAt!, TZ, "HH:mm")).toBe("09:00");
     expect(await run(runAt)).toMatchObject({ cloned: 0 });
     await stopRecurrence(created.data.id);
     expect((await run(new Date(after.nextRunAt!.getTime() + 1000))).cloned).toBe(0);
+  });
+
+  it("recurring on a chosen day (DAY anchor) at a chosen time persists dayOfMonth + notifyMinutes (ADR 0007)", async () => {
+    const { createInvoice } = await import("@/server/finance/invoices");
+    const bad = await createInvoice({ ...baseInput(seed.client.id), plan: "RECURRING", recurrence: { frequency: "MONTHLY", monthAnchor: "DAY" } });
+    expect(bad.ok).toBe(false);
+    if (!bad.ok) expect(bad.error).toMatch(/dayOfMonth/);
+    const created = await createInvoice({ ...baseInput(seed.client.id), plan: "RECURRING", recurrence: { frequency: "MONTHLY", monthAnchor: "DAY", dayOfMonth: 15, notifyMinutes: 10 * 60 + 30 } });
+    if (!created.ok) throw new Error(created.error);
+    const rule = await testDb.recurrenceRule.findFirstOrThrow();
+    expect(rule).toMatchObject({ monthAnchor: "DAY", dayOfMonth: 15, notifyMinutes: 630 });
+    expect(formatInTimeZone(rule.nextRunAt!, TZ, "dd HH:mm")).toBe("15 10:30");
+    expect(rule.nextRunAt!.getTime()).toBeGreaterThan(Date.now());
+    const inv = await testDb.invoice.findUniqueOrThrow({ where: { id: created.data.id } });
+    expect(inv.remindAt).toBeNull(); // recurring documents never take the one-off reminder
+    const { getInvoiceDetail } = await import("@/server/finance/queries");
+    expect((await getInvoiceDetail(created.data.id))!.schedule).toMatchObject({ monthAnchor: "DAY", dayOfMonth: 15, notifyMinutes: 630 });
+  });
+
+  it("'remind me to approve and send on' from the wizard persists remindAt; the job notifies and clears it; nothing is sent", async () => {
+    const { createInvoice } = await import("@/server/finance/invoices");
+    const { run } = await import("@/jobs/invoices");
+    const { sentMailLog } = await import("@/google/gmail");
+    const remindAt = new Date(Date.now() + 2 * 86_400_000);
+    const created = await createInvoice({ ...baseInput(seed.client.id), remindAt: remindAt.toISOString() });
+    if (!created.ok) throw new Error(created.error);
+    expect((await testDb.invoice.findUniqueOrThrow({ where: { id: created.data.id } })).remindAt).toEqual(remindAt);
+    const part = await createInvoice({ ...baseInput(seed.client.id), plan: "PART", parts: [{ kind: "PERCENT", value: 50, dueDate: "2026-10-09" }, { kind: "PERCENT", value: 50, dueDate: "2026-11-09" }], remindAt: remindAt.toISOString() });
+    if (!part.ok) throw new Error(part.error);
+    expect((await testDb.invoice.findUniqueOrThrow({ where: { id: part.data.id } })).remindAt).toEqual(remindAt);
+    expect((await run()).reminded).toBe(0);
+    const r = await run(new Date(remindAt.getTime() + 1000));
+    expect(r.reminded).toBe(2);
+    const notes = await testDb.notification.findMany({ where: { kind: "INVOICE_APPROVAL_DUE" }, orderBy: { createdAt: "asc" } });
+    expect(notes.map((n) => n.title)).toEqual(["Reminder: approve and send invoice for Repo", "Reminder: approve and send invoice for Repo"]);
+    expect(notes[0].body).toMatch(/^Draft · INR/);
+    const after = await testDb.invoice.findUniqueOrThrow({ where: { id: created.data.id } });
+    expect(after).toMatchObject({ remindAt: null, status: "AWAITING_APPROVAL", emailSentAt: null, whatsappSentAt: null, sentAt: null });
+    expect(sentMailLog).toHaveLength(0);
+  });
+
+  it("currency: INR for Indian clients, the client's currency abroad (override allowed), copied to clones and credit notes", async () => {
+    const { createInvoice, approveAndSend, createCreditNote } = await import("@/server/finance/invoices");
+    const { listInvoices } = await import("@/server/finance/queries");
+    const inr = await createInvoice({ ...baseInput(seed.client.id), currency: "USD" }); // ignored: Indian client
+    if (!inr.ok) throw new Error(inr.error);
+    expect((await testDb.invoice.findUniqueOrThrow({ where: { id: inr.data.id } })).currency).toBe("INR");
+
+    await testDb.client.update({ where: { id: seed.client.id }, data: { country: "AE", gstNumber: null, currency: "AED" } });
+    const fromClient = await createInvoice(baseInput(seed.client.id));
+    if (!fromClient.ok) throw new Error(fromClient.error);
+    expect((await testDb.invoice.findUniqueOrThrow({ where: { id: fromClient.data.id } })).currency).toBe("AED");
+    const usd = await createInvoice({ ...baseInput(seed.client.id), currency: "usd" });
+    if (!usd.ok) throw new Error(usd.error);
+    expect((await testDb.invoice.findUniqueOrThrow({ where: { id: usd.data.id } })).currency).toBe("USD");
+    expect((await createInvoice({ ...baseInput(seed.client.id), currency: "dollars" })).ok).toBe(false);
+    expect((await listInvoices()).map((r) => r.currency).sort()).toEqual(["AED", "INR", "USD"]);
+
+    expect((await approveAndSend(usd.data.id, {})).ok).toBe(true);
+    const cn = await createCreditNote(usd.data.id, { amount: 1000, reason: "Discount" });
+    if (!cn.ok) throw new Error(cn.error);
+    expect((await testDb.invoice.findUniqueOrThrow({ where: { id: cn.data.id } })).currency).toBe("USD");
+    const pdf = (await testDb.invoice.findUniqueOrThrow({ where: { id: usd.data.id } })).pdfData!;
+    const { pdfText } = await import("../helpers/pdf-text");
+    expect((await pdfText(Buffer.from(pdf))).text.replace(/\s+/g, "")).toContain("USD20,000");
   });
 
   it("job (d) flags overdue only for approved tax/export invoices", async () => {

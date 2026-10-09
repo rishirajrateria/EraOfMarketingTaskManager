@@ -12,9 +12,37 @@ export function formatINR(n: number): string {
   return `₹${formatINRNumber(n)}`;
 }
 
-/** "INR 1,23,456.50" — for PDFs/emails (standard PDF fonts lack the ₹ glyph). */
+/** "INR 1,23,456.50" — for emails / WhatsApp text (plain ASCII). */
 export function formatINRPlain(n: number): string {
   return `INR ${formatINRNumber(n)}`;
+}
+
+const grouped = (locale: string, digits: number) => new Intl.NumberFormat(locale, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+const inrWhole = grouped("en-IN", 0);
+const inrCents = grouped("en-IN", 2);
+const intlWhole = grouped("en-US", 0);
+const intlCents = grouped("en-US", 2);
+
+/** Whole amounts print without decimals, anything else with two: 30000 → "30,000", 1234.5 → "1,234.50". */
+function compactNumber(n: number, whole: Intl.NumberFormat, cents: Intl.NumberFormat): string {
+  const v = Number.isFinite(n) ? round2(n) : 0;
+  return Number.isInteger(v) ? whole.format(v) : cents.format(v);
+}
+
+/**
+ * Amount as printed on documents (ADR 0007): INR → "₹30,000" (Indian grouping, no decimals when whole),
+ * any other ISO code → the code directly before the number, e.g. "AED2,700".
+ */
+export function formatCurrency(n: number, currency: string = "INR"): string {
+  const code = (currency || "INR").trim().toUpperCase();
+  if (code === "INR") return `₹${compactNumber(n, inrWhole, inrCents)}`;
+  return `${code}${compactNumber(n, intlWhole, intlCents)}`;
+}
+
+/** "AED 2,700.00" / "₹2,700.00" — for UI rows that may show a foreign-currency invoice. */
+export function formatMoney(n: number, currency: string = "INR"): string {
+  const code = (currency || "INR").trim().toUpperCase();
+  return code === "INR" ? formatINR(n) : `${code} ${intlCents.format(Number.isFinite(n) ? round2(n) : 0)}`;
 }
 
 export function round2(n: number): number {

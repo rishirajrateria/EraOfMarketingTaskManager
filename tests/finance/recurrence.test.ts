@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { formatInTimeZone } from "date-fns-tz";
-import { anchoredMonthDate, isRuleActive, nextOccurrence, nextOccurrenceAfter, shiftedDueDate } from "@/server/finance/recurrence";
+import { anchoredMonthDate, describeMonthAnchor, isRuleActive, nextOccurrence, nextOccurrenceAfter, shiftedDueDate } from "@/server/finance/recurrence";
 
 const at = (s: string) => new Date(s);
 const TZ = "Asia/Kolkata";
@@ -16,20 +16,44 @@ describe("recurrence math", () => {
     expect(nextOccurrence(at("2026-01-15T00:00:00Z"), { frequency: "MONTHLY", interval: 3 })).toEqual(at("2026-04-15T00:00:00Z"));
     expect(nextOccurrence(at("2026-01-15T00:00:00Z"), { frequency: "MONTHLY", interval: 1, monthAnchor: "NONE" })).toEqual(at("2026-02-15T00:00:00Z"));
   });
-  it("month anchors land on the 1st / last day of the next month at local midnight (ADR 0005)", () => {
-    // 9 Oct 2026 10:00 IST → START: 1 Nov 2026 00:00 IST; END: 30 Nov 2026 00:00 IST
+  it("month anchors land on the 1st / last day of the next month at 09:00 local by default (ADR 0005 / 0007)", () => {
+    // 9 Oct 2026 10:00 IST → START: 1 Nov 2026 09:00 IST; END: 30 Nov 2026 09:00 IST
     const from = at("2026-10-09T04:30:00Z");
-    expect(local(nextOccurrence(from, { frequency: "MONTHLY", interval: 1, monthAnchor: "START" }, TZ))).toBe("2026-11-01 00:00");
-    expect(local(nextOccurrence(from, { frequency: "MONTHLY", interval: 1, monthAnchor: "END" }, TZ))).toBe("2026-11-30 00:00");
-    expect(nextOccurrence(from, { frequency: "MONTHLY", interval: 1, monthAnchor: "START" }, TZ)).toEqual(at("2026-10-31T18:30:00Z"));
+    expect(local(nextOccurrence(from, { frequency: "MONTHLY", interval: 1, monthAnchor: "START" }, TZ))).toBe("2026-11-01 09:00");
+    expect(local(nextOccurrence(from, { frequency: "MONTHLY", interval: 1, monthAnchor: "END" }, TZ))).toBe("2026-11-30 09:00");
+    expect(nextOccurrence(from, { frequency: "MONTHLY", interval: 1, monthAnchor: "START", notifyMinutes: 0 }, TZ)).toEqual(at("2026-10-31T18:30:00Z"));
     // February and leap years
-    expect(local(anchoredMonthDate(at("2028-01-31T12:00:00Z"), "END", 1, TZ))).toBe("2028-02-29 00:00");
-    expect(local(anchoredMonthDate(at("2026-12-31T20:00:00Z"), "START", 1, TZ))).toBe("2027-02-01 00:00"); // 1 Jan IST already
-    expect(local(anchoredMonthDate(at("2026-12-31T20:00:00Z"), "START", 1, "UTC"))).toBe("2027-01-01 05:30");
-    expect(local(anchoredMonthDate(at("2026-10-09T04:30:00Z"), "END", 2, TZ))).toBe("2026-12-31 00:00");
+    expect(local(anchoredMonthDate(at("2028-01-31T12:00:00Z"), "END", 1, TZ, null, 0))).toBe("2028-02-29 00:00");
+    expect(local(anchoredMonthDate(at("2026-12-31T20:00:00Z"), "START", 1, TZ, null, 0))).toBe("2027-02-01 00:00"); // 1 Jan IST already
+    expect(local(anchoredMonthDate(at("2026-12-31T20:00:00Z"), "START", 1, "UTC", null, 0))).toBe("2027-01-01 05:30");
+    expect(local(anchoredMonthDate(at("2026-10-09T04:30:00Z"), "END", 2, TZ))).toBe("2026-12-31 09:00");
     // catch-up keeps the anchor
     const next = nextOccurrenceAfter(at("2026-01-31T18:30:00Z"), { frequency: "MONTHLY", interval: 1, monthAnchor: "END" }, at("2026-10-09T00:00:00Z"), TZ);
-    expect(local(next)).toBe("2026-10-31 00:00");
+    expect(local(next)).toBe("2026-10-31 09:00");
+  });
+  it("DAY anchor: the chosen day of the next month at notifyMinutes in Asia/Kolkata, across month lengths (ADR 0007)", () => {
+    const rule = { frequency: "MONTHLY" as const, interval: 1, monthAnchor: "DAY" as const, dayOfMonth: 15, notifyMinutes: 10 * 60 + 30 };
+    // 9 Oct 2026 → 15 Nov 2026 10:30 IST = 05:00Z
+    expect(local(nextOccurrence(at("2026-10-09T04:30:00Z"), rule, TZ))).toBe("2026-11-15 10:30");
+    expect(nextOccurrence(at("2026-10-09T04:30:00Z"), rule, TZ)).toEqual(at("2026-11-15T05:00:00Z"));
+    // day 28 exists in every month, including February of a non-leap year
+    const d28 = { ...rule, dayOfMonth: 28 };
+    expect(local(nextOccurrence(at("2027-01-28T05:00:00Z"), d28, TZ))).toBe("2027-02-28 10:30");
+    expect(local(nextOccurrence(at("2027-02-28T05:00:00Z"), d28, TZ))).toBe("2027-03-28 10:30");
+    expect(local(nextOccurrence(at("2026-12-28T05:00:00Z"), d28, TZ))).toBe("2027-01-28 10:30");
+    // 31-day → 30-day months keep the day; out-of-range values are clamped to 1–28
+    expect(local(nextOccurrence(at("2026-07-01T05:00:00Z"), { ...rule, dayOfMonth: 1 }, TZ))).toBe("2026-08-01 10:30");
+    expect(local(nextOccurrence(at("2026-07-01T05:00:00Z"), { ...rule, dayOfMonth: 31 }, TZ))).toBe("2026-08-28 10:30");
+    // late-evening IST creation on the day itself still lands on next month's day
+    expect(local(nextOccurrence(at("2026-10-15T19:30:00Z"), rule, TZ))).toBe("2026-11-16 10:30".replace("16", "15"));
+    // catch-up
+    expect(local(nextOccurrenceAfter(at("2026-01-15T05:00:00Z"), rule, at("2026-10-01T00:00:00Z"), TZ))).toBe("2026-10-15 10:30");
+    // notifyMinutes applies to non-anchored frequencies too; absent → time-of-day preserved
+    expect(local(nextOccurrence(at("2026-10-09T04:30:00Z"), { frequency: "DAILY", interval: 1, notifyMinutes: 540 }, TZ))).toBe("2026-10-10 09:00");
+    expect(local(nextOccurrence(at("2026-10-09T04:30:00Z"), { frequency: "DAILY", interval: 1 }, TZ))).toBe("2026-10-10 10:00");
+    expect(describeMonthAnchor("DAY", 3)).toBe("the 3rd");
+    expect(describeMonthAnchor("DAY", 21)).toBe("the 21st");
+    expect(describeMonthAnchor("END")).toBe("last day of the month");
   });
   it("weekly without weekdays adds interval weeks", () => {
     expect(nextOccurrence(at("2026-09-10T00:00:00Z"), { frequency: "WEEKLY", interval: 2 })).toEqual(at("2026-09-24T00:00:00Z"));

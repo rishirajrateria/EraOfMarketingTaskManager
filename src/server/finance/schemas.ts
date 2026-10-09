@@ -35,13 +35,31 @@ export const invoiceItemSchema = z.object({
 });
 export type InvoiceItemInput = z.infer<typeof invoiceItemSchema>;
 
-export const recurrenceInputSchema = z.object({
-  frequency: z.enum(["DAILY", "WEEKLY", "MONTHLY", "CUSTOM"]),
-  interval: z.coerce.number().int().min(1).max(365).default(1),
-  byWeekday: z.array(z.coerce.number().int().min(0).max(6)).default([]),
-  monthAnchor: z.enum(["NONE", "START", "END"]).default("NONE"),
-  endDate: optionalDateInput,
-});
+/** ADR 0007: monthly rules bill on the 1st (START), the last day (END) or `dayOfMonth` (DAY, 1–28), at `notifyMinutes` in the company tz. */
+export const recurrenceInputSchema = z
+  .object({
+    frequency: z.enum(["DAILY", "WEEKLY", "MONTHLY", "CUSTOM"]),
+    interval: z.coerce.number().int().min(1).max(365).default(1),
+    byWeekday: z.array(z.coerce.number().int().min(0).max(6)).default([]),
+    monthAnchor: z.enum(["NONE", "START", "END", "DAY"]).default("NONE"),
+    dayOfMonth: z.coerce.number().int().min(1, "day must be 1–28").max(28, "day must be 1–28").optional().nullable(),
+    notifyMinutes: z.coerce.number().int().min(0).max(1439).default(540),
+    endDate: optionalDateInput,
+  })
+  .superRefine((r, ctx) => {
+    if (r.monthAnchor === "DAY" && r.dayOfMonth == null) ctx.addIssue({ code: "custom", path: ["dayOfMonth"], message: "pick a day of the month (1–28)" });
+  });
+export type RecurrenceInput = z.infer<typeof recurrenceInputSchema>;
+
+/** ISO 4217 code; blank → null (the client's currency applies). */
+export const currencyInput = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .optional()
+  .nullable()
+  .transform((v) => (v ? v : null))
+  .refine((v) => v === null || /^[A-Z]{3}$/.test(v), "currency must be a 3-letter ISO code");
 
 export const partInputSchema = z.object({
   kind: z.enum(["PERCENT", "FIXED"]).default("PERCENT"),
@@ -69,6 +87,10 @@ export const invoiceInputSchema = z
     parts: z.array(partInputSchema).optional().nullable(),
     /** ADR 0006: the client will deduct TDS on this invoice. Omitted/null → true when the client has a TDS %. */
     tdsApplicable: z.boolean().optional().nullable(),
+    /** ADR 0007: printed currency (export invoices); null → the client's currency. */
+    currency: currencyInput,
+    /** ADR 0007: "remind me to approve and send on" (non-recurring documents). */
+    remindAt: optionalDateInput,
   })
   .superRefine((v, ctx) => {
     const hasItems = (v.items?.length ?? 0) > 0;
@@ -82,6 +104,8 @@ export type InvoiceInput = z.infer<typeof invoiceInputSchema>;
 export const approveOptionsSchema = z.object({
   email: z.boolean().default(false),
   whatsapp: z.boolean().default(false),
+  /** UI-only: the sheet opens the PDF download after approval; accepted so the form can pass it through. */
+  download: z.boolean().optional().nullable(),
   emailText: optionalStr,
   whatsappText: optionalStr,
 });

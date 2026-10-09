@@ -101,6 +101,15 @@ export const clientInputSchema = z.object({
   phone: optionalText(30),
   whatsapp: optionalText(30).refine((v) => v === null || normalizeE164(v) !== null, "WhatsApp number must be in E.164 form, e.g. +919876543210"),
   tdsPercent: z.coerce.number().min(0).max(100).optional().nullable(),
+  /** ADR 0007: ISO 4217 the client is billed in (export invoices); Indian clients are always INR. */
+  currency: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .optional()
+    .nullable()
+    .transform((v) => v || "INR")
+    .refine((v) => /^[A-Z]{3}$/.test(v), "Currency must be a 3-letter ISO code"),
 });
 export const updateClientSchema = clientInputSchema.extend({ id });
 export type ClientInput = z.input<typeof clientInputSchema>;
@@ -110,12 +119,14 @@ export type UpdateClientInput = z.input<typeof updateClientSchema>;
 export function withDerivedClientFields<T extends z.output<typeof clientInputSchema>>(input: T): T {
   const fromGstin = stateFromGstin(input.gstNumber);
   const state = fromGstin ?? stateByCode(input.stateCode);
+  const india = (input.country || "IN") === "IN";
   return {
     ...input,
-    stateCode: state?.code ?? null,
-    stateName: state ? state.name : input.stateName,
+    stateCode: india ? (state?.code ?? null) : null,
+    stateName: india ? (state ? state.name : input.stateName) : null,
     whatsapp: normalizeE164(input.whatsapp),
     tdsPercent: input.tdsPercent ?? null,
+    currency: india ? "INR" : input.currency || "INR",
   };
 }
 
@@ -138,16 +149,32 @@ function isValidTimezone(tz: string): boolean {
   }
 }
 
+const shortText = (max: number) => z.string().trim().max(max).default("");
+
 export const settingsInputSchema = z
   .object({
     companyName: z.string().trim().min(1, "Company name is required").max(120),
+    /** ADR 0007: company block printed on every invoice. */
+    legalName: shortText(160),
     address: z.string().trim().max(1000).default(""),
-    gstNumber: z.string().trim().max(30).default(""),
-    bankName: z.string().trim().max(120).default(""),
-    bankAccountName: z.string().trim().max(120).default(""),
-    bankAccountNumber: z.string().trim().max(40).default(""),
-    bankIfsc: z.string().trim().max(20).default(""),
-    upiId: z.string().trim().max(80).default(""),
+    gstNumber: shortText(30).transform((v) => v.replace(/\s+/g, "").toUpperCase()),
+    stateCode: shortText(2).refine((v) => v === "" || stateByCode(v) !== null, "Unknown GST state code"),
+    pan: shortText(20)
+      .transform((v) => v.replace(/\s+/g, "").toUpperCase())
+      .refine((v) => v === "" || PAN_REGEX.test(v), "PAN must be 5 letters, 4 digits and a letter (e.g. ABCDE1234F)"),
+    lutNumber: shortText(40),
+    iecCode: shortText(40),
+    email: shortText(160).refine((v) => v === "" || z.email().safeParse(v).success, "Enter a valid billing email"),
+    phone: shortText(30),
+    website: shortText(160),
+    hsnSacCode: shortText(20),
+    bankName: shortText(120),
+    bankAccountName: shortText(120),
+    bankAccountNumber: shortText(40),
+    bankIfsc: shortText(20),
+    bankSwift: shortText(20),
+    bankAddress: shortText(300),
+    upiId: shortText(80),
     workStartMinutes: minutesOfDay,
     workEndMinutes: minutesOfDay,
     lunchStartMinutes: minutesOfDay,

@@ -64,15 +64,25 @@ export async function loadCompany(): Promise<CompanyInfo> {
   const s = await getSettings();
   return {
     companyName: s.companyName,
+    legalName: s.legalName,
     address: s.address,
     gstNumber: s.gstNumber,
+    pan: s.pan,
+    iecCode: s.iecCode,
+    email: s.email,
+    phone: s.phone,
+    website: s.website,
+    hsnSacCode: s.hsnSacCode,
     bankName: s.bankName,
     bankAccountName: s.bankAccountName,
     bankAccountNumber: s.bankAccountNumber,
     bankIfsc: s.bankIfsc,
+    bankSwift: s.bankSwift,
+    bankAddress: s.bankAddress,
     upiId: s.upiId,
     lutNumber: s.lutNumber,
     logoData: s.logoData,
+    signatureData: s.signatureData,
     stateCode: companyStateCode(s),
     timezone: s.timezone,
     invoiceEmailTemplate: s.invoiceEmailTemplate,
@@ -109,7 +119,17 @@ export type DocumentDraft = {
   creditNoteOfId?: string | null;
   /** ADR 0006: client deducts TDS. Undefined → true when the client has a TDS % on file. */
   tdsApplicable?: boolean | null;
+  /** ISO 4217 (ADR 0007). Undefined → the client's currency. */
+  currency?: string | null;
+  /** "Remind me to approve and send on" — the job notifies admins and clears it. */
+  remindAt?: Date | null;
 };
+
+async function currencyFor(tx: Tx, draft: DocumentDraft): Promise<string> {
+  if (draft.currency) return draft.currency.toUpperCase();
+  const c = await tx.client.findUnique({ where: { id: draft.clientId }, select: { currency: true } });
+  return c?.currency?.toUpperCase() || "INR";
+}
 
 async function defaultTdsApplicable(tx: Tx, draft: DocumentDraft): Promise<boolean> {
   if (draft.tdsApplicable != null) return draft.tdsApplicable;
@@ -124,6 +144,7 @@ export async function insertDocument(tx: Tx, draft: DocumentDraft, actorId: stri
   const subtotal = subtotalOf(draft.items);
   const t = splitTax(subtotal, gstPercent, draft.taxMode);
   const tdsApplicable = await defaultTdsApplicable(tx, draft);
+  const currency = await currencyFor(tx, draft);
   const created = await tx.invoice.create({
     data: {
       clientId: draft.clientId,
@@ -153,6 +174,8 @@ export async function insertDocument(tx: Tx, draft: DocumentDraft, actorId: stri
       paymentTerms: draft.paymentTerms ?? null,
       dueDate: draft.dueDate,
       tdsApplicable,
+      currency,
+      remindAt: draft.remindAt ?? null,
       status: "AWAITING_APPROVAL",
     },
     select: { id: true },
@@ -176,6 +199,7 @@ export function toPdfInvoice(inv: InvoiceFull): PdfInvoice {
     dueDate: inv.dueDate,
     docType: inv.docType,
     taxMode: inv.taxMode,
+    currency: inv.currency,
     placeOfSupply: inv.placeOfSupply,
     description: inv.description,
     partLabel: partLabelFor(inv),

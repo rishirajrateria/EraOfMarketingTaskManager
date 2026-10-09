@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { resetDb, seedBasics, testDb } from "../helpers/db";
 import { mockSession } from "../helpers/mock-session";
 import { addDays } from "date-fns";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
 const session = mockSession();
 
@@ -13,8 +14,9 @@ describe("add-task header inventory", () => {
   it("returns remaining hours and assigned task counts for the visible team, narrowing to selected assignees", async () => {
     const { admin, tl, exec, client } = await seedBasics();
     // one task tomorrow for the exec (2h)
-    const start = addDays(new Date(), 1);
-    start.setUTCHours(5, 0, 0, 0); // 10:30 IST
+    // "tomorrow" in the company timezone, not UTC (the two differ between 18:30 and 24:00 UTC)
+    const tomorrowIst = formatInTimeZone(addDays(new Date(), 1), "Asia/Kolkata", "yyyy-MM-dd");
+    const start = fromZonedTime(`${tomorrowIst}T10:30:00`, "Asia/Kolkata");
     await testDb.task.create({
       data: { title: "t", clientId: client.id, createdById: tl.id, allocatedMinutes: 120, scheduledStart: start, scheduledEnd: new Date(start.getTime() + 7200_000), assignees: { create: [{ userId: exec.id }] } },
     });

@@ -50,6 +50,9 @@ export const TAX_MODE_LABEL: Record<TaxMode, string> = {
   NONE: "No tax",
 };
 
+/** ADR 0007: currencies offered for clients outside India (export invoices print the code before the amount). */
+export const CURRENCIES = ["INR", "USD", "EUR", "GBP", "AED", "SGD", "AUD", "CAD", "SAR", "QAR", "NZD"] as const;
+
 export const PAYMENT_METHODS = ["CASH", "BANK", "UPI", "OTHER"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 export const METHOD_LABEL: Record<string, string> = { CASH: "Cash", BANK: "Bank", UPI: "UPI", OTHER: "Other" };

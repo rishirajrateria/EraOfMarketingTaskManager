@@ -10,12 +10,23 @@ async function load() {
 
 const baseInput = {
   companyName: "Era Of Marketing Pvt Ltd",
+  legalName: "The Era Of Marketing",
   address: "Mumbai",
   gstNumber: "27ABCDE1234F1Z5",
+  stateCode: "27",
+  pan: "ABCDE1234F",
+  lutNumber: "AD270326000123X",
+  iecCode: "ABCDE1234F",
+  email: "billing@eom.test",
+  phone: "919999999999",
+  website: "www.eom.test",
+  hsnSacCode: "998361",
   bankName: "HDFC",
   bankAccountName: "Era Of Marketing",
   bankAccountNumber: "1234567890",
   bankIfsc: "HDFC0000001",
+  bankSwift: "HDFCINBB",
+  bankAddress: "Fort, Mumbai 400001",
   upiId: "eom@hdfc",
   workStartMinutes: 9 * 60,
   workEndMinutes: 18 * 60,
@@ -70,8 +81,20 @@ describe("company settings actions", () => {
     expect(s.halfDayMinutes).toBe(300);
     expect(s.expenseCategories).toEqual(["Travel", "Software", "Office"]);
 
+    expect(s).toMatchObject({ legalName: "The Era Of Marketing", stateCode: "27", pan: "ABCDE1234F", iecCode: "ABCDE1234F", lutNumber: "AD270326000123X", email: "billing@eom.test", website: "www.eom.test", hsnSacCode: "998361", bankSwift: "HDFCINBB", bankAddress: "Fort, Mumbai 400001" });
+
     const dto = await getSettingsDto();
-    expect(dto).toMatchObject({ ...baseInput, holidays: ["2026-08-15", "2026-10-02"], hasLogo: false, logoUrl: null });
+    expect(dto).toMatchObject({ ...baseInput, holidays: ["2026-08-15", "2026-10-02"], hasLogo: false, logoUrl: null, hasSignature: false, signatureUrl: null });
+
+    // ADR 0007: the company block fields default to blank (HSN 998361) and PAN / email are validated
+    const { legalName: _ln, pan: _p, iecCode: _i, email: _e, phone: _ph, website: _w, hsnSacCode: _h, bankSwift: _bs, bankAddress: _ba, stateCode: _sc, lutNumber: _lut, ...minimal } = baseInput;
+    expect((await actions.updateSettings({ ...minimal, address: "Pune" })).ok).toBe(true);
+    const back = await getSettings();
+    expect(back).toMatchObject({ legalName: "", pan: "", email: "", hsnSacCode: "", stateCode: "", lutNumber: "" });
+    expect((await actions.updateSettings({ ...baseInput, pan: "ABC123" })).ok).toBe(false);
+    expect((await actions.updateSettings({ ...baseInput, email: "not-an-email" })).ok).toBe(false);
+    expect((await actions.updateSettings({ ...baseInput, stateCode: "99" })).ok).toBe(true);
+    expect((await actions.updateSettings({ ...baseInput, stateCode: "xx" })).ok).toBe(false);
 
     const log = await testDb.auditLog.findFirst({ where: { entityType: "CompanySettings", action: "settings.update" } });
     expect(log?.actorId).toBe(admin.id);

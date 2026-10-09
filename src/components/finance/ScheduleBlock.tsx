@@ -2,6 +2,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { formatINR } from "@/server/finance/money";
+import { describeMonthAnchor } from "@/server/finance/recurrence";
+import { minutesToHHMM } from "@/lib/time";
 import { issuePart } from "@/server/finance/invoices";
 import type { InvoiceDetail } from "@/server/finance/queries";
 import { Section } from "@/components/finance/InvoiceDetailSections";
@@ -43,7 +45,7 @@ export function ScheduleBlock({
     const s = inv.schedule;
     const freq =
       s.frequency === "MONTHLY"
-        ? `Monthly · ${s.monthAnchor === "END" ? "last day" : s.monthAnchor === "START" ? "1st" : "same day"}`
+        ? `Monthly · ${describeMonthAnchor(s.monthAnchor, s.dayOfMonth)} at ${minutesToHHMM(s.notifyMinutes)}`
         : s.frequency === "WEEKLY"
           ? "Weekly"
           : s.frequency === "DAILY"

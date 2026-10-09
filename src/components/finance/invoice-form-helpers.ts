@@ -20,11 +20,19 @@ export type InvoiceFormState = {
   dueDate: string;
   frequency: Frequency;
   interval: string;
-  monthAnchor: "START" | "END";
+  /** ADR 0007: 1st / last day / a chosen day (`dayOfMonth`, 1–28) at `notifyTime` (HH:MM, company tz). */
+  monthAnchor: "START" | "END" | "DAY";
+  dayOfMonth: string;
+  notifyTime: string;
   endDate: string;
   infinite: boolean;
   dueDays: string;
   parts: PartRow[];
+  /** ADR 0007: non-recurring documents — "remind me to approve and send on" (date + HH:MM, blank = none). */
+  remindDate: string;
+  remindTime: string;
+  /** ADR 0007: ISO 4217 printed on the PDF; follows the client (INR for Indian clients). */
+  currency: string;
   proforma: boolean;
   /** ADR 0006: the client deducts TDS on this invoice (defaults to "has a TDS %" when a client is picked). */
   tdsApplicable: boolean;
@@ -47,10 +55,15 @@ export function emptyForm(defaults: { gstPercent: number; paymentTerms: string; 
     frequency: "MONTHLY",
     interval: "1",
     monthAnchor: "START",
+    dayOfMonth: "15",
+    notifyTime: "09:00",
     endDate: "",
     infinite: true,
     dueDays: "15",
     parts: defaultPartsFor(2, defaults.today),
+    remindDate: "",
+    remindTime: "09:00",
+    currency: "INR",
     proforma: false,
     tdsApplicable: false,
     notes: "",
@@ -152,11 +165,26 @@ export function validateForm(f: InvoiceFormState): Record<string, string> {
   if (f.useLines && f.lines.some((l) => !l.description.trim() && num(l.rate) > 0)) errors.items = "Every line needs a description";
   if (f.plan === "RECURRING" && !f.infinite && !f.endDate) errors.recurrence = "Pick an end date or choose Infinite";
   if (f.plan === "RECURRING" && num(f.interval) < 1) errors.recurrence = "Interval must be at least 1";
+  if (f.plan === "RECURRING" && f.frequency === "MONTHLY" && f.monthAnchor === "DAY" && (num(f.dayOfMonth) < 1 || num(f.dayOfMonth) > 28)) errors.recurrence = "Pick a day between 1 and 28";
+  if (f.plan !== "RECURRING" && f.remindDate && !/^\d{4}-\d{2}-\d{2}$/.test(f.remindDate)) errors.remindAt = "Pick a valid reminder date";
   if (f.plan === "PART") {
     const s = partsSummary(f.parts, taxable);
     if (!s.valid && s.error) errors.parts = s.error;
   }
   return errors;
+}
+
+/** "09:00" → 540. */
+export function hhmmToMinutes(s: string): number {
+  const [h, m] = s.split(":").map(Number);
+  return Math.max(0, Math.min(1439, (h || 0) * 60 + (m || 0)));
+}
+
+/** Local date + HH:MM from the wizard → ISO instant (the browser's zone, i.e. the admin's), or null. */
+export function remindAtIso(date: string, time: string): string | null {
+  if (!date) return null;
+  const d = new Date(`${date}T${/^\d{2}:\d{2}$/.test(time) ? time : "09:00"}:00`);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
 /** Shape the wizard state into the `createInvoice` input (strings → numbers, blanks → null). */
@@ -171,6 +199,8 @@ export function buildInvoiceInput(f: InvoiceFormState) {
           interval: f.frequency === "CUSTOM" ? Math.max(1, Math.round(num(f.interval))) : 1,
           byWeekday: [] as number[],
           monthAnchor: f.frequency === "MONTHLY" ? f.monthAnchor : ("NONE" as const),
+          dayOfMonth: f.frequency === "MONTHLY" && f.monthAnchor === "DAY" ? Math.round(num(f.dayOfMonth)) : null,
+          notifyMinutes: hhmmToMinutes(f.notifyTime || "09:00"),
           endDate: f.infinite ? null : f.endDate || null,
         }
       : null;
@@ -190,6 +220,8 @@ export function buildInvoiceInput(f: InvoiceFormState) {
     recurrence,
     parts,
     tdsApplicable: f.tdsApplicable,
+    currency: f.currency.trim().toUpperCase() || null,
+    remindAt: f.plan === "RECURRING" ? null : remindAtIso(f.remindDate, f.remindTime),
   };
 }
 

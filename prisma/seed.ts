@@ -4,26 +4,45 @@
  */
 import { PrismaClient } from "@prisma/client";
 import { addDays, addHours, subDays, subHours } from "date-fns";
+import { readFileSync } from "fs";
+import path from "path";
 
 const prisma = new PrismaClient();
 const DOMAIN = process.env.GOOGLE_WORKSPACE_DOMAIN || "eraofmarketing.com";
 const email = (local: string) => `${local}@${DOMAIN}`;
+const asset = (name: string) => readFileSync(path.join(__dirname, "seed-assets", name));
+
+/** The owner's real company details, as printed on their invoices (ADR 0007). */
+const COMPANY = {
+  companyName: "The Era Of Marketing",
+  legalName: "The Era Of Marketing",
+  gstNumber: "19CEWPR5040D1Z3",
+  stateCode: "19",
+  pan: "CEWPR5040D",
+  iecCode: "CEWPR5040D",
+  lutNumber: "AD190424009251F",
+  address: "7th floor, Yamuna Building, 86 Golaghata Rd, Kolkata, West Bengal 700048, India",
+  email: "contact@theeraofmarketing.com",
+  phone: "918910358506",
+  website: "www.theeraofmarketing.com",
+  hsnSacCode: "998361",
+  bankAccountName: "The Era Of Marketing",
+  bankAccountNumber: "10126079826",
+  bankSwift: "IDFBINBBMUM",
+  bankIfsc: "IDFB0060102",
+  bankName: "IDFC FIRST Bank LTD",
+  bankAddress: "Salt Lake, Sector 1, Kolkata, West Bengal, India, Pincode 700064",
+  logoData: asset("logo.png"),
+  logoUrl: "/api/files/logo",
+  signatureData: asset("signature.png"),
+  signatureUrl: "/api/files/signature",
+};
 
 async function main() {
   await prisma.companySettings.upsert({
     where: { id: "default" },
-    update: {},
-    create: {
-      id: "default",
-      companyName: "Era Of Marketing",
-      address: "2nd Floor, Marketing House, Bengaluru 560001",
-      gstNumber: "29ABCDE1234F1Z5",
-      bankName: "HDFC Bank",
-      bankAccountName: "Era Of Marketing",
-      bankAccountNumber: "50100123456789",
-      bankIfsc: "HDFC0001234",
-      upiId: "eraofmarketing@hdfcbank",
-    },
+    update: COMPANY,
+    create: { id: "default", ...COMPANY },
   });
 
   const teamsData = ["Graphic", "Finance", "Website", "Video", "Write"];

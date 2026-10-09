@@ -92,6 +92,8 @@ export type InvoiceRow = {
   plan: "ONE_TIME" | "RECURRING" | "PART";
   partSeq: number | null;
   total: number;
+  /** ISO 4217 (ADR 0007); "INR" unless an export invoice was raised in a foreign currency. */
+  currency: string;
   received: number;
   tds: number;
   credited: number;
@@ -104,7 +106,7 @@ export type InvoiceRow = {
 };
 
 export const invoiceSelect = {
-  id: true, number: true, clientId: true, status: true, docType: true, taxMode: true, plan: true, partSeq: true, total: true,
+  id: true, number: true, clientId: true, status: true, docType: true, taxMode: true, plan: true, partSeq: true, total: true, currency: true,
   dueDate: true, approvedAt: true, sentAt: true, remindAt: true, createdAt: true,
   client: { select: { name: true } },
   ...SETTLEMENT_INCLUDE,
@@ -114,7 +116,7 @@ export function toInvoiceRow(i: Prisma.InvoiceGetPayload<{ select: typeof invoic
   const s = settleInvoice(i);
   return {
     id: i.id, number: i.number, clientId: i.clientId, clientName: i.client.name, status: i.status, docType: i.docType, taxMode: i.taxMode, plan: i.plan, partSeq: i.partSeq,
-    total: i.total.toNumber(), received: s.received, tds: s.tds, credited: s.credited, balance: s.balance,
+    total: i.total.toNumber(), currency: i.currency, received: s.received, tds: s.tds, credited: s.credited, balance: s.balance,
     dueDate: iso(i.dueDate), approvedAt: iso(i.approvedAt), sentAt: iso(i.sentAt), remindAt: iso(i.remindAt), createdAt: i.createdAt.toISOString(),
   };
 }
@@ -151,7 +153,7 @@ export type InvoiceDetail = InvoiceRow & {
   cancelledAt: string | null;
   reminderSentAt: string | null;
   reminderCount: number;
-  schedule: { frequency: string; interval: number; monthAnchor: string; nextRunAt: string | null; endDate: string | null; stopped: boolean } | null;
+  schedule: { frequency: string; interval: number; monthAnchor: string; dayOfMonth: number | null; notifyMinutes: number; nextRunAt: string | null; endDate: string | null; stopped: boolean } | null;
   planRef: {
     id: string;
     title: string;
@@ -209,7 +211,7 @@ export async function getInvoiceDetail(id: string): Promise<InvoiceDetail | null
     reminderSentAt: iso(i.reminderSentAt),
     reminderCount: i.reminderCount,
     schedule: i.schedule
-      ? { frequency: i.schedule.frequency, interval: i.schedule.interval, monthAnchor: i.schedule.monthAnchor, nextRunAt: iso(i.schedule.nextRunAt), endDate: iso(i.schedule.endDate), stopped: i.schedule.stopped }
+      ? { frequency: i.schedule.frequency, interval: i.schedule.interval, monthAnchor: i.schedule.monthAnchor, dayOfMonth: i.schedule.dayOfMonth, notifyMinutes: i.schedule.notifyMinutes, nextRunAt: iso(i.schedule.nextRunAt), endDate: iso(i.schedule.endDate), stopped: i.schedule.stopped }
       : null,
     planRef: i.planRef
       ? {
@@ -234,7 +236,7 @@ export async function getInvoiceDetail(id: string): Promise<InvoiceDetail | null
 }
 
 export async function listClientsForInvoice() {
-  const rows = await prisma.client.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, email: true, whatsapp: true, country: true, stateCode: true, stateName: true, gstNumber: true, tdsPercent: true, workOnHold: true } });
+  const rows = await prisma.client.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, email: true, whatsapp: true, country: true, currency: true, stateCode: true, stateName: true, gstNumber: true, tdsPercent: true, workOnHold: true } });
   return rows.map((c) => ({ ...c, tdsPercent: c.tdsPercent?.toNumber() ?? null }));
 }
 

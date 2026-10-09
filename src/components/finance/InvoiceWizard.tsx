@@ -73,8 +73,9 @@ export function InvoiceWizard({ clients, companyStateCode, defaults, onClose }: 
         </ZoneRow>
         {form.plan === "RECURRING" && form.frequency === "MONTHLY" ? (
           <ZoneRow label="Bill on">
-            <ZonePill active={form.monthAnchor === "START"} onClick={() => set({ monthAnchor: "START" })}>Bill on 1st</ZonePill>
-            <ZonePill active={form.monthAnchor === "END"} onClick={() => set({ monthAnchor: "END" })}>Last day of month</ZonePill>
+            <ZonePill active={form.monthAnchor === "START"} onClick={() => set({ monthAnchor: "START" })}>1st day</ZonePill>
+            <ZonePill active={form.monthAnchor === "END"} onClick={() => set({ monthAnchor: "END" })}>Last day</ZonePill>
+            <ZonePill active={form.monthAnchor === "DAY"} onClick={() => set({ monthAnchor: "DAY" })}>A date</ZonePill>
           </ZoneRow>
         ) : form.plan === "PART" ? (
           <ZoneRow label="Part presets">

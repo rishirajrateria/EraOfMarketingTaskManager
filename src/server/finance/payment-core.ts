@@ -72,6 +72,7 @@ export async function recordPaymentCore(input: PaymentInput, actorId: string | n
       invoiceTotal: inv.total.toNumber(),
       totalReceived: settlement.settled,
       balance: settlement.balance,
+      currency: inv.currency,
     },
     inv.client,
     company,

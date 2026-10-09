@@ -24,6 +24,8 @@ COPY --from=build /app/.next ./.next
 COPY --from=build /app/public ./public
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/next.config.ts ./next.config.ts
+# PDF fonts (DejaVu Sans for the ₹ glyph) are read from src/ at runtime — see src/server/finance/pdf-base.ts
+COPY --from=build /app/src/server/finance/fonts ./src/server/finance/fonts
 EXPOSE 3000
 # Apply migrations on boot (and seed demo data when SEED_DEMO=true), then start Next (jobs start from instrumentation.ts)
 CMD ["sh", "-c", "npx prisma migrate deploy && if [ \"$SEED_DEMO\" = \"true\" ]; then npx tsx prisma/seed.ts; fi && npx next start -p ${PORT}"]

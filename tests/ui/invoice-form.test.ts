@@ -6,7 +6,9 @@ import {
   emptyForm,
   formTax,
   formTotals,
+  hhmmToMinutes,
   partsSummary,
+  remindAtIso,
   renderTemplate,
   shiftDateKey,
   splitActionError,
@@ -119,8 +121,32 @@ describe("buildInvoiceInput", () => {
   });
   it("builds a monthly recurrence billed on the last day with no end date", () => {
     const input = buildInvoiceInput({ ...base(), plan: "RECURRING", frequency: "MONTHLY", monthAnchor: "END", infinite: true, dueDate: "2026-10-24" });
-    expect(input.recurrence).toEqual({ frequency: "MONTHLY", interval: 1, byWeekday: [], monthAnchor: "END", endDate: null });
+    expect(input.recurrence).toEqual({ frequency: "MONTHLY", interval: 1, byWeekday: [], monthAnchor: "END", dayOfMonth: null, notifyMinutes: 540, endDate: null });
+    expect(input.remindAt).toBeNull();
     expect(invoiceInputSchema.safeParse(input).success).toBe(true);
+  });
+  it("builds a monthly recurrence on a chosen day at a chosen time (ADR 0007)", () => {
+    const input = buildInvoiceInput({ ...base(), plan: "RECURRING", frequency: "MONTHLY", monthAnchor: "DAY", dayOfMonth: "15", notifyTime: "10:30", infinite: true, dueDate: "2026-10-24", remindDate: "2026-10-20" });
+    expect(input.recurrence).toMatchObject({ monthAnchor: "DAY", dayOfMonth: 15, notifyMinutes: 630 });
+    expect(input.remindAt).toBeNull(); // recurring: no one-off reminder
+    expect(invoiceInputSchema.safeParse(input).success).toBe(true);
+    expect(validateForm({ ...base(), plan: "RECURRING", frequency: "MONTHLY", monthAnchor: "DAY", dayOfMonth: "31" }).recurrence).toMatch(/1 and 28/);
+    expect(hhmmToMinutes("09:00")).toBe(540);
+    expect(hhmmToMinutes("23:59")).toBe(1439);
+  });
+  it("non-recurring documents carry 'remind me to approve and send on' (date + time) and the currency", () => {
+    const input = buildInvoiceInput({ ...base(), remindDate: "2026-10-20", remindTime: "14:30", currency: "aed" });
+    expect(input.remindAt).toBe(new Date("2026-10-20T14:30:00").toISOString());
+    expect(input.currency).toBe("AED");
+    const parsed = invoiceInputSchema.safeParse(input);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.remindAt).toEqual(new Date("2026-10-20T14:30:00"));
+      expect(parsed.data.currency).toBe("AED");
+    }
+    expect(buildInvoiceInput({ ...base(), remindDate: "" }).remindAt).toBeNull();
+    expect(remindAtIso("2026-10-20", "bad")).toBe(new Date("2026-10-20T09:00:00").toISOString());
+    expect(validateForm({ ...base(), remindDate: "20-10-2026" }).remindAt).toBeTruthy();
   });
   it("builds a custom-days recurrence with an end date", () => {
     const input = buildInvoiceInput({ ...base(), plan: "RECURRING", frequency: "CUSTOM", interval: "10", infinite: false, endDate: "2027-03-31" });

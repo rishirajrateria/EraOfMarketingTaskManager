@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatINR } from "@/server/finance/money";
+import { formatINR, formatMoney } from "@/server/finance/money";
 import type { InvoiceDetail } from "@/server/finance/queries";
 import { CopyButton } from "@/components/finance/CopyButton";
 import { DOC_LABEL, DOC_TONE, STATUS_LABEL, STATUS_TONE, TAX_MODE_LABEL, chipCls, docNumber, fmtDay, fmtDayTime } from "@/components/finance/finance-ui";
@@ -33,6 +33,7 @@ export function DetailHeader({ inv, tz }: { inv: InvoiceDetail; tz: string }) {
         <span className={`${chipCls} ${STATUS_TONE[inv.status]}`}>{STATUS_LABEL[inv.status]}</span>
         <span className={`${chipCls} ${DOC_TONE[inv.docType]}`}>{DOC_LABEL[inv.docType]}</span>
         {planText ? <span className={`${chipCls} bg-white/25 text-white`}>{planText}</span> : null}
+        {inv.currency !== "INR" ? <span className={`${chipCls} bg-white/25 text-white`} title="Invoice currency">{inv.currency}</span> : null}
       </div>
       <div className="mt-0.5 text-sm opacity-90">{inv.clientName}</div>
       <div className="text-xs opacity-80">
@@ -43,12 +44,12 @@ export function DetailHeader({ inv, tz }: { inv: InvoiceDetail; tz: string }) {
       <div className="mt-2 flex items-end justify-between">
         <div>
           <div className="text-[11px] uppercase opacity-80">Total</div>
-          <div className="text-xl font-bold">{formatINR(inv.total)}</div>
+          <div className="text-xl font-bold">{formatMoney(inv.total, inv.currency)}</div>
         </div>
         {inv.docType !== "CREDIT_NOTE" ? (
           <div className="text-right">
             <div className="text-[11px] uppercase opacity-80">Balance</div>
-            <div className="text-xl font-bold">{formatINR(inv.balance)}</div>
+            <div className="text-xl font-bold">{formatMoney(inv.balance, inv.currency)}</div>
           </div>
         ) : null}
       </div>

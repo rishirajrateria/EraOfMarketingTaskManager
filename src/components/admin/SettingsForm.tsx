@@ -9,18 +9,18 @@ import {
   GoogleStatusSection,
   HolidaysSection,
   InvoicingSection,
-  LogoSection,
   NotificationsSection,
   TdsSection,
   WorkingTimeSection,
   type SettingsValues,
 } from "@/components/admin/SettingsSections";
 import { ExpenseCategoriesSection } from "@/components/admin/ExpenseCategoriesSection";
-import { removeLogo, updateSettings, uploadLogo } from "@/server/admin/settings-actions";
+import { ImageUpload, ImagesSection } from "@/components/admin/SettingsImages";
+import { removeLogo, removeSignature, updateSettings, uploadLogo, uploadSignature } from "@/server/admin/settings-actions";
 import type { GoogleStatus, SettingsDto } from "@/server/admin/queries";
 
 function toValues(s: SettingsDto): SettingsValues {
-  const { logoUrl: _l, hasLogo: _h, updatedAt: _u, ...rest } = s;
+  const { logoUrl: _l, hasLogo: _h, signatureUrl: _s, hasSignature: _hs, updatedAt: _u, ...rest } = s;
   return rest;
 }
 
@@ -43,10 +43,11 @@ export function SettingsForm({ settings, google }: { settings: SettingsDto; goog
     const res = await run(updateSettings(v), "Settings saved");
     if (res) setDirty(false);
   };
-  const upload = async (file: File) => {
+  const upload = (kind: "logo" | "signature") => async (file: File) => {
     const fd = new FormData();
-    fd.append("logo", file);
-    await run(uploadLogo(fd), "Logo updated");
+    fd.append(kind, file);
+    if (kind === "logo") await run(uploadLogo(fd), "Logo updated");
+    else await run(uploadSignature(fd), "Signature updated");
   };
 
   const zone = (
@@ -79,7 +80,10 @@ export function SettingsForm({ settings, google }: { settings: SettingsDto; goog
     >
       <Screen header={<ScreenHeader title="Settings" subtitle={dirty ? "Unsaved changes" : "Company profile, invoicing, expenses, working time and integrations"} />} zone={zone}>
         <CompanySection v={v} patch={patch} />
-        <LogoSection logoUrl={settings.hasLogo ? settings.logoUrl : null} version={settings.updatedAt} busy={busy} onUpload={upload} onRemove={() => void run(removeLogo(), "Logo removed")} />
+        <ImagesSection
+          logo={<ImageUpload kind="logo" url={settings.hasLogo ? settings.logoUrl : null} version={settings.updatedAt} busy={busy} onUpload={upload("logo")} onRemove={() => void run(removeLogo(), "Logo removed")} hint="PNG, JPG, SVG or WebP up to 2 MB. Printed top-left on invoices and receipts." />}
+          signature={<ImageUpload kind="signature" wide url={settings.hasSignature ? settings.signatureUrl : null} version={settings.updatedAt} busy={busy} onUpload={upload("signature")} onRemove={() => void run(removeSignature(), "Signature removed")} hint="Signature image (e.g. name, signature, designation on white). Printed bottom-left on every invoice; without it the legal name + “Authorised signatory” is printed." />}
+        />
         <BankSection v={v} patch={patch} />
         <WorkingTimeSection v={v} patch={patch} />
         <HolidaysSection v={v} patch={patch} />

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { Field, inputCls, btnSecondary } from "@/components/ui/Field";
 import { FormFooter } from "@/components/admin/AdminUi";
 import { TaxBadge } from "@/components/finance/TaxBadge";
-import { GST_STATE_CODES, resolveTax, stateFromGstin } from "@/server/finance/tax";
+import { CURRENCIES } from "@/components/finance/finance-ui";
+import { GST_STATE_CODES, resolveTax, stateByCode, stateFromGstin } from "@/server/finance/tax";
 import type { ClientRow } from "@/server/admin/queries";
 import type { ClientInput } from "@/server/admin/schemas";
 
@@ -25,6 +26,7 @@ const COUNTRIES: { code: string; name: string }[] = [
   { code: "ZZ", name: "Other (outside India)" },
 ];
 const STATES = Object.entries(GST_STATE_CODES).map(([code, name]) => ({ code, name }));
+const COUNTRY_CURRENCY: Record<string, string> = { IN: "INR", US: "USD", GB: "GBP", AE: "AED", SG: "SGD", AU: "AUD", CA: "CAD", DE: "EUR", NL: "EUR", FR: "EUR", SA: "SAR", QA: "QAR", NZ: "NZD" };
 
 type Values = ClientInput & { tdsPercent?: number | string | null };
 
@@ -44,17 +46,24 @@ export function ClientForm({ client, busy, companyStateCode, onSubmit, onCancel,
     phone: client?.phone ?? "",
     whatsapp: client?.whatsapp ?? "",
     tdsPercent: client?.tdsPercent ?? "",
+    currency: client?.currency ?? "INR",
   });
   const set = (k: keyof Values) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setV({ ...v, [k]: e.target.value });
+  const setCountry = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const country = e.target.value;
+    setV({ ...v, country, currency: country === "IN" ? "INR" : COUNTRY_CURRENCY[country] ?? (v.currency === "INR" ? "USD" : v.currency) });
+  };
   const fromGstin = useMemo(() => stateFromGstin(v.gstNumber), [v.gstNumber]);
   const india = (v.country ?? "IN") === "IN";
   const stateCode = fromGstin?.code ?? v.stateCode ?? "";
   const tax = useMemo(() => resolveTax({ companyStateCode, client: { country: v.country, stateCode: stateCode || null, gstNumber: v.gstNumber } }), [companyStateCode, v.country, stateCode, v.gstNumber]);
+  const companyState = stateByCode(companyStateCode)?.name;
+  const stateHint = `${fromGstin ? "From GSTIN. " : ""}Same state as you${companyState ? ` (${companyState})` : ""} → CGST+SGST · other state → IGST`;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const tds = v.tdsPercent === "" || v.tdsPercent == null ? null : Number(v.tdsPercent);
-    onSubmit({ ...v, stateCode: india ? stateCode || null : null, stateName: india ? STATES.find((s) => s.code === stateCode)?.name ?? null : null, tdsPercent: tds });
+    onSubmit({ ...v, stateCode: india ? stateCode || null : null, stateName: india ? STATES.find((s) => s.code === stateCode)?.name ?? null : null, tdsPercent: tds, currency: india ? "INR" : v.currency || "INR" });
   };
 
   return (
@@ -81,7 +90,7 @@ export function ClientForm({ client, busy, companyStateCode, onSubmit, onCancel,
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Country">
-          <select className={inputCls} value={v.country ?? "IN"} onChange={set("country")}>
+          <select className={inputCls} value={v.country ?? "IN"} onChange={setCountry}>
             {COUNTRIES.map((c) => (
               <option key={c.code} value={c.code}>{c.name}</option>
             ))}
@@ -101,7 +110,7 @@ export function ClientForm({ client, busy, companyStateCode, onSubmit, onCancel,
               <input className={inputCls} value={v.pan ?? ""} onChange={set("pan")} placeholder="ABCDE1234F" maxLength={10} autoCapitalize="characters" />
             </Field>
           </div>
-          <Field label="State" hint={fromGstin ? "from GSTIN" : "Decides CGST+SGST vs IGST"}>
+          <Field label="State" hint={stateHint}>
             <select className={`${inputCls} disabled:opacity-70`} value={stateCode} disabled={!!fromGstin} onChange={set("stateCode")}>
               <option value="">— unregistered / same as company —</option>
               {STATES.map((s) => (
@@ -110,10 +119,19 @@ export function ClientForm({ client, busy, companyStateCode, onSubmit, onCancel,
             </select>
           </Field>
         </>
-      ) : null}
+      ) : (
+        <Field label="Currency" hint="Export invoices are printed in this currency (amounts as entered, no conversion)">
+          <select className={inputCls} value={v.currency ?? "USD"} onChange={set("currency")}>
+            {CURRENCIES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </Field>
+      )}
       <div className="flex items-center gap-2 text-xs text-gray-600">
         <span>Billing:</span>
         <TaxBadge tax={tax} />
+        {india ? <span className="text-gray-400">· {stateCode && companyStateCode && stateCode !== companyStateCode ? "other state → IGST" : "same state → CGST+SGST"}</span> : null}
       </div>
       <Field label="Address">
         <textarea className={inputCls} rows={3} value={v.address ?? ""} onChange={set("address")} />

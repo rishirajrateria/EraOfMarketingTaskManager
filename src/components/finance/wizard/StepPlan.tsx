@@ -18,7 +18,14 @@ const FREQS: { value: Frequency; label: string }[] = [
   { value: "CUSTOM", label: "Custom days" },
 ];
 
-/** Step 3 — plan: one time (due date) / recurring (frequency, anchor, end, due days) / part payment (parts editor). */
+const ANCHORS: { value: "START" | "END" | "DAY"; label: string }[] = [
+  { value: "START", label: "1st day" },
+  { value: "END", label: "Last day" },
+  { value: "DAY", label: "A date" },
+];
+const DAYS = Array.from({ length: 28 }, (_, i) => String(i + 1));
+
+/** Step 3 — plan: one time (due date + optional reminder) / recurring (frequency, day, notify time, end, due days) / part payment. */
 export function StepPlan({ form, set, errors }: StepProps) {
   const taxable = formTaxable(form);
   const seg = (active: boolean) => `touch-target flex-1 rounded-lg px-3 py-1.5 text-center text-sm ${active ? segActive : segIdle}`;
@@ -63,11 +70,22 @@ export function StepPlan({ form, set, errors }: StepProps) {
           {form.frequency === "MONTHLY" ? (
             <Field label="Bill on">
               <div className="flex gap-2">
-                <button type="button" aria-pressed={form.monthAnchor === "START"} className={seg(form.monthAnchor === "START")} onClick={() => set({ monthAnchor: "START" })}>1st of month</button>
-                <button type="button" aria-pressed={form.monthAnchor === "END"} className={seg(form.monthAnchor === "END")} onClick={() => set({ monthAnchor: "END" })}>Last day of month</button>
+                {ANCHORS.map((a) => (
+                  <button key={a.value} type="button" aria-pressed={form.monthAnchor === a.value} className={seg(form.monthAnchor === a.value)} onClick={() => set({ monthAnchor: a.value })}>{a.label}</button>
+                ))}
               </div>
+              {form.monthAnchor === "DAY" ? (
+                <select className={`${inputSm} mt-2`} value={form.dayOfMonth} onChange={(e) => set({ dayOfMonth: e.target.value })} aria-label="Day of month">
+                  {DAYS.map((d) => (
+                    <option key={d} value={d}>Day {d} of every month</option>
+                  ))}
+                </select>
+              ) : null}
             </Field>
           ) : null}
+          <Field label="Notify me at" hint="The invoice is created and you get a notification at this time — nothing is sent until you approve it">
+            <input type="time" step={300} value={form.notifyTime} onChange={(e) => e.target.value && set({ notifyTime: e.target.value })} className={inputSm} />
+          </Field>
           <Toggle checked={form.infinite} onChange={(v) => set({ infinite: v })} label="Infinite" hint="Runs until you stop the recurrence" />
           {!form.infinite ? (
             <Field label="End date">
@@ -85,6 +103,21 @@ export function StepPlan({ form, set, errors }: StepProps) {
         <div>
           <PartsEditor parts={form.parts} total={taxable} onChange={(parts) => set({ parts })} label={`Parts of the taxable total (GST is added to each part)`} />
           <FieldError error={errors.parts} />
+        </div>
+      ) : null}
+
+      {form.plan !== "RECURRING" ? (
+        <div className="glass space-y-2 rounded-2xl p-3">
+          <Field label="Remind me to approve and send on" hint="Optional. You get a notification then; nothing is sent automatically">
+            <div className="flex gap-2">
+              <input type="date" value={form.remindDate} onChange={(e) => set({ remindDate: e.target.value })} className={inputSm} aria-label="Reminder date" />
+              <input type="time" step={300} value={form.remindTime} disabled={!form.remindDate} onChange={(e) => e.target.value && set({ remindTime: e.target.value })} className={`${inputSm} max-w-[120px] disabled:opacity-50`} aria-label="Reminder time" />
+            </div>
+          </Field>
+          {form.remindDate ? (
+            <button type="button" className="text-xs text-gray-500 underline" onClick={() => set({ remindDate: "" })}>Clear reminder</button>
+          ) : null}
+          <FieldError error={errors.remindAt} />
         </div>
       ) : null}
     </div>

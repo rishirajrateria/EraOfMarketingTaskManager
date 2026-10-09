@@ -1,8 +1,9 @@
 "use client";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Field, inputCls, btnSecondary } from "@/components/ui/Field";
 import { Toggle, WeekdayPicker, hoursToMinutes, minutesToHours } from "@/components/admin/AdminUi";
 import { minutesToHHMM, hhmmToMinutes } from "@/lib/time";
+import { GST_STATE_CODES, stateFromGstin } from "@/server/finance/tax";
 import type { GoogleStatus } from "@/server/admin/queries";
 import type { SettingsInput } from "@/server/admin/schemas";
 
@@ -14,8 +15,8 @@ export type Patch = (p: Partial<SettingsValues>) => void;
 /** Jump targets for the bottom-zone section pills (SettingsForm). */
 export const SETTINGS_SECTIONS: { id: string; label: string }[] = [
   { id: "company", label: "Company" },
-  { id: "logo", label: "Logo" },
-  { id: "bank", label: "Bank" },
+  { id: "logo", label: "Logo & signature" },
+  { id: "bank", label: "Pay to" },
   { id: "working-time", label: "Working time" },
   { id: "holidays", label: "Holidays" },
   { id: "invoicing", label: "Invoicing" },
@@ -54,75 +55,58 @@ function TimeInput({ label, value, onChange }: { label: string; value: number; o
   );
 }
 
+const STATES = Object.entries(GST_STATE_CODES).map(([code, name]) => ({ code, name }));
+
+/** ADR 0007: the "Invoice From" block of every invoice. The state is filled from the GSTIN but stays editable. */
 export function CompanySection({ v, patch }: { v: SettingsValues; patch: Patch }) {
+  const fromGstin = stateFromGstin(v.gstNumber);
+  const setGstin = (gstNumber: string) => {
+    const derived = stateFromGstin(gstNumber);
+    patch(derived ? { gstNumber, stateCode: derived.code } : { gstNumber });
+  };
   return (
-    <Section id="company" title="Company profile">
-      <Text label="Company name" value={v.companyName} onChange={(companyName) => patch({ companyName })} />
-      <Text label="Address" value={v.address} rows={3} onChange={(address) => patch({ address })} />
-      <Text label="GST number" value={v.gstNumber} onChange={(gstNumber) => patch({ gstNumber })} />
+    <Section id="company" title="Company (printed on every invoice)">
+      <Text label="Brand name" hint="Shown next to the logo and in emails" value={v.companyName} onChange={(companyName) => patch({ companyName })} />
+      <Text label="Legal name" hint="Printed under “Invoice From”; blank = brand name" value={v.legalName ?? ""} onChange={(legalName) => patch({ legalName })} />
+      <div className="grid grid-cols-2 gap-3">
+        <Text label="GSTIN" value={v.gstNumber} onChange={setGstin} />
+        <Field label="State" hint={fromGstin ? `from GSTIN · ${fromGstin.name}` : "Decides CGST+SGST vs IGST"}>
+          <select className={inputCls} value={v.stateCode ?? ""} onChange={(e) => patch({ stateCode: e.target.value })}>
+            <option value="">— not set —</option>
+            {STATES.map((st) => (
+              <option key={st.code} value={st.code}>{st.code} · {st.name}</option>
+            ))}
+          </select>
+        </Field>
+        <Text label="PAN" value={v.pan ?? ""} onChange={(pan) => patch({ pan })} />
+        <Text label="LUT number" hint="Required on export invoices" value={v.lutNumber ?? ""} onChange={(lutNumber) => patch({ lutNumber })} />
+        <Text label="IEC code" value={v.iecCode ?? ""} onChange={(iecCode) => patch({ iecCode })} />
+        <Text label="HSN / SAC" hint="Printed in the footer" value={v.hsnSacCode ?? ""} onChange={(hsnSacCode) => patch({ hsnSacCode })} />
+      </div>
+      <Text label="Billing address" value={v.address} rows={3} onChange={(address) => patch({ address })} />
+      <div className="grid grid-cols-2 gap-3">
+        <Text label="Billing email" type="email" value={v.email ?? ""} onChange={(email) => patch({ email })} />
+        <Text label="Phone" type="tel" value={v.phone ?? ""} onChange={(phone) => patch({ phone })} />
+      </div>
+      <Text label="Website" value={v.website ?? ""} onChange={(website) => patch({ website })} />
       <Text label="Timezone" hint="IANA name, e.g. Asia/Kolkata" value={v.timezone} onChange={(timezone) => patch({ timezone })} />
     </Section>
   );
 }
 
+/** ADR 0007: the "Pay To" block of every invoice. */
 export function BankSection({ v, patch }: { v: SettingsValues; patch: Patch }) {
   return (
-    <Section id="bank" title="Bank details (printed on invoices)">
-      <Text label="Bank name" value={v.bankName} onChange={(bankName) => patch({ bankName })} />
+    <Section id="bank" title="Pay to (printed on every invoice)">
       <Text label="Account name" value={v.bankAccountName} onChange={(bankAccountName) => patch({ bankAccountName })} />
       <Text label="Account number" value={v.bankAccountNumber} onChange={(bankAccountNumber) => patch({ bankAccountNumber })} />
-      <Text label="IFSC" value={v.bankIfsc} onChange={(bankIfsc) => patch({ bankIfsc })} />
-      <Text label="UPI id" value={v.upiId} onChange={(upiId) => patch({ upiId })} />
-    </Section>
-  );
-}
-
-export function LogoSection({
-  logoUrl,
-  version,
-  busy,
-  onUpload,
-  onRemove,
-}: {
-  logoUrl: string | null;
-  version: string;
-  busy: boolean;
-  onUpload: (file: File) => void;
-  onRemove: () => void;
-}) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  return (
-    <Section id="logo" title="Logo">
-      <div className="flex items-center gap-4">
-        {logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={`${logoUrl}?v=${encodeURIComponent(version)}`} alt="Company logo" className="h-16 w-16 rounded-lg border border-white/70 bg-white/60 object-contain backdrop-blur-md" />
-        ) : (
-          <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-white/80 bg-white/30 text-xs text-gray-500">No logo</div>
-        )}
-        <div className="flex flex-col gap-2">
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/png,image/jpeg,image/svg+xml,image/webp"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) onUpload(f);
-              e.target.value = "";
-            }}
-          />
-          <button type="button" className={btnSecondary} disabled={busy} onClick={() => fileRef.current?.click()}>
-            {logoUrl ? "Replace logo" : "Upload logo"}
-          </button>
-          {logoUrl ? (
-            <button type="button" className="text-left text-xs text-red-600" disabled={busy} onClick={onRemove}>
-              Remove logo
-            </button>
-          ) : null}
-        </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Text label="Swift / BIC" value={v.bankSwift ?? ""} onChange={(bankSwift) => patch({ bankSwift })} />
+        <Text label="IFSC" value={v.bankIfsc} onChange={(bankIfsc) => patch({ bankIfsc })} />
       </div>
-      <p className="text-[11px] text-gray-400">PNG, JPG, SVG or WebP up to 2 MB. Used on invoices and receipts.</p>
+      <Text label="Bank name" value={v.bankName} onChange={(bankName) => patch({ bankName })} />
+      <Text label="Bank address" rows={2} value={v.bankAddress ?? ""} onChange={(bankAddress) => patch({ bankAddress })} />
+      <Text label="UPI id" hint="When set, a “Scan to pay” QR is printed beside the bank details" value={v.upiId} onChange={(upiId) => patch({ upiId })} />
     </Section>
   );
 }

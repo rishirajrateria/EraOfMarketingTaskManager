@@ -124,6 +124,7 @@ enum MonthAnchor {
   NONE
   START // bill on the 1st
   END // bill on the last day
+  DAY // bill on `dayOfMonth` (1–28)
 }
 
 enum PaymentMethod {
@@ -332,6 +333,7 @@ model Client {
   phone            String?
   whatsapp         String? // E.164, e.g. +91XXXXXXXXXX
   tdsPercent       Decimal?          @db.Decimal(5, 2)
+  currency         String            @default("INR") // ISO 4217; invoices default to it (export invoices may be in a foreign currency)
   workOnHold       Boolean           @default(false)
   holdInvoiceId    String?
   holdSince        DateTime?
@@ -480,18 +482,20 @@ model TaskAttachment {
 }
 
 model RecurrenceRule {
-  id          String              @id @default(cuid())
-  frequency   RecurrenceFrequency
-  interval    Int                 @default(1)
-  byWeekday   Int[]               @default([])
-  trigger     RecurrenceTrigger   @default(ON_SCHEDULE)
-  monthAnchor MonthAnchor         @default(NONE) // monthly billing on the 1st / last day
-  endDate     DateTime? // null = infinite
-  nextRunAt   DateTime?
-  stopped     Boolean             @default(false)
-  tasks       Task[]
-  invoices    Invoice[]
-  createdAt   DateTime            @default(now())
+  id            String              @id @default(cuid())
+  frequency     RecurrenceFrequency
+  interval      Int                 @default(1)
+  byWeekday     Int[]               @default([])
+  trigger       RecurrenceTrigger   @default(ON_SCHEDULE)
+  monthAnchor   MonthAnchor         @default(NONE) // monthly billing on the 1st / last day / a chosen day
+  dayOfMonth    Int? // 1–28, used when monthAnchor = DAY
+  notifyMinutes Int                 @default(540) // minutes after midnight (company tz) at which the occurrence is created and Admin notified
+  endDate       DateTime? // null = infinite
+  nextRunAt     DateTime?
+  stopped       Boolean             @default(false)
+  tasks         Task[]
+  invoices      Invoice[]
+  createdAt     DateTime            @default(now())
 }
 
 model Request {
@@ -592,6 +596,7 @@ model Invoice {
   creditNotes      Invoice[]       @relation("CreditNotes")
   cancelledAt      DateTime?
   tdsApplicable    Boolean         @default(false) // client deducts TDS on this invoice (ADR 0006)
+  currency         String          @default("INR") // ISO 4217 code printed on the PDF; amounts are stored as entered (no FX)
   items            InvoiceItem[]
   subtotal         Decimal         @db.Decimal(12, 2)
   gstPercent       Decimal         @default(18) @db.Decimal(5, 2)
@@ -784,6 +789,17 @@ model CompanySettings {
   upiId                         String     @default("")
   logoUrl                       String?
   logoData                      Bytes?
+  legalName                     String     @default("") // printed in "Invoice From" (falls back to companyName)
+  pan                           String     @default("")
+  iecCode                       String     @default("")
+  email                         String     @default("")
+  phone                         String     @default("")
+  website                       String     @default("")
+  hsnSacCode                    String     @default("998361")
+  bankSwift                     String     @default("")
+  bankAddress                   String     @default("")
+  signatureUrl                  String?
+  signatureData                 Bytes?
   workStartMinutes              Int        @default(600) // 10:00
   workEndMinutes                Int        @default(1140) // 19:00
   lunchStartMinutes             Int        @default(810) // 13:30

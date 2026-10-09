@@ -59,7 +59,7 @@ async function cloneDueRecurrences(now: Date): Promise<number> {
       // Advance the pointer first so a failure while cloning never produces duplicate occurrences.
       await prisma.recurrenceRule.update({ where: { id: rule.id }, data: { nextRunAt: next } });
       const clone = await cloneRecurringOccurrence(template, rule.nextRunAt, null);
-      await tellAdmins(`Recurring invoice for ${template.client.name} is ready — approve and send`, `${formatINRPlain(clone.total.toNumber())} · next on ${next.toISOString().slice(0, 10)}`, clone.id);
+      await tellAdmins(`Invoice for ${template.client.name} is ready — approve to send`, `${formatINRPlain(clone.total.toNumber())} · recurring · next on ${next.toISOString().slice(0, 10)}`, clone.id);
       cloned++;
     } catch (e) {
       console.error("[jobs/invoices] recurrence failed", rule.id, e);
@@ -77,7 +77,7 @@ async function fireReminders(now: Date): Promise<number> {
   for (const inv of due) {
     try {
       await prisma.invoice.update({ where: { id: inv.id }, data: { remindAt: null } });
-      await tellAdmins(`Reminder: ${inv.number} for ${inv.client.name} is waiting for you`, `${formatINRPlain(inv.total.toNumber())} · ${inv.status.toLowerCase().replace("_", " ")}`, inv.id);
+      await tellAdmins(`Reminder: approve and send invoice for ${inv.client.name}`, `${inv.number.startsWith("DRAFT-") ? "Draft" : inv.number} · ${formatINRPlain(inv.total.toNumber())} · ${inv.status.toLowerCase().replace("_", " ")}`, inv.id);
       reminded++;
     } catch (e) {
       console.error("[jobs/invoices] reminder failed", inv.id, e);

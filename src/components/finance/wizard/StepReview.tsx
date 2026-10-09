@@ -4,6 +4,7 @@ import { Toggle } from "@/components/admin/AdminUi";
 import { formatINR } from "@/server/finance/money";
 import { TaxBadge } from "@/components/finance/TaxBadge";
 import { formTaxable, partsSummary } from "@/components/finance/invoice-form-helpers";
+import { describeMonthAnchor } from "@/server/finance/recurrence";
 import { TotalsCard } from "@/components/finance/wizard/TotalsCard";
 import { PLAN_CARDS } from "@/components/finance/wizard/StepPlan";
 import { FieldError, type StepProps } from "@/components/finance/wizard/types";
@@ -29,10 +30,12 @@ export function StepReview({ form, set, errors, clients, tax }: StepProps) {
         <Row k="Document" v={tax ? <TaxBadge tax={tax} /> : "—"} />
         <Row k="Plan" v={`${plan.icon} ${plan.title}`} />
         <Row k="TDS" v={form.tdsApplicable ? `Client deducts TDS${client?.tdsPercent != null ? ` (${client.tdsPercent}%)` : ""}` : "Not deducted"} />
+        {form.currency && form.currency !== "INR" ? <Row k="Currency" v={form.currency} /> : null}
         {form.plan === "ONE_TIME" ? <Row k="Due" v={fmtKey(form.dueDate)} /> : null}
         {form.plan === "RECURRING" ? (
-          <Row k="Repeats" v={`${form.frequency === "CUSTOM" ? `every ${form.interval} days` : form.frequency === "MONTHLY" ? `monthly · ${form.monthAnchor === "END" ? "last day" : "1st"}` : "weekly"}${form.infinite ? " · infinite" : ` · until ${fmtKey(form.endDate)}`} · due +${form.dueDays || 0}d`} />
+          <Row k="Repeats" v={`${form.frequency === "CUSTOM" ? `every ${form.interval} days` : form.frequency === "MONTHLY" ? `monthly on ${describeMonthAnchor(form.monthAnchor, Number(form.dayOfMonth))}` : "weekly"} at ${form.notifyTime || "09:00"}${form.infinite ? " · infinite" : ` · until ${fmtKey(form.endDate)}`} · due +${form.dueDays || 0}d`} />
         ) : null}
+        {form.plan !== "RECURRING" && form.remindDate ? <Row k="Reminder" v={`${fmtKey(form.remindDate)} at ${form.remindTime || "09:00"}`} /> : null}
         {parts ? (
           <div className="pt-1 text-sm">
             <div className="text-gray-500">Parts</div>

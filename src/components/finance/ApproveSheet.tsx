@@ -15,7 +15,9 @@ export type Templates = { email: string; whatsapp: string; companyName: string }
 /**
  * Approve & send confirm sheet (ADR 0005): PDF preview, editable email + WhatsApp text (placeholders rendered
  * client-side; `{{number}}` before approval and `{{link}}` are filled by the server at send time), channel
- * checkboxes, per-channel result. With both channels off the button reads "Approve only".
+ * checkboxes, per-channel result, plus "Download the PDF" (ADR 0007), which opens /api/files/invoice/<id>?download=1
+ * in a tab opened before the await so popup blockers allow it. With both channels off the button reads "Approve only"
+ * (or "Approve & download"): the number is allocated and the PDF stored, nothing is sent.
  */
 export function ApproveSheet({ inv, tz, templates, open, onClose, resend }: { inv: InvoiceDetail; tz: string; templates: Templates; open: boolean; onClose: () => void; resend: boolean }) {
   const { pending, run } = useAction();
@@ -34,17 +36,28 @@ export function ApproveSheet({ inv, tz, templates, open, onClose, resend }: { in
   const [whatsappText, setWhatsappText] = useState(() => renderTemplate(templates.whatsapp, vars));
   const [email, setEmail] = useState(!!inv.client.email);
   const [whatsapp, setWhatsapp] = useState(!!inv.client.whatsapp);
+  const [download, setDownload] = useState(false);
   const [result, setResult] = useState<ApproveResult | null>(null);
-  const label = !email && !whatsapp ? (resend ? "Nothing to send" : "Approve only") : resend ? "Resend" : "Confirm & send";
+  const sending = email || whatsapp;
+  const label = sending ? (resend ? "Resend" : "Confirm & send") : download ? (resend ? "Download" : "Approve & download") : resend ? "Nothing to send" : "Approve only";
 
-  const confirm = () =>
-    run(
+  const confirm = () => {
+    // Open the tab synchronously (popup-safe), then point it at the PDF once the approval succeeded.
+    const tab = download ? window.open("", "_blank") : null;
+    const url = `/api/files/invoice/${inv.id}?download=1`;
+    return run(
       () => approveAndSend(inv.id, { email, whatsapp, emailText: email ? emailText : null, whatsappText: whatsapp ? whatsappText : null }),
       (d) => {
         setResult(d);
+        if (download) {
+          if (tab) tab.location.href = url;
+          else window.open(url, "_blank", "noopener");
+        }
         return d.status === "SENT" ? `${d.number} sent` : `${d.number} approved`;
       },
+      { onError: () => tab?.close() },
     );
+  };
 
   return (
     <Sheet open={open} onClose={onClose} title={resend ? "Resend" : "Approve & send"} full>
@@ -83,10 +96,14 @@ export function ApproveSheet({ inv, tz, templates, open, onClose, resend }: { in
                 <textarea rows={4} value={whatsappText} onChange={(e) => setWhatsappText(e.target.value)} className={inputCls} />
               </Field>
             ) : null}
-            <button type="button" className={`${btnPrimary} w-full py-3 text-base`} disabled={pending || (resend && !email && !whatsapp)} onClick={confirm}>
-              {pending ? "Sending…" : label}
+            <label className="glass flex items-center justify-between rounded-2xl px-3 py-2 text-sm">
+              <span>📥 Download the PDF <span className="text-xs text-gray-500">· opens in a new tab after approval</span></span>
+              <input type="checkbox" className="h-5 w-5 accent-brand-blue" checked={download} onChange={(e) => setDownload(e.target.checked)} />
+            </label>
+            <button type="button" className={`${btnPrimary} w-full py-3 text-base`} disabled={pending || (resend && !sending && !download)} onClick={confirm}>
+              {pending ? (sending ? "Sending…" : "Approving…") : label}
             </button>
-            {!email && !whatsapp && !resend ? <p className="text-center text-xs text-gray-500">The number is allocated and the PDF stored; nothing is sent.</p> : null}
+            {!sending && !resend ? <p className="text-center text-xs text-gray-500">The number is allocated and the PDF stored; nothing is sent.</p> : null}
           </>
         )}
       </div>

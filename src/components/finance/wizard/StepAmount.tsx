@@ -2,18 +2,30 @@
 import { Field, inputCls } from "@/components/ui/Field";
 import { Toggle } from "@/components/admin/AdminUi";
 import { effectiveGstPercent } from "@/server/finance/tax";
+import { CURRENCIES } from "@/components/finance/finance-ui";
 import { LineItemsEditor } from "@/components/finance/wizard/LineItemsEditor";
 import { TotalsCard } from "@/components/finance/wizard/TotalsCard";
 import { FieldError, type StepProps } from "@/components/finance/wizard/types";
 
 /** Step 2 — amount (taxable) + description, or line items; GST % (locked for export / proforma); live totals. */
-export function StepAmount({ form, set, errors, tax }: StepProps) {
+export function StepAmount({ form, set, errors, tax, clients }: StepProps) {
   const taxMode = tax?.taxMode ?? "CGST_SGST";
   const gstLocked = taxMode === "EXPORT_LUT" || taxMode === "NONE";
+  const abroad = (clients.find((c) => c.id === form.clientId)?.country ?? "IN").toUpperCase() !== "IN";
+  const unit = form.currency && form.currency !== "INR" ? form.currency : "₹";
   return (
     <div className="space-y-4 px-4 py-4">
+      {abroad ? (
+        <Field label="Currency" hint="Printed on the export invoice; amounts are entered as-is (no conversion)">
+          <select className={inputCls} value={form.currency || "INR"} onChange={(e) => set({ currency: e.target.value })}>
+            {CURRENCIES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </Field>
+      ) : null}
       {!form.useLines ? (
-        <Field label="Amount (taxable, ₹)">
+        <Field label={`Amount (taxable, ${unit})`}>
           <input
             type="number"
             min="0"

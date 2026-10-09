@@ -23,7 +23,7 @@ export function StepClient({ form, set, errors, clients, tax, query }: StepProps
                 key={c.id}
                 type="button"
                 aria-pressed={active}
-                onClick={() => set({ clientId: c.id, tdsApplicable: c.tdsPercent != null })}
+                onClick={() => set({ clientId: c.id, tdsApplicable: c.tdsPercent != null, currency: c.country?.toUpperCase() === "IN" ? "INR" : c.currency || "INR" })}
                 className={`touch-target rounded-full px-3.5 py-1.5 text-sm font-medium transition ${active ? "bg-gradient-to-b from-[#2f74e6] to-[#1e63d6] text-white shadow-[0_6px_16px_rgba(30,99,214,.35)]" : "glass-chip text-gray-800"}`}
               >
                 {c.name}

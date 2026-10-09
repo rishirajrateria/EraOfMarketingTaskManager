@@ -12,10 +12,11 @@ export function useAction() {
   const toast = useToast();
   const router = useRouter();
   const [pending, start] = useTransition();
-  const run = <T,>(call: () => Promise<ActionResult<T>>, onOk?: (data: T) => string | void, opts: { refresh?: boolean } = {}) =>
+  const run = <T,>(call: () => Promise<ActionResult<T>>, onOk?: (data: T) => string | void, opts: { refresh?: boolean; onError?: (error: string) => void } = {}) =>
     start(async () => {
       const res = await call();
       if (!res.ok) {
+        opts.onError?.(res.error);
         toast(res.error, "err");
         return;
       }
