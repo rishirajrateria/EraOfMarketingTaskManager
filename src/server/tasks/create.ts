@@ -10,6 +10,7 @@ import { getSettings } from "@/lib/settings";
 import { proposeSlot, shiftDisplacedTasks, type SlotProposal } from "@/server/scheduling/slot";
 import { queueTaskCreation } from "@/google/task-integrations";
 import { taskInputSchema, type TaskInput } from "@/server/tasks/schema";
+import { firstName, planAssignment, type AssignmentPlan } from "@/server/tasks/assignment";
 import { nextRunAt } from "@/server/tasks/recurrence";
 import { ACTIVE_STATUSES } from "@/server/tasks/state";
 import { sanitizeDescription } from "@/lib/sanitize";
@@ -17,9 +18,9 @@ import { z } from "zod";
 
 const idsSchema = z.array(z.string().min(1)).max(50);
 
-/** Assignment rules (SPEC §2): Admin→Team Leaders (or self), TL→own Executives (or self), Exec→self only. */
+/** Assignment rules (SPEC §2): Admin→Team Leaders (or self), TL→own team's Executives (or self), Exec→self only. */
 export async function validateAssignees(user: SessionUser, assigneeIds: string[], type: "WORK" | "MEETING") {
-  const users = await prisma.user.findMany({ where: { id: { in: assigneeIds }, active: true }, select: { id: true, role: true, teamLeaderId: true, email: true } });
+  const users = await prisma.user.findMany({ where: { id: { in: assigneeIds }, active: true }, select: { id: true, role: true, teamId: true, teamLeaderId: true, email: true } });
   if (users.length !== assigneeIds.length) throw new Error("Unknown or inactive assignee");
   for (const a of users) {
     if (a.id === user.id) continue;
@@ -29,7 +30,7 @@ export async function validateAssignees(user: SessionUser, assigneeIds: string[]
       throw new ForbiddenError("Admin assigns Executives only via their Team Leader");
     }
     if (user.role === "TEAM_LEADER") {
-      if (a.role === "EXECUTIVE" && a.teamLeaderId === user.id) continue;
+      if (a.role === "EXECUTIVE" && (a.teamLeaderId === user.id || (!!user.teamId && a.teamId === user.teamId))) continue;
       throw new ForbiddenError("Team Leaders may only assign their own Executives");
     }
     throw new ForbiddenError("Executives may only self-assign");
@@ -38,6 +39,42 @@ export async function validateAssignees(user: SessionUser, assigneeIds: string[]
 }
 
 export type CreateResult = { taskId: string; slot: SlotProposal | null };
+
+/**
+ * Admin → the Team Leader(s): "New task from Rishi: <title> · prefers Arjun — assign it from the task" (ADR 0008).
+ * Everyone else: the assignees and their Team Leaders hear "Task assigned: <title>".
+ */
+async function notifyNewTask(
+  user: SessionUser,
+  taskId: string,
+  title: string,
+  type: "WORK" | "MEETING",
+  plan: AssignmentPlan,
+  assignees: { id: string; teamLeaderId: string | null }[],
+) {
+  const others = plan.assigneeIds.filter((id) => id !== user.id);
+  const href = `/dashboard?task=${taskId}`;
+  if (user.role === "ADMIN") {
+    const prefs = plan.preferredAssigneeIds.length
+      ? await prisma.user.findMany({ where: { id: { in: plan.preferredAssigneeIds } }, select: { id: true, name: true } })
+      : [];
+    const names = plan.preferredAssigneeIds.map((id) => firstName(prefs.find((p) => p.id === id)?.name)).join(", ");
+    const kind = type === "MEETING" ? "meeting" : "task";
+    const suffix = names ? ` · prefers ${names} — assign it from the task` : "";
+    await notify({ userIds: others, kind: "TASK_ASSIGNED", title: `New ${kind} from ${firstName(user.name)}: ${title}${suffix}`, href, taskId, chat: false });
+    return;
+  }
+  const leaders = assignees.map((a) => a.teamLeaderId).filter((x): x is string => !!x && x !== user.id);
+  await notify({
+    userIds: [...others, ...leaders],
+    kind: "TASK_ASSIGNED",
+    title: `${type === "MEETING" ? "Meeting" : "Task"} assigned: ${title}`,
+    body: `by ${user.name ?? "someone"}`,
+    href,
+    taskId,
+    chat: false,
+  });
+}
 
 async function buildRecurrence(input: TaskInput, tz: string) {
   if (!input.recurrence) return null;
@@ -59,16 +96,17 @@ export async function createTask(raw: unknown): Promise<ActionResult<CreateResul
     const user = await requireUser();
     if (user.role === "HR" || user.role === "CA") throw new ForbiddenError();
     const input = taskInputSchema.parse(raw);
-    const assignees = await validateAssignees(user, input.assigneeIds, input.type);
+    const plan = await planAssignment(user, input, (ids, type) => validateAssignees(user, ids, type));
+    const assignees = await prisma.user.findMany({ where: { id: { in: plan.assigneeIds } }, select: { id: true, teamLeaderId: true } });
     const settings = await getSettings();
-    const selfAssigned = input.assigneeIds.length === 1 && input.assigneeIds[0] === user.id;
+    const selfAssigned = plan.assigneeIds.length === 1 && plan.assigneeIds[0] === user.id;
 
     let start = input.scheduledStart ? new Date(input.scheduledStart) : null;
     let end = input.scheduledEnd ? new Date(input.scheduledEnd) : null;
     let slot: SlotProposal | null = null;
     if (start && !end) end = new Date(start.getTime() + input.allocatedMinutes * 60000);
     if (!start) {
-      slot = await proposeSlot(input.assigneeIds, input.allocatedMinutes, { requesterRole: user.role, requesterId: user.id });
+      slot = await proposeSlot(plan.assigneeIds, input.allocatedMinutes, { requesterRole: user.role, requesterId: user.id });
       if (!slot) throw new Error("No available slot found in the next 60 days");
       start = slot.start;
       end = slot.end;
@@ -93,9 +131,10 @@ export async function createTask(raw: unknown): Promise<ActionResult<CreateResul
         protected: selfAssigned && user.role === "ADMIN",
         recurrenceRuleId: rule?.id,
         status: "ASSIGNED",
-        assignees: { create: input.assigneeIds.map((userId) => ({ userId })) },
-        teams: { create: input.teamIds.map((teamId) => ({ teamId })) },
-        tags: { create: input.tagIds.map((workTypeId) => ({ workTypeId })) },
+        preferredAssigneeIds: plan.preferredAssigneeIds,
+        assignees: { create: plan.assigneeIds.map((userId) => ({ userId })) },
+        teams: { create: plan.teamIds.map((teamId) => ({ teamId })) },
+        tags: { create: plan.tagIds.map((workTypeId) => ({ workTypeId })) },
       },
     });
     await prisma.client.update({ where: { id: input.clientId }, data: { visibleInFilters: true } });
@@ -103,16 +142,7 @@ export async function createTask(raw: unknown): Promise<ActionResult<CreateResul
     await queueTaskCreation(task.id, input.type);
     if (slot?.displaced.length) await shiftDisplacedTasks(slot.displaced, user.id);
 
-    const leaders = assignees.map((a) => a.teamLeaderId).filter((x): x is string => !!x && x !== user.id);
-    await notify({
-      userIds: [...input.assigneeIds.filter((id) => id !== user.id), ...leaders],
-      kind: "TASK_ASSIGNED",
-      title: `${input.type === "MEETING" ? "Meeting" : "Task"} assigned: ${input.title}`,
-      body: `by ${user.name ?? "someone"}`,
-      href: `/dashboard?task=${task.id}`,
-      taskId: task.id,
-      chat: false,
-    });
+    await notifyNewTask(user, task.id, input.title, input.type, plan, assignees);
     void publishTaskChanged(task.id);
     safeRevalidate("/dashboard");
     // Process the integration queue promptly (best-effort; the job runner also drains it).
@@ -158,22 +188,37 @@ export async function periodLoads(assigneeIds: string[]): Promise<ActionResult<R
 }
 
 /**
+ * Whose inventory the add-task header may show: Admin → anyone with a dashboard (the preferred / team executives,
+ * ADR 0008); Team Leader → self + own team's executives; Executive → self.
+ */
+async function assertInventoryScope(user: SessionUser, ids: string[]) {
+  if (user.role === "ADMIN") {
+    const n = await prisma.user.count({ where: { id: { in: ids }, active: true, role: { in: ["ADMIN", "TEAM_LEADER", "EXECUTIVE"] } } });
+    if (n !== ids.length) throw new Error("Unknown or inactive assignee");
+    return;
+  }
+  await validateAssignees(user, ids, "WORK");
+}
+
+/**
  * Add-task header (design): remaining inventory (capacity − assigned) and the number of tasks already assigned
- * for Today / Tom / Week / month. Scope = the selected assignees, or the caller's whole visible team when none
- * are selected (Admin: everyone; Team Leader: own executives + self; Executive: self).
+ * for Today / Tom / Week / month. Scope = the selected people (Admin: the preferred executives, else the chosen teams'
+ * executives), or the caller's whole visible team when none are selected (Admin: everyone; Team Leader: own team +
+ * self; Executive: self).
  */
 export async function addTaskInventory(assigneeIds: string[]): Promise<ActionResult<Record<string, { minutes: number; count: number }>>> {
   return wrap(async () => {
     const user = await requireUser();
     if (user.role === "HR" || user.role === "CA") throw new ForbiddenError();
     const requested = idsSchema.parse(assigneeIds);
-    if (requested.length) await validateAssignees(user, requested, "WORK");
+    if (requested.length) await assertInventoryScope(user, requested);
     let scope: string[] = requested;
     if (!scope.length) {
       if (user.role === "ADMIN") {
         scope = (await prisma.user.findMany({ where: { active: true, role: { in: ["ADMIN", "TEAM_LEADER", "EXECUTIVE"] } }, select: { id: true } })).map((u) => u.id);
       } else if (user.role === "TEAM_LEADER") {
-        scope = [user.id, ...(await prisma.user.findMany({ where: { active: true, teamLeaderId: user.id }, select: { id: true } })).map((u) => u.id)];
+        const team = { active: true, role: "EXECUTIVE" as const, OR: [{ teamLeaderId: user.id }, ...(user.teamId ? [{ teamId: user.teamId }] : [])] };
+        scope = [user.id, ...(await prisma.user.findMany({ where: team, select: { id: true } })).map((u) => u.id)];
       } else {
         scope = [user.id];
       }

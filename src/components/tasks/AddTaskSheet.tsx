@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { JSX } from "react";
 import { Sheet } from "@/components/ui/Sheet";
@@ -9,17 +9,20 @@ import { addTaskInventory, createTask } from "@/server/tasks/create";
 import { uploadAttachment } from "@/server/tasks/manage";
 import { AddTaskHeader } from "@/components/tasks/AddTaskHeader";
 import { AddTaskBody } from "@/components/tasks/AddTaskBody";
-import { AddTaskBottomBar, AddTaskTags, TaskTypeSheet, type Shortcut } from "@/components/tasks/AddTaskFooter";
+import { AddTaskBottomBar, TaskTypeSheet, type Shortcut } from "@/components/tasks/AddTaskFooter";
+import { AddTaskGreenRows, AddTaskSummary } from "@/components/tasks/AddTaskRows";
 import { AddTaskDetails, AssigneeSheet, LoopSheet, type DetailsFocus, type FieldErrors } from "@/components/tasks/AddTaskDetails";
 import type { VoiceNote } from "@/components/tasks/VoiceRecorder";
 import {
   EMPTY_LOADS,
   allowedAssignees,
-  defaultTeamIds,
+  effectiveAssignees,
   emptyForm,
+  inventoryScope,
   needsDetailsSheet,
   parseAddParam,
   shortcutStart,
+  syncWorkType,
   toTaskInput,
   validateForm,
   type AddTaskForm,
@@ -47,7 +50,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
   }, [onClose]);
 
   const [chosen, setChosen] = useState<TaskMode | null>(null);
-  const [form, setForm] = useState<AddTaskForm>(() => emptyForm("WORK", data.me.id));
+  const [form, setForm] = useState<AddTaskForm>(() => emptyForm("WORK", data.me.id, data.role));
   const [manualTime, setManualTime] = useState(false);
   const [voiceNotes, setVoiceNotes] = useState<VoiceNote[]>([]);
   const [files, setFiles] = useState<File[]>([]);
@@ -58,7 +61,6 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
   const [assigneesOpen, setAssigneesOpen] = useState(false);
   const [loopOpen, setLoopOpen] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
-  const teamsTouched = useRef(false);
 
   const patch = useCallback((p: Partial<AddTaskForm>) => setForm((f) => ({ ...f, ...p })), []);
 
@@ -68,7 +70,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
     // "+" and "Work" open a task; the Meet icon opens a meeting. The type icon in the bottom bar switches later.
     const type: TaskMode = mode === "MEETING" ? "MEETING" : "WORK";
     setChosen(type);
-    setForm(emptyForm(type, data.me.id));
+    setForm(emptyForm(type, data.me.id, data.role));
     setManualTime(false);
     setVoiceNotes([]);
     setFiles([]);
@@ -78,23 +80,26 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
     setAssigneesOpen(false);
     setLoopOpen(false);
     setTypeOpen(false);
-    teamsTouched.current = false;
-  }, [open, mode, data.me.id]);
+  }, [open, mode, data.me.id, data.role]);
 
-  // Teams default to the selected assignees' teams until the user edits them by hand.
-  const assigneeKey = form.assigneeIds.join(",");
+  // WORK is single-select: auto-select the first work type of the team(s) when the current one doesn't belong.
+  const teamKey = form.teamIds.join(",");
   useEffect(() => {
-    if (teamsTouched.current) return;
-    setForm((f) => ({ ...f, teamIds: defaultTeamIds(data, f.assigneeIds) }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assigneeKey]);
+    setForm((f) => {
+      const tagIds = syncWorkType(f, data);
+      return tagIds.join(",") === f.tagIds.join(",") ? f : { ...f, tagIds };
+    });
+  }, [teamKey, open, data]);
 
-  // Header pills (remaining inventory + assigned tasks) — refreshed (debounced 400ms) whenever the assignee set changes.
+  // Header pills (remaining inventory + assigned tasks) — refreshed (debounced 400ms) whenever the scope changes
+  // (Admin: preferred executives, else the picked teams' executives; Team Leader: the EXEC picks, else the team).
+  const scope = inventoryScope(form, data);
+  const scopeKey = scope.join(",");
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
     const t = setTimeout(async () => {
-      const res = await addTaskInventory(form.assigneeIds).catch(() => null);
+      const res = await addTaskInventory(scope).catch(() => null);
       if (cancelled || !res || !res.ok) return;
       setLoads({ ...EMPTY_LOADS, ...(res.data as Partial<PeriodLoads>) });
     }, 400);
@@ -103,18 +108,16 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
       clearTimeout(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, assigneeKey]);
+  }, [open, scopeKey]);
 
   const assignees = useMemo(() => allowedAssignees(data, chosen ?? "WORK"), [data, chosen]);
-  const executives = useMemo(() => allowedAssignees(data, "WORK").filter((p) => p.id !== data.me.id), [data]);
   const meeting = chosen === "MEETING";
   const subSheetOpen = details.open || assigneesOpen || loopOpen || typeOpen;
 
   const choose = (type: TaskMode) => {
     if (type === chosen) return;
     setChosen(type);
-    setForm((f) => ({ ...emptyForm(type, data.me.id), title: f.title, description: f.description, clientId: f.clientId }));
-    teamsTouched.current = false;
+    setForm((f) => ({ ...emptyForm(type, data.me.id, data.role), title: f.title, description: f.description, clientId: f.clientId, teamIds: f.teamIds, tagIds: f.tagIds }));
   };
 
   const setShortcut = (kind: Shortcut) => {
@@ -155,7 +158,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
 
   const submit = async () => {
     if (busy || !chosen) return;
-    const errs = validateForm(form);
+    const errs = validateForm({ ...form, type: chosen }, data);
     const first = Object.values(errs)[0];
     if (first) {
       toast(first, "err");
@@ -165,7 +168,8 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
     setErrors({});
     setBusy("saving");
     try {
-      const res = await createTask(toTaskInput({ ...form, type: chosen }, data.tz));
+      const live = { ...form, type: chosen };
+      const res = await createTask(toTaskInput({ ...live, assigneeIds: effectiveAssignees(live, data) }, data.tz));
       if (!res.ok) {
         toast(res.error, "err");
         showErrors(errorsFromMessage(res.error));
@@ -185,7 +189,8 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
 
   if (!open) return null;
   const liveForm = { ...form, type: chosen ?? "WORK" };
-  const canPickAssignees = data.role !== "EXECUTIVE" || meeting;
+  // Work: the green rows pick team / executives. Meetings can also invite anyone from the people glyph.
+  const canPickAssignees = meeting;
 
   return (
     <>
@@ -206,8 +211,9 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
               setFiles={setFiles}
               busy={busy}
               onError={(m) => toast(m, "err")}
+              summary={<AddTaskSummary form={liveForm} data={data} />}
           />
-          <AddTaskTags form={liveForm} patch={patch} data={data} executives={executives} onTeamsTouched={() => (teamsTouched.current = true)} />
+          <AddTaskGreenRows form={liveForm} patch={patch} data={data} />
           <AddTaskBottomBar
             form={liveForm}
             type={chosen}
@@ -235,7 +241,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
             errors={errors}
             manualTime={manualTime}
             setManualTime={setManualTime}
-            onTeamsTouched={() => (teamsTouched.current = true)}
+            slotAssigneeIds={effectiveAssignees(liveForm, data)}
             disabled={!!busy}
           />
           <AssigneeSheet open={assigneesOpen} onClose={() => setAssigneesOpen(false)} form={liveForm} patch={patch} data={data} assignees={assignees} />
@@ -250,6 +256,8 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
 function errorsFromMessage(message: string): FieldErrors {
   const m = message.toLowerCase();
   if (m.includes("title")) return { title: message };
+  if (m.includes("pick a team") || m.includes("team leader yet")) return { teamIds: message };
+  if (m.includes("work type")) return { tagIds: message };
   if (m.includes("client")) return { clientId: message };
   if (m.includes("assign")) return { assigneeIds: message };
   if (m.includes("allocated")) return { allocatedHours: message };

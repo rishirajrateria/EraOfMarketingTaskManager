@@ -32,7 +32,9 @@ function task(p: Partial<TaskRow> = {}): TaskRow {
     client: { id: "c1", name: "Repo" },
     teams: [{ id: "team1", name: "Graphic", colour: "#000" }],
     assignees: [{ id: "u1", name: "Arush Kumar", avatar: null }],
+    preferredAssigneeIds: [],
     tags: [],
+    workTypeId: null,
     allocatedMinutes: 60,
     scheduledStart: "2026-09-10T04:30:00Z", // today 10:00 IST
     scheduledEnd: "2026-09-10T05:30:00Z",

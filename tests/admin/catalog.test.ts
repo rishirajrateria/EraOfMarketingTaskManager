@@ -96,14 +96,14 @@ describe("admin teams / clients / work types", () => {
   });
 
   it("creates a work type and toggles it", async () => {
-    const { admin } = await seedBasics();
+    const { admin, team } = await seedBasics();
     session.set(admin);
     const actions = await load();
-    const res = await actions.createWorkType({ name: "Pharma bag", colour: "#10b981" });
+    const res = await actions.createWorkType({ name: "Pharma bag", colour: "#10b981", teamIds: [team.id] });
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    expect((await actions.createWorkType({ name: "Pharma bag" })).ok).toBe(false);
-    expect((await actions.createWorkType({ name: "Bad colour", colour: "red" })).ok).toBe(false);
+    expect((await actions.createWorkType({ name: "Pharma bag", teamIds: [team.id] })).ok).toBe(false);
+    expect((await actions.createWorkType({ name: "Bad colour", colour: "red", teamIds: [team.id] })).ok).toBe(false);
     const off = await actions.setWorkTypeActive(res.data.id, false);
     expect(off.ok).toBe(true);
     const wt = await testDb.workType.findUniqueOrThrow({ where: { id: res.data.id } });

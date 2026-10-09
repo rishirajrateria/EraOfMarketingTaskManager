@@ -53,6 +53,8 @@ export const userInputSchema = z.object({
   teamLeaderId: optionalId,
   dailyCapacityMinutes: z.number().int().min(0).max(1440).optional().nullable(),
   workingDays: z.array(weekday).max(7).default([1, 2, 3, 4, 5, 6]),
+  /** Work types this person is best at — must be work types of their team (ADR 0008). */
+  specialityIds: z.array(id).max(50).default([]),
 });
 export const updateUserSchema = userInputSchema.extend({ id });
 export type UserInput = z.input<typeof userInputSchema>;
@@ -134,6 +136,12 @@ export function withDerivedClientFields<T extends z.output<typeof clientInputSch
 export const workTypeInputSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(60),
   colour: colour.default("#f59e0b"),
+  /** Teams that do this work (ADR 0008) — at least one. */
+  teamIds: z
+    .array(id)
+    .max(50)
+    .transform((ids) => Array.from(new Set(ids)))
+    .pipe(z.array(id).min(1, "Pick at least one team")),
 });
 export const updateWorkTypeSchema = workTypeInputSchema.extend({ id });
 export type WorkTypeInput = z.input<typeof workTypeInputSchema>;

@@ -102,12 +102,15 @@ describe("admin people actions", () => {
     const { admin, exec, tl } = await seedBasics();
     session.set(admin);
     const actions = await load();
-    const res = await actions.updateUser({ id: exec.id, email: exec.email, name: "Arush K", role: "TEAM_LEADER", teamId: exec.teamId, teamLeaderId: tl.id });
+    // one Team Leader per team (ADR 0008): the promoted executive leads a second team
+    const video = await testDb.team.create({ data: { name: "Video" } });
+    const res = await actions.updateUser({ id: exec.id, email: exec.email, name: "Arush K", role: "TEAM_LEADER", teamId: video.id, teamLeaderId: tl.id });
     expect(res.ok).toBe(true);
     const after = await testDb.user.findUniqueOrThrow({ where: { id: exec.id } });
     expect(after.name).toBe("Arush K");
     expect(after.role).toBe("TEAM_LEADER");
     expect(after.teamLeaderId).toBeNull(); // only executives keep a reporting leader
+    expect((await testDb.team.findUniqueOrThrow({ where: { id: video.id } })).leaderId).toBe(exec.id);
 
     const self = await actions.updateUser({ id: admin.id, email: admin.email, name: admin.name, role: "HR" });
     expect(self.ok).toBe(false);

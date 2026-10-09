@@ -6,9 +6,9 @@ import { Field, btnPrimary, inputCls } from "@/components/ui/Field";
 import type { DashboardData } from "@/server/tasks/types";
 import { RecurrencePicker } from "@/components/tasks/RecurrencePicker";
 import { SlotPreview } from "@/components/tasks/SlotPreview";
-import { hoursToMinutes, toggleId, type AddTaskForm, type Person } from "@/components/tasks/add-task-helpers";
+import { hoursToMinutes, toggleId, type AddTaskErrors, type AddTaskForm, type Person } from "@/components/tasks/add-task-helpers";
 
-export type FieldErrors = Partial<Record<"title" | "clientId" | "assigneeIds" | "allocatedHours", string>>;
+export type FieldErrors = AddTaskErrors;
 export type DetailsFocus = "schedule" | null;
 
 function Chip({ active, onClick, children, colour }: { active: boolean; onClick: () => void; children: React.ReactNode; colour?: string }) {
@@ -86,13 +86,17 @@ type DetailsProps = {
   errors: FieldErrors;
   manualTime: boolean;
   setManualTime: (v: boolean) => void;
-  onTeamsTouched: () => void;
+  /** Who the slot is proposed for (the effective assignees, ADR 0008). */
+  slotAssigneeIds: string[];
   disabled: boolean;
 };
 
-/** DETAILS SHEET (light): every remaining field — client, assignees, teams, work types, hours, schedule, priority, loop. */
+/**
+ * DETAILS SHEET (light): client, meeting attendees, hours, schedule, priority, loop. Team, work type and executives
+ * are picked in the green rows (ADR 0008).
+ */
 export function AddTaskDetails(p: DetailsProps) {
-  const { open, onClose, focus, form, patch, data, assignees, errors, manualTime, setManualTime, onTeamsTouched, disabled } = p;
+  const { open, onClose, focus, form, patch, data, assignees, errors, manualTime, setManualTime, slotAssigneeIds, disabled } = p;
   const schedule = useRef<HTMLDivElement>(null);
   const meeting = form.type === "MEETING";
   const showTimeInputs = manualTime || !!form.scheduledStart;
@@ -116,42 +120,10 @@ export function AddTaskDetails(p: DetailsProps) {
           <Err text={errors.clientId} />
         </Field>
 
-        <div>
-          <span className="mb-1 block text-xs font-medium text-gray-600">{meeting ? "Attendees" : "Assignees"}</span>
-          <AssigneeChips form={form} patch={patch} data={data} assignees={assignees} error={errors.assigneeIds} />
-        </div>
-
-        {data.teams.length ? (
+        {meeting ? (
           <div>
-            <span className="mb-1 block text-xs font-medium text-gray-600">Teams</span>
-            <div className="flex flex-wrap gap-2">
-              {data.teams.map((t) => (
-                <Chip
-                  key={t.id}
-                  colour={t.colour}
-                  active={form.teamIds.includes(t.id)}
-                  onClick={() => {
-                    onTeamsTouched();
-                    patch({ teamIds: toggleId(form.teamIds, t.id) });
-                  }}
-                >
-                  {t.name}
-                </Chip>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {!meeting && data.workTypes.length ? (
-          <div>
-            <span className="mb-1 block text-xs font-medium text-gray-600">Work type</span>
-            <div className="flex flex-wrap gap-2">
-              {data.workTypes.map((w) => (
-                <Chip key={w.id} colour={w.colour} active={form.tagIds.includes(w.id)} onClick={() => patch({ tagIds: toggleId(form.tagIds, w.id) })}>
-                  {w.name}
-                </Chip>
-              ))}
-            </div>
+            <span className="mb-1 block text-xs font-medium text-gray-600">Attendees</span>
+            <AssigneeChips form={form} patch={patch} data={data} assignees={assignees} error={errors.assigneeIds} />
           </div>
         ) : null}
 
@@ -194,7 +166,7 @@ export function AddTaskDetails(p: DetailsProps) {
             </div>
           ) : (
             <SlotPreview
-              assigneeIds={form.assigneeIds}
+              assigneeIds={slotAssigneeIds}
               allocatedMinutes={hoursToMinutes(form.allocatedHours)}
               tz={data.tz}
               accepted={form.acceptProposedSlot}

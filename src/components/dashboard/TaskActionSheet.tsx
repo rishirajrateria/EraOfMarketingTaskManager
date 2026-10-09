@@ -30,7 +30,8 @@ export type SimpleAction =
   | "retry"
   | "edit"
   | "delete"
-  | "details";
+  | "details"
+  | "assign";
 
 type Item = { label: string; onClick: () => void; danger?: boolean; hint?: string };
 
@@ -65,6 +66,14 @@ export function TaskActionSheet({
   };
   const s = t.status;
   const items: Item[] = [];
+  // Assign executive (ADR 0008): Admin on any open task, Team Leader on their own team's open tasks.
+  const first = (id: string) => (data.people.find((p) => p.id === id)?.name ?? "?").split(" ")[0];
+  const assignItem: Item = {
+    label: "Assign executive",
+    onClick: act("assign"),
+    hint: t.preferredAssigneeIds.length ? `Admin prefers ${t.preferredAssigneeIds.map(first).join(", ")} · you decide` : "Pick who does this task",
+  };
+  const canAssign = s !== "COMPLETED" && (role === "ADMIN" || (role === "TEAM_LEADER" && !!data.me.teamId && t.teams.some((x) => x.id === data.me.teamId)));
 
   if (role === "ADMIN") {
     if (canTransition(s, "START")) items.push({ label: "Start", onClick: act("start") });
@@ -74,6 +83,7 @@ export function TaskActionSheet({
     if (canTransition(s, "PAUSE")) items.push({ label: "Pause", onClick: act("pause") });
     if (canTransition(s, "RESUME")) items.push({ label: "Resume", onClick: act("resume") });
     if (s !== "COMPLETED") items.push({ label: "Edit", onClick: act("edit") });
+    if (canAssign) items.push(assignItem);
     if (canTransition(s, "RESTART")) items.push({ label: "Restart", onClick: act("restart"), hint: "duplicate as new" });
     if (t.doubtRaised) items.push({ label: "Resolve doubt", onClick: act("resolve_doubt"), hint: "unflag" });
     items.push({ label: "Open request", onClick: () => { onClose(); router.push("/requests"); }, hint: t.reviewRequested || t.doubtRaised || s === "FINISH_REQUESTED" ? "pending" : undefined });
@@ -81,6 +91,7 @@ export function TaskActionSheet({
     if (t.integrationError) items.push({ label: "Retry integrations", onClick: act("retry"), hint: "Google" });
     items.push({ label: "Delete", onClick: act("delete"), danger: true });
   } else if (role === "TEAM_LEADER") {
+    if (canAssign) items.push(assignItem);
     if (canTransition(s, "START")) items.push({ label: "Start", onClick: act("start") });
     if (canTransition(s, "REQUEST_FINISH")) items.push({ label: "Request finish", onClick: act("request_finish") });
     if (s !== "COMPLETED" && !t.doubtRaised) items.push({ label: "Raise doubt", onClick: note("doubt"), hint: "with note" });

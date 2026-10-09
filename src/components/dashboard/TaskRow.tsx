@@ -41,6 +41,22 @@ function AssigneeNames({ t, meId }: { t: Row; meId: string }) {
   );
 }
 
+/**
+ * Amber "pref: arjun" chip while an Admin task still sits with its Team Leader(s): every assignee is a Team Leader
+ * and Admin suggested executives (ADR 0008).
+ */
+function PrefChip({ t, data }: { t: Row; data: DashboardData }) {
+  if (!t.preferredAssigneeIds.length || !t.assignees.length) return null;
+  const role = (id: string) => data.people.find((p) => p.id === id)?.role;
+  if (!t.assignees.every((a) => role(a.id) === "TEAM_LEADER")) return null;
+  const names = t.preferredAssigneeIds.map((id) => firstName(data.people.find((p) => p.id === id)?.name ?? "?").toLowerCase()).join(", ");
+  return (
+    <span className="glass-chip max-w-[140px] shrink-0 truncate rounded-md px-2 py-0.5 text-[12px] leading-4 text-[#b45309]" title="Admin preference — Team Leader decides">
+      pref: {names}
+    </span>
+  );
+}
+
 export function TaskRow({ t, data, h }: { t: Row; data: DashboardData; h: RowHandlers }) {
   const toast = useToast();
   const [driveBusy, setDriveBusy] = useState(false);
@@ -118,6 +134,7 @@ export function TaskRow({ t, data, h }: { t: Row; data: DashboardData; h: RowHan
           <div className="flex items-center gap-1.5 overflow-hidden">
             <span className={CHIP}>{t.client.name}</span>
             <span className={CHIP_ME}>{assigneeChip(t, data.me.id)}</span>
+            <PrefChip t={t} data={data} />
             {t.type === "MEETING" ? <span className="glass-chip shrink-0 rounded-md px-2 py-0.5 text-[12px] leading-4 text-[#6D28D9]">Meeting</span> : null}
           </div>
           <div className="mt-1.5 flex items-center gap-2.5">

@@ -1,7 +1,7 @@
 import type { Role } from "@prisma/client";
 import { env } from "@/lib/env";
 import { requireAdminPage } from "@/server/admin/guard";
-import { listLeaderOptions, listPeople, listTeamOptions } from "@/server/admin/queries";
+import { listLeaderOptions, listPeople, listTeamOptions, listWorkTypeOptions } from "@/server/admin/queries";
 import { ASSIGNABLE_ROLES } from "@/server/admin/schemas";
 import { PeopleManager } from "@/components/admin/PeopleManager";
 
@@ -12,6 +12,6 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
   const me = await requireAdminPage();
   const { role } = await searchParams;
   const initialRole: Role = ROLES.includes(role as Role) ? (role as Role) : "EXECUTIVE";
-  const [users, teams, leaders] = await Promise.all([listPeople(), listTeamOptions(), listLeaderOptions()]);
-  return <PeopleManager users={users} teams={teams} leaders={leaders} initialRole={initialRole} workspaceDomain={env.workspaceDomain} meId={me.id} />;
+  const [users, teams, leaders, workTypes] = await Promise.all([listPeople(), listTeamOptions(), listLeaderOptions(), listWorkTypeOptions()]);
+  return <PeopleManager users={users} teams={teams} leaders={leaders} workTypes={workTypes} initialRole={initialRole} workspaceDomain={env.workspaceDomain} meId={me.id} />;
 }

@@ -23,7 +23,11 @@ export type TaskRow = {
   client: { id: string; name: string };
   teams: { id: string; name: string; colour: string }[];
   assignees: { id: string; name: string; avatar: string | null }[];
+  /** Admin's suggested executives when the task went to a Team Leader (ADR 0008). */
+  preferredAssigneeIds: string[];
   tags: { id: string; name: string; colour: string }[];
+  /** The task's work type (first tag), drives the "✓ specialist" marks. */
+  workTypeId: string | null;
   allocatedMinutes: number;
   scheduledStart: string | null;
   scheduledEnd: string | null;
@@ -51,10 +55,11 @@ export type DashboardData = {
   pills: PillGroup[];
   row1: { id: string; label: string }[]; // Admin: teams; TL: executives; Exec: clients
   row2: { id: string; label: string }[]; // clients (Exec: work types)
-  workTypes: { id: string; name: string; colour: string }[];
+  /** `teamIds` empty = legacy work type available to every team (ADR 0008). */
+  workTypes: { id: string; name: string; colour: string; teamIds: string[] }[];
   clients: { id: string; name: string }[];
   teams: { id: string; name: string; colour: string }[];
-  people: { id: string; name: string; role: string; teamId: string | null; teamLeaderId: string | null }[];
+  people: { id: string; name: string; role: string; teamId: string | null; teamLeaderId: string | null; specialityIds: string[] }[];
   me: { id: string; role: string; teamId: string | null };
   tz: string;
   /** yyyy-MM-dd of the user's next approved leave (drives the B4Leave pill filter). */

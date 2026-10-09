@@ -267,6 +267,8 @@ model User {
   pushSubscriptions PushSubscription[]
   vaultViews        VaultViewLog[]
   attachments       TaskAttachment[]
+  /// Work types this person is best at ("✓ specialist" in Add task / Assign executive). Must belong to their team.
+  specialities      WorkType[]          @relation("UserSpecialities")
 }
 
 model Account {
@@ -313,6 +315,8 @@ model Team {
   members   User[]              @relation("TeamMembers")
   tasks     TaskTeam[]
   inventory InventorySnapshot[]
+  /// Work types this team does (ADR 0008). Implicit many-to-many with WorkType.teams.
+  workTypes WorkType[]
   active    Boolean             @default(true)
   createdAt DateTime            @default(now())
   updatedAt DateTime            @updatedAt
@@ -351,74 +355,80 @@ model Client {
 
 // Admin-managed tag labels ("Add Work")
 model WorkType {
-  id        String    @id @default(cuid())
-  name      String    @unique
-  colour    String    @default("#f59e0b")
-  active    Boolean   @default(true)
-  tasks     TaskTag[]
-  createdAt DateTime  @default(now())
+  id          String    @id @default(cuid())
+  name        String    @unique
+  colour      String    @default("#f59e0b")
+  active      Boolean   @default(true)
+  tasks       TaskTag[]
+  /// Teams that do this work. Empty = legacy row, available to every team (ADR 0008).
+  teams       Team[]
+  /// People who list this work type as a speciality.
+  specialists User[]    @relation("UserSpecialities")
+  createdAt   DateTime  @default(now())
 }
 
 // ---------- Tasks ----------
 model Task {
-  id                  String           @id @default(cuid())
-  title               String
-  description         String           @default("") // rich text (HTML)
-  type                TaskType         @default(WORK)
-  clientId            String
-  client              Client           @relation(fields: [clientId], references: [id])
-  teams               TaskTeam[]
-  assignees           TaskAssignee[]
-  createdById         String
-  createdBy           User             @relation("TaskCreatedBy", fields: [createdById], references: [id])
-  assignedById        String?
-  assignedBy          User?            @relation("TaskAssignedBy", fields: [assignedById], references: [id])
-  allocatedMinutes    Int              @default(60)
-  scheduledStart      DateTime?
-  scheduledEnd        DateTime?
-  actualStart         DateTime?
-  actualEnd           DateTime?
-  status              TaskStatus       @default(ASSIGNED)
-  statusBeforePause   TaskStatus?
-  overdue             Boolean          @default(false) // red overlay, set by scheduler
-  overdueNotifiedAt   DateTime?
-  important           Boolean          @default(false)
-  tags                TaskTag[]
-  priority            Priority         @default(NORMAL)
-  selfAssigned        Boolean          @default(false)
-  protected           Boolean          @default(false) // fixed: cannot be overlapped/shifted (Admin self tasks always)
-  recurrenceRuleId    String?
-  recurrenceRule      RecurrenceRule?  @relation(fields: [recurrenceRuleId], references: [id])
-  parentTaskId        String?
-  parentTask          Task?            @relation("TaskRestart", fields: [parentTaskId], references: [id])
-  children            Task[]           @relation("TaskRestart")
-  driveFolderId       String?
-  driveFolderUrl      String?
-  meetLink            String?
-  meetActive          Boolean          @default(false)
-  calendarEventId     String?
-  chatSpaceId         String?
-  chatSpaceUrl        String?
-  pausedAt            DateTime?
-  pausedTotalMinutes  Int              @default(0)
-  doubtRaised         Boolean          @default(false)
-  doubtNote           String?
-  reviewRequested     Boolean          @default(false)
-  reviewNote          String?
-  finishRequestedAt   DateTime?
-  finishRequestedById String?
-  approvedAt          DateTime?
-  approvedById        String?
-  rejectionNote       String?
-  deletedAt           DateTime?
-  deletedById         String?
-  integrationError    String? // last failed Google step, shown as row badge
-  sessions            TaskSession[]
-  attachments         TaskAttachment[]
-  requests            Request[]
-  integrations        IntegrationJob[]
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  id                   String           @id @default(cuid())
+  title                String
+  description          String           @default("") // rich text (HTML)
+  type                 TaskType         @default(WORK)
+  clientId             String
+  client               Client           @relation(fields: [clientId], references: [id])
+  teams                TaskTeam[]
+  assignees            TaskAssignee[]
+  /// Admin's suggested executives when the task goes to a Team Leader; the Team Leader decides (ADR 0008).
+  preferredAssigneeIds String[]         @default([])
+  createdById          String
+  createdBy            User             @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  assignedById         String?
+  assignedBy           User?            @relation("TaskAssignedBy", fields: [assignedById], references: [id])
+  allocatedMinutes     Int              @default(60)
+  scheduledStart       DateTime?
+  scheduledEnd         DateTime?
+  actualStart          DateTime?
+  actualEnd            DateTime?
+  status               TaskStatus       @default(ASSIGNED)
+  statusBeforePause    TaskStatus?
+  overdue              Boolean          @default(false) // red overlay, set by scheduler
+  overdueNotifiedAt    DateTime?
+  important            Boolean          @default(false)
+  tags                 TaskTag[]
+  priority             Priority         @default(NORMAL)
+  selfAssigned         Boolean          @default(false)
+  protected            Boolean          @default(false) // fixed: cannot be overlapped/shifted (Admin self tasks always)
+  recurrenceRuleId     String?
+  recurrenceRule       RecurrenceRule?  @relation(fields: [recurrenceRuleId], references: [id])
+  parentTaskId         String?
+  parentTask           Task?            @relation("TaskRestart", fields: [parentTaskId], references: [id])
+  children             Task[]           @relation("TaskRestart")
+  driveFolderId        String?
+  driveFolderUrl       String?
+  meetLink             String?
+  meetActive           Boolean          @default(false)
+  calendarEventId      String?
+  chatSpaceId          String?
+  chatSpaceUrl         String?
+  pausedAt             DateTime?
+  pausedTotalMinutes   Int              @default(0)
+  doubtRaised          Boolean          @default(false)
+  doubtNote            String?
+  reviewRequested      Boolean          @default(false)
+  reviewNote           String?
+  finishRequestedAt    DateTime?
+  finishRequestedById  String?
+  approvedAt           DateTime?
+  approvedById         String?
+  rejectionNote        String?
+  deletedAt            DateTime?
+  deletedById          String?
+  integrationError     String? // last failed Google step, shown as row badge
+  sessions             TaskSession[]
+  attachments          TaskAttachment[]
+  requests             Request[]
+  integrations         IntegrationJob[]
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
 
   @@index([clientId])
   @@index([status])

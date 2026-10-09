@@ -8,8 +8,14 @@ Sign in as **Admin** from the demo chooser. Everything below is in the order a r
   phone, website. **Pay to** → account name / number, Swift/BIC, IFSC, bank name, bank address, UPI id. **Logo & signature**
   → upload both (the seed already has the owner's); "Remove" clears them. Working hours, half-day hours, holidays, expense
   categories, invoice prefix as before. Save with the bar button.
-- **Add Team** → add a team. **Add Work** → add a work-type tag. **Add Executive / Add Team Leader** → add a person
-  by email (demo users already exist). **Add Client** (vault "+") → name, **Business name** (printed on invoices), GSTIN
+- **Add Team** → add a team; each row lists its work types ("work: Content, Reels…"). Picking a leader in the team
+  form moves that leader into the team.
+- **Add Work** (ADR 0008) → list grouped by team ("SOCIAL · 4"; Reporting appears under every team; "Not in any team"
+  for old rows). **+ Add work** → Name + **Teams** pills → Save without a team toasts "Pick at least one team". Tap a
+  row's **edit** pill → change teams / **Remove** (deleted if unused, otherwise moved to "Removed" with **Restore**).
+- **Add Executive / Add Team Leader** → add a person by email (demo users already exist). **Speciality** pills show only
+  the chosen team's work types; switching the team drops specialities that no longer belong. Rows show "✓ Reels"
+  chips. Adding a second Team Leader to Graphic → "Graphic already has a team leader". **Add Client** (vault "+") → name, **Business name** (printed on invoices), GSTIN
   (watch the tax badge: CGST+SGST / IGST / Export), **PAN** (try `ABC123` → rejected; `abcde1234f` → saved upper-case),
   email, WhatsApp, TDS %. With an empty GSTIN the **State** select is still there ("Same state as you (West Bengal) →
   CGST+SGST · other state → IGST") and the badge flips live as you pick a state. Pick a country outside India → the state
@@ -17,8 +23,20 @@ Sign in as **Admin** from the demo chooser. Everything below is in the order a r
 - **Settings → TDS** → threshold on expenses (default ₹20,000; "per payee, per financial year").
 
 ## 2. Tasks (dashboard)
-- **+** → task: title, description (mic for dictation), record a voice note (mic on the dark bar), pick client and a team
-  pill (its Team Leader is assigned), leave the time empty → "Proposed slot" → Send. Row appears white.
+- **+** → task: title, description (mic for dictation), record a voice note (mic on the dark bar). Green rows (labels on
+  the left): only **TEAM** + **CLIENT** at first and the card says "Pick a team below." Type a title, Send → "Pick a team in the
+  green area". Tap **Social** → **WORK** (Social's work types, first one selected) and **PREFER** appear above TEAM;
+  the card reads "Goes to Neha (TL, Social)" · "No executive preference · tap names in the PREFER row" ·
+  "✓ Content specialists: Isha". Tap **Arjun** in PREFER → "★ Arjun", card "Your preference: Arjun · the Team Leader
+  decides"; the cyan header now shows Arjun's free hours. Tap **SEO** only → "— no Team Leader in this team yet", Send →
+  "That team has no Team Leader yet (Menu → Add teamleader)". Pick Graphic + Logo + a client, leave the time empty →
+  Send. The row shows an amber **pref: arush** chip next to the client.
+- Switch to **Team Leader** (Rishi) → the "[demo] Festive logo refresh" row shows "pref: arush" → long-press →
+  **Assign executive** ("Admin prefers Arush · you decide") → "me (Rishi)", "★ Arush ✓", "Dev"; Arush is pre-selected →
+  Assign → toast "Assigned to Arush", the chip disappears, Arush gets "New task from Rishi: …" in 🔔.
+  Team Leader **+**: **WORK** (Graphic's work types) · **EXEC** ("me", specialists first with ✓) · **CLIENT**; nothing
+  picked → "Your whole team · tap names in the EXEC row to pick".
+- Executive **+**: **WORK** + **CLIENT** only. Executive dashboard green row 2 lists only their team's work types.
 - Long-press the row → **Start** (green). Tap the circle → finish requested → **📥 Requests** → Approve (grey, Restart button).
 - Long-press → **Pause** (⏸ badge) → Resume. Long-press → **Edit** (clears a red dot). Long-press → **Delete** (3 checkboxes).
 - Switch to **Team Leader** (Demo chip) → long-press → **Raise doubt** (yellow) and **Review request** (red dot); back as

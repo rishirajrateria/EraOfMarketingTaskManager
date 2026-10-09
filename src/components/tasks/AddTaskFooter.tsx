@@ -2,8 +2,7 @@
 import { CalendarDays, ClipboardList, X } from "lucide-react";
 import { ActionList, Sheet } from "@/components/ui/Sheet";
 import { clsx } from "@/lib/clsx";
-import type { DashboardData } from "@/server/tasks/types";
-import { shortcutStart, toggleId, toggleTeamWithLeader, type AddTaskForm, type Person, type TaskMode } from "@/components/tasks/add-task-helpers";
+import { shortcutStart, type AddTaskForm, type TaskMode } from "@/components/tasks/add-task-helpers";
 
 export type Shortcut = "upnext" | "tomorrow" | "today";
 
@@ -18,85 +17,6 @@ function TagPill({ active, onClick, children }: { active: boolean; onClick: () =
     >
       {children}
     </button>
-  );
-}
-
-function TagRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="scrollbar-none flex h-[34px] items-center gap-1.5 overflow-x-auto px-3" role="group" aria-label={label}>
-      {children}
-    </div>
-  );
-}
-
-/** GREEN AREA (TAG MODE): role-specific rows of pills. "All" is white when nothing in the row is selected. */
-export function AddTaskTags({
-  form,
-  patch,
-  data,
-  executives,
-  onTeamsTouched,
-}: {
-  form: AddTaskForm;
-  patch: (p: Partial<AddTaskForm>) => void;
-  data: DashboardData;
-  executives: Person[];
-  onTeamsTouched: () => void;
-}) {
-  const clientsRow = (
-    <TagRow label="Clients">
-      <TagPill active={!form.clientId} onClick={() => patch({ clientId: "" })}>
-        All
-      </TagPill>
-      {data.clients.map((c) => (
-        <TagPill key={c.id} active={form.clientId === c.id} onClick={() => patch({ clientId: form.clientId === c.id ? "" : c.id })}>
-          {c.name}
-        </TagPill>
-      ))}
-    </TagRow>
-  );
-
-  return (
-    <div className="bg-green-area shrink-0">
-      {data.role === "ADMIN" ? (
-        <TagRow label="Teams">
-          <TagPill
-            active={!form.teamIds.length}
-            onClick={() => {
-              onTeamsTouched();
-              patch({ teamIds: [] });
-            }}
-          >
-            All
-          </TagPill>
-          {data.teams.map((t) => (
-            <TagPill
-              key={t.id}
-              active={form.teamIds.includes(t.id)}
-              onClick={() => {
-                onTeamsTouched();
-                patch(toggleTeamWithLeader(form, data, t.id));
-              }}
-            >
-              {t.name}
-            </TagPill>
-          ))}
-        </TagRow>
-      ) : null}
-      {data.role === "TEAM_LEADER" ? (
-        <TagRow label="Executives">
-          <TagPill active={!executives.some((e) => form.assigneeIds.includes(e.id))} onClick={() => patch({ assigneeIds: form.assigneeIds.filter((id) => !executives.some((e) => e.id === id)) })}>
-            All
-          </TagPill>
-          {executives.map((e) => (
-            <TagPill key={e.id} active={form.assigneeIds.includes(e.id)} onClick={() => patch({ assigneeIds: toggleId(form.assigneeIds, e.id) })}>
-              {e.name.split(" ")[0]}
-            </TagPill>
-          ))}
-        </TagRow>
-      ) : null}
-      {clientsRow}
-    </div>
   );
 }
 

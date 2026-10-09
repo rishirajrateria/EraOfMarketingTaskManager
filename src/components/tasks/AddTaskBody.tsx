@@ -21,14 +21,16 @@ type Props = {
   setFiles: (v: File[]) => void;
   busy: false | "saving" | "uploading";
   onError: (message: string) => void;
+  /** "Goes to Priya (TL, Social)…" card (ADR 0008). */
+  summary?: React.ReactNode;
 };
 
 const ICON_BTN = "glass-dark-panel flex h-9 w-9 items-center justify-center rounded-md text-white backdrop-blur-md";
 
 
-/** DARK BODY: star/loop column, title, rich description, assignee + send row, input bar, voice notes, file chips. */
+/** DARK BODY: star/loop column, title, rich description, assignment summary, attendees + send row, input bar, voice notes, file chips. */
 export function AddTaskBody(p: Props) {
-  const { form, patch, titleError, canPickAssignees, onOpenAssignees, onOpenLoop, onSubmit, voiceNotes, setVoiceNotes, files, setFiles, busy, onError } = p;
+  const { form, patch, titleError, canPickAssignees, onOpenAssignees, onOpenLoop, onSubmit, voiceNotes, setVoiceNotes, files, setFiles, busy, onError, summary } = p;
   const editor = useRef<RichTextEditorHandle>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const meeting = form.type === "MEETING";
@@ -82,6 +84,8 @@ export function AddTaskBody(p: Props) {
           toolbarExtra={<DictationButton compact onText={(t) => editor.current?.insertText(t)} />}
         />
       </div>
+
+      {summary}
 
       <div className="mt-auto flex items-center justify-between px-3 pb-1 pt-3">
         {canPickAssignees ? (

@@ -45,7 +45,12 @@ export function TeamsManager({ teams, leaders }: { teams: TeamRow[]; leaders: Le
         <ListRow
           key={t.id}
           title={t.name}
-          subtitle={`${t.leader ? `Lead: ${t.leader.name}` : "No leader"} · ${t._count.members} member${t._count.members === 1 ? "" : "s"}`}
+          subtitle={
+            <>
+              {`${t.leader ? `Lead: ${t.leader.name}` : "No leader"} · ${t._count.members} member${t._count.members === 1 ? "" : "s"}`}
+              <span className="block truncate">work: {t.workTypes.map((w) => w.name).join(", ") || "none"}</span>
+            </>
+          }
           leading={<ColourDot colour={t.colour} size={14} />}
           trailing={<StatusPill active={t.active} />}
           inactive={!t.active}
@@ -94,7 +99,7 @@ function TeamForm({
       <Field label="Colour">
         <ColourInput value={v.colour ?? "#2563eb"} onChange={(colour) => setV({ ...v, colour })} />
       </Field>
-      <Field label="Leader" hint="Pick from active Team Leaders (add them under Add Team Leader first)">
+      <Field label="Leader" hint="One team leader per team · the chosen leader moves into this team">
         <select className={inputCls} value={v.leaderId ?? ""} onChange={(e) => setV({ ...v, leaderId: e.target.value || null })}>
           <option value="">— none —</option>
           {leaders.map((l) => (

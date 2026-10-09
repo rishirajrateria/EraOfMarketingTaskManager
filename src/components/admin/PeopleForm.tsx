@@ -2,8 +2,8 @@
 import { useState } from "react";
 import type { Role } from "@prisma/client";
 import { Field, inputCls } from "@/components/ui/Field";
-import { FormFooter, WeekdayPicker, hoursToMinutes, minutesToHours } from "@/components/admin/AdminUi";
-import type { LeaderOption, PersonRow, TeamOption } from "@/server/admin/queries";
+import { FormFooter, PillPicker, WeekdayPicker, hoursToMinutes, minutesToHours } from "@/components/admin/AdminUi";
+import type { LeaderOption, PersonRow, TeamOption, WorkTypeOption } from "@/server/admin/queries";
 import type { UserInput } from "@/server/admin/schemas";
 
 /** Assignable roles. CA access is parked (ADR 0004) — not offered here and rejected by the server. */
@@ -25,7 +25,13 @@ function initial(user: PersonRow | null, role: Role): PeopleFormValues {
     teamLeaderId: user?.teamLeaderId ?? null,
     dailyCapacityMinutes: user?.dailyCapacityMinutes ?? null,
     workingDays: user?.workingDays ?? [1, 2, 3, 4, 5, 6],
+    specialityIds: user?.specialities.map((w) => w.id) ?? [],
   };
+}
+
+/** Work types a member of `teamId` can specialise in (legacy no-team work types count for every team). */
+export function workTypesForTeam(workTypes: WorkTypeOption[], teamId: string | null): WorkTypeOption[] {
+  return workTypes.filter((w) => !w.teamIds.length || (!!teamId && w.teamIds.includes(teamId)));
 }
 
 export function PeopleForm({
@@ -33,6 +39,7 @@ export function PeopleForm({
   defaultRole,
   teams,
   leaders,
+  workTypes,
   workspaceDomain,
   busy,
   onSubmit,
@@ -42,6 +49,7 @@ export function PeopleForm({
   defaultRole: Role;
   teams: TeamOption[];
   leaders: LeaderOption[];
+  workTypes: WorkTypeOption[];
   workspaceDomain: string;
   busy: boolean;
   onSubmit: (values: PeopleFormValues) => void;
@@ -49,8 +57,17 @@ export function PeopleForm({
 }) {
   const [v, setV] = useState<PeopleFormValues>(() => initial(user, defaultRole));
   const [hours, setHours] = useState(minutesToHours(user?.dailyCapacityMinutes));
-  const patch = (p: Partial<PeopleFormValues>) => setV((s) => ({ ...s, ...p }));
+  const teamOf = (s: PeopleFormValues) => s.teamId ?? (s.role === "EXECUTIVE" ? (leaders.find((l) => l.id === s.teamLeaderId)?.teamId ?? null) : null);
+  // Changing the team (or the executive's leader) drops specialities that no longer belong to the team.
+  const patch = (p: Partial<PeopleFormValues>) =>
+    setV((s) => {
+      const next = { ...s, ...p };
+      const allowed = workTypesForTeam(workTypes, teamOf(next));
+      return { ...next, specialityIds: (next.specialityIds ?? []).filter((id) => allowed.some((w) => w.id === id)) };
+    });
   const isExec = v.role === "EXECUTIVE";
+  const hasSpeciality = isExec || v.role === "TEAM_LEADER";
+  const specialityOptions = workTypesForTeam(workTypes, teamOf(v));
   const emailHint = workspaceDomain ? `Must end with @${workspaceDomain}` : undefined;
   const isLegacyCa = v.role === "CA";
   const roleHint = isLegacyCa ? "CA access is parked — choose another role to keep this person" : ROLE_OPTIONS.find((r) => r.value === v.role)?.hint;
@@ -83,7 +100,7 @@ export function PeopleForm({
           ))}
         </select>
       </Field>
-      <Field label="Team (designation)" hint={isExec ? "Defaults to the team leader's team" : undefined}>
+      <Field label="Team (designation)" hint={isExec ? "Defaults to the team leader's team" : v.role === "TEAM_LEADER" ? "One team leader per team" : undefined}>
         <select className={inputCls} value={v.teamId ?? ""} onChange={(e) => patch({ teamId: e.target.value || null })}>
           <option value="">— none —</option>
           {teams.map((t) => (
@@ -105,6 +122,16 @@ export function PeopleForm({
                 </option>
               ))}
           </select>
+        </Field>
+      ) : null}
+      {hasSpeciality ? (
+        <Field label="Speciality" hint="Work types they're best at · shown as ✓ when you add a task">
+          <PillPicker
+            options={specialityOptions}
+            value={v.specialityIds ?? []}
+            onChange={(specialityIds) => patch({ specialityIds })}
+            empty={teamOf(v) ? "This team has no work types yet · Menu → Add Work" : "Pick a team first"}
+          />
         </Field>
       ) : null}
       <Field label="Daily capacity override (hours)" hint="Leave blank to use the company default">

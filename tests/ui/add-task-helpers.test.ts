@@ -17,11 +17,11 @@ import type { DashboardData } from "@/server/tasks/types";
 const TZ = "Asia/Kolkata";
 
 const people: DashboardData["people"] = [
-  { id: "admin", name: "Ada Admin", role: "ADMIN", teamId: null, teamLeaderId: null },
-  { id: "tl1", name: "Tina Lead", role: "TEAM_LEADER", teamId: "teamA", teamLeaderId: null },
-  { id: "tl2", name: "Tom Lead", role: "TEAM_LEADER", teamId: "teamB", teamLeaderId: null },
-  { id: "ex1", name: "Eve Exec", role: "EXECUTIVE", teamId: "teamA", teamLeaderId: "tl1" },
-  { id: "ex2", name: "Eli Exec", role: "EXECUTIVE", teamId: "teamB", teamLeaderId: "tl2" },
+  { id: "admin", name: "Ada Admin", role: "ADMIN", teamId: null, teamLeaderId: null, specialityIds: [] },
+  { id: "tl1", name: "Tina Lead", role: "TEAM_LEADER", teamId: "teamA", teamLeaderId: null, specialityIds: [] },
+  { id: "tl2", name: "Tom Lead", role: "TEAM_LEADER", teamId: "teamB", teamLeaderId: null, specialityIds: [] },
+  { id: "ex1", name: "Eve Exec", role: "EXECUTIVE", teamId: "teamA", teamLeaderId: "tl1", specialityIds: [] },
+  { id: "ex2", name: "Eli Exec", role: "EXECUTIVE", teamId: "teamB", teamLeaderId: "tl2", specialityIds: [] },
 ];
 const teams = [
   { id: "teamA", name: "A", colour: "#000" },
@@ -139,19 +139,11 @@ describe("tag-mode helpers", () => {
     expect(teamLeaderId({ people }, "teamA")).toBe("tl1");
     expect(teamLeaderId({ people }, "nope")).toBeNull();
   });
-  it("toggleTeamWithLeader adds the leader when switching a team on, keeps assignees when switching off", async () => {
-    const { toggleTeamWithLeader } = await import("@/components/tasks/add-task-helpers");
-    const on = toggleTeamWithLeader({ teamIds: [], assigneeIds: ["admin"] }, { people }, "teamA");
-    expect(on).toEqual({ teamIds: ["teamA"], assigneeIds: ["admin", "tl1"] });
-    const again = toggleTeamWithLeader(on, { people }, "teamA");
-    expect(again).toEqual({ teamIds: [], assigneeIds: ["admin", "tl1"] });
-    const dup = toggleTeamWithLeader({ teamIds: [], assigneeIds: ["tl1"] }, { people }, "teamA");
-    expect(dup.assigneeIds).toEqual(["tl1"]);
-  });
   it("needsDetailsSheet / parseAddParam", async () => {
     const { needsDetailsSheet, parseAddParam } = await import("@/components/tasks/add-task-helpers");
     expect(needsDetailsSheet({ title: "x" })).toBe(false);
-    expect(needsDetailsSheet({ clientId: "x" })).toBe(true);
+    expect(needsDetailsSheet({ clientId: "x" })).toBe(false); // client is picked in the green CLIENT row
+    expect(needsDetailsSheet({ allocatedHours: "x" })).toBe(true);
     expect(parseAddParam("WORK")).toBe("WORK");
     expect(parseAddParam("CHOOSE")).toBe("CHOOSE");
     expect(parseAddParam("nope")).toBeNull();

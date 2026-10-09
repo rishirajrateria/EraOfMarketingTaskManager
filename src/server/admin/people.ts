@@ -88,3 +88,33 @@ export async function withUnique<T>(fn: () => Promise<T>, message: string): Prom
     throw e;
   }
 }
+
+/** Specialities must be (active) work types of the person's team; legacy no-team work types are allowed (ADR 0008). */
+export async function resolveSpecialities(role: Role, teamId: string | null, ids: string[]): Promise<string[]> {
+  if (role !== "EXECUTIVE" && role !== "TEAM_LEADER") return [];
+  const wanted = Array.from(new Set(ids));
+  if (!wanted.length) return [];
+  const { workTypesForTeamsWhere } = await import("@/server/tasks/assignment");
+  const ok = await prisma.workType.count({ where: { AND: [{ id: { in: wanted } }, workTypesForTeamsWhere(teamId ? [teamId] : [])] } });
+  if (ok !== wanted.length) throw new Error("Specialities must be work types of the person's team");
+  return wanted;
+}
+
+/** One Team Leader per team: "<Team> already has a team leader". */
+export async function assertSingleLeader(teamId: string | null, selfId?: string): Promise<void> {
+  if (!teamId) return;
+  const team = await prisma.team.findUnique({ where: { id: teamId }, select: { name: true, leader: { select: { id: true, role: true, active: true } } } });
+  if (!team) throw new Error("Team not found");
+  const other = await prisma.user.findFirst({ where: { role: "TEAM_LEADER", active: true, teamId, ...(selfId ? { id: { not: selfId } } : {}) }, select: { id: true } });
+  const leader = team.leader;
+  const leaderElsewhere = leader && leader.id !== selfId && leader.role === "TEAM_LEADER" && leader.active;
+  if (other || leaderElsewhere) throw new Error(`${team.name} already has a team leader`);
+}
+
+/** Keeps Team.leaderId in step with the Team Leader's own team membership. */
+export async function syncTeamLeader(userId: string): Promise<void> {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { role: true, teamId: true, active: true } });
+  const leads = u?.role === "TEAM_LEADER" && u.active && u.teamId ? u.teamId : null;
+  await prisma.team.updateMany({ where: { leaderId: userId, ...(leads ? { id: { not: leads } } : {}) }, data: { leaderId: null } });
+  if (leads) await prisma.team.update({ where: { id: leads }, data: { leaderId: userId } });
+}

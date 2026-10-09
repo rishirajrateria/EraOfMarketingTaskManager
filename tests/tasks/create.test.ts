@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { toZonedTime } from "date-fns-tz";
 import { resetDb, seedBasics, testDb } from "../helpers/db";
 import { mockSession } from "../helpers/mock-session";
-import { createTaskAs, loadTask, settle } from "./helpers";
+import { anyTeamWorkType, createTaskAs, loadTask, settle } from "./helpers";
 
 const session = mockSession();
 
@@ -15,11 +15,12 @@ describe("createTask", () => {
   });
 
   it("Admin → Team Leader: ASSIGNED, auto-proposed slot inside IST working hours, client visible, 3 jobs, notification", async () => {
-    const { admin, tl, client } = await seedBasics();
+    const { admin, tl, client, team } = await seedBasics();
     await testDb.client.update({ where: { id: client.id }, data: { visibleInFilters: false } });
+    const work = await anyTeamWorkType();
     session.set(admin);
     const { createTask } = await import("@/server/tasks/create");
-    const res = await createTask({ title: "Design banner", clientId: client.id, assigneeIds: [tl.id], allocatedMinutes: 90 });
+    const res = await createTask({ title: "Design banner", clientId: client.id, teamIds: [team.id], tagIds: [work.id], allocatedMinutes: 90 });
     expect(res.ok).toBe(true);
     if (!res.ok) return;
     expect(res.data.slot).not.toBeNull();
@@ -82,22 +83,26 @@ describe("createTask", () => {
   });
 
   it("Admin cannot assign an Executive directly", async () => {
-    const { admin, exec, client } = await seedBasics();
+    const { admin, exec, client, team } = await seedBasics();
+    const work = await anyTeamWorkType();
     session.set(admin);
     const { createTask } = await import("@/server/tasks/create");
-    const res = await createTask({ title: "x", clientId: client.id, assigneeIds: [exec.id] });
+    const res = await createTask({ title: "x", clientId: client.id, assigneeIds: [exec.id], teamIds: [team.id], tagIds: [work.id] });
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toMatch(/Team Leader/);
     expect(await testDb.task.count()).toBe(0);
   });
 
   it("Team Leader may assign own Executive but not another leader's", async () => {
-    const { tl, exec, client, team } = await seedBasics();
-    const tl2 = await testDb.user.create({ data: { email: "tl2@test.local", name: "TL Two", role: "TEAM_LEADER", teamId: team.id, activatedAt: new Date() } });
-    const exec2 = await testDb.user.create({ data: { email: "exec2@test.local", name: "Exec Two", role: "EXECUTIVE", teamId: team.id, teamLeaderId: tl2.id, activatedAt: new Date() } });
+    const { tl, exec, client } = await seedBasics();
+    // one Team Leader per team (ADR 0008): the other leader runs a second team
+    const team2 = await testDb.team.create({ data: { name: "Video" } });
+    const tl2 = await testDb.user.create({ data: { email: "tl2@test.local", name: "TL Two", role: "TEAM_LEADER", teamId: team2.id, activatedAt: new Date() } });
+    const exec2 = await testDb.user.create({ data: { email: "exec2@test.local", name: "Exec Two", role: "EXECUTIVE", teamId: team2.id, teamLeaderId: tl2.id, activatedAt: new Date() } });
+    const work = await anyTeamWorkType();
     session.set(tl);
     const { createTask } = await import("@/server/tasks/create");
-    const own = await createTask({ title: "own exec", clientId: client.id, assigneeIds: [exec.id] });
+    const own = await createTask({ title: "own exec", clientId: client.id, assigneeIds: [exec.id], tagIds: [work.id] });
     expect(own.ok).toBe(true);
     if (own.ok) {
       const t = await loadTask(own.data.taskId);
@@ -107,16 +112,17 @@ describe("createTask", () => {
       const notes = await testDb.notification.findMany({ where: { taskId: t.id } });
       expect(notes.map((n) => n.userId)).toEqual([exec.id]);
     }
-    const other = await createTask({ title: "other exec", clientId: client.id, assigneeIds: [exec2.id] });
+    const other = await createTask({ title: "other exec", clientId: client.id, assigneeIds: [exec2.id], tagIds: [work.id] });
     expect(other.ok).toBe(false);
     if (!other.ok) expect(other.error).toMatch(/own Executives/);
   });
 
   it("Executive may only self-assign", async () => {
     const { tl, exec, client } = await seedBasics();
+    const work = await anyTeamWorkType();
     session.set(exec);
     const { createTask } = await import("@/server/tasks/create");
-    const self = await createTask({ title: "mine", clientId: client.id, assigneeIds: [exec.id] });
+    const self = await createTask({ title: "mine", clientId: client.id, assigneeIds: [exec.id], tagIds: [work.id] });
     expect(self.ok).toBe(true);
     if (self.ok) {
       const t = await loadTask(self.data.taskId);
@@ -126,7 +132,7 @@ describe("createTask", () => {
       const notes = await testDb.notification.findMany({ where: { taskId: t.id } });
       expect(notes.map((n) => n.userId)).toEqual([tl.id]);
     }
-    const other = await createTask({ title: "not mine", clientId: client.id, assigneeIds: [tl.id] });
+    const other = await createTask({ title: "not mine", clientId: client.id, assigneeIds: [tl.id], tagIds: [work.id] });
     expect(other.ok).toBe(false);
     if (!other.ok) expect(other.error).toMatch(/self-assign/);
   });
@@ -151,12 +157,17 @@ describe("createTask", () => {
   });
 
   it("validates input: empty title, no assignees, unknown assignee", async () => {
-    const { admin, client } = await seedBasics();
+    const { admin, tl, client, team } = await seedBasics();
+    const work = await anyTeamWorkType();
     session.set(admin);
     const { createTask } = await import("@/server/tasks/create");
-    expect((await createTask({ title: "   ", clientId: client.id, assigneeIds: [admin.id] })).ok).toBe(false);
-    expect((await createTask({ title: "x", clientId: client.id, assigneeIds: [] })).ok).toBe(false);
-    const unknown = await createTask({ title: "x", clientId: client.id, assigneeIds: ["nope"] });
+    expect((await createTask({ title: "   ", clientId: client.id, teamIds: [team.id], tagIds: [work.id] })).ok).toBe(false);
+    session.set(tl); // Admin's assignees come from the team; everyone else must pick someone
+    const none = await createTask({ title: "x", clientId: client.id, assigneeIds: [], tagIds: [work.id] });
+    expect(none.ok).toBe(false);
+    if (!none.ok) expect(none.error).toMatch(/At least one assignee/);
+    session.set(admin);
+    const unknown = await createTask({ title: "x", clientId: client.id, assigneeIds: ["nope"], teamIds: [team.id], tagIds: [work.id] });
     expect(unknown.ok).toBe(false);
     if (!unknown.ok) expect(unknown.error).toMatch(/Unknown or inactive assignee/);
   });
@@ -183,14 +194,14 @@ describe("createTask", () => {
     expect(t.scheduledEnd!.getTime()).toBe(start.getTime() + 45 * 60000);
   });
 
-  it("Admin self-assigned task is protected", async () => {
-    const { admin, client } = await seedBasics();
+  it("Admin's own work still goes to the team's Team Leader (team-first, ADR 0008)", async () => {
+    const { admin, tl, client } = await seedBasics();
     session.set(admin);
     const t = await loadTask(await createTaskAs(client.id, [admin.id], { title: "admin own" }));
-    expect(t.selfAssigned).toBe(true);
-    expect(t.protected).toBe(true);
-    // no notification to self
-    expect(await testDb.notification.count({ where: { taskId: t.id } })).toBe(0);
+    expect(t.assignees.map((a) => a.userId).sort()).toEqual([admin.id, tl.id].sort());
+    expect(t.selfAssigned).toBe(false);
+    // only the Team Leader is notified, never Admin themselves
+    expect((await testDb.notification.findMany({ where: { taskId: t.id } })).map((n) => n.userId)).toEqual([tl.id]);
   });
 
   it("multi-assignee task is not self-assigned", async () => {

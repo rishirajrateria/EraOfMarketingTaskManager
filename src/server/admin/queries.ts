@@ -23,6 +23,7 @@ export async function listPeople() {
       activatedAt: true,
       team: { select: { name: true } },
       teamLeader: { select: { name: true } },
+      specialities: { select: { id: true, name: true }, orderBy: { name: "asc" } },
     },
     orderBy: [{ active: "desc" }, { name: "asc" }],
   });
@@ -54,6 +55,7 @@ export async function listTeams() {
       active: true,
       leader: { select: { name: true } },
       _count: { select: { members: { where: { active: true } } } },
+      workTypes: { where: { active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } },
     },
     orderBy: [{ active: "desc" }, { name: "asc" }],
   });
@@ -93,12 +95,27 @@ export async function listClients() {
 export type ClientRow = Awaited<ReturnType<typeof listClients>>[number];
 
 export async function listWorkTypes() {
-  return prisma.workType.findMany({
-    select: { id: true, name: true, colour: true, active: true, _count: { select: { tasks: true } } },
+  const rows = await prisma.workType.findMany({
+    select: {
+      id: true,
+      name: true,
+      colour: true,
+      active: true,
+      teams: { select: { id: true, name: true }, orderBy: { name: "asc" } },
+      _count: { select: { tasks: true } },
+    },
     orderBy: [{ active: "desc" }, { name: "asc" }],
   });
+  return rows.map((w) => ({ ...w, teamIds: w.teams.map((t) => t.id) }));
 }
 export type WorkTypeRow = Awaited<ReturnType<typeof listWorkTypes>>[number];
+
+/** Active work types with their teams, for the Speciality picker (empty `teamIds` = legacy, every team). */
+export async function listWorkTypeOptions() {
+  const rows = await prisma.workType.findMany({ where: { active: true }, select: { id: true, name: true, teams: { select: { id: true } } }, orderBy: { name: "asc" } });
+  return rows.map((w) => ({ id: w.id, name: w.name, teamIds: w.teams.map((t) => t.id) }));
+}
+export type WorkTypeOption = Awaited<ReturnType<typeof listWorkTypeOptions>>[number];
 
 /** CompanySettings without binary/Decimal fields so it can cross the RSC boundary. */
 export async function getSettingsDto() {

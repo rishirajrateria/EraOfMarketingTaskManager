@@ -9,7 +9,7 @@ export const taskInclude = {
   client: { select: { id: true, name: true } },
   teams: { include: { team: { select: { id: true, name: true, colour: true } } } },
   assignees: { include: { user: { select: { id: true, name: true, avatar: true } } } },
-  tags: { include: { workType: { select: { id: true, name: true, colour: true } } } },
+  tags: { include: { workType: { select: { id: true, name: true, colour: true } } }, orderBy: { workType: { name: "asc" } } },
   attachments: { select: { id: true, name: true, kind: true, url: true, driveFileId: true, durationSec: true } },
   children: { select: { id: true }, take: 1, orderBy: { createdAt: "desc" as const } },
   recurrenceRule: { select: { id: true, stopped: true } },
@@ -39,7 +39,9 @@ export function toRow(t: TaskWithRelations): TaskRow {
     client: t.client,
     teams: t.teams.map((x) => x.team),
     assignees: t.assignees.map((a) => a.user),
+    preferredAssigneeIds: t.preferredAssigneeIds,
     tags: t.tags.map((x) => x.workType),
+    workTypeId: t.tags[0]?.workType.id ?? null,
     allocatedMinutes: t.allocatedMinutes,
     scheduledStart: t.scheduledStart?.toISOString() ?? null,
     scheduledEnd: t.scheduledEnd?.toISOString() ?? null,
@@ -190,17 +192,19 @@ export async function buildPills(user: SessionUser, tasks: TaskRow[], tz: string
 export async function dashboardData(user: SessionUser): Promise<DashboardData> {
   if (user.role !== "ADMIN" && user.role !== "TEAM_LEADER" && user.role !== "EXECUTIVE") throw new Error("No task dashboard for this role");
   const settings = await getSettings();
-  const [tasks, workTypes, clients, teams, people] = await Promise.all([
+  const [tasks, workTypeRows, clients, teams, peopleRows] = await Promise.all([
     listTasks(user, { includeCompleted: true }),
-    prisma.workType.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, colour: true } }),
+    prisma.workType.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, colour: true, teams: { select: { id: true } } } }),
     prisma.client.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, visibleInFilters: true } }),
     prisma.team.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, colour: true } }),
     prisma.user.findMany({
       where: { active: true, role: { in: ["ADMIN", "TEAM_LEADER", "EXECUTIVE"] } },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, role: true, teamId: true, teamLeaderId: true },
+      select: { id: true, name: true, role: true, teamId: true, teamLeaderId: true, specialities: { select: { id: true } } },
     }),
   ]);
+  const workTypes = workTypeRows.map(({ teams: wt, ...w }) => ({ ...w, teamIds: wt.map((t) => t.id) }));
+  const people = peopleRows.map(({ specialities, ...p }) => ({ ...p, specialityIds: specialities.map((w) => w.id) }));
   const pills = await buildPills(user, tasks, settings.timezone);
   let nextLeaveKey: string | null = null;
   try {
@@ -223,7 +227,8 @@ export async function dashboardData(user: SessionUser): Promise<DashboardData> {
     row2 = filterClients.map((c) => ({ id: c.id, label: c.name }));
   } else {
     row1 = filterClients.map((c) => ({ id: c.id, label: c.name }));
-    row2 = workTypes.map((w) => ({ id: w.id, label: w.name }));
+    // Executives see only their own team's work types (plus legacy ones with no team).
+    row2 = workTypes.filter((w) => !w.teamIds.length || (!!user.teamId && w.teamIds.includes(user.teamId))).map((w) => ({ id: w.id, label: w.name }));
   }
   return {
     role: user.role,

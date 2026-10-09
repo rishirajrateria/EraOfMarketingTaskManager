@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { DashboardData, DashboardFilters, TaskRow } from "@/server/tasks/types";
 import { approveFinish, pauseTask, raiseDoubt, raiseReviewRequest, rejectFinish, requestFinish, requestFixSelfTask, resolveDoubt, restartTask, resumeTask, startTask } from "@/server/tasks/lifecycle";
-import { deleteTask, retryIntegrations, saveFilters, setTaskProtected } from "@/server/tasks/manage";
+import { assignExecutives, deleteTask, retryIntegrations, saveFilters, setTaskProtected } from "@/server/tasks/manage";
 import { useLiveEvents } from "@/components/shell/useLiveEvents";
 import { AddTaskSheet } from "@/components/tasks/AddTaskSheet";
 import { applyFilters } from "@/components/dashboard/filters";
@@ -19,6 +19,7 @@ import { DeleteTaskSheet, type DeleteOptions } from "@/components/dashboard/Dele
 import { EditTaskSheet } from "@/components/dashboard/EditTaskSheet";
 import { NoteSheet } from "@/components/dashboard/NoteSheet";
 import { DatePickerSheet } from "@/components/dashboard/DatePickerSheet";
+import { AssignExecutiveSheet } from "@/components/dashboard/AssignExecutiveSheet";
 
 const SAVE_DEBOUNCE_MS = 800;
 /**
@@ -50,6 +51,7 @@ export function Dashboard({
   const [actionId, setActionId] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [assignId, setAssignId] = useState<string | null>(null);
   const [note, setNote] = useState<{ kind: NoteKind; taskId: string } | null>(null);
   const [dateOpen, setDateOpen] = useState(false);
   const [addMode, setAddMode] = useState<AddMode | null>(null);
@@ -141,6 +143,8 @@ export function Dashboard({
           return setDeleteId(t.id);
         case "details":
           return setDetailId(t.id);
+        case "assign":
+          return setAssignId(t.id);
       }
     },
     [run, onRestart, onRetry],
@@ -168,6 +172,12 @@ export function Dashboard({
       setDeleteId(null);
       if (detailId === id) setDetailId(null);
     }
+  };
+
+  const assign = async (t: TaskRow, userIds: string[]) => {
+    const names = userIds.map((id) => (data.people.find((p) => p.id === id)?.name ?? "?").split(" ")[0]).join(", ");
+    const res = await run(assignExecutives(t.id, userIds), `Assigned to ${names}`);
+    if (res !== null) setAssignId(null);
   };
 
   const detailTask = detailId ? byId.get(detailId) ?? null : null;
@@ -217,6 +227,7 @@ export function Dashboard({
         onClose={() => setNote(null)}
       />
       <DeleteTaskSheet task={deleteId ? byId.get(deleteId) ?? null : null} open={!!deleteId} busy={busy} onConfirm={confirmDelete} onClose={() => setDeleteId(null)} />
+      <AssignExecutiveSheet task={assignId ? byId.get(assignId) ?? null : null} data={data} open={!!assignId} busy={busy} onClose={() => setAssignId(null)} onAssign={assign} />
       <EditTaskSheet task={editId ? byId.get(editId) ?? null : null} data={data} open={!!editId} onClose={() => setEditId(null)} />
       <DatePickerSheet open={dateOpen} value={filters.date} tz={data.tz} onChange={(date) => setFilters({ ...filters, date })} onClose={() => setDateOpen(false)} />
       <AddTaskSheet open={addMode !== null} mode={addMode} onClose={() => setAddMode(null)} data={data} />

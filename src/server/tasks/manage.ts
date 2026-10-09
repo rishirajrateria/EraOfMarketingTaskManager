@@ -7,7 +7,8 @@ import { notify, taskStakeholderIds, publishTaskChanged } from "@/lib/notify";
 import { bus } from "@/lib/events";
 import { safeRevalidate } from "@/lib/revalidate";
 import { canView } from "@/server/tasks/queries";
-import { taskUpdateSchema } from "@/server/tasks/schema";
+import { assignExecutivesSchema, taskUpdateSchema } from "@/server/tasks/schema";
+import { assignableMembers, firstName } from "@/server/tasks/assignment";
 import { validateAssignees } from "@/server/tasks/create";
 import { queueTaskPropagation, teardownTask } from "@/google/task-integrations";
 import { retryFailedForTask } from "@/google/queue";
@@ -87,6 +88,49 @@ export async function updateTask(raw: unknown): Promise<ActionResult<undefined>>
     bus.publish({ type: "requests.changed" });
     safeRevalidate("/dashboard", "/requests");
     return undefined;
+  });
+}
+
+/**
+ * Long-press → Assign executive (ADR 0008). Admin: any task; Team Leader: only tasks of their own team, and only
+ * people of that team. Replaces the assignees, keeps Admin's preferences, and syncs Calendar / Drive / Chat members.
+ */
+export async function assignExecutives(taskId: string, userIds: string[]): Promise<ActionResult<{ assigneeIds: string[] }>> {
+  return wrap(async () => {
+    const user = await requireUser();
+    if (user.role !== "ADMIN" && user.role !== "TEAM_LEADER") throw new ForbiddenError();
+    const input = assignExecutivesSchema.parse({ taskId, userIds });
+    const ids = Array.from(new Set(input.userIds));
+    const t = await prisma.task.findUnique({ where: { id: input.taskId }, include: { assignees: true, teams: true } });
+    if (!t || t.deletedAt) throw new Error("Task not found");
+    if (t.status === "COMPLETED") throw new Error("This task is already completed");
+    const taskTeams = t.teams.map((x) => x.teamId);
+    let teamIds = taskTeams;
+    if (user.role === "TEAM_LEADER") {
+      if (!user.teamId || !taskTeams.includes(user.teamId)) throw new ForbiddenError("You can only assign tasks of your own team");
+      teamIds = [user.teamId];
+    }
+    if (!teamIds.length) throw new Error("This task has no team — edit it and pick a team first");
+    const members = await assignableMembers(teamIds);
+    const outside = ids.filter((id) => !members.some((m) => m.id === id));
+    if (outside.length) throw new ForbiddenError("Only people in this task's team can be assigned");
+    const before = t.assignees.map((a) => a.userId);
+    await prisma.task.update({
+      where: { id: t.id },
+      data: { assignedById: user.id, assignees: { deleteMany: {}, create: ids.map((userId) => ({ userId })) } },
+    });
+    await audit(user.id, "task.assignExecutives", "Task", t.id, { assigneeIds: before }, { assigneeIds: ids, preferredAssigneeIds: t.preferredAssigneeIds });
+    await queueTaskPropagation(t.id); // Calendar attendees, Drive sharing, Chat members
+    const added = ids.filter((id) => id !== user.id && !before.includes(id));
+    if (added.length) {
+      await notify({ userIds: added, kind: "TASK_ASSIGNED", title: `New task from ${firstName(user.name)}: ${t.title}`, href: `/dashboard?task=${t.id}`, taskId: t.id, chat: false });
+    }
+    void import("@/google/queue").then((q) => q.processPending()).catch(() => undefined);
+    void publishTaskChanged(t.id);
+    const removed = before.filter((id) => !ids.includes(id));
+    if (removed.length) bus.publish({ type: "task.changed", taskId: t.id, userIds: removed });
+    safeRevalidate("/dashboard");
+    return { assigneeIds: ids };
   });
 }
 

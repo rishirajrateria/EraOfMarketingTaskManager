@@ -214,3 +214,31 @@ export const hoursToMinutes = (hours: string): number | null => {
   return hours.trim() === "" || Number.isNaN(h) ? null : Math.round(h * 60);
 };
 export const minutesToHours = (min: number | null | undefined): string => (min == null ? "" : String(Math.round((min / 60) * 100) / 100));
+
+/** Multi-select pill picker used for Teams (Add Work) and Speciality (Add Executive / Team Leader). */
+export function PillPicker({ options, value, onChange, empty }: { options: { id: string; name: string }[]; value: string[]; onChange: (ids: string[]) => void; empty?: React.ReactNode }) {
+  if (!options.length) return <p className="text-xs text-gray-500">{empty}</p>;
+  return (
+    <div className="flex flex-wrap gap-1.5" role="group">
+      {options.map((o) => {
+        const on = value.includes(o.id);
+        return (
+          <button
+            key={o.id}
+            type="button"
+            aria-pressed={on}
+            onClick={() => onChange(on ? value.filter((x) => x !== o.id) : [...value, o.id])}
+            className={clsx("touch-target rounded-full px-3 text-xs font-medium transition", on ? "bg-gray-900 text-white" : "glass-chip text-gray-800")}
+          >
+            {o.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Small trailing "edit" pill on tappable admin rows. */
+export function EditPill() {
+  return <span className="glass-chip shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-medium text-gray-700">edit</span>;
+}

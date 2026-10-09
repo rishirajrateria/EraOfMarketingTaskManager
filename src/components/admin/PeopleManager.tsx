@@ -8,7 +8,7 @@ import { BarChip, BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZo
 import { EmptyState, ListRow, Screen, ScreenHeader, SectionLabel, StatusPill, useAdminAction } from "@/components/admin/AdminUi";
 import { PeopleForm, type PeopleFormValues } from "@/components/admin/PeopleForm";
 import { createUser, deactivateUser, reactivateUser, updateUser } from "@/server/admin/actions";
-import type { LeaderOption, PersonRow, TeamOption } from "@/server/admin/queries";
+import type { LeaderOption, PersonRow, TeamOption, WorkTypeOption } from "@/server/admin/queries";
 
 /** CA access is parked (ADR 0004): no chip / entry point, but legacy CA rows stay visible so Admin can re-role them. */
 const GROUPS: { role: Role; label: string }[] = [
@@ -26,6 +26,7 @@ export function PeopleManager({
   users,
   teams,
   leaders,
+  workTypes,
   initialRole,
   workspaceDomain,
   meId,
@@ -33,6 +34,7 @@ export function PeopleManager({
   users: PersonRow[];
   teams: TeamOption[];
   leaders: LeaderOption[];
+  workTypes: WorkTypeOption[];
   initialRole: Role;
   workspaceDomain: string;
   meId: string;
@@ -96,7 +98,12 @@ export function PeopleManager({
               <ListRow
                 key={u.id}
                 title={u.name}
-                subtitle={[u.email, u.team?.name, u.role === "EXECUTIVE" && u.teamLeader ? `→ ${u.teamLeader.name}` : null].filter(Boolean).join(" · ")}
+                subtitle={
+                  <>
+                    {[u.email, u.team?.name, u.role === "EXECUTIVE" && u.teamLeader ? `→ ${u.teamLeader.name}` : null].filter(Boolean).join(" · ")}
+                    {u.role === "EXECUTIVE" || u.role === "TEAM_LEADER" ? <SpecialityChips names={u.specialities.map((w) => w.name)} /> : null}
+                  </>
+                }
                 leading={<Avatar name={u.name} src={u.avatar} size={32} />}
                 trailing={
                   <span className="flex flex-col items-end gap-1">
@@ -124,6 +131,7 @@ export function PeopleManager({
               defaultRole={initialRole}
               teams={teams}
               leaders={leaders}
+              workTypes={workTypes}
               workspaceDomain={workspaceDomain}
               busy={busy}
               onSubmit={submit}
@@ -146,3 +154,20 @@ export function PeopleManager({
   );
 }
 
+
+/** "✓ Reels" chips under an executive / team leader (ADR 0008). */
+function SpecialityChips({ names }: { names: string[] }) {
+  return (
+    <span className="mt-1 flex flex-wrap gap-1">
+      {names.length ? (
+        names.map((n) => (
+          <span key={n} className="glass-chip rounded-full px-2 py-0.5 text-[10px] font-medium text-gray-700">
+            ✓ {n}
+          </span>
+        ))
+      ) : (
+        <span className="glass-chip rounded-full px-2 py-0.5 text-[10px] text-gray-400">no speciality set</span>
+      )}
+    </span>
+  );
+}
