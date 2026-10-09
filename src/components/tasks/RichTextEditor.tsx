@@ -67,7 +67,7 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
   }));
 
   return (
-    <div className={clsx(dark ? "" : "rounded-lg border border-gray-300 bg-white focus-within:border-brand-blue", className)}>
+    <div className={clsx(dark ? "" : "rounded-xl border border-white/70 bg-white/60 backdrop-blur-md focus-within:border-brand-blue/60", className)}>
       <div className={clsx("flex items-center", dark ? "mb-3 gap-3 px-2 text-[#9CA3AF]" : "gap-1 border-b border-gray-200 px-1")}>
         {COMMANDS.map((c) => (
           <button
@@ -100,7 +100,7 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
           "rte prose-sm relative w-full outline-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5",
           "empty:before:pointer-events-none empty:before:content-[attr(data-placeholder)]",
           dark
-            ? "rounded-3xl bg-[#2A2A2A] px-4 py-3 text-sm text-white empty:before:absolute empty:before:inset-0 empty:before:flex empty:before:items-center empty:before:justify-center empty:before:text-[#9CA3AF]"
+            ? "glass-dark-panel rounded-3xl px-4 py-3 text-sm text-white backdrop-blur-md empty:before:absolute empty:before:inset-0 empty:before:flex empty:before:items-center empty:before:justify-center empty:before:text-[#9CA3AF]"
             : "px-3 py-2 text-sm empty:before:text-gray-400",
           minHeightClass,
         )}

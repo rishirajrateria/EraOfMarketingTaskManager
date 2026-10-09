@@ -229,7 +229,9 @@ describe("invoices", () => {
   it("job: recurring template spawns a new occurrence and advances nextRunAt; stopRecurrence halts it", async () => {
     const { createInvoice, stopRecurrence } = await import("@/server/finance/invoices");
     const { run } = await import("@/jobs/invoices");
-    const created = await createInvoice({ ...baseInput(seed.client.id), kind: "RECURRING", recurrence: { frequency: "MONTHLY", interval: 1 }, sendNow: true, dueDate: "2026-09-25" });
+    // due date relative to today so the cloned occurrence is never already overdue when the job runs
+    const dueDate = new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10);
+    const created = await createInvoice({ ...baseInput(seed.client.id), kind: "RECURRING", recurrence: { frequency: "MONTHLY", interval: 1 }, sendNow: true, dueDate });
     if (!created.ok) throw new Error(created.error);
     const rule = await testDb.recurrenceRule.findFirstOrThrow();
     const runAt = new Date(rule.nextRunAt!.getTime() + 1000);

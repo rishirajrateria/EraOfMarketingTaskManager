@@ -25,8 +25,8 @@ function openExternal(url: string) {
   window.open(url, "_blank", "noopener");
 }
 
-const CHIP = "max-w-[140px] shrink-0 truncate rounded-md bg-[#E5E7EB] px-2 py-0.5 text-[12px] leading-4 text-[#111]";
-const CHIP_ME = "shrink-0 rounded-md bg-[#DCE3F5] px-2 py-0.5 text-[12px] font-semibold leading-4 text-[#1e40af]";
+const CHIP = "glass-chip max-w-[140px] shrink-0 truncate rounded-md px-2 py-0.5 text-[12px] leading-4 text-[#111]";
+const CHIP_ME = "glass-chip shrink-0 rounded-md px-2 py-0.5 text-[12px] font-semibold leading-4 text-[#1e40af]";
 
 /**
  * Team Leader only: assignee first names (lowercase) printed beside the title, or a person
@@ -72,7 +72,7 @@ export function TaskRow({ t, data, h }: { t: Row; data: DashboardData; h: RowHan
   return (
     <li
       {...press}
-      className={clsx("no-select relative border-b border-white px-3 py-2 pl-[14px]", `row-${t.colour}`)}
+      className={clsx("no-select relative border-b border-white/70 px-3 py-2 pl-[14px]", `row-${t.colour}`)}
       data-task-id={t.id}
       aria-label={t.title}
     >
@@ -118,7 +118,7 @@ export function TaskRow({ t, data, h }: { t: Row; data: DashboardData; h: RowHan
           <div className="flex items-center gap-1.5 overflow-hidden">
             <span className={CHIP}>{t.client.name}</span>
             <span className={CHIP_ME}>{assigneeChip(t, data.me.id)}</span>
-            {t.type === "MEETING" ? <span className="shrink-0 rounded-md bg-[#EDE9FE] px-2 py-0.5 text-[12px] leading-4 text-[#6D28D9]">Meeting</span> : null}
+            {t.type === "MEETING" ? <span className="glass-chip shrink-0 rounded-md px-2 py-0.5 text-[12px] leading-4 text-[#6D28D9]">Meeting</span> : null}
           </div>
           <div className="mt-1.5 flex items-center gap-2.5">
             <IconBtn label="Task details" onClick={() => h.onOpen(t)}>

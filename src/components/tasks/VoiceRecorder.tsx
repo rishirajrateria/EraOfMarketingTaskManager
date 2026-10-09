@@ -120,7 +120,7 @@ export function VoiceInputBar({
   };
 
   return (
-    <div className="mx-3 my-2 flex h-11 items-center gap-2 rounded-[10px] bg-[#2B2B2B] px-3 text-white">
+    <div className="glass-dark-panel mx-3 my-2 flex h-11 items-center gap-2 rounded-[10px] px-3 text-white backdrop-blur-md">
       <button type="button" onClick={onUpload} disabled={disabled} aria-label="Upload files" className="flex h-8 w-8 items-center justify-center rounded disabled:opacity-50">
         <Upload size={20} strokeWidth={2} aria-hidden />
       </button>
@@ -175,7 +175,7 @@ export function VoiceNotePill({ note, seed, onRemove }: { note: VoiceNote; seed:
   };
   const press = useLongPress(() => onRemove?.(), toggle);
   return (
-    <li className="relative h-[26px] w-[170px] shrink-0 rounded-md bg-[#111]">
+    <li className="glass-dark-panel relative h-[26px] w-[170px] shrink-0 rounded-md bg-black/40">
       <button
         type="button"
         {...press}

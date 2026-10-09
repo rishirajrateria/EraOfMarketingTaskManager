@@ -190,7 +190,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
   return (
     <>
       <Sheet open={open} onClose={subSheetOpen ? () => undefined : close} full>
-        <div className="flex h-full min-h-full flex-col bg-[#1E1E1E]">
+        <div className="flex h-full min-h-full flex-col bg-gradient-to-b from-[#15171d] via-[#1b1e26] to-[#101218]">
           <AddTaskHeader loads={loads} />
           <AddTaskBody
               form={liveForm}

@@ -23,7 +23,7 @@ type Props = {
   onError: (message: string) => void;
 };
 
-const ICON_BTN = "flex h-9 w-9 items-center justify-center rounded-md bg-[#2B2B2B] text-white";
+const ICON_BTN = "glass-dark-panel flex h-9 w-9 items-center justify-center rounded-md text-white backdrop-blur-md";
 
 
 /** DARK BODY: star/loop column, title, rich description, assignee + send row, input bar, voice notes, file chips. */
@@ -35,7 +35,7 @@ export function AddTaskBody(p: Props) {
   const disabled = !!busy;
 
   return (
-    <section className="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-[#1E1E1E] text-white">
+    <section className="relative flex min-h-0 flex-1 flex-col overflow-y-auto text-white">
       <div className="absolute right-3 top-3 flex flex-col gap-2">
         <button
           type="button"
@@ -112,7 +112,7 @@ export function AddTaskBody(p: Props) {
           {files.length ? (
             <ul className="mx-3 mb-2 flex flex-wrap gap-1">
               {files.map((f, i) => (
-                <li key={`${f.name}-${i}`} className="flex h-5 items-center gap-1 rounded-full bg-[#2B2B2B] pl-2 pr-1 text-[10px] text-[#D1D5DB]">
+                <li key={`${f.name}-${i}`} className="glass-dark-panel flex h-5 items-center gap-1 rounded-full pl-2 pr-1 text-[10px] text-[#D1D5DB]">
                   <span className="max-w-32 truncate">{f.name}</span>
                   <button type="button" onClick={() => setFiles(files.filter((_, j) => j !== i))} aria-label={`Remove ${f.name}`} className="flex h-4 w-4 items-center justify-center text-[#9CA3AF]">
                     <X size={10} aria-hidden />

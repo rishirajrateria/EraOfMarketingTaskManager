@@ -37,7 +37,7 @@ export function FilterStrip({ filters, onChange }: { filters: DashboardFilters; 
   const recurringActive = icon("recurring") || filters.recurringOnly;
   const pausedActive = icon("paused") || filters.pausedOnly;
   return (
-    <div className="flex h-10 shrink-0 items-center justify-between gap-1.5 bg-white px-2.5" role="group" aria-label="Filter by state and row colour">
+    <div className="flex h-10 shrink-0 items-center justify-between gap-1.5 border-t border-white/70 bg-white/55 px-2.5 backdrop-blur-xl" role="group" aria-label="Filter by state and row colour">
       <IconToggle active={icon("restarted")} label="Restarted tasks" onClick={() => toggleIcon("restarted")}>
         <RotateCcw size={15} strokeWidth={2.5} />
       </IconToggle>
@@ -46,7 +46,7 @@ export function FilterStrip({ filters, onChange }: { filters: DashboardFilters; 
         aria-pressed={filters.completed}
         title="Show completed tasks"
         onClick={() => onChange({ ...filters, completed: !filters.completed })}
-        className={clsx("no-select h-[22px] shrink-0 rounded-full px-2.5 text-[11px] leading-none transition", filters.completed ? "bg-[#9CA3AF] text-white" : "bg-[#E0E0E0] text-[#9CA3AF]")}
+        className={clsx("no-select h-[22px] shrink-0 rounded-full px-2.5 text-[11px] leading-none transition", filters.completed ? "bg-[#9CA3AF] text-white" : "glass-chip text-[#9CA3AF]")}
       >
         completed
       </button>
@@ -66,7 +66,7 @@ export function FilterStrip({ filters, onChange }: { filters: DashboardFilters; 
             aria-label={c.label}
             title={c.label}
             onClick={() => onChange({ ...filters, colours: toggleIn(filters.colours, c.key) })}
-            className={clsx("no-select h-[18px] w-[46px] shrink-0 rounded-[4px] transition", active && "shadow-[inset_0_0_0_2px_#111]")}
+            className={clsx("no-select h-[18px] w-[46px] shrink-0 rounded-[5px] border border-white/70 shadow-sm transition", active && "shadow-[inset_0_0_0_2px_#111]")}
             style={{ backgroundColor: c.hex }}
           />
         );

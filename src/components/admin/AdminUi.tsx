@@ -44,7 +44,7 @@ export function Fab({ onClick, label = "Add" }: { onClick: () => void; label?: s
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="fixed bottom-6 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-brand-green text-3xl leading-none text-white shadow-lg active:bg-brand-green-dark"
+      className="fixed bottom-6 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-b from-[#22b14c] to-[#16a34a] text-3xl leading-none shadow-[0_8px_20px_rgba(22,163,74,.4),inset_0_1px_0_rgba(255,255,255,.35)] text-white shadow-lg active:bg-brand-green-dark"
       style={{ right: "max(1rem, calc(50% - 240px + 1rem))" }}
     >
       ＋
@@ -54,7 +54,7 @@ export function Fab({ onClick, label = "Add" }: { onClick: () => void; label?: s
 
 export function ScreenHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <div className="bg-brand-blue px-4 pb-4 pt-3 text-white">
+    <div className="bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 px-4 pb-4 pt-3 text-white backdrop-blur-xl">
       <h1 className="text-lg font-bold">{title}</h1>
       {subtitle ? <p className="text-xs text-white/80">{subtitle}</p> : null}
     </div>
@@ -90,7 +90,7 @@ export function ListRow({
       type="button"
       onClick={onClick}
       className={clsx(
-        "flex w-full items-center gap-3 border-b border-gray-100 bg-white px-4 py-3 text-left",
+        "flex w-full items-center gap-3 border-b border-white/60 bg-white/50 px-4 py-3 text-left backdrop-blur-md",
         inactive && "opacity-60",
         onClick && "active:bg-gray-50",
       )}
@@ -163,7 +163,7 @@ export function ColourInput({ value, onChange }: { value: string; onChange: (v: 
 /** Sticky submit/cancel footer used inside form Sheets. */
 export function FormFooter({ busy, onCancel, submitLabel = "Save", extra }: { busy: boolean; onCancel: () => void; submitLabel?: string; extra?: React.ReactNode }) {
   return (
-    <div className="sticky bottom-0 flex items-center gap-2 border-t bg-white px-4 py-3">
+    <div className="sticky bottom-0 flex items-center gap-2 border-t border-white/60 bg-white/70 px-4 py-3 backdrop-blur-xl">
       {extra}
       <span className="flex-1" />
       <button type="button" className={btnSecondary} onClick={onCancel} disabled={busy}>

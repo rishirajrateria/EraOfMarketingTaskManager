@@ -17,7 +17,7 @@ function GreenPill({ active, label, onClick, children }: { active: boolean; labe
       aria-label={label}
       title={label}
       onClick={onClick}
-      className={clsx("no-select flex h-[22px] shrink-0 items-center whitespace-nowrap rounded-full px-2.5 text-[11px] leading-none text-[#111] transition", active ? "bg-white" : "bg-green-pill")}
+      className={clsx("no-select flex h-[22px] shrink-0 items-center whitespace-nowrap rounded-full px-2.5 text-[11px] leading-none text-[#111] transition", active ? "bg-white/90 shadow-sm backdrop-blur-md" : "bg-green-pill")}
     >
       {children}
     </button>
@@ -82,11 +82,11 @@ export function BottomBar({
             today
           </GreenPill>
         </div>
-        <div className="flex flex-[38] items-center justify-evenly bg-white px-1">
+        <div className="flex flex-[38] items-center justify-evenly bg-white/60 px-1 backdrop-blur-xl">
           <button type="button" aria-label="Schedule a meeting" title="Meeting" onClick={() => onAdd("MEETING")} className="flex h-8 w-8 items-center justify-center">
             <MeetIcon size={22} />
           </button>
-          <button type="button" onClick={() => onAdd("WORK")} className="no-select flex h-[22px] items-center rounded-full bg-[#E5E7EB] px-3 text-[11px] leading-none text-[#111]">
+          <button type="button" onClick={() => onAdd("WORK")} className="no-select glass-chip flex h-[22px] items-center rounded-full px-3 text-[11px] leading-none text-[#111]">
             Work
           </button>
           <button type="button" aria-label="Add task" onClick={() => onAdd("CHOOSE")} className="flex h-8 w-8 items-center justify-center text-[#111]">

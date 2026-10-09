@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * Admin menu tray (SPEC §11) laid out as in the "menu bar features" design: a translucent panel over the
@@ -34,11 +36,14 @@ export const MENU_GROUPS: { href: string; label: string }[][] = [
 export const MENU_ITEMS = MENU_GROUPS.flat();
 
 export function MenuTray({ open, onClose }: { open: boolean; onClose: () => void }) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-40 flex bg-black/10" onClick={onClose}>
+  // Portal to <body> so blurred/filtered ancestors can never clip the fixed overlay.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!open || !mounted) return null;
+  return createPortal(
+    <div className="fixed inset-0 z-40 flex bg-black/15 backdrop-blur-[2px]" onClick={onClose}>
       <nav
-        className="relative h-full w-[74%] max-w-[360px] overflow-y-auto bg-white/90 pb-24 backdrop-blur-sm"
+        className="relative h-full w-[74%] max-w-[360px] overflow-y-auto border-r border-white/60 bg-white/70 pb-24 shadow-[8px_0_40px_rgba(16,24,40,.15)] backdrop-blur-xl"
         onClick={(e) => e.stopPropagation()}
         aria-label="Admin menu"
       >
@@ -83,5 +88,7 @@ export function MenuTray({ open, onClose }: { open: boolean; onClose: () => void
         </div>
       </nav>
     </div>
+    ,
+    document.body,
   );
 }

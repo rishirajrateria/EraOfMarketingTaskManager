@@ -33,7 +33,7 @@ export function RedDot({ corner, label }: { corner: "tl" | "tr"; label: string }
   return <span aria-label={label} title={label} className={clsx("absolute -top-1 h-[11px] w-[11px] rounded-full bg-[#EF4444]", corner === "tl" ? "-left-1" : "-right-1")} />;
 }
 
-const PILL = "inline-flex h-[22px] items-center rounded-full bg-[#E5E7EB] px-2.5 text-[11px] leading-none whitespace-nowrap";
+const PILL = "glass-chip inline-flex h-[22px] items-center rounded-full px-2.5 text-[11px] leading-none whitespace-nowrap";
 
 /**
  * Right-hand column of pills (the design the client picked): allocated hours, scheduled start – end,
@@ -53,7 +53,7 @@ export function RightPills({ t, tz }: { t: Row; tz: string }) {
         {fmtTime(start, tz)} – {fmtTime(end, tz)}
       </span>
       {t.actualStart ? (
-        <span className={clsx(PILL, "bg-[#F3F4F6] text-[#6B7280]")}>
+        <span className={clsx(PILL, "text-[#6B7280] opacity-80")}>
           {fmtTime(new Date(t.actualStart), tz)} – {t.actualEnd ? fmtTime(new Date(t.actualEnd), tz) : "…"}
         </span>
       ) : null}
@@ -82,7 +82,7 @@ export function CompletionCircle({ t, onTap, onRestart }: { t: Row; onTap: () =>
           e.stopPropagation();
           onRestart();
         }}
-        className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border-2 border-[#111] text-[#111]"
+        className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border-2 border-[#111] bg-white/40 text-[#111] shadow-sm backdrop-blur-sm"
       >
         <RotateCcw size={15} strokeWidth={2.5} />
       </button>
@@ -100,7 +100,7 @@ export function CompletionCircle({ t, onTap, onRestart }: { t: Row; onTap: () =>
         e.stopPropagation();
         onTap();
       }}
-      className={clsx("flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-transparent text-[#111]", ring)}
+      className={clsx("flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full text-[#111] shadow-sm backdrop-blur-sm", t.doubtRaised ? "" : "bg-white/40", ring)}
     >
       {t.paused ? <Pause size={13} strokeWidth={3} /> : t.status === "FINISH_REQUESTED" ? <Check size={15} strokeWidth={3} aria-label="Finish requested" /> : null}
     </button>

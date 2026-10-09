@@ -24,16 +24,16 @@ export function Sheet({
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={onClose} role="dialog" aria-modal>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 backdrop-blur-[2px]" onClick={onClose} role="dialog" aria-modal>
       <div
         onClick={(e) => e.stopPropagation()}
         className={clsx(
-          "sheet-up w-full max-w-[480px] overflow-y-auto bg-white shadow-2xl",
+          "sheet-up glass-strong w-full max-w-[480px] overflow-y-auto shadow-2xl",
           full ? "h-[100dvh]" : "max-h-[85dvh] rounded-t-2xl",
         )}
       >
         {title ? (
-          <div className="sticky top-0 flex items-center justify-between border-b bg-white px-4 py-3">
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/60 bg-white/70 px-4 py-3 backdrop-blur-md">
             <h2 className="text-base font-semibold">{title}</h2>
             <button className="touch-target text-gray-500" onClick={onClose} aria-label="Close">
               ✕
@@ -48,7 +48,7 @@ export function Sheet({
 
 export function ActionList({ items }: { items: { label: string; onClick: () => void; danger?: boolean; hint?: string }[] }) {
   return (
-    <ul className="divide-y">
+    <ul className="divide-y divide-white/60">
       {items.map((it) => (
         <li key={it.label}>
           <button

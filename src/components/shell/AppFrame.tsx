@@ -48,7 +48,7 @@ export function AppFrame({
   return (
     <div className="phone-frame">
       {showHeader ? (
-        <header className="sticky top-0 z-30 flex items-center gap-2 bg-brand-blue-dark px-3 py-2 text-white">
+        <header className="sticky top-0 z-30 flex items-center gap-2 bg-gradient-to-r from-[#174ea6]/90 to-[#1e63d6]/85 px-3 py-2 text-white shadow-[inset_0_-1px_0_rgba(255,255,255,.25)] backdrop-blur-xl">
           {user.role === "ADMIN" ? (
             <button className="touch-target -ml-2 text-2xl" onClick={() => setMenuOpen(true)} aria-label="Menu">
               ☰

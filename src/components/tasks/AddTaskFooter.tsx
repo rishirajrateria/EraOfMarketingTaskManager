@@ -57,7 +57,7 @@ export function AddTaskTags({
   );
 
   return (
-    <div className="shrink-0 bg-[#5FC46A]">
+    <div className="bg-green-area shrink-0">
       {data.role === "ADMIN" ? (
         <TagRow label="Teams">
           <TagPill
@@ -152,7 +152,7 @@ export function AddTaskBottomBar({
   const startIs = (kind: "tomorrow" | "today") => !!form.scheduledStart && form.scheduledStart === shortcutStart(kind, new Date(), tz);
   return (
     <div className="flex h-11 shrink-0 items-stretch">
-      <div className="flex w-[62%] items-center gap-1.5 bg-[#2DB84A] px-2 text-white">
+      <div className="bg-green-bar flex w-[62%] items-center gap-1.5 px-2 text-white">
         <button type="button" onClick={onOpenSchedule} aria-label="Schedule" className="flex h-8 w-7 shrink-0 items-center justify-center">
           <CalendarDays size={22} aria-hidden />
         </button>
@@ -166,7 +166,7 @@ export function AddTaskBottomBar({
           today
         </TagPill>
       </div>
-      <div className="flex w-[38%] items-center justify-between gap-1 bg-white px-2 text-[#111]">
+      <div className="flex w-[38%] items-center justify-between gap-1 bg-white/60 px-2 text-[#111] backdrop-blur-xl">
         <button type="button" onClick={() => onType("MEETING")} aria-pressed={type === "MEETING"} aria-label="Meeting" className={clsx("flex h-8 w-7 items-center justify-center rounded", type === "MEETING" && "bg-[#E5E7EB]")}>
           <MeetIcon size={26} />
         </button>
@@ -174,7 +174,7 @@ export function AddTaskBottomBar({
           type="button"
           onClick={() => onType("WORK")}
           aria-pressed={type === "WORK"}
-          className={clsx("no-select h-[22px] rounded-full bg-[#E5E7EB] px-2.5 text-[11px] font-medium leading-none", type === "WORK" ? "text-[#111] ring-1 ring-[#111]/60" : "text-[#4B5563]")}
+          className={clsx("no-select glass-chip h-[22px] rounded-full px-2.5 text-[11px] font-medium leading-none", type === "WORK" ? "text-[#111] ring-1 ring-[#111]/60" : "text-[#4B5563]")}
         >
           Work
         </button>
