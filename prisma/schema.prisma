@@ -51,6 +51,15 @@ enum RecurrenceFrequency {
   CUSTOM
 }
 
+/// Task repeat rules (ADR 0010). Null on legacy task rules and on invoice schedules, which keep using `frequency`.
+enum RepeatFrequency {
+  DAILY
+  WEEKDAYS
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
 enum RecurrenceTrigger {
   ON_COMPLETE
   ON_SCHEDULE
@@ -501,6 +510,15 @@ model RecurrenceRule {
   dayOfMonth    Int? // 1–28, used when monthAnchor = DAY
   notifyMinutes Int                 @default(540) // minutes after midnight (company tz) at which the occurrence is created and Admin notified
   endDate       DateTime? // null = infinite
+  // ---- task repeat rules (ADR 0010); null on legacy rules, which are mapped on read ----
+  repeatFreq    RepeatFrequency?
+  monthDay      Int? // MONTHLY on a date: 1–31, 32 = last day of the month
+  nthWeek       Int? // MONTHLY on a weekday: 1–4 = first…fourth, 5 = last
+  nthWeekday    Int? // 0 = Sunday … 6 = Saturday
+  yearMonth     Int? // YEARLY: 0–11
+  yearDay       Int? // YEARLY: 1–31 (clamped to the month)
+  endAfterCount Int? // ends after N occurrences (the first included)
+  anchorDate    String? // yyyy-MM-dd (company tz) of the first occurrence; intervals count from it
   nextRunAt     DateTime?
   stopped       Boolean             @default(false)
   tasks         Task[]

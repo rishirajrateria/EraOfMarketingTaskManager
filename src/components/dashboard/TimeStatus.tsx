@@ -25,9 +25,9 @@ export function TimeStatus({
   const select = (id: string) => onChange({ ...filters, pill: filters.pill === id ? null : id });
   const twoCol = data.pills.length === 2;
   return (
-    <section className="shrink-0 bg-cyan-area px-2.5 pb-2" aria-label="Time status">
+    <section className="shrink-0 bg-cyan-area px-3 pb-3 pt-[env(safe-area-inset-top)]" aria-label="Time status">
       {topBar}
-      <div className="mt-1.5 flex gap-3">
+      <div className="mt-1 flex gap-2">
         {data.pills.map((g, i) => {
           const alignEnd = twoCol && i === 1;
           return (
@@ -38,7 +38,7 @@ export function TimeStatus({
               className={clsx("scrollbar-none flex min-w-0 flex-1 flex-col gap-2 overflow-y-auto", alignEnd ? "items-end" : twoCol ? "items-start" : "items-stretch")}
               style={{ height: COLUMN_PX }}
             >
-              {g.items.length === 0 ? <span className="px-1 text-[12px] font-semibold text-white/70">—</span> : null}
+              {g.items.length === 0 ? <span className="px-1 text-[12px] font-semibold text-z1icon">—</span> : null}
               {g.items.map((it) => {
                 const active = filters.pill === it.id;
                 return (
@@ -49,13 +49,13 @@ export function TimeStatus({
                     title={pillText(it.label, it.minutes)}
                     onClick={() => select(it.id)}
                     className={clsx(
-                      "no-select flex h-8 shrink-0 items-center rounded-[6px] px-2.5 text-left text-[13px] font-bold leading-none text-[#111] transition",
+                      "no-select flex h-8 shrink-0 items-center rounded-[10px] px-2.5 text-left text-[12.5px] font-bold leading-none transition",
                       twoCol ? "w-auto max-w-full" : "w-full",
-                      active ? "bg-cyan-pill-active shadow-[inset_0_0_0_2px_#0E7490]" : "bg-cyan-pill",
+                      active ? "bg-cyan-pill-active" : "bg-cyan-pill",
                     )}
                   >
                     <span className="truncate">{it.id.startsWith("date:") ? datePillLabel(it.id, it.label) : shortPillLabel(it.label)}</span>
-                    <span className="shrink-0 whitespace-pre">- {pillHours(it.minutes)}</span>
+                    <span className="shrink-0 whitespace-pre font-semibold opacity-85">- {pillHours(it.minutes)}</span>
                   </button>
                 );
               })}

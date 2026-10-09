@@ -1,8 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Mic, Square, Upload, X } from "lucide-react";
 import { clsx } from "@/lib/clsx";
-import { useLongPress } from "@/components/ui/useLongPress";
+import { ChipButton } from "@/components/ui/Controls";
+import { fmtSecs } from "@/components/tasks/add-task-helpers";
 
 export type VoiceNote = { id: string; blob: Blob; durationSec: number; url: string };
 
@@ -83,27 +83,35 @@ export function useMediaRecorder() {
   return { recording, seconds, error, start, stop, supported: recorderSupported() };
 }
 
-/** Deterministic pseudo-waveform tick heights (px) so pills look stable across renders. */
-function ticks(seed: number, count = 26): number[] {
-  return Array.from({ length: count }, (_, i) => 3 + ((Math.sin(seed * 7 + i * 1.7) + 1) / 2) * 11);
+/** Filled mic glyph from the prototype. */
+function MicGlyph() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" fill="currentColor" />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3" />
+    </svg>
+  );
 }
 
+const newId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
 /**
- * The dark INPUT BAR under the description: upload ↥ (left), thin track, mic (right).
- * The mic starts/stops a voice-note recording; while recording it shows a red dot + seconds.
+ * Voice note (prototype `micToggle`): a big round mic — tap to record, tap again to stop. While recording it turns
+ * red with a pulse and a live m:ss timer; each note becomes a chip with its duration, ▶ and ✕. The notes are uploaded
+ * as VOICE_NOTE attachments after the task is created (AddTaskSheet → uploadAttachment).
  */
-export function VoiceInputBar({
+export function VoiceNoteRecorder({
   notes,
   onChange,
-  onUpload,
   disabled,
   onError,
+  onAttached,
 }: {
   notes: VoiceNote[];
   onChange: (notes: VoiceNote[]) => void;
-  onUpload: () => void;
   disabled?: boolean;
   onError?: (message: string) => void;
+  onAttached?: () => void;
 }) {
   const r = useMediaRecorder();
 
@@ -111,60 +119,55 @@ export function VoiceInputBar({
     if (r.recording) {
       const res = await r.stop();
       if (!res) return;
-      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      onChange([...notes, { id, blob: res.blob, durationSec: res.durationSec, url: URL.createObjectURL(res.blob) }]);
-    } else {
-      const ok = await r.start();
-      if (!ok) onError?.(r.error ?? "Recording is not supported in this browser");
+      onChange([...notes, { id: newId(), blob: res.blob, durationSec: res.durationSec, url: URL.createObjectURL(res.blob) }]);
+      onAttached?.();
+      return;
     }
+    const ok = await r.start();
+    if (!ok) onError?.(r.error ?? "Recording is not supported in this browser");
+  };
+
+  const remove = (n: VoiceNote) => {
+    URL.revokeObjectURL(n.url);
+    onChange(notes.filter((x) => x.id !== n.id));
   };
 
   return (
-    <div className="glass-dark-panel mx-3 my-2 flex h-11 items-center gap-2 rounded-[10px] px-3 text-white backdrop-blur-md">
-      <button type="button" onClick={onUpload} disabled={disabled} aria-label="Upload files" className="flex h-8 w-8 items-center justify-center rounded disabled:opacity-50">
-        <Upload size={20} strokeWidth={2} aria-hidden />
-      </button>
-      <div className="flex h-full flex-1 items-center" aria-hidden>
-        {r.recording ? (
-          <span className="flex items-center gap-2 text-xs text-white">
-            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" /> {r.seconds}s
-          </span>
-        ) : (
-          <span className="h-[3px] w-full rounded-full bg-[#3A3A3A]" />
-        )}
-      </div>
+    <div className="mt-4 flex items-center gap-3.5">
       <button
         type="button"
         onClick={toggle}
         disabled={disabled}
         aria-pressed={r.recording}
-        aria-label={r.recording ? "Stop recording" : "Record voice note"}
+        aria-label={r.recording ? "Stop recording" : "Record a voice note"}
         title={r.supported ? undefined : "Recording is not supported in this browser"}
-        className={clsx("flex h-8 w-8 items-center justify-center rounded disabled:opacity-50", r.recording && "text-red-400")}
+        className={clsx("mic-btn flex h-[60px] w-[60px] shrink-0 touch-none items-center justify-center rounded-full text-white disabled:opacity-50", r.recording && "rec")}
       >
-        {r.recording ? <Square size={18} fill="currentColor" aria-hidden /> : <Mic size={20} strokeWidth={2} aria-hidden />}
+        <MicGlyph />
       </button>
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5" aria-live="polite">
+        {r.recording ? (
+          <div className="text-[13px] font-bold text-[#dc2626]">● Recording {fmtSecs(r.seconds)} · tap to stop</div>
+        ) : notes.length ? (
+          <ul className="flex flex-col gap-1.5" aria-label="Voice notes">
+            {notes.map((n) => (
+              <VoiceNoteChip key={n.id} note={n} onRemove={() => remove(n)} />
+            ))}
+          </ul>
+        ) : (
+          <div className="text-[13px] leading-snug text-muted">
+            <b className="text-ink">Voice note</b>
+            <br />
+            Tap the mic to record, tap again to stop
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-/** Recorded voice notes: 170×26 dark pills with tick-mark waveform + "20s"; two per view, horizontally scrollable. */
-export function VoiceNoteStrip({ notes, onChange }: { notes: VoiceNote[]; onChange: (notes: VoiceNote[]) => void }) {
-  if (!notes.length) return null;
-  const remove = (n: VoiceNote) => {
-    URL.revokeObjectURL(n.url);
-    onChange(notes.filter((x) => x.id !== n.id));
-  };
-  return (
-    <ul className="scrollbar-none mx-3 flex gap-2 overflow-x-auto py-1" aria-label="Voice notes">
-      {notes.map((n, i) => (
-        <VoiceNotePill key={n.id} note={n} seed={i + 1} onRemove={() => remove(n)} />
-      ))}
-    </ul>
-  );
-}
-
-export function VoiceNotePill({ note, seed, onRemove }: { note: VoiceNote; seed: number; onRemove?: () => void }) {
+/** "🎙 0:42 ▮▮▮ ▶ ✕" chip for a recorded note. */
+export function VoiceNoteChip({ note, onRemove }: { note: VoiceNote; onRemove?: () => void }) {
   const audio = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const toggle = () => {
@@ -173,28 +176,19 @@ export function VoiceNotePill({ note, seed, onRemove }: { note: VoiceNote; seed:
     if (playing) a.pause();
     else void a.play();
   };
-  const press = useLongPress(() => onRemove?.(), toggle);
   return (
-    <li className="glass-dark-panel relative h-[26px] w-[170px] shrink-0 rounded-md bg-black/40">
-      <button
-        type="button"
-        {...press}
-        aria-label={`${playing ? "Pause" : "Play"} voice note, ${note.durationSec} seconds (long-press to remove)`}
-        className="flex h-full w-full items-center gap-2 pl-2 pr-6"
-      >
-        <span className="flex h-full flex-1 items-center gap-[2px] overflow-hidden" aria-hidden>
-          {ticks(seed).map((h, i) => (
-            <span key={i} className={clsx("w-px shrink-0 rounded-full", playing ? "bg-[#93C5FD]" : "bg-[#9CA3AF]")} style={{ height: `${h}px` }} />
-          ))}
-        </span>
-        <span className="text-[10px] leading-none text-[#D1D5DB]">{note.durationSec}s</span>
-      </button>
-      <audio ref={audio} src={note.url} preload="metadata" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} />
+    <li className="flex items-center gap-2 rounded-full border border-hair bg-chip py-1 pl-3 pr-1.5 text-xs text-ink">
+      <span className="shrink-0">🎙 {fmtSecs(note.durationSec)}</span>
+      <span className="vn-bars flex-1" aria-hidden />
+      <ChipButton on={playing} onClick={toggle} label={playing ? "Pause voice note" : "Play voice note"}>
+        {playing ? "❚❚" : "▶"}
+      </ChipButton>
       {onRemove ? (
-        <button type="button" onClick={onRemove} aria-label="Remove voice note" className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded text-[#9CA3AF] hover:text-white">
-          <X size={10} aria-hidden />
-        </button>
+        <ChipButton onClick={onRemove} label="Remove voice note">
+          ✕
+        </ChipButton>
       ) : null}
+      <audio ref={audio} src={note.url} preload="metadata" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} />
     </li>
   );
 }

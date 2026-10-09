@@ -5,13 +5,14 @@ import { wrap, type ActionResult } from "@/lib/action-result";
 import { audit } from "@/lib/audit";
 import { notify, publishTaskChanged } from "@/lib/notify";
 import { safeRevalidate } from "@/lib/revalidate";
-import { parseDateKey } from "@/lib/time";
+import { dateKey } from "@/lib/time";
 import { getSettings } from "@/lib/settings";
 import { proposeSlot, shiftDisplacedTasks, type SlotProposal } from "@/server/scheduling/slot";
 import { queueTaskCreation } from "@/google/task-integrations";
 import { taskInputSchema, type TaskInput } from "@/server/tasks/schema";
 import { firstName, planAssignment, type AssignmentPlan } from "@/server/tasks/assignment";
-import { nextRunAt } from "@/server/tasks/recurrence";
+import { nextRunAt, repeatRuleData } from "@/server/tasks/recurrence";
+import { completeRule } from "@/server/tasks/repeat-rule";
 import { ACTIVE_STATUSES } from "@/server/tasks/state";
 import { sanitizeDescription } from "@/lib/sanitize";
 import { z } from "zod";
@@ -76,19 +77,14 @@ async function notifyNewTask(
   });
 }
 
-async function buildRecurrence(input: TaskInput, tz: string) {
+/** Stores the repeat rule anchored on the first occurrence's day; `nextRunAt` = due time of the second one. */
+async function buildRecurrence(input: TaskInput, start: Date, tz: string) {
   if (!input.recurrence) return null;
-  const r = input.recurrence;
-  const rule = await prisma.recurrenceRule.create({
-    data: {
-      frequency: r.frequency,
-      interval: r.interval,
-      byWeekday: r.byWeekday,
-      trigger: r.trigger,
-      endDate: r.endDate ? parseDateKey(r.endDate, tz) : null,
-    },
-  });
-  return rule;
+  const { trigger, ...r } = input.recurrence;
+  const anchor = dateKey(start, tz);
+  const rule = completeRule({ ...r, anchor }, anchor);
+  const data = repeatRuleData(rule, tz);
+  return prisma.recurrenceRule.create({ data: { ...data, trigger, nextRunAt: nextRunAt(data, start, tz, 1) } });
 }
 
 export async function createTask(raw: unknown): Promise<ActionResult<CreateResult>> {
@@ -111,8 +107,7 @@ export async function createTask(raw: unknown): Promise<ActionResult<CreateResul
       start = slot.start;
       end = slot.end;
     }
-    const rule = await buildRecurrence(input, settings.timezone);
-    if (rule) await prisma.recurrenceRule.update({ where: { id: rule.id }, data: { nextRunAt: nextRunAt(rule, start!, settings.timezone) } });
+    const rule = await buildRecurrence(input, start!, settings.timezone);
 
     const task = await prisma.task.create({
       data: {
@@ -224,7 +219,7 @@ export async function addTaskInventory(assigneeIds: string[]): Promise<ActionRes
       }
     }
     const { inventoryFor } = await import("@/server/inventory/queries");
-    const { zonedStartOfDay, dateKey } = await import("@/lib/time");
+    const { zonedStartOfDay } = await import("@/lib/time");
     const { addDays, addMonths } = await import("date-fns");
     const tz = (await getSettings()).timezone;
     const today = zonedStartOfDay(new Date(), tz);

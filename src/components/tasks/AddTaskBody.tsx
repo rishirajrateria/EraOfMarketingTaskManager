@@ -1,19 +1,23 @@
 "use client";
 import { useRef } from "react";
-import { Repeat, Send, Star, Users, X } from "lucide-react";
+import { Users, X } from "lucide-react";
 import { clsx } from "@/lib/clsx";
+import { ChipButton, Stepper } from "@/components/ui/Controls";
 import { RichTextEditor, type RichTextEditorHandle } from "@/components/tasks/RichTextEditor";
 import { DictationButton } from "@/components/tasks/DictationButton";
-import { VoiceInputBar, VoiceNoteStrip, type VoiceNote } from "@/components/tasks/VoiceRecorder";
-import type { AddTaskForm } from "@/components/tasks/add-task-helpers";
+import { VoiceNoteRecorder, type VoiceNote } from "@/components/tasks/VoiceRecorder";
+import { HOUR_PRESETS, fmtHours, stepHours, type AddTaskForm } from "@/components/tasks/add-task-helpers";
+import { describeRule } from "@/server/tasks/repeat-rule";
 
 type Props = {
   form: AddTaskForm;
   patch: (p: Partial<AddTaskForm>) => void;
   titleError?: string;
+  hoursError?: string;
+  /** Meetings: the people glyph next to Save opens the attendee chooser. */
   canPickAssignees: boolean;
   onOpenAssignees: () => void;
-  onOpenLoop: () => void;
+  onOpenRepeat: () => void;
   onSubmit: () => void;
   voiceNotes: VoiceNote[];
   setVoiceNotes: (v: VoiceNote[]) => void;
@@ -21,77 +25,105 @@ type Props = {
   setFiles: (v: File[]) => void;
   busy: false | "saving" | "uploading";
   onError: (message: string) => void;
+  onToast: (message: string) => void;
+  /** "📅 09 Oct 2026 at 10:00 · 2h · for Priya · change with the calendar icon below" */
+  scheduleText: string;
   /** "Goes to Priya (TL, Social)…" card (ADR 0008). */
   summary?: React.ReactNode;
 };
 
-const ICON_BTN = "glass-dark-panel flex h-9 w-9 items-center justify-center rounded-md text-white backdrop-blur-md";
-
-
-/** DARK BODY: star/loop column, title, rich description, assignment summary, attendees + send row, input bar, voice notes, file chips. */
+/**
+ * Add-task body (prototype `renderAdd`, ADR 0010): title, rich description, ★ Important / ⟳ Repeat / files pills,
+ * "How long" pills + stepper, the round voice-note mic, the schedule line and who gets it. No date / time inputs:
+ * scheduling happens from the bottom bar (calendar icon, upnext / Tom / today).
+ */
 export function AddTaskBody(p: Props) {
-  const { form, patch, titleError, canPickAssignees, onOpenAssignees, onOpenLoop, onSubmit, voiceNotes, setVoiceNotes, files, setFiles, busy, onError, summary } = p;
+  const { form, patch, titleError, hoursError, canPickAssignees, onOpenAssignees, onOpenRepeat, onSubmit, voiceNotes, setVoiceNotes, files, setFiles, busy, onError, onToast, scheduleText, summary } = p;
   const editor = useRef<RichTextEditorHandle>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const meeting = form.type === "MEETING";
   const disabled = !!busy;
 
   return (
-    <section className="relative flex min-h-0 flex-1 flex-col overflow-y-auto text-white">
-      <div className="absolute right-3 top-3 flex flex-col gap-2">
-        <button
-          type="button"
-          onClick={() => patch({ important: !form.important })}
-          aria-pressed={form.important}
-          aria-label={form.important ? "Unmark important" : "Mark important"}
-          className={clsx(ICON_BTN, form.important && "text-[#93C5FD]")}
-        >
-          <Star size={20} fill={form.important ? "#93C5FD" : "none"} aria-hidden />
-        </button>
+    <section className="relative flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pt-4 text-ink">
+      <input
+        value={form.title}
+        onChange={(e) => patch({ title: e.target.value })}
+        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), onSubmit())}
+        placeholder={meeting ? "Meeting title" : "Task title"}
+        aria-label="Title"
+        aria-invalid={!!titleError}
+        autoFocus
+        maxLength={200}
+        disabled={disabled}
+        className="w-full border-0 bg-transparent text-[18px] font-bold tracking-[-.015em] text-ink placeholder:text-muted focus:outline-none"
+      />
+      {titleError ? <span className="mt-0.5 block text-[11px] text-red-500">{titleError}</span> : null}
+
+      <RichTextEditor
+        ref={editor}
+        tone="plain"
+        className="mt-1"
+        value={form.description}
+        onChange={(description) => patch({ description })}
+        placeholder="Describe the work. Rich text, links and dictation."
+        minHeightClass="min-h-[72px]"
+        toolbarExtra={<DictationButton compact onText={(t) => editor.current?.insertText(t)} />}
+      />
+
+      <div className="mt-2 flex flex-wrap gap-2">
+        <ChipButton on={form.important} onClick={() => patch({ important: !form.important })} onClass="border-transparent bg-[#fde68a] text-[#3b2a00]">
+          ★ Important
+        </ChipButton>
         {!meeting ? (
-          <button type="button" onClick={onOpenLoop} aria-pressed={!!form.recurrence} aria-label="Loop (recurrence)" className={clsx(ICON_BTN, form.recurrence && "text-[#93C5FD]")}>
-            <Repeat size={20} aria-hidden />
-          </button>
+          <ChipButton on={!!form.recurrence} onClick={onOpenRepeat} onClass="border-transparent bg-[#bfdbfe] text-[#0b1b2b]" label={form.recurrence ? `Repeats: ${describeRule(form.recurrence)}` : "Recurring"}>
+            ⟳ {form.recurrence ? describeRule(form.recurrence) : "Recurring"}
+          </ChipButton>
         ) : null}
+        <ChipButton onClick={() => fileInput.current?.click()} label="Attach files">
+          📎 Files{files.length ? ` · ${files.length}` : ""}
+        </ChipButton>
+        <input ref={fileInput} type="file" multiple hidden onChange={(e) => setFiles([...files, ...Array.from(e.target.files ?? [])])} />
       </div>
 
-      <div className="px-3 pt-3">
-        <input
-          value={form.title}
-          onChange={(e) => patch({ title: e.target.value })}
-          placeholder="Title"
-          aria-label="Title"
-          aria-invalid={!!titleError}
-          autoFocus
-          maxLength={200}
-          disabled={disabled}
-          className={clsx(
-            "mr-12 w-[calc(100%-3rem)] border-0 border-b bg-transparent pb-2 text-base text-white placeholder:text-[#9CA3AF] focus:outline-none",
-            titleError ? "border-red-500" : "border-[#3A3A3A]",
-          )}
-        />
-        {titleError ? <span className="mt-1 block text-[11px] text-red-400">{titleError}</span> : null}
+      <div className="mt-4 flex flex-wrap items-center gap-2" role="group" aria-label="How long">
+        <span className="mr-0.5 text-xs text-muted">How long</span>
+        {HOUR_PRESETS.map((h) => (
+          <ChipButton key={h} on={form.hours === h} onClick={() => patch({ hours: h })}>
+            {fmtHours(h)}
+          </ChipButton>
+        ))}
+        <Stepper onMinus={() => patch({ hours: stepHours(form.hours, -1) })} onPlus={() => patch({ hours: stepHours(form.hours, 1) })} minusLabel="15 minutes less" plusLabel="15 minutes more">
+          {fmtHours(form.hours)}
+        </Stepper>
       </div>
+      {hoursError ? <span className="mt-1 block text-[11px] text-red-500">{hoursError}</span> : null}
 
-      <div className="mt-4 px-3">
-        <RichTextEditor
-          ref={editor}
-          tone="dark"
-          value={form.description}
-          onChange={(description) => patch({ description })}
-          placeholder="Your paragraph text"
-          minHeightClass="min-h-[190px]"
-          toolbarExtra={<DictationButton compact onText={(t) => editor.current?.insertText(t)} />}
-        />
-      </div>
+      <VoiceNoteRecorder notes={voiceNotes} onChange={setVoiceNotes} disabled={disabled} onError={onError} onAttached={() => onToast("Voice note attached")} />
+
+      {files.length ? (
+        <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Files">
+          {files.map((f, i) => (
+            <li key={`${f.name}-${i}`} className="flex h-[26px] items-center gap-1 rounded-full border border-hair bg-chip pl-2.5 pr-1 text-[11.5px] text-ink">
+              <span className="max-w-36 truncate">{f.name}</span>
+              <button type="button" onClick={() => setFiles(files.filter((_, j) => j !== i))} aria-label={`Remove ${f.name}`} className="flex h-5 w-5 items-center justify-center text-muted">
+                <X size={11} aria-hidden />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <p className="mt-3.5 text-[12.5px] leading-[1.4] text-muted" aria-live="polite">
+        {scheduleText}
+      </p>
 
       {summary}
 
-      <div className="mt-auto flex items-center justify-between px-3 pb-1 pt-3">
+      <div className="pointer-events-none sticky bottom-3 mt-auto flex items-center justify-between pb-0 pt-3">
         {canPickAssignees ? (
-          <button type="button" onClick={onOpenAssignees} aria-label={meeting ? "Choose attendees" : "Choose assignees"} className="flex h-9 w-9 items-center justify-center rounded-md">
-            <Users size={28} strokeWidth={1.75} aria-hidden />
-            {form.assigneeIds.length > 1 ? <span className="sr-only">{form.assigneeIds.length} selected</span> : null}
+          <button type="button" onClick={onOpenAssignees} aria-label="Choose attendees" className="glass pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full text-ink">
+            <Users size={20} strokeWidth={1.9} aria-hidden />
           </button>
         ) : (
           <span />
@@ -101,32 +133,11 @@ export function AddTaskBody(p: Props) {
           onClick={onSubmit}
           disabled={disabled}
           aria-busy={disabled}
-          aria-label={busy === "saving" ? "Saving…" : busy === "uploading" ? "Uploading…" : meeting ? "Schedule meeting" : "Create task"}
-          className="flex h-9 w-9 items-center justify-center rounded-md disabled:opacity-50"
+          className={clsx("pointer-events-auto h-10 rounded-full bg-primary px-[22px] text-sm font-semibold text-primary-ink shadow-[0_8px_24px_rgba(0,0,0,.2)] disabled:opacity-60", disabled && "animate-pulse")}
         >
-          <Send size={30} strokeWidth={1.75} className={clsx(disabled && "animate-pulse")} aria-hidden />
+          {busy === "saving" ? "Saving…" : busy === "uploading" ? "Uploading…" : meeting ? "Schedule" : "Save"}
         </button>
       </div>
-
-      {!meeting ? (
-        <>
-          <input ref={fileInput} type="file" multiple hidden onChange={(e) => setFiles([...files, ...Array.from(e.target.files ?? [])])} />
-          <VoiceInputBar notes={voiceNotes} onChange={setVoiceNotes} onUpload={() => fileInput.current?.click()} disabled={disabled} onError={onError} />
-          <VoiceNoteStrip notes={voiceNotes} onChange={setVoiceNotes} />
-          {files.length ? (
-            <ul className="mx-3 mb-2 flex flex-wrap gap-1">
-              {files.map((f, i) => (
-                <li key={`${f.name}-${i}`} className="glass-dark-panel flex h-5 items-center gap-1 rounded-full pl-2 pr-1 text-[10px] text-[#D1D5DB]">
-                  <span className="max-w-32 truncate">{f.name}</span>
-                  <button type="button" onClick={() => setFiles(files.filter((_, j) => j !== i))} aria-label={`Remove ${f.name}`} className="flex h-4 w-4 items-center justify-center text-[#9CA3AF]">
-                    <X size={10} aria-hidden />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </>
-      ) : null}
     </section>
   );
 }

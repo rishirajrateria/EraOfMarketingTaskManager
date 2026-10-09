@@ -1,5 +1,6 @@
 /** Shared helpers for the task-domain integration tests (not a test file). */
 import { testDb } from "../helpers/db";
+import type { RecurrenceInput } from "@/server/tasks/schema";
 
 export type TaskInputOverrides = Partial<{
   title: string;
@@ -9,7 +10,8 @@ export type TaskInputOverrides = Partial<{
   allocatedMinutes: number;
   scheduledStart: string | null;
   scheduledEnd: string | null;
-  recurrence: { frequency: "DAILY" | "WEEKLY" | "MONTHLY" | "CUSTOM"; interval?: number; byWeekday?: number[]; trigger?: "ON_COMPLETE" | "ON_SCHEDULE"; endDate?: string | null } | null;
+  /** "Repeat this task" (ADR 0010): fields a frequency doesn't use may be left out. */
+  recurrence: (Partial<RecurrenceInput> & Pick<RecurrenceInput, "freq">) | null;
   teamIds: string[];
   tagIds: string[];
   preferredAssigneeIds: string[];

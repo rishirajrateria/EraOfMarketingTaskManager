@@ -1,16 +1,23 @@
 import { clsx } from "@/lib/clsx";
 
+/** Labelled form field (glass refresh: 10.5px uppercase label, 0.07em tracking). */
 export function Field({ label, children, hint, className }: { label: string; children: React.ReactNode; hint?: string; className?: string }) {
   return (
     <label className={clsx("block", className)}>
-      <span className="mb-1 block text-xs font-medium text-gray-600">{label}</span>
+      <span className="mb-1.5 block text-[10.5px] font-bold uppercase tracking-[.07em] text-muted">{label}</span>
       {children}
-      {hint ? <span className="mt-1 block text-[11px] text-gray-400">{hint}</span> : null}
+      {hint ? <span className="mt-1.5 block text-[11.5px] leading-snug text-muted">{hint}</span> : null}
     </label>
   );
 }
 
-export const inputCls = "w-full rounded-xl border border-white/70 bg-white/60 px-3 py-2 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,.8)] backdrop-blur-md focus:border-brand-blue/60 focus:bg-white/80 focus:outline-none";
-export const btnPrimary = "touch-target rounded-xl bg-gradient-to-b from-[#2f74e6] to-[#1e63d6] px-4 py-2 text-sm font-semibold text-white shadow-[0_6px_16px_rgba(30,99,214,.35),inset_0_1px_0_rgba(255,255,255,.35)] disabled:opacity-50";
-export const btnSecondary = "touch-target glass-chip rounded-xl px-4 py-2 text-sm font-medium text-gray-800";
-export const btnDanger = "touch-target rounded-xl bg-gradient-to-b from-[#ef4444] to-[#dc2626] px-4 py-2 text-sm font-semibold text-white shadow-[0_6px_16px_rgba(220,38,38,.3),inset_0_1px_0_rgba(255,255,255,.3)]";
+/** 44px input / select (textareas grow), 12px radius, sky focus ring. */
+export const inputCls =
+  "field-input w-full min-h-11 rounded-xl border border-hair bg-input px-3.5 py-2 text-[15px] text-ink shadow-[inset_0_1px_2px_rgba(15,40,70,.06)] placeholder:text-muted";
+/** 46px primary button (ink in light, light in dark). */
+export const btnPrimary =
+  "touch-target inline-flex min-h-[46px] items-center justify-center gap-1.5 rounded-[14px] bg-primary px-4 text-[15px] font-semibold tracking-[-.01em] text-primary-ink shadow-[0_8px_20px_-10px_rgba(0,0,0,.45)] disabled:opacity-45";
+export const btnSecondary =
+  "touch-target inline-flex min-h-[46px] items-center justify-center gap-1.5 rounded-[14px] border border-hair bg-glass px-4 text-[15px] font-semibold text-ink shadow-glass backdrop-blur-[22px] disabled:opacity-45";
+export const btnDanger =
+  "touch-target inline-flex min-h-[46px] items-center justify-center gap-1.5 rounded-[14px] bg-gradient-to-b from-[#f87171] to-[#dc2626] px-4 text-[15px] font-semibold text-white shadow-[0_8px_20px_-10px_rgba(220,38,38,.6)] disabled:opacity-45";

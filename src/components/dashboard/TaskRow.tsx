@@ -25,8 +25,10 @@ function openExternal(url: string) {
   window.open(url, "_blank", "noopener");
 }
 
-const CHIP = "glass-chip max-w-[140px] shrink-0 truncate rounded-md px-2 py-0.5 text-[12px] leading-4 text-[#111]";
-const CHIP_ME = "glass-chip shrink-0 rounded-md px-2 py-0.5 text-[12px] font-semibold leading-4 text-[#1e40af]";
+/** 22px rounded chips that wrap instead of truncating the row (glass refresh). */
+const CHIP_BASE = "glass-chip inline-flex h-[22px] max-w-[150px] shrink-0 items-center rounded-full px-[9px] text-[11.5px] font-medium leading-none";
+const CHIP = `${CHIP_BASE} text-ink`;
+const CHIP_ME = `${CHIP_BASE} font-semibold text-me`;
 
 /**
  * Team Leader only: assignee first names (lowercase) printed beside the title, or a person
@@ -35,8 +37,8 @@ const CHIP_ME = "glass-chip shrink-0 rounded-md px-2 py-0.5 text-[12px] font-sem
 function AssigneeNames({ t, meId }: { t: Row; meId: string }) {
   const self = t.selfAssigned && t.assignees.some((a) => a.id === meId);
   return (
-    <span className="ml-1 shrink-0 text-[12px] font-semibold lowercase text-[#374151]" title={t.assignees.map((a) => a.name).join(", ")}>
-      {self ? <User size={14} fill="#374151" strokeWidth={0} aria-label="Self-assigned" /> : t.assignees.map((a) => firstName(a.name)).join(", ")}
+    <span className="ml-1 shrink-0 text-[12px] font-semibold lowercase text-muted" title={t.assignees.map((a) => a.name).join(", ")}>
+      {self ? <User size={14} fill="currentColor" strokeWidth={0} aria-label="Self-assigned" /> : t.assignees.map((a) => firstName(a.name)).join(", ")}
     </span>
   );
 }
@@ -51,7 +53,7 @@ function PrefChip({ t, data }: { t: Row; data: DashboardData }) {
   if (!t.assignees.every((a) => role(a.id) === "TEAM_LEADER")) return null;
   const names = t.preferredAssigneeIds.map((id) => firstName(data.people.find((p) => p.id === id)?.name ?? "?").toLowerCase()).join(", ");
   return (
-    <span className="glass-chip max-w-[140px] shrink-0 truncate rounded-md px-2 py-0.5 text-[12px] leading-4 text-[#b45309]" title="Admin preference — Team Leader decides">
+    <span className={`${CHIP_BASE} truncate text-[#b45309]`} title="Admin preference — Team Leader decides">
       pref: {names}
     </span>
   );
@@ -88,24 +90,24 @@ export function TaskRow({ t, data, h }: { t: Row; data: DashboardData; h: RowHan
   return (
     <li
       {...press}
-      className={clsx("no-select relative border-b border-white/70 px-3 py-2 pl-[14px]", `row-${t.colour}`)}
+      className={clsx("no-select task-card", `row-${t.colour}`)}
       data-task-id={t.id}
       aria-label={t.title}
     >
       {t.parentTaskId ? (
-        <span className="absolute -left-0.5 top-2.5 flex h-4 w-4 items-center justify-center rounded-full bg-restart text-white" aria-label="Restarted task" title="Restarted task">
+        <span className="absolute left-2 top-0 flex h-[18px] w-[18px] items-center justify-center rounded-b-lg bg-restart text-white" aria-label="Restarted task" title="Restarted task">
           <RotateCcw size={10} strokeWidth={3} />
         </span>
       ) : null}
 
       {/* Line 1: the title runs the full width of the row */}
       <div className="flex items-center gap-1.5">
-        <span className={clsx("min-w-0 truncate text-[15px] font-semibold leading-5 text-[#111]", grey && "line-through opacity-70")}>{t.title}</span>
+        <span className={clsx("min-w-0 truncate text-[15px] font-[650] leading-5 tracking-[-.01em] text-ink", grey && "line-through opacity-70")}>{t.title}</span>
         {t.important ? <Star size={12} className="shrink-0 fill-[#F59E0B] text-[#F59E0B]" aria-label="Important" /> : null}
         {t.recurring ? <Repeat size={12} strokeWidth={2.5} className="shrink-0 text-[#2563EB]" aria-label="Recurring" /> : null}
         {t.paused ? (
-          <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-[#111] text-white" aria-label="Paused" title="Paused">
-            <Pause size={9} strokeWidth={3} fill="#fff" />
+          <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-primary text-primary-ink" aria-label="Paused" title="Paused">
+            <Pause size={9} strokeWidth={3} fill="currentColor" />
           </span>
         ) : null}
         {t.integrationError ? (
@@ -129,15 +131,15 @@ export function TaskRow({ t, data, h }: { t: Row; data: DashboardData; h: RowHan
       </div>
 
       {/* Lines 2–3: chips + outline icons on the left; hours / time / date pills and the circle on the right */}
-      <div className="mt-1 flex items-center gap-2">
+      <div className="mt-1.5 flex items-center gap-2.5">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 overflow-hidden">
+          <div className="flex flex-wrap items-center gap-1.5">
             <span className={CHIP}>{t.client.name}</span>
             <span className={CHIP_ME}>{assigneeChip(t, data.me.id)}</span>
             <PrefChip t={t} data={data} />
-            {t.type === "MEETING" ? <span className="glass-chip shrink-0 rounded-md px-2 py-0.5 text-[12px] leading-4 text-[#6D28D9]">Meeting</span> : null}
+            {t.type === "MEETING" ? <span className={`${CHIP_BASE} text-meet`}>Meeting</span> : null}
           </div>
-          <div className="mt-1.5 flex items-center gap-2.5">
+          <div className="-ml-1 mt-1.5 flex items-center gap-1">
             <IconBtn label="Task details" onClick={() => h.onOpen(t)}>
               <Info size={20} strokeWidth={1.75} />
             </IconBtn>

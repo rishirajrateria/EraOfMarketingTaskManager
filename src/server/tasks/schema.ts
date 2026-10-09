@@ -1,14 +1,33 @@
 import { z } from "zod";
 
+const dayKey = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a yyyy-MM-dd date");
+
+/**
+ * "Repeat this task" (ADR 0010, prototype `recurPicker`). Fields a frequency doesn't use may be left out; the server
+ * fills them from the first occurrence's day (`completeRule`).
+ */
 export const recurrenceSchema = z
   .object({
-    frequency: z.enum(["DAILY", "WEEKLY", "MONTHLY", "CUSTOM"]),
+    freq: z.enum(["DAILY", "WEEKDAYS", "WEEKLY", "MONTHLY", "YEARLY"]),
     interval: z.number().int().min(1).max(365).default(1),
-    byWeekday: z.array(z.number().int().min(0).max(6)).default([]),
+    days: z.array(z.number().int().min(0).max(6)).max(7).default([]),
+    monthMode: z.enum(["DATE", "NTH"]).default("DATE"),
+    monthDay: z.number().int().min(1).max(32).optional(), // 32 = last day of the month
+    nth: z.number().int().min(1).max(5).optional(), // 5 = last
+    nthDay: z.number().int().min(0).max(6).optional(),
+    yMonth: z.number().int().min(0).max(11).optional(),
+    yDay: z.number().int().min(1).max(31).optional(),
+    ends: z.enum(["NEVER", "COUNT", "UNTIL"]).default("NEVER"),
+    count: z.number().int().min(1).max(999).default(10),
+    until: z.union([dayKey, z.literal("")]).default(""),
+    anchor: dayKey.optional(),
     trigger: z.enum(["ON_COMPLETE", "ON_SCHEDULE"]).default("ON_SCHEDULE"),
-    endDate: z.string().nullable().default(null), // yyyy-MM-dd or null = infinite
+  })
+  .superRefine((r, ctx) => {
+    if (r.ends === "UNTIL" && !r.until) ctx.addIssue({ code: "custom", path: ["until"], message: "Pick the last date for the repeat" });
   })
   .nullable();
+export type RecurrenceInput = NonNullable<z.infer<typeof recurrenceSchema>>;
 
 const ids = (max: number) => z.array(z.string()).max(max);
 const isoOrNull = z.string().datetime({ offset: true }).nullable();

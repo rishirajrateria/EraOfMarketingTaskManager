@@ -105,7 +105,7 @@ export function TaskDetailSheet({
           <p className="text-xs text-gray-600">
             {statusLabel(t)} · {t.client.name} · {t.type === "MEETING" ? "Meeting" : fmtMinutes(t.allocatedMinutes)} · {dateChip(start, new Date(), tz)}
             {t.important ? " · ★ important" : ""}
-            {t.recurring ? " · ↻ recurring" : ""}
+            {t.recurring ? ` · ↻ ${t.repeatText ?? "recurring"}` : ""}
             {t.protected ? " · protected" : ""}
           </p>
         </div>

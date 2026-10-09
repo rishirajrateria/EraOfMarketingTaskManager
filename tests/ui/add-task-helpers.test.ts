@@ -3,15 +3,24 @@ import {
   allowedAssignees,
   defaultTeamIds,
   emptyForm,
+  fallbackNextSlot,
+  fmtHours,
+  fmtSecs,
+  forWhom,
   formatSlot,
   fromDatetimeLocal,
+  HOUR_PRESETS,
   hoursToMinutes,
+  repeatBaseDay,
+  scheduleLine,
   shortcutStart,
+  stepHours,
   toDatetimeLocal,
   toTaskInput,
   validateForm,
 } from "@/components/tasks/add-task-helpers";
 import { taskInputSchema } from "@/server/tasks/schema";
+import { defaultRule, repeatPresets } from "@/server/tasks/repeat-rule";
 import type { DashboardData } from "@/server/tasks/types";
 
 const TZ = "Asia/Kolkata";
@@ -102,34 +111,79 @@ describe("datetime helpers", () => {
 
 describe("toTaskInput / validateForm", () => {
   it("builds a payload that taskInputSchema accepts (auto slot)", () => {
-    const form = { ...emptyForm("WORK", "admin"), title: " Brief ", clientId: "c1", allocatedHours: "2.5", tagIds: ["w1"] };
+    const form = { ...emptyForm("WORK", "admin"), title: " Brief ", clientId: "c1", hours: 2.5, tagIds: ["w1"] };
     const payload = toTaskInput(form, TZ);
-    expect(payload).toMatchObject({ title: "Brief", allocatedMinutes: 150, scheduledStart: null, scheduledEnd: null, acceptProposedSlot: false, tagIds: ["w1"] });
+    expect(payload).toMatchObject({ title: "Brief", allocatedMinutes: 150, scheduledStart: null, scheduledEnd: null, recurrence: null, tagIds: ["w1"] });
     expect(taskInputSchema.safeParse(payload).success).toBe(true);
-    expect(toTaskInput({ ...form, acceptProposedSlot: true }, TZ).acceptProposedSlot).toBe(true);
   });
-  it("meetings drop tags and recurrence; manual time disables acceptProposedSlot", () => {
+  it("meetings drop tags and recurrence; the start comes from the calendar icon / shortcuts", () => {
     const form = {
       ...emptyForm("MEETING", "ex1"),
       title: "Sync",
       clientId: "c1",
       tagIds: ["w1"],
-      recurrence: { frequency: "DAILY" as const, interval: 1, byWeekday: [], trigger: "ON_SCHEDULE" as const, endDate: null },
+      recurrence: defaultRule("2026-09-12"),
       scheduledStart: "2026-09-12T10:00",
-      scheduledEnd: "2026-09-12T09:00",
     };
     const payload = toTaskInput(form, TZ);
     expect(payload.tagIds).toEqual([]);
     expect(payload.recurrence).toBeNull();
-    expect(payload.acceptProposedSlot).toBe(false);
     expect(payload.scheduledStart).toBe("2026-09-12T10:00:00+05:30");
-    expect(payload.scheduledEnd).toBeNull(); // end before start is dropped → server derives from allocated time
+    expect(payload.scheduledEnd).toBeNull(); // the server ends it after the allocated time
     expect(taskInputSchema.safeParse(payload).success).toBe(true);
   });
+  it("work tasks carry the repeat rule (ON_SCHEDULE) and the server schema accepts every preset", () => {
+    const base = "2026-10-09";
+    for (const p of repeatPresets(base)) {
+      const recurrence = { ...defaultRule(base), ...p.patch, anchor: base };
+      const payload = toTaskInput({ ...emptyForm("WORK", "ex1"), title: "t", clientId: "c", tagIds: ["w"], recurrence }, TZ);
+      expect(payload.recurrence).toMatchObject({ freq: p.patch.freq, trigger: "ON_SCHEDULE" });
+      const parsed = taskInputSchema.safeParse(payload);
+      expect(parsed.success, p.label).toBe(true);
+    }
+    const until = { ...defaultRule(base), ends: "UNTIL" as const, until: "" };
+    expect(taskInputSchema.safeParse(toTaskInput({ ...emptyForm("WORK", "ex1"), title: "t", clientId: "c", recurrence: until }, TZ)).success).toBe(false);
+  });
   it("validateForm reports the mandatory fields", () => {
-    const errors = validateForm({ ...emptyForm("WORK", "me"), assigneeIds: [], allocatedHours: "0" });
-    expect(Object.keys(errors).sort()).toEqual(["allocatedHours", "assigneeIds", "clientId", "title"]);
+    const errors = validateForm({ ...emptyForm("WORK", "me"), assigneeIds: [], hours: 0 });
+    expect(Object.keys(errors).sort()).toEqual(["assigneeIds", "clientId", "hours", "title"]);
     expect(validateForm({ ...emptyForm("WORK", "me"), title: "t", clientId: "c" })).toEqual({});
+  });
+});
+
+describe("add-task body helpers (ADR 0010)", () => {
+  it("hours: quick pills, ½h label and 15-minute stepper (min 15 minutes)", () => {
+    expect(HOUR_PRESETS).toEqual([0.5, 1, 2, 3, 4, 6, 8]);
+    expect(HOUR_PRESETS.map(fmtHours)).toEqual(["½h", "1h", "2h", "3h", "4h", "6h", "8h"]);
+    expect(fmtHours(1.25)).toBe("1.25h");
+    expect(fmtHours(1.5)).toBe("1.5h");
+    expect(stepHours(2, 1)).toBe(2.25);
+    expect(stepHours(0.25, -1)).toBe(0.25);
+    expect(stepHours(0.5, -1)).toBe(0.25);
+    expect(emptyForm("WORK", "me").hours).toBe(2);
+    expect(fmtSecs(65)).toBe("1:05");
+  });
+  it("schedule line: picked date or the next free slot, hours and who it is for", () => {
+    const now = new Date("2026-10-09T05:00:00Z"); // Fri 10:30 IST
+    const picked = { scheduledStart: "2026-10-12T15:30", hours: 2 };
+    expect(scheduleLine(picked, "Tina", null, now, TZ)).toBe("📅 12 Oct 2026 at 15:30 · 2h · for Tina · change with the calendar icon below");
+    const slot = new Date("2026-10-10T04:30:00Z"); // Sat 10:00 IST
+    expect(scheduleLine({ scheduledStart: "", hours: 0.5 }, null, slot, now, TZ)).toBe("📅 Next free slot: Tom 10:00am · ½h · change with the calendar icon below");
+    // prototype nextSlot(): next full hour, after 18:00 tomorrow 10:00 (company tz)
+    expect(fallbackNextSlot(now, TZ).toISOString()).toBe("2026-10-09T05:30:00.000Z"); // 11:00 IST
+    expect(fallbackNextSlot(new Date("2026-10-09T13:00:00Z"), TZ).toISOString()).toBe("2026-10-10T04:30:00.000Z");
+    expect(fallbackNextSlot(new Date("2026-10-08T21:30:00Z"), TZ).toISOString()).toBe("2026-10-09T04:30:00.000Z"); // 03:00 IST → 10:00
+  });
+  it("forWhom and the repeat base day (company tz)", () => {
+    const form = { ...emptyForm("WORK", "admin"), teamIds: ["teamA"] };
+    expect(forWhom(form, dataFor("admin"))).toBe("Tina");
+    expect(forWhom({ ...form, teamIds: [] }, dataFor("admin"))).toBeNull();
+    expect(forWhom({ ...form, assigneeIds: [] }, dataFor("tl1"))).toBe("whole team");
+    expect(forWhom({ ...form, assigneeIds: ["tl1", "ex1"] }, dataFor("tl1"))).toBe("me, Eve");
+    expect(forWhom(form, dataFor("ex1"))).toBe("me");
+    expect(repeatBaseDay({ scheduledStart: "2026-12-01T10:00" })).toBe("2026-12-01");
+    // 20:00 UTC on the 9th is already the 10th in Asia/Kolkata
+    expect(repeatBaseDay({ scheduledStart: "" }, new Date("2026-10-09T20:00:00Z"), TZ)).toBe("2026-10-10");
   });
 });
 
@@ -139,11 +193,8 @@ describe("tag-mode helpers", () => {
     expect(teamLeaderId({ people }, "teamA")).toBe("tl1");
     expect(teamLeaderId({ people }, "nope")).toBeNull();
   });
-  it("needsDetailsSheet / parseAddParam", async () => {
-    const { needsDetailsSheet, parseAddParam } = await import("@/components/tasks/add-task-helpers");
-    expect(needsDetailsSheet({ title: "x" })).toBe(false);
-    expect(needsDetailsSheet({ clientId: "x" })).toBe(false); // client is picked in the green CLIENT row
-    expect(needsDetailsSheet({ allocatedHours: "x" })).toBe(true);
+  it("parseAddParam", async () => {
+    const { parseAddParam } = await import("@/components/tasks/add-task-helpers");
     expect(parseAddParam("WORK")).toBe("WORK");
     expect(parseAddParam("CHOOSE")).toBe("CHOOSE");
     expect(parseAddParam("nope")).toBeNull();

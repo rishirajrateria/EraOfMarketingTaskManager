@@ -16,8 +16,8 @@ type Props = {
   className?: string;
   minHeightClass?: string;
   toolbarExtra?: React.ReactNode;
-  /** "dark" = the add-task look: tiny grey icon toolbar above a rounded #2A2A2A panel with a centred placeholder. */
-  tone?: "light" | "dark";
+  /** "plain" = the add-task look: tiny muted icon toolbar above a borderless body that follows the theme. */
+  tone?: "light" | "plain";
 };
 
 const COMMANDS: { cmd: string; label: string; aria: string; icon: LucideIcon; cls?: string }[] = [
@@ -32,7 +32,7 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
   ref,
 ) {
   const el = useRef<HTMLDivElement>(null);
-  const dark = tone === "dark";
+  const plain = tone === "plain";
 
   // Sync external value → DOM only when it actually differs (keeps the caret stable while typing).
   useEffect(() => {
@@ -67,8 +67,8 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
   }));
 
   return (
-    <div className={clsx(dark ? "" : "rounded-xl border border-white/70 bg-white/60 backdrop-blur-md focus-within:border-brand-blue/60", className)}>
-      <div className={clsx("flex items-center", dark ? "mb-3 gap-3 px-2 text-[#9CA3AF]" : "gap-1 border-b border-gray-200 px-1")}>
+    <div className={clsx(plain ? "" : "field-input rounded-xl border border-hair bg-input", className)}>
+      <div className={clsx("flex items-center", plain ? "mb-1 gap-3 text-muted" : "gap-1 border-b border-line px-1")}>
         {COMMANDS.map((c) => (
           <button
             key={c.cmd}
@@ -77,11 +77,11 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
             onClick={() => exec(c.cmd)}
             aria-label={c.aria}
             className={clsx(
-              dark ? "flex h-6 w-6 items-center justify-center rounded hover:text-white" : "touch-target min-w-10 rounded px-2 text-sm text-gray-700 hover:bg-gray-100",
-              !dark && c.cls,
+              plain ? "flex h-6 w-6 items-center justify-center rounded hover:text-ink" : "touch-target min-w-10 rounded px-2 text-sm text-ink hover:bg-chip",
+              !plain && c.cls,
             )}
           >
-            {dark ? <c.icon size={12} strokeWidth={2.5} aria-hidden /> : c.label}
+            {plain ? <c.icon size={12} strokeWidth={2.5} aria-hidden /> : c.label}
           </button>
         ))}
         <div className="ml-auto flex items-center">{toolbarExtra}</div>
@@ -99,9 +99,7 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(function R
         className={clsx(
           "rte prose-sm relative w-full outline-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5",
           "empty:before:pointer-events-none empty:before:content-[attr(data-placeholder)]",
-          dark
-            ? "glass-dark-panel rounded-3xl px-4 py-3 text-sm text-white backdrop-blur-md empty:before:absolute empty:before:inset-0 empty:before:flex empty:before:items-center empty:before:justify-center empty:before:text-[#9CA3AF]"
-            : "px-3 py-2 text-sm empty:before:text-gray-400",
+          plain ? "text-[15px] leading-snug text-ink empty:before:text-muted" : "px-3 py-2 text-sm empty:before:text-muted",
           minHeightClass,
         )}
       />

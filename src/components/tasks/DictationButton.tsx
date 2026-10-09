@@ -123,7 +123,7 @@ export function DictationButton({
         aria-pressed={active}
         aria-label={label}
         title={supported === false ? "Web Speech API unavailable — records a clip and sends it to /api/stt" : "Dictate into the description"}
-        className={clsx("flex h-6 w-6 items-center justify-center rounded disabled:opacity-50", active ? "animate-pulse text-red-400" : "text-[#9CA3AF] hover:text-white", className)}
+        className={clsx("flex h-6 w-6 items-center justify-center rounded disabled:opacity-50", active ? "animate-pulse text-red-500" : "text-muted hover:text-ink", className)}
       >
         <Mic size={12} strokeWidth={2.5} aria-hidden />
       </button>

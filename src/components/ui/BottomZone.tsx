@@ -5,7 +5,8 @@ import { menuStore } from "@/components/shell/menu-store";
 
 /**
  * Thumb-reach zone shared by every screen (same geometry as the dashboard, SPEC §5.4):
- * optional white strip · green area with pill rows (34px each) · 44px bar split 62% green / 38% white.
+ * optional glass strip · emerald area with pill rows (40px each, 28px pills) · 56px bar split 62% green / 38% glass.
+ * The zone's top edge has a 22px radius (glass refresh, ADR 0010).
  * Put a screen's tabs, filters and primary actions here, never in the header.
  */
 export function ZonePill({ active, onClick, children, label, className }: { active?: boolean; onClick?: () => void; children: React.ReactNode; label?: string; className?: string }) {
@@ -17,8 +18,8 @@ export function ZonePill({ active, onClick, children, label, className }: { acti
       title={label}
       onClick={onClick}
       className={clsx(
-        "no-select flex h-[22px] shrink-0 items-center whitespace-nowrap rounded-full px-2.5 text-[11px] leading-none text-[#111] transition",
-        active ? "bg-white/90 shadow-sm backdrop-blur-md" : "bg-green-pill",
+        "no-select flex h-7 shrink-0 items-center whitespace-nowrap rounded-full px-[13px] text-xs font-medium leading-none transition",
+        active ? "bg-green-pill-on" : "bg-green-pill",
         className,
       )}
     >
@@ -29,7 +30,7 @@ export function ZonePill({ active, onClick, children, label, className }: { acti
 
 export function ZoneRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="scrollbar-none flex h-[34px] items-center gap-1.5 overflow-x-auto px-2.5" role="group" aria-label={label}>
+    <div className="scrollbar-none flex h-10 items-center gap-2 overflow-x-auto px-3" role="group" aria-label={label}>
       {children}
     </div>
   );
@@ -44,7 +45,7 @@ export function BarChip({ onClick, children, label, active, className }: { onCli
       aria-pressed={active}
       title={label}
       onClick={onClick}
-      className={clsx("no-select glass-chip flex h-[22px] items-center whitespace-nowrap rounded-full px-3 text-[11px] leading-none text-[#111]", active && "ring-1 ring-[#111]/60", className)}
+      className={clsx("no-select glass-chip flex h-[30px] items-center whitespace-nowrap rounded-full px-3.5 text-xs font-semibold leading-none text-ink", active && "ring-1 ring-ink/50", className)}
     >
       {children}
     </button>
@@ -53,7 +54,7 @@ export function BarChip({ onClick, children, label, active, className }: { onCli
 
 /** 44px icon button for the bar (white glyph on green, dark glyph on white). */
 export function BarIcon({ onClick, label, children, tone = "green", href }: { onClick?: () => void; label: string; children: React.ReactNode; tone?: "green" | "white"; href?: string }) {
-  const cls = clsx("touch-target flex h-11 w-11 shrink-0 items-center justify-center", tone === "green" ? "text-white" : "text-[#111]");
+  const cls = clsx("touch-target flex h-11 w-11 shrink-0 items-center justify-center rounded-xl", tone === "green" ? "text-white" : "text-ink");
   if (href) {
     return (
       <a href={href} aria-label={label} title={label} className={cls}>
@@ -89,11 +90,11 @@ export function BottomZone({
   className?: string;
 }) {
   return (
-    <div className={clsx("sticky bottom-0 z-20 shrink-0", className)}>
-      {strip ? <div className="flex h-10 items-center gap-1.5 border-t border-white/70 bg-white/55 px-2.5 backdrop-blur-xl">{strip}</div> : null}
+    <div className={clsx("zone-top sticky bottom-0 z-20 shrink-0 pb-[env(safe-area-inset-bottom)]", className)}>
+      {strip ? <div className="strip-glass flex h-11 items-center gap-1.5 px-3">{strip}</div> : null}
       {rows ? <div className="bg-green-area">{rows}</div> : null}
-      <div className="flex h-11 items-stretch">
-        <div className="scrollbar-none flex min-w-0 flex-[62] items-center gap-1.5 overflow-x-auto bg-green-bar pr-2">
+      <div className="flex h-14 items-stretch">
+        <div className="scrollbar-none flex min-w-0 flex-[62] items-center gap-2 overflow-x-auto bg-green-bar pr-2">
           {menu ? (
             <BarIcon label="Menu" onClick={() => menuStore.open()}>
               <Menu size={22} />
@@ -103,7 +104,7 @@ export function BottomZone({
           )}
           {left}
         </div>
-        <div className="flex flex-[38] items-center justify-evenly gap-1 bg-white/60 px-1 backdrop-blur-xl">{right}</div>
+        <div className="bar-glass flex flex-[38] items-center justify-evenly gap-1 px-1">{right}</div>
       </div>
     </div>
   );

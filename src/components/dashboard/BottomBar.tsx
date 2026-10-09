@@ -8,7 +8,7 @@ import { MeetIcon } from "@/components/dashboard/GoogleIcons";
 
 export type AddMode = "WORK" | "MEETING" | "CHOOSE";
 
-/** Green-area pill: 22px tall, #A9E0AE, white when active. */
+/** Green-area pill: 28px frosted, near-white when active. */
 function GreenPill({ active, label, onClick, children }: { active: boolean; label?: string; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
@@ -17,7 +17,7 @@ function GreenPill({ active, label, onClick, children }: { active: boolean; labe
       aria-label={label}
       title={label}
       onClick={onClick}
-      className={clsx("no-select flex h-[22px] shrink-0 items-center whitespace-nowrap rounded-full px-2.5 text-[11px] leading-none text-[#111] transition", active ? "bg-white/90 shadow-sm backdrop-blur-md" : "bg-green-pill")}
+      className={clsx("no-select flex h-7 shrink-0 items-center whitespace-nowrap rounded-full px-[13px] text-xs font-medium leading-none transition", active ? "bg-green-pill-on" : "bg-green-pill")}
     >
       {children}
     </button>
@@ -26,7 +26,7 @@ function GreenPill({ active, label, onClick, children }: { active: boolean; labe
 
 function PillRow({ label, items, value, onChange }: { label: string; items: { id: string; label: string }[]; value: string | null; onChange: (id: string | null) => void }) {
   return (
-    <div className="scrollbar-none flex h-[34px] items-center gap-1.5 overflow-x-auto px-2.5" role="group" aria-label={label}>
+    <div className="scrollbar-none flex h-10 items-center gap-2 overflow-x-auto px-3" role="group" aria-label={label}>
       <GreenPill active={value === null} onClick={() => onChange(null)}>
         All
       </GreenPill>
@@ -40,7 +40,7 @@ function PillRow({ label, items, value, onChange }: { label: string; items: { id
 }
 
 /**
- * Bottom zone (SPEC §5.4): white filter strip · green area (two filter pill rows) · 44px bottom bar
+ * Bottom zone (SPEC §5.4): glass filter strip · emerald area (two 40px filter pill rows) · 56px bottom bar
  * (calendar + quick pills on green · Meet / Work / + on white).
  */
 export function BottomBar({
@@ -66,8 +66,8 @@ export function BottomBar({
         <PillRow label={row1Label} items={data.row1} value={filters.row1} onChange={(row1) => onChange({ ...filters, row1 })} />
         <PillRow label={row2Label} items={data.row2} value={filters.row2} onChange={(row2) => onChange({ ...filters, row2 })} />
       </div>
-      <div className="flex h-11">
-        <div className="scrollbar-none flex min-w-0 flex-[62] items-center gap-1.5 overflow-x-auto bg-green-bar px-2.5">
+      <div className="flex h-14">
+        <div className="scrollbar-none flex min-w-0 flex-[62] items-center gap-2 overflow-x-auto bg-green-bar px-3">
           <button type="button" aria-label="Pick a date" title="Pick a date" aria-pressed={!!filters.date} onClick={onOpenDate} className="flex h-8 shrink-0 items-center gap-1 text-white">
             <CalendarDays size={20} strokeWidth={2.25} />
             {filters.date ? <span className="text-[11px] font-semibold">{fmtDate(parseDateKey(filters.date, data.tz), data.tz)}</span> : null}
@@ -82,14 +82,14 @@ export function BottomBar({
             today
           </GreenPill>
         </div>
-        <div className="flex flex-[38] items-center justify-evenly bg-white/60 px-1 backdrop-blur-xl">
-          <button type="button" aria-label="Schedule a meeting" title="Meeting" onClick={() => onAdd("MEETING")} className="flex h-8 w-8 items-center justify-center">
+        <div className="bar-glass flex flex-[38] items-center justify-evenly gap-1 px-2">
+          <button type="button" aria-label="Schedule a meeting" title="Meeting" onClick={() => onAdd("MEETING")} className="flex h-10 w-10 items-center justify-center rounded-xl">
             <MeetIcon size={22} />
           </button>
-          <button type="button" onClick={() => onAdd("WORK")} className="no-select glass-chip flex h-[22px] items-center rounded-full px-3 text-[11px] leading-none text-[#111]">
+          <button type="button" onClick={() => onAdd("WORK")} className="no-select glass-chip flex h-[30px] items-center rounded-full px-3.5 text-xs font-semibold leading-none text-ink">
             Work
           </button>
-          <button type="button" aria-label="Add task" onClick={() => onAdd("CHOOSE")} className="flex h-8 w-8 items-center justify-center text-[#111]">
+          <button type="button" aria-label="Add task" onClick={() => onAdd("CHOOSE")} className="flex h-10 w-10 items-center justify-center rounded-xl text-ink">
             <Plus size={24} strokeWidth={2.75} />
           </button>
         </div>

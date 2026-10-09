@@ -5,26 +5,33 @@ import type { JSX } from "react";
 import { Sheet } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import type { DashboardData } from "@/server/tasks/types";
-import { addTaskInventory, createTask } from "@/server/tasks/create";
+import { describeRule } from "@/server/tasks/repeat-rule";
+import { addTaskInventory, createTask, previewSlot } from "@/server/tasks/create";
 import { uploadAttachment } from "@/server/tasks/manage";
 import { AddTaskHeader } from "@/components/tasks/AddTaskHeader";
 import { AddTaskBody } from "@/components/tasks/AddTaskBody";
 import { AddTaskBottomBar, TaskTypeSheet, type Shortcut } from "@/components/tasks/AddTaskFooter";
 import { AddTaskGreenRows, AddTaskSummary } from "@/components/tasks/AddTaskRows";
-import { AddTaskDetails, AssigneeSheet, LoopSheet, type DetailsFocus, type FieldErrors } from "@/components/tasks/AddTaskDetails";
+import { AssigneeSheet, ScheduleSheet } from "@/components/tasks/AddTaskDetails";
+import { RepeatSheet } from "@/components/tasks/RecurrencePicker";
 import type { VoiceNote } from "@/components/tasks/VoiceRecorder";
 import {
   EMPTY_LOADS,
   allowedAssignees,
   effectiveAssignees,
   emptyForm,
+  fallbackNextSlot,
+  forWhom,
+  hoursToMinutes,
   inventoryScope,
-  needsDetailsSheet,
   parseAddParam,
+  repeatBaseDay,
+  scheduleLine,
   shortcutStart,
   syncWorkType,
   toTaskInput,
   validateForm,
+  type AddTaskErrors,
   type AddTaskForm,
   type PeriodLoads,
   type TaskMode,
@@ -51,16 +58,16 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
 
   const [chosen, setChosen] = useState<TaskMode | null>(null);
   const [form, setForm] = useState<AddTaskForm>(() => emptyForm("WORK", data.me.id, data.role));
-  const [manualTime, setManualTime] = useState(false);
   const [voiceNotes, setVoiceNotes] = useState<VoiceNote[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [loads, setLoads] = useState<PeriodLoads>(EMPTY_LOADS);
-  const [errors, setErrors] = useState<FieldErrors>({});
+  const [errors, setErrors] = useState<AddTaskErrors>({});
   const [busy, setBusy] = useState<false | "saving" | "uploading">(false);
-  const [details, setDetails] = useState<{ open: boolean; focus: DetailsFocus }>({ open: false, focus: null });
+  const [scheduleOpen, setScheduleOpen] = useState(false);
   const [assigneesOpen, setAssigneesOpen] = useState(false);
-  const [loopOpen, setLoopOpen] = useState(false);
+  const [repeatOpen, setRepeatOpen] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
+  const [nextSlot, setNextSlot] = useState<Date | null>(null);
 
   const patch = useCallback((p: Partial<AddTaskForm>) => setForm((f) => ({ ...f, ...p })), []);
 
@@ -71,14 +78,13 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
     const type: TaskMode = mode === "MEETING" ? "MEETING" : "WORK";
     setChosen(type);
     setForm(emptyForm(type, data.me.id, data.role));
-    setManualTime(false);
     setVoiceNotes([]);
     setFiles([]);
     setErrors({});
     setBusy(false);
-    setDetails({ open: false, focus: null });
+    setScheduleOpen(false);
     setAssigneesOpen(false);
-    setLoopOpen(false);
+    setRepeatOpen(false);
     setTypeOpen(false);
   }, [open, mode, data.me.id, data.role]);
 
@@ -110,9 +116,26 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, scopeKey]);
 
+  // "📅 Next free slot: …" — the slot the server would pick for the effective assignees (debounced 400ms).
+  const slotIds = effectiveAssignees({ ...form, type: chosen ?? "WORK" }, data);
+  const slotKey = `${slotIds.join(",")}|${hoursToMinutes(form.hours)}|${form.scheduledStart}`;
+  useEffect(() => {
+    if (!open || form.scheduledStart) return;
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      const res = slotIds.length ? await previewSlot(slotIds, hoursToMinutes(form.hours)).catch(() => null) : null;
+      if (!cancelled) setNextSlot(res && res.ok && res.data ? new Date(res.data.start) : null);
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, slotKey]);
+
   const assignees = useMemo(() => allowedAssignees(data, chosen ?? "WORK"), [data, chosen]);
   const meeting = chosen === "MEETING";
-  const subSheetOpen = details.open || assigneesOpen || loopOpen || typeOpen;
+  const subSheetOpen = scheduleOpen || assigneesOpen || repeatOpen || typeOpen;
 
   const choose = (type: TaskMode) => {
     if (type === chosen) return;
@@ -120,15 +143,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
     setForm((f) => ({ ...emptyForm(type, data.me.id, data.role), title: f.title, description: f.description, clientId: f.clientId, teamIds: f.teamIds, tagIds: f.tagIds }));
   };
 
-  const setShortcut = (kind: Shortcut) => {
-    if (kind === "upnext") {
-      setManualTime(false);
-      patch({ scheduledStart: "", scheduledEnd: "", acceptProposedSlot: false });
-      return;
-    }
-    setManualTime(true);
-    patch({ scheduledStart: shortcutStart(kind, new Date(), data.tz), scheduledEnd: "", acceptProposedSlot: false });
-  };
+  const setShortcut = (kind: Shortcut) => patch({ scheduledStart: kind === "upnext" ? "" : shortcutStart(kind, new Date(), data.tz) });
 
   const uploadAll = async (taskId: string) => {
     const jobs: { file: File; kind: "FILE" | "VOICE_NOTE" | "IMAGE"; durationSec?: number }[] = [
@@ -151,18 +166,13 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
     else toast(`${jobs.length} attachment${jobs.length === 1 ? "" : "s"} uploaded`);
   };
 
-  const showErrors = (errs: FieldErrors) => {
-    setErrors(errs);
-    if (needsDetailsSheet(errs)) setDetails({ open: true, focus: null });
-  };
-
   const submit = async () => {
     if (busy || !chosen) return;
     const errs = validateForm({ ...form, type: chosen }, data);
     const first = Object.values(errs)[0];
     if (first) {
       toast(first, "err");
-      showErrors(errs);
+      setErrors(errs);
       return;
     }
     setErrors({});
@@ -172,7 +182,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
       const res = await createTask(toTaskInput({ ...live, assigneeIds: effectiveAssignees(live, data) }, data.tz));
       if (!res.ok) {
         toast(res.error, "err");
-        showErrors(errorsFromMessage(res.error));
+        setErrors(errorsFromMessage(res.error));
         return;
       }
       toast(meeting ? "Meeting scheduled" : "Task created");
@@ -192,26 +202,32 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
   // Work: the green rows pick team / executives. Meetings can also invite anyone from the people glyph.
   const canPickAssignees = meeting;
 
+  const scheduleText = scheduleLine(liveForm, forWhom(liveForm, data), nextSlot ?? fallbackNextSlot(new Date(), data.tz), new Date(), data.tz);
+  const repeatBase = repeatBaseDay(liveForm, new Date(), data.tz);
+
   return (
     <>
       <Sheet open={open} onClose={subSheetOpen ? () => undefined : close} full>
-        <div className="flex h-full min-h-full flex-col bg-gradient-to-b from-[#15171d] via-[#1b1e26] to-[#101218]">
+        <div className="flex h-full min-h-full flex-col" style={{ background: "var(--aurora), var(--bg)" }}>
           <AddTaskHeader loads={loads} />
           <AddTaskBody
-              form={liveForm}
-              patch={patch}
-              titleError={errors.title}
-              canPickAssignees={canPickAssignees}
-              onOpenAssignees={() => setAssigneesOpen(true)}
-              onOpenLoop={() => setLoopOpen(true)}
-              onSubmit={submit}
-              voiceNotes={voiceNotes}
-              setVoiceNotes={setVoiceNotes}
-              files={files}
-              setFiles={setFiles}
-              busy={busy}
-              onError={(m) => toast(m, "err")}
-              summary={<AddTaskSummary form={liveForm} data={data} />}
+            form={liveForm}
+            patch={patch}
+            titleError={errors.title}
+            hoursError={errors.hours}
+            canPickAssignees={canPickAssignees}
+            onOpenAssignees={() => setAssigneesOpen(true)}
+            onOpenRepeat={() => setRepeatOpen(true)}
+            onSubmit={submit}
+            voiceNotes={voiceNotes}
+            setVoiceNotes={setVoiceNotes}
+            files={files}
+            setFiles={setFiles}
+            busy={busy}
+            onError={(m) => toast(m, "err")}
+            onToast={(m) => toast(m)}
+            scheduleText={scheduleText}
+            summary={<AddTaskSummary form={liveForm} data={data} />}
           />
           <AddTaskGreenRows form={liveForm} patch={patch} data={data} />
           <AddTaskBottomBar
@@ -220,7 +236,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
             tz={data.tz}
             onShortcut={setShortcut}
             onType={choose}
-            onOpenSchedule={() => setDetails({ open: true, focus: "schedule" })}
+            onOpenSchedule={() => setScheduleOpen(true)}
             onOpenTypeChooser={() => setTypeOpen(true)}
             onClose={close}
           />
@@ -228,38 +244,33 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
       </Sheet>
 
       <TaskTypeSheet open={typeOpen} onClose={() => setTypeOpen(false)} type={chosen} onType={choose} />
-      {chosen !== null ? (
-        <>
-          <AddTaskDetails
-            open={details.open}
-            onClose={() => setDetails({ open: false, focus: null })}
-            focus={details.focus}
-            form={liveForm}
-            patch={patch}
-            data={data}
-            assignees={assignees}
-            errors={errors}
-            manualTime={manualTime}
-            setManualTime={setManualTime}
-            slotAssigneeIds={effectiveAssignees(liveForm, data)}
-            disabled={!!busy}
-          />
-          <AssigneeSheet open={assigneesOpen} onClose={() => setAssigneesOpen(false)} form={liveForm} patch={patch} data={data} assignees={assignees} />
-          {!meeting ? <LoopSheet open={loopOpen} onClose={() => setLoopOpen(false)} value={form.recurrence} onChange={(recurrence) => patch({ recurrence })} /> : null}
-        </>
+      <ScheduleSheet open={scheduleOpen} onClose={() => setScheduleOpen(false)} value={form.scheduledStart} tz={data.tz} onSet={(scheduledStart) => patch({ scheduledStart })} onError={(m) => toast(m, "err")} />
+      <AssigneeSheet open={assigneesOpen} onClose={() => setAssigneesOpen(false)} form={liveForm} patch={patch} data={data} assignees={assignees} />
+      {!meeting ? (
+        <RepeatSheet
+          open={repeatOpen}
+          onClose={() => setRepeatOpen(false)}
+          value={form.recurrence}
+          base={repeatBase}
+          onDone={(recurrence) => {
+            patch({ recurrence });
+            toast(`Repeats: ${describeRule(recurrence)}`);
+          }}
+          onClear={form.recurrence ? () => patch({ recurrence: null }) : undefined}
+        />
       ) : null}
     </>
   );
 }
 
 /** Map a zod / server message back onto a field so it can be highlighted inline. */
-function errorsFromMessage(message: string): FieldErrors {
+function errorsFromMessage(message: string): AddTaskErrors {
   const m = message.toLowerCase();
   if (m.includes("title")) return { title: message };
   if (m.includes("pick a team") || m.includes("team leader yet")) return { teamIds: message };
   if (m.includes("work type")) return { tagIds: message };
   if (m.includes("client")) return { clientId: message };
   if (m.includes("assign")) return { assigneeIds: message };
-  if (m.includes("allocated")) return { allocatedHours: message };
+  if (m.includes("allocated")) return { hours: message };
   return {};
 }

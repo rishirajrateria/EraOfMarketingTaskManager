@@ -15,7 +15,7 @@ import {
 
 const first = (name: string) => name.split(" ")[0] ?? name;
 
-/** Green tag pill (#A9E0AE; white when active). `pref` adds the dark ring of a preferred executive. */
+/** Frosted green pill (28px; near-white when active). `pref` adds the dark ring of a preferred executive. */
 export function TagPill({ active, pref, onClick, children }: { active: boolean; pref?: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
@@ -23,9 +23,9 @@ export function TagPill({ active, pref, onClick, children }: { active: boolean; 
       onClick={onClick}
       aria-pressed={active}
       className={clsx(
-        "no-select h-[22px] shrink-0 whitespace-nowrap rounded-full px-2.5 text-[11px] font-medium leading-none text-[#111] transition",
-        active ? "bg-white" : "bg-[#A9E0AE]",
-        active && pref && "shadow-[inset_0_0_0_1.5px_#111]",
+        "no-select h-7 shrink-0 whitespace-nowrap rounded-full px-[13px] text-xs font-medium leading-none transition",
+        active ? "bg-green-pill-on" : "bg-green-pill",
+        active && pref && "bg-green-pill-pref",
       )}
     >
       {children}
@@ -36,14 +36,14 @@ export function TagPill({ active, pref, onClick, children }: { active: boolean; 
 /** One labelled green row: small uppercase white label on the left, scrollable pills on the right. */
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="scrollbar-none flex h-[34px] items-center gap-1.5 overflow-x-auto px-3" role="group" aria-label={label}>
-      <span className="min-w-[44px] shrink-0 text-[10px] font-bold uppercase tracking-[.05em] text-white/95">{label}</span>
+    <div className="scrollbar-none flex h-10 items-center gap-2 overflow-x-auto px-3" role="group" aria-label={label}>
+      <span className="min-w-[52px] shrink-0 text-[10px] font-bold uppercase tracking-[.08em] text-z2label">{label}</span>
       {children}
     </div>
   );
 }
 
-const Note = ({ children }: { children: React.ReactNode }) => <span className="shrink-0 whitespace-nowrap text-[11px] font-medium text-white/90">{children}</span>;
+const Note = ({ children }: { children: React.ReactNode }) => <span className="shrink-0 whitespace-nowrap text-[11px] font-medium text-z2label">{children}</span>;
 
 type Props = { form: AddTaskForm; patch: (p: Partial<AddTaskForm>) => void; data: DashboardData };
 
@@ -137,7 +137,7 @@ export function AddTaskGreenRows({ form, patch, data }: Props) {
 /** Body card: who gets the task (Admin: "Goes to Priya (TL, Social)", preference, specialists; TL: "Assigned to …"). */
 export function AddTaskSummary({ form, data }: Omit<Props, "patch">) {
   const name = (id: string) => (id === data.me.id ? "me" : first(data.people.find((p) => p.id === id)?.name ?? "?"));
-  const muted = "text-[#9CA3AF]";
+  const muted = "text-muted";
   let body: React.ReactNode = null;
   if (data.role === "ADMIN") {
     if (!form.teamIds.length) {
@@ -187,7 +187,7 @@ export function AddTaskSummary({ form, data }: Omit<Props, "patch">) {
   }
   if (!body) return null;
   return (
-    <div className="glass-dark-panel mx-3 mt-3 rounded-lg px-3 py-2.5 text-[12.5px] leading-snug text-white" aria-live="polite">
+    <div className="glass-card mt-3 px-3 py-2.5 text-[12.5px] leading-snug text-ink" aria-live="polite">
       {body}
     </div>
   );

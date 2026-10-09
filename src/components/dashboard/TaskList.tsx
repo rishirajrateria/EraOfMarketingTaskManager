@@ -40,14 +40,14 @@ export function TaskList({
   return (
     <div ref={ref} className="min-h-0 flex-1 overflow-y-auto overscroll-contain" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
       {pull > 0 || refreshing ? (
-        <div className="flex items-center justify-center overflow-hidden text-[11px] text-gray-500 transition-[height]" style={{ height: refreshing ? 28 : Math.round(pull * 0.5) }}>
+        <div className="flex items-center justify-center overflow-hidden text-[11px] text-muted transition-[height]" style={{ height: refreshing ? 28 : Math.round(pull * 0.5) }}>
           {refreshing ? "Refreshing…" : pull > PULL_THRESHOLD ? "Release to refresh" : "Pull to refresh"}
         </div>
       ) : null}
       {tasks.length === 0 ? (
-        <p className="px-4 py-12 text-center text-sm text-gray-400">No tasks match the current filters.</p>
+        <p className="mx-2.5 my-4 rounded-2xl border border-dashed border-hair bg-glass px-5 py-10 text-center text-[13px] text-muted">No tasks match the current filters.</p>
       ) : (
-        <ul>
+        <ul className="pb-3 pt-2.5">
           {tasks.map((t) => (
             <TaskRow key={t.id} t={t} data={data} h={handlers} />
           ))}

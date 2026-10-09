@@ -13,9 +13,11 @@ export async function spawnNextOccurrence(taskId: string, actorId: string | null
   if (!t?.recurrenceRule || t.recurrenceRule.stopped) return null;
   const rule = t.recurrenceRule;
   const settings = await getSettings();
+  // Occurrences that already exist (the first included) — "After N times" ends the series (ADR 0010).
+  const done = await prisma.task.count({ where: { recurrenceRuleId: rule.id } });
   // `nextRunAt` IS the due time of the next occurrence (set at creation and advanced after each spawn).
   // A stale value (e.g. ON_COMPLETE approved late) is still honoured so no occurrence is skipped.
-  const next = rule.nextRunAt ?? nextRunAt(rule, t.scheduledStart ?? new Date(), settings.timezone);
+  const next = rule.nextRunAt ?? nextRunAt(rule, t.scheduledStart ?? new Date(), settings.timezone, done);
   if (!next) {
     await prisma.recurrenceRule.update({ where: { id: rule.id }, data: { stopped: true } });
     return null;
@@ -60,7 +62,7 @@ export async function spawnNextOccurrence(taskId: string, actorId: string | null
       tags: { create: t.tags.map((x) => ({ workTypeId: x.workTypeId })) },
     },
   });
-  await prisma.recurrenceRule.update({ where: { id: rule.id }, data: { nextRunAt: nextRunAt(rule, next, settings.timezone) } });
+  await prisma.recurrenceRule.update({ where: { id: rule.id }, data: { nextRunAt: nextRunAt(rule, next, settings.timezone, done + 1) } });
   await audit(actorId, "task.recur", "Task", occurrence.id, { from: t.id }, occurrence);
   await queueTaskCreation(occurrence.id, t.type);
   await notify({ userIds: t.assignees.map((a) => a.userId), kind: "TASK_ASSIGNED", title: `Recurring task: ${t.title}`, href: `/dashboard?task=${occurrence.id}`, taskId: occurrence.id, chat: false });

@@ -42,9 +42,9 @@ export function MenuTray({ open, onClose }: { open: boolean; onClose: () => void
   useEffect(() => setMounted(true), []);
   if (!open || !mounted) return null;
   return createPortal(
-    <div className="fixed inset-0 z-40 flex bg-black/15 backdrop-blur-[2px]" onClick={onClose}>
+    <div className="fixed inset-0 z-40 flex bg-[rgba(2,12,24,.28)] backdrop-blur-[2px]" onClick={onClose}>
       <nav
-        className="relative flex h-full w-[74%] max-w-[360px] flex-col overflow-y-auto border-r border-white/60 bg-white/70 pb-[calc(12px+env(safe-area-inset-bottom))] shadow-[8px_0_40px_rgba(16,24,40,.15)] backdrop-blur-xl"
+        className="relative flex h-full w-[74%] max-w-[360px] flex-col overflow-y-auto rounded-r-[26px] border-r border-hair bg-glass-strong pb-[calc(12px+env(safe-area-inset-bottom))] text-ink shadow-[8px_0_40px_rgba(16,24,40,.15)] backdrop-blur-[30px] backdrop-saturate-[1.8]"
         onClick={(e) => e.stopPropagation()}
         aria-label="Admin menu"
       >
@@ -54,18 +54,18 @@ export function MenuTray({ open, onClose }: { open: boolean; onClose: () => void
           className="absolute right-3 top-2 flex flex-col items-end"
           aria-label="Add Client"
         >
-          <span className="text-[38px] font-light leading-none text-gray-900">+</span>
-          <span className="mt-0.5 w-[84px] text-right text-[8px] leading-[10px] text-gray-500">
+          <span className="text-[38px] font-light leading-none text-ink">+</span>
+          <span className="mt-0.5 w-[84px] text-right text-[8px] leading-[10px] text-muted">
             Add Client (visible in filters once it has a task)
           </span>
         </Link>
-        <ul className="px-5 pt-[76px]">
+        <ul className="px-6 pt-[calc(76px+env(safe-area-inset-top))]">
           {MENU_GROUPS.map((group, gi) => (
-            <li key={gi} className={gi === 0 ? "" : "mt-9"}>
-              <ul className="space-y-1.5">
+            <li key={gi} className={gi === 0 ? "" : "mt-7"}>
+              <ul>
                 {group.map((m) => (
                   <li key={m.href}>
-                    <Link href={m.href} onClick={onClose} className="block py-1 text-[19px] leading-6 text-gray-900">
+                    <Link href={m.href} onClick={onClose} className="block py-1.5 text-[18px] leading-6 tracking-[-.01em] text-ink">
                       {m.label}
                     </Link>
                   </li>
@@ -77,12 +77,12 @@ export function MenuTray({ open, onClose }: { open: boolean; onClose: () => void
         <Link
           href="/dashboard?add=CHOOSE"
           onClick={onClose}
-          className="mr-5 mt-9 self-end text-[46px] font-light leading-none text-gray-900"
+          className="mr-6 mt-9 self-end text-[46px] font-light leading-none text-ink"
           aria-label="Add task"
         >
           +
         </Link>
-        <div className="mt-auto flex gap-4 px-5 pt-5 text-[11px] text-gray-500">
+        <div className="mt-auto flex gap-4 px-6 pt-5 text-[11px] text-muted">
           <Link href="/requests" onClick={onClose}>Requests</Link>
           <Link href="/admin/settings" onClick={onClose}>Settings</Link>
           <Link href="/api/auth/signout" className="text-red-600">Sign out</Link>

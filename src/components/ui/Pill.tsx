@@ -20,15 +20,15 @@ export function Pill({
   const styles =
     tone === "light"
       ? active
-        ? "bg-white/90 text-gray-900 shadow backdrop-blur-md"
+        ? "bg-white/90 text-[#0b1b2b] shadow backdrop-blur-md"
         : "bg-white/25 text-white backdrop-blur-md hover:bg-white/35"
       : tone === "dark"
         ? active
-          ? "bg-gray-900/90 text-white backdrop-blur-md"
-          : "glass-chip text-gray-800"
+          ? "bg-primary text-primary-ink"
+          : "glass-chip text-ink"
         : active
-          ? "border border-gray-900 bg-gray-900 text-white"
-          : "glass-chip text-gray-700";
+          ? "border border-transparent bg-primary text-primary-ink"
+          : "glass-chip text-ink";
   return (
     <button type="button" title={title} onClick={onClick} className={clsx(base, styles, className)}>
       {children}

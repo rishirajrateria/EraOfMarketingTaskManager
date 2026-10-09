@@ -1,4 +1,7 @@
-/** Generates the next occurrence for ON_SCHEDULE recurrence rules whose nextRunAt has arrived (SPEC §13). */
+/**
+ * Generates the next occurrence for ON_SCHEDULE recurrence rules whose nextRunAt has arrived (SPEC §13).
+ * Dates come from the pure repeat-rule math (`src/server/tasks/repeat-rule.ts`, ADR 0010) via `spawnNextOccurrence`.
+ */
 import { prisma } from "@/lib/db";
 import { spawnNextOccurrence } from "@/server/tasks/recurring";
 

@@ -21,7 +21,7 @@ describe("recurring tasks", () => {
   it("createTask with a DAILY ON_SCHEDULE rule sets nextRunAt one interval after the start", async () => {
     const { admin, tl, client } = await seedBasics();
     session.set(admin);
-    const id = await createTaskAs(client.id, [tl.id], { title: "Daily report", recurrence: { frequency: "DAILY", interval: 1, trigger: "ON_SCHEDULE" } });
+    const id = await createTaskAs(client.id, [tl.id], { title: "Daily report", recurrence: { freq: "DAILY", interval: 1, trigger: "ON_SCHEDULE" } });
     const t = await loadTask(id);
     expect(t.recurrenceRuleId).toBeTruthy();
     expect(t.recurrenceRule!.frequency).toBe("DAILY");
@@ -35,7 +35,7 @@ describe("recurring tasks", () => {
   it("jobs/recurrence spawns one occurrence when nextRunAt has arrived and is idempotent afterwards", async () => {
     const { admin, tl, client } = await seedBasics();
     session.set(admin);
-    const id = await createTaskAs(client.id, [tl.id], { title: "Daily report", recurrence: { frequency: "DAILY", interval: 1, trigger: "ON_SCHEDULE" } });
+    const id = await createTaskAs(client.id, [tl.id], { title: "Daily report", recurrence: { freq: "DAILY", interval: 1, trigger: "ON_SCHEDULE" } });
     const ruleId = (await loadTask(id)).recurrenceRuleId!;
     await testDb.recurrenceRule.update({ where: { id: ruleId }, data: { nextRunAt: new Date(Date.now() - 3_600_000) } });
 
@@ -75,7 +75,7 @@ describe("recurring tasks", () => {
   it("ON_SCHEDULE: the occurrence spawned by the job is scheduled AT the due nextRunAt, not one interval later", async () => {
     const { admin, tl, client } = await seedBasics();
     session.set(admin);
-    const id = await createTaskAs(client.id, [tl.id], { title: "Daily report", recurrence: { frequency: "DAILY", interval: 1, trigger: "ON_SCHEDULE" } });
+    const id = await createTaskAs(client.id, [tl.id], { title: "Daily report", recurrence: { freq: "DAILY", interval: 1, trigger: "ON_SCHEDULE" } });
     const ruleId = (await loadTask(id)).recurrenceRuleId!;
     // due = 10:00 IST on a recent working day (>= 2 days ago, never a Sunday) so findSlot(due) === due
     let due = zonedDayAt(subDays(new Date(), 2), 600, TZ);
@@ -93,7 +93,7 @@ describe("recurring tasks", () => {
   it("ON_COMPLETE: approveFinish spawns the next occurrence; the job ignores ON_COMPLETE rules", async () => {
     const { admin, tl, client } = await seedBasics();
     session.set(admin);
-    const id = await createTaskAs(client.id, [tl.id], { title: "Weekly sync", recurrence: { frequency: "WEEKLY", interval: 1, trigger: "ON_COMPLETE" } });
+    const id = await createTaskAs(client.id, [tl.id], { title: "Weekly sync", recurrence: { freq: "WEEKLY", interval: 1, trigger: "ON_COMPLETE" } });
     const ruleId = (await loadTask(id)).recurrenceRuleId!;
     await testDb.recurrenceRule.update({ where: { id: ruleId }, data: { nextRunAt: new Date(Date.now() - 3_600_000) } });
     const { run } = await import("@/jobs/recurrence");
@@ -130,7 +130,7 @@ describe("recurring tasks", () => {
     const { admin, tl, client } = await seedBasics();
     session.set(admin);
     const yesterday = dateKey(new Date(Date.now() - DAY), TZ);
-    const id = await createTaskAs(client.id, [tl.id], { title: "Ended", recurrence: { frequency: "DAILY", interval: 1, trigger: "ON_COMPLETE", endDate: yesterday } });
+    const id = await createTaskAs(client.id, [tl.id], { title: "Ended", recurrence: { freq: "DAILY", interval: 1, trigger: "ON_COMPLETE", ends: "UNTIL", until: yesterday } });
     const t = await loadTask(id);
     expect(t.recurrenceRule!.endDate).not.toBeNull();
     expect(t.recurrenceRule!.nextRunAt).toBeNull();
@@ -153,7 +153,7 @@ describe("recurring tasks", () => {
   it("stopRecurrence prevents further occurrences", async () => {
     const { admin, tl, client } = await seedBasics();
     session.set(admin);
-    const id = await createTaskAs(client.id, [tl.id], { title: "Stop me", recurrence: { frequency: "DAILY", interval: 1, trigger: "ON_SCHEDULE" } });
+    const id = await createTaskAs(client.id, [tl.id], { title: "Stop me", recurrence: { freq: "DAILY", interval: 1, trigger: "ON_SCHEDULE" } });
     const ruleId = (await loadTask(id)).recurrenceRuleId!;
     const { stopRecurrence, spawnNextOccurrence } = await import("@/server/tasks/recurring");
     await stopRecurrence(ruleId);
