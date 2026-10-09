@@ -44,7 +44,7 @@ export function MenuTray({ open, onClose }: { open: boolean; onClose: () => void
   return createPortal(
     <div className="fixed inset-0 z-40 flex bg-black/15 backdrop-blur-[2px]" onClick={onClose}>
       <nav
-        className="relative h-full w-[74%] max-w-[360px] overflow-y-auto border-r border-white/60 bg-white/70 pb-24 shadow-[8px_0_40px_rgba(16,24,40,.15)] backdrop-blur-xl"
+        className="relative flex h-full w-[74%] max-w-[360px] flex-col overflow-y-auto border-r border-white/60 bg-white/70 pb-[calc(12px+env(safe-area-inset-bottom))] shadow-[8px_0_40px_rgba(16,24,40,.15)] backdrop-blur-xl"
         onClick={(e) => e.stopPropagation()}
         aria-label="Admin menu"
       >
@@ -77,12 +77,12 @@ export function MenuTray({ open, onClose }: { open: boolean; onClose: () => void
         <Link
           href="/dashboard?add=CHOOSE"
           onClick={onClose}
-          className="absolute bottom-16 right-5 text-[46px] font-light leading-none text-gray-900"
+          className="mr-5 mt-9 self-end text-[46px] font-light leading-none text-gray-900"
           aria-label="Add task"
         >
           +
         </Link>
-        <div className="absolute bottom-3 left-5 flex gap-4 text-[11px] text-gray-500">
+        <div className="mt-auto flex gap-4 px-5 pt-5 text-[11px] text-gray-500">
           <Link href="/requests" onClick={onClose}>Requests</Link>
           <Link href="/admin/settings" onClick={onClose}>Settings</Link>
           <Link href="/api/auth/signout" className="text-red-600">Sign out</Link>
