@@ -117,7 +117,7 @@ export async function reactivateUser(id: string): Promise<ActionResult<{ id: str
   return setUserActive(id, true);
 }
 
-// ---------- Teams (Designations) ----------
+// ---------- Teams ----------
 export async function createTeam(raw: unknown): Promise<ActionResult<{ id: string }>> {
   return wrap(async () => {
     const actor = await requireRole("ADMIN");
@@ -138,7 +138,7 @@ export async function updateTeam(raw: unknown): Promise<ActionResult<{ id: strin
     const actor = await requireRole("ADMIN");
     const { id, ...input } = parse(updateTeamSchema, raw);
     const before = await prisma.team.findUnique({ where: { id } });
-    if (!before) throw new Error("Designation not found");
+    if (!before) throw new Error("Team not found");
     await assertLeader(input.leaderId);
     const after = await withUnique(() => prisma.team.update({ where: { id }, data: input }), "A designation with this name already exists");
     if (input.leaderId) {
@@ -154,7 +154,7 @@ export async function setTeamActive(id: string, active: boolean): Promise<Action
   return wrap(async () => {
     const actor = await requireRole("ADMIN");
     const before = await prisma.team.findUnique({ where: { id } });
-    if (!before) throw new Error("Designation not found");
+    if (!before) throw new Error("Team not found");
     const after = await prisma.team.update({ where: { id }, data: { active } });
     await audit(actor.id, active ? "team.activate" : "team.deactivate", "Team", id, before, after);
     safeRevalidate(TEAMS);

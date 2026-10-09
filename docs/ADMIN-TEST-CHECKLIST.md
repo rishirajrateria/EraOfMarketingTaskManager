@@ -5,7 +5,7 @@ Sign in as **Admin** from the demo chooser. Everything below is in the order a r
 ## 1. Setup (☰ menu)
 - **Settings** → company name, address, GSTIN (state is derived from it), bank + UPI id, logo, working hours, half-day hours,
   holidays, expense categories, invoice prefix. Save with the bar button.
-- **Add Designation** → add a team. **Add Work** → add a work-type tag. **Add Executive / Add Team Leader** → add a person
+- **Add Team** → add a team. **Add Work** → add a work-type tag. **Add Executive / Add Team Leader** → add a person
   by email (demo users already exist). **Add Client** (vault "+") → name, **Business name** (printed on invoices), GSTIN
   (watch the tax badge: CGST+SGST / IGST / Export), **PAN** (try `ABC123` → rejected; `abcde1234f` → saved upper-case),
   email, WhatsApp, TDS %.

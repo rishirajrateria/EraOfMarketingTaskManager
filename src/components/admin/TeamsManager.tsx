@@ -8,7 +8,7 @@ import { createTeam, setTeamActive, updateTeam } from "@/server/admin/actions";
 import type { LeaderOption, TeamRow } from "@/server/admin/queries";
 import type { TeamInput } from "@/server/admin/schemas";
 
-/** /admin/teams — "Add Designation" (SPEC §11.8). Designation = Team. */
+/** /admin/teams — "Add Team" (SPEC §11.8; called "Add Designation" in the original spec). */
 export function TeamsManager({ teams, leaders }: { teams: TeamRow[]; leaders: LeaderOption[] }) {
   const { busy, run } = useAdminAction();
   const [editing, setEditing] = useState<TeamRow | null>(null);
@@ -19,7 +19,7 @@ export function TeamsManager({ teams, leaders }: { teams: TeamRow[]; leaders: Le
   };
 
   const submit = async (values: TeamInput) => {
-    const res = editing ? await run(updateTeam({ ...values, id: editing.id }), "Saved") : await run(createTeam(values), "Designation added");
+    const res = editing ? await run(updateTeam({ ...values, id: editing.id }), "Saved") : await run(createTeam(values), "Team added");
     if (res) close();
   };
   const toggle = async (t: TeamRow) => {
@@ -39,7 +39,7 @@ export function TeamsManager({ teams, leaders }: { teams: TeamRow[]; leaders: Le
   );
 
   return (
-    <Screen header={<ScreenHeader title="Add Designation" subtitle={`${teams.filter((t) => t.active).length} active · Graphic, Finance, Website, Video, Write…`} />} zone={zone} className="pb-3">
+    <Screen header={<ScreenHeader title="Add Team" subtitle={`${teams.filter((t) => t.active).length} active · Graphic, Finance, Website, Video, Write…`} />} zone={zone} className="pb-3">
       {teams.length === 0 ? <EmptyState>No designations yet. Tap ＋ Add to add one.</EmptyState> : null}
       {teams.map((t) => (
         <ListRow

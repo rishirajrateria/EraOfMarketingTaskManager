@@ -29,7 +29,7 @@ export const MENU_GROUPS: { href: string; label: string }[][] = [
   ],
   [
     { href: "/admin/work-types", label: "Add Work" },
-    { href: "/admin/teams", label: "Add Designation" },
+    { href: "/admin/teams", label: "Add Team" },
   ],
 ];
 
