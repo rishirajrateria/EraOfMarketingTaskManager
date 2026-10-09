@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { stateByCode, stateFromGstin } from "@/server/finance/tax";
+import { normalizeE164 } from "@/integrations/whatsapp";
 
 /** Zod schemas shared by the admin server actions (SPEC §11.7–§11.9). */
 
@@ -77,12 +79,37 @@ export const clientInputSchema = z.object({
     .nullable()
     .transform((v) => (v ? v.toLowerCase() : null))
     .refine((v) => v === null || z.email().safeParse(v).success, "Enter a valid email"),
-  gstNumber: optionalText(30),
+  gstNumber: optionalText(30).transform((v) => (v ? v.replace(/\s+/g, "").toUpperCase() : null)),
   address: optionalText(1000),
+  /** ISO-3166 alpha-2; anything but IN is billed as an export (ADR 0005). */
+  country: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z]{2}$/, "Country must be a 2-letter ISO code")
+    .default("IN"),
+  stateCode: optionalText(2).refine((v) => v === null || stateByCode(v) !== null, "Unknown GST state code"),
+  stateName: optionalText(80),
+  phone: optionalText(30),
+  whatsapp: optionalText(30).refine((v) => v === null || normalizeE164(v) !== null, "WhatsApp number must be in E.164 form, e.g. +919876543210"),
+  tdsPercent: z.coerce.number().min(0).max(100).optional().nullable(),
 });
 export const updateClientSchema = clientInputSchema.extend({ id });
 export type ClientInput = z.input<typeof clientInputSchema>;
 export type UpdateClientInput = z.input<typeof updateClientSchema>;
+
+/** State is derived from the GSTIN when present (editable otherwise); WhatsApp is normalised to E.164. */
+export function withDerivedClientFields<T extends z.output<typeof clientInputSchema>>(input: T): T {
+  const fromGstin = stateFromGstin(input.gstNumber);
+  const state = fromGstin ?? stateByCode(input.stateCode);
+  return {
+    ...input,
+    stateCode: state?.code ?? null,
+    stateName: state ? state.name : input.stateName,
+    whatsapp: normalizeE164(input.whatsapp),
+    tdsPercent: input.tdsPercent ?? null,
+  };
+}
 
 // ---------- Work types ----------
 export const workTypeInputSchema = z.object({

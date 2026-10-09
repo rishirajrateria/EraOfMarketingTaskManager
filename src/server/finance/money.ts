@@ -34,6 +34,28 @@ export function computeTotals(lines: LineInput[], gstPercent: number) {
   return { subtotal, gstAmount, total: round2(subtotal + gstAmount) };
 }
 
+/** Tolerance for "paid in full" comparisons. */
+export const PAID_EPSILON = 0.005;
+
+export type SettlementInput = {
+  total: number;
+  payments: { amount: number; tdsAmount?: number | null }[];
+  /** Credit notes that have been approved (approvedAt set) and not cancelled. */
+  creditNotes?: { total: number }[];
+};
+
+export type Settlement = { received: number; tds: number; credited: number; settled: number; balance: number; paid: boolean };
+
+/** Balance after payments, TDS and credit notes (ADR 0005): PAID when settled ≥ total. */
+export function settle(i: SettlementInput): Settlement {
+  const received = round2(i.payments.reduce((s, p) => s + p.amount, 0));
+  const tds = round2(i.payments.reduce((s, p) => s + (p.tdsAmount ?? 0), 0));
+  const credited = round2((i.creditNotes ?? []).reduce((s, c) => s + c.total, 0));
+  const settled = round2(received + tds + credited);
+  const balance = round2(Math.max(0, i.total - settled));
+  return { received, tds, credited, settled, balance, paid: settled >= i.total - PAID_EPSILON };
+}
+
 /** Escape one CSV cell. */
 export function csvCell(v: unknown): string {
   const s = v == null ? "" : String(v);

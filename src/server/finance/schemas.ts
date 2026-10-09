@@ -33,39 +33,79 @@ export const invoiceItemSchema = z.object({
   unit: z.enum(["HOURS", "FIXED"]).default("FIXED"),
   rate: z.coerce.number().min(0),
 });
+export type InvoiceItemInput = z.infer<typeof invoiceItemSchema>;
 
-export const invoiceInputSchema = z.object({
-  clientId: z.string().min(1, "client required"),
-  items: z.array(invoiceItemSchema).min(1, "at least one line item"),
-  gstPercent: z.coerce.number().min(0).max(100).optional(),
-  notes: optionalStr,
-  paymentTerms: optionalStr,
-  dueDate: optionalDateInput,
-  kind: z.enum(["ONE_TIME", "RECURRING"]).default("ONE_TIME"),
-  recurrence: z
-    .object({
-      frequency: z.enum(["DAILY", "WEEKLY", "MONTHLY", "CUSTOM"]),
-      interval: z.coerce.number().int().min(1).max(365).default(1),
-      byWeekday: z.array(z.coerce.number().int().min(0).max(6)).default([]),
-      endDate: optionalDateInput,
-    })
-    .optional()
-    .nullable(),
-  paymentMode: z.enum(["FULL", "ADVANCE"]).default("FULL"),
-  advancePercent: z.coerce.number().int().min(1).max(99).optional().nullable(),
-  /** ADVANCE only — how the balance invoice is raised: on `balanceDueOn`, by hand, or automatically (as a draft) once the client's tasks are complete. */
-  balanceMode: z.enum(["DATE", "MANUAL", "AUTO"]).optional().nullable(),
-  balanceDueOn: optionalDateInput,
-  sendAt: optionalDateInput,
+export const recurrenceInputSchema = z.object({
+  frequency: z.enum(["DAILY", "WEEKLY", "MONTHLY", "CUSTOM"]),
+  interval: z.coerce.number().int().min(1).max(365).default(1),
+  byWeekday: z.array(z.coerce.number().int().min(0).max(6)).default([]),
+  monthAnchor: z.enum(["NONE", "START", "END"]).default("NONE"),
+  endDate: optionalDateInput,
 });
+
+export const partInputSchema = z.object({
+  kind: z.enum(["PERCENT", "FIXED"]).default("PERCENT"),
+  value: z.coerce.number().positive("part value must be positive"),
+  dueDate: dateInput,
+  description: z.string().trim().max(500).default(""),
+});
+export type PartInput = z.infer<typeof partInputSchema>;
+
+/** `createInvoice` input (ADR 0005). Either `items[]` or the `amount` + `description` convenience. */
+export const invoiceInputSchema = z
+  .object({
+    clientId: z.string().min(1, "client required"),
+    docType: z.enum(["TAX_INVOICE", "EXPORT_INVOICE", "PROFORMA"]).optional().nullable(),
+    plan: z.enum(["ONE_TIME", "RECURRING", "PART"]).default("ONE_TIME"),
+    items: z.array(invoiceItemSchema).optional(),
+    amount: z.coerce.number().min(0).optional().nullable(),
+    hsnSac: optionalStr,
+    gstPercent: z.coerce.number().min(0).max(100).optional().nullable(),
+    description: z.string().trim().max(5000).default(""),
+    notes: optionalStr,
+    paymentTerms: optionalStr,
+    dueDate: optionalDateInput,
+    recurrence: recurrenceInputSchema.optional().nullable(),
+    parts: z.array(partInputSchema).optional().nullable(),
+  })
+  .superRefine((v, ctx) => {
+    const hasItems = (v.items?.length ?? 0) > 0;
+    if (!hasItems && (v.amount == null || v.amount <= 0)) ctx.addIssue({ code: "custom", path: ["items"], message: "add at least one line item or an amount" });
+    if (!hasItems && v.amount != null && v.amount > 0 && !v.description) ctx.addIssue({ code: "custom", path: ["description"], message: "description required with a single amount" });
+    if (v.plan === "RECURRING" && !v.recurrence) ctx.addIssue({ code: "custom", path: ["recurrence"], message: "recurrence rule required for recurring invoices" });
+    if (v.plan === "PART" && (v.parts?.length ?? 0) < 1) ctx.addIssue({ code: "custom", path: ["parts"], message: "at least one part required for part payments" });
+  });
 export type InvoiceInput = z.infer<typeof invoiceInputSchema>;
+
+export const approveOptionsSchema = z.object({
+  email: z.boolean().default(false),
+  whatsapp: z.boolean().default(false),
+  emailText: optionalStr,
+  whatsappText: optionalStr,
+});
+export type ApproveOptions = z.infer<typeof approveOptionsSchema>;
+
+export const sendOptionsSchema = z.object({ email: z.boolean().default(false), whatsapp: z.boolean().default(false) });
+export type SendOptions = z.infer<typeof sendOptionsSchema>;
+
+export const mergePartsSchema = z.object({ dueDate: dateInput, description: optionalStr });
+export const partScheduleSchema = z.array(partInputSchema).min(1, "at least one part");
+
+export const creditNoteInputSchema = z.object({
+  amount: z.coerce.number().positive().optional().nullable(),
+  reason: z.string().trim().min(1, "reason required").max(1000),
+});
+export type CreditNoteInput = z.infer<typeof creditNoteInputSchema>;
 
 export const paymentInputSchema = z.object({
   invoiceId: z.string().min(1),
   amount: z.coerce.number().positive("amount must be positive"),
   receivedAt: optionalDateInput,
   method: z.enum(["CASH", "BANK", "UPI", "OTHER"]).default("BANK"),
+  tdsAmount: z.coerce.number().min(0).optional().nullable(),
+  tdsPercent: z.coerce.number().min(0).max(100).optional().nullable(),
   reference: optionalStr,
+  notes: optionalStr,
 });
 export type PaymentInput = z.infer<typeof paymentInputSchema>;
 

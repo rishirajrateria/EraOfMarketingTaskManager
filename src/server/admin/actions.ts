@@ -12,6 +12,7 @@ import {
   updateTeamSchema,
   clientInputSchema,
   updateClientSchema,
+  withDerivedClientFields,
   workTypeInputSchema,
   updateWorkTypeSchema,
 } from "@/server/admin/schemas";
@@ -165,7 +166,7 @@ export async function setTeamActive(id: string, active: boolean): Promise<Action
 export async function createClient(raw: unknown): Promise<ActionResult<{ id: string }>> {
   return wrap(async () => {
     const actor = await requireRole("ADMIN");
-    const input = parse(clientInputSchema, raw);
+    const input = withDerivedClientFields(parse(clientInputSchema, raw));
     const client = await withUnique(() => prisma.client.create({ data: input }), "A client with this name already exists");
     await audit(actor.id, "client.create", "Client", client.id, null, client);
     safeRevalidate(CLIENTS, "/admin/vault");
@@ -176,7 +177,7 @@ export async function createClient(raw: unknown): Promise<ActionResult<{ id: str
 export async function updateClient(raw: unknown): Promise<ActionResult<{ id: string }>> {
   return wrap(async () => {
     const actor = await requireRole("ADMIN");
-    const { id, ...input } = parse(updateClientSchema, raw);
+    const { id, ...input } = withDerivedClientFields(parse(updateClientSchema, raw));
     const before = await prisma.client.findUnique({ where: { id } });
     if (!before) throw new Error("Client not found");
     const after = await withUnique(() => prisma.client.update({ where: { id }, data: input }), "A client with this name already exists");

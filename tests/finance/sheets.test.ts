@@ -13,11 +13,12 @@ describe("finance sheet push-only sync", () => {
   });
 
   it("pushes invoices, payments, expenses and the summary; reports the spreadsheet and row count only", async () => {
-    const { createInvoice } = await import("@/server/finance/invoices");
+    const { createInvoice, approveAndSend } = await import("@/server/finance/invoices");
     const { recordPayment } = await import("@/server/finance/payments");
     const { syncFinanceSheet } = await import("@/server/finance/sheets-sync");
-    const c = await createInvoice({ clientId: seed.client.id, items: [{ description: "Retainer", rate: 10000 }], sendNow: true });
+    const c = await createInvoice({ clientId: seed.client.id, items: [{ description: "Retainer", rate: 10000 }] });
     if (!c.ok) throw new Error(c.error);
+    expect((await approveAndSend(c.data.id, {})).ok).toBe(true);
     const p = await recordPayment({ invoiceId: c.data.id, amount: 1000, receivedAt: "2026-09-05", reference: "UTR1" });
     if (!p.ok) throw new Error(p.error);
     await testDb.expense.create({ data: { date: new Date(), amount: 250, category: "Travel", createdById: seed.admin.id } });

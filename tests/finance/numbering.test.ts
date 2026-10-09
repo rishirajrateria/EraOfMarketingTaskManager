@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { resetDb, seedBasics, testDb } from "../helpers/db";
-import { allocateInvoiceNumber, allocateReceiptNumber, financialYearKey, formatNumber, normalizePrefix } from "@/server/finance/numbering";
+import { allocateCreditNoteNumber, allocateInvoiceNumber, allocateNumberFor, allocateProformaNumber, allocateReceiptNumber, financialYearKey, formatNumber, isDraftNumber, normalizePrefix } from "@/server/finance/numbering";
 import { prisma } from "@/lib/db";
 
 const TZ = "Asia/Kolkata";
@@ -76,8 +76,22 @@ describe("numbering (db)", () => {
   });
 
   it("a stale stored key resets the counters even when they were set by hand", async () => {
-    await testDb.companySettings.update({ where: { id: "default" }, data: { numberingFyKey: "24-25", invoiceNextNumber: 40, receiptNextNumber: 9 } });
+    await testDb.companySettings.update({ where: { id: "default" }, data: { numberingFyKey: "24-25", invoiceNextNumber: 40, receiptNextNumber: 9, proformaNextNumber: 5, creditNoteNextNumber: 3 } });
     expect(await allocateInvoiceNumber()).toBe(`EOM/${FY}/0001`);
     expect(await allocateReceiptNumber()).toBe(`EOM-RCP/${FY}/0001`);
+    expect(await allocateProformaNumber()).toBe(`EOM-PRO/${FY}/0001`);
+    expect(await allocateCreditNoteNumber()).toBe(`EOM-CN/${FY}/0001`);
+  });
+
+  it("proforma and credit-note series have their own prefixes and counters; tax + export share the invoice series", async () => {
+    expect(await allocateNumberFor("PROFORMA")).toBe(`EOM-PRO/${FY}/0001`);
+    expect(await allocateNumberFor("PROFORMA")).toBe(`EOM-PRO/${FY}/0002`);
+    expect(await allocateNumberFor("CREDIT_NOTE")).toBe(`EOM-CN/${FY}/0001`);
+    expect(await allocateNumberFor("TAX_INVOICE")).toBe(`EOM/${FY}/0001`);
+    expect(await allocateNumberFor("EXPORT_INVOICE")).toBe(`EOM/${FY}/0002`);
+    const s = await testDb.companySettings.findUniqueOrThrow({ where: { id: "default" } });
+    expect(s).toMatchObject({ invoiceNextNumber: 3, proformaNextNumber: 3, creditNoteNextNumber: 2, receiptNextNumber: 1 });
+    expect(isDraftNumber("DRAFT-abc")).toBe(true);
+    expect(isDraftNumber(`EOM/${FY}/0001`)).toBe(false);
   });
 });

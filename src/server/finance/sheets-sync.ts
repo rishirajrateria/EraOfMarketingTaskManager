@@ -13,7 +13,7 @@ import { audit } from "@/lib/audit";
  */
 export type SheetSyncResult = { spreadsheetId: string; created: boolean; rows: number };
 
-const PAYMENT_HEADERS = ["invoiceNumber", "amount", "receivedAt", "method", "reference", "receiptNumber", "client"];
+const PAYMENT_HEADERS = ["invoiceNumber", "amount", "tdsAmount", "receivedAt", "method", "reference", "receiptNumber", "client"];
 
 export async function syncExpensesSheet(actorId: string | null): Promise<SheetSyncResult> {
   const tz = (await getSettings()).timezone;
@@ -41,12 +41,12 @@ export async function syncFinanceSheet(actorId: string | null): Promise<SheetSyn
   ]);
   const d = (x: string | Date | null) => (x ? fmtDate(new Date(x), tz, "yyyy-MM-dd") : "");
   await writeTable(spreadsheetId, "Invoices", [
-    ["number", "client", "status", "kind", "paymentMode", "total", "received", "balance", "sentAt", "dueDate", "id"],
-    ...invoices.map((i) => [i.number, i.clientName, i.status, i.kind, i.paymentMode, i.total, i.received, i.balance, d(i.sentAt), d(i.dueDate), i.id]),
+    ["number", "client", "status", "docType", "plan", "total", "received", "tds", "credited", "balance", "approvedAt", "dueDate", "id"],
+    ...invoices.map((i) => [i.number, i.clientName, i.status, i.docType, i.plan, i.total, i.received, i.tds, i.credited, i.balance, d(i.approvedAt), d(i.dueDate), i.id]),
   ]);
   await writeTable(spreadsheetId, "Payments", [
     PAYMENT_HEADERS,
-    ...payments.map((p) => [p.invoice.number, p.amount.toNumber(), d(p.receivedAt), p.method, p.reference ?? "", p.receiptNumber ?? "", p.invoice.client.name]),
+    ...payments.map((p) => [p.invoice.number, p.amount.toNumber(), p.tdsAmount.toNumber(), d(p.receivedAt), p.method, p.reference ?? "", p.receiptNumber ?? "", p.invoice.client.name]),
   ]);
   await writeTable(spreadsheetId, "Expenses", [
     ["date", "amount", "category", "vendor", "note", "tags"],

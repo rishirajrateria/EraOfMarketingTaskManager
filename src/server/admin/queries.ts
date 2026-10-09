@@ -61,7 +61,7 @@ export async function listTeams() {
 export type TeamRow = Awaited<ReturnType<typeof listTeams>>[number];
 
 export async function listClients() {
-  return prisma.client.findMany({
+  const rows = await prisma.client.findMany({
     select: {
       id: true,
       name: true,
@@ -69,6 +69,15 @@ export async function listClients() {
       email: true,
       gstNumber: true,
       address: true,
+      country: true,
+      stateCode: true,
+      stateName: true,
+      phone: true,
+      whatsapp: true,
+      tdsPercent: true,
+      workOnHold: true,
+      holdInvoiceId: true,
+      holdSince: true,
       driveFolderId: true,
       visibleInFilters: true,
       active: true,
@@ -76,6 +85,7 @@ export async function listClients() {
     },
     orderBy: [{ active: "desc" }, { name: "asc" }],
   });
+  return rows.map((c) => ({ ...c, tdsPercent: c.tdsPercent?.toNumber() ?? null, holdSince: c.holdSince?.toISOString() ?? null }));
 }
 export type ClientRow = Awaited<ReturnType<typeof listClients>>[number];
 
