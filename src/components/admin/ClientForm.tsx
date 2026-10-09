@@ -28,13 +28,15 @@ const STATES = Object.entries(GST_STATE_CODES).map(([code, name]) => ({ code, na
 
 type Values = ClientInput & { tdsPercent?: number | string | null };
 
-/** Add / edit client (SPEC §11.1 + ADR 0005): country, GST state (locked to the GSTIN), phone, WhatsApp, TDS %. */
+/** Add / edit client (SPEC §11.1 + ADR 0005/0006): business name + PAN for the invoice, country, GST state (locked to the GSTIN), phone, WhatsApp, TDS %. */
 export function ClientForm({ client, busy, companyStateCode, onSubmit, onCancel, onToggle }: { client: ClientRow | null; busy: boolean; companyStateCode: string | null; onSubmit: (v: ClientInput) => void; onCancel: () => void; onToggle?: () => void }) {
   const [v, setV] = useState<Values>({
     name: client?.name ?? "",
+    businessName: client?.businessName ?? "",
     contact: client?.contact ?? "",
     email: client?.email ?? "",
     gstNumber: client?.gstNumber ?? "",
+    pan: client?.pan ?? "",
     address: client?.address ?? "",
     country: client?.country ?? "IN",
     stateCode: client?.stateCode ?? "",
@@ -59,6 +61,9 @@ export function ClientForm({ client, busy, companyStateCode, onSubmit, onCancel,
     <form className="flex flex-col gap-3 px-4 pb-2 pt-3" onSubmit={submit}>
       <Field label="Client name">
         <input className={inputCls} required value={v.name} onChange={set("name")} />
+      </Field>
+      <Field label="Business name" hint="Legal name printed on invoices; blank = client name">
+        <input className={inputCls} value={v.businessName ?? ""} onChange={set("businessName")} />
       </Field>
       <Field label="Contact person">
         <input className={inputCls} value={v.contact ?? ""} onChange={set("contact")} />
@@ -88,9 +93,14 @@ export function ClientForm({ client, busy, companyStateCode, onSubmit, onCancel,
       </div>
       {india ? (
         <>
-          <Field label="GST number">
-            <input className={inputCls} value={v.gstNumber ?? ""} onChange={set("gstNumber")} placeholder="29ABCDE1234F1Z5" autoCapitalize="characters" />
-          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="GST number">
+              <input className={inputCls} value={v.gstNumber ?? ""} onChange={set("gstNumber")} placeholder="29ABCDE1234F1Z5" autoCapitalize="characters" />
+            </Field>
+            <Field label="PAN" hint="ABCDE1234F">
+              <input className={inputCls} value={v.pan ?? ""} onChange={set("pan")} placeholder="ABCDE1234F" maxLength={10} autoCapitalize="characters" />
+            </Field>
+          </div>
           <Field label="State" hint={fromGstin ? "from GSTIN" : "Decides CGST+SGST vs IGST"}>
             <select className={`${inputCls} disabled:opacity-70`} value={stateCode} disabled={!!fromGstin} onChange={set("stateCode")}>
               <option value="">— unregistered / same as company —</option>

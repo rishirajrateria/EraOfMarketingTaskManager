@@ -20,8 +20,8 @@ export async function syncExpensesSheet(actorId: string | null): Promise<SheetSy
   const { rows } = await listExpenses();
   const spreadsheetId = await ensureSpreadsheet("Expenses", env.expensesSheetId || undefined);
   const table: (string | number)[][] = [
-    ["date", "amount", "category", "vendor", "note", "tags", "receiptDriveId", "createdBy", "id"],
-    ...rows.map((e) => [fmtDate(new Date(e.date), tz, "yyyy-MM-dd"), e.amount, e.category, e.vendor ?? "", e.note ?? "", e.tags.join(", "), e.receiptDriveId ?? "", e.createdBy, e.id]),
+    ["date", "amount", "category", "vendor", "note", "tags", "tdsAmount", "netPaid", "receiptDriveId", "createdBy", "id"],
+    ...rows.map((e) => [fmtDate(new Date(e.date), tz, "yyyy-MM-dd"), e.amount, e.category, e.vendor ?? "", e.note ?? "", e.tags.join(", "), e.tdsAmount, e.amount - e.tdsAmount, e.receiptDriveId ?? "", e.createdBy, e.id]),
   ];
   await writeTable(spreadsheetId, "Expenses", table);
   await prisma.expense.updateMany({ where: { id: { in: rows.map((r) => r.id) } }, data: { sheetRowSyncedAt: new Date() } });
@@ -49,8 +49,8 @@ export async function syncFinanceSheet(actorId: string | null): Promise<SheetSyn
     ...payments.map((p) => [p.invoice.number, p.amount.toNumber(), p.tdsAmount.toNumber(), d(p.receivedAt), p.method, p.reference ?? "", p.receiptNumber ?? "", p.invoice.client.name]),
   ]);
   await writeTable(spreadsheetId, "Expenses", [
-    ["date", "amount", "category", "vendor", "note", "tags"],
-    ...expenses.rows.map((e) => [d(e.date), e.amount, e.category, e.vendor ?? "", e.note ?? "", e.tags.join(", ")]),
+    ["date", "amount", "category", "vendor", "note", "tags", "tdsAmount"],
+    ...expenses.rows.map((e) => [d(e.date), e.amount, e.category, e.vendor ?? "", e.note ?? "", e.tags.join(", "), e.tdsAmount]),
   ]);
   await writeTable(spreadsheetId, "Summary", [
     ["month", "invoiced", "received", "expenses", "net"],

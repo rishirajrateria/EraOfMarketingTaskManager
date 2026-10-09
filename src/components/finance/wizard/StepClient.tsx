@@ -1,4 +1,5 @@
 "use client";
+import { Toggle } from "@/components/admin/AdminUi";
 import { TaxBadge } from "@/components/finance/TaxBadge";
 import { contactWarnings } from "@/components/finance/invoice-form-helpers";
 import { FieldError, type StepProps } from "@/components/finance/wizard/types";
@@ -22,7 +23,7 @@ export function StepClient({ form, set, errors, clients, tax, query }: StepProps
                 key={c.id}
                 type="button"
                 aria-pressed={active}
-                onClick={() => set({ clientId: c.id })}
+                onClick={() => set({ clientId: c.id, tdsApplicable: c.tdsPercent != null })}
                 className={`touch-target rounded-full px-3.5 py-1.5 text-sm font-medium transition ${active ? "bg-gradient-to-b from-[#2f74e6] to-[#1e63d6] text-white shadow-[0_6px_16px_rgba(30,99,214,.35)]" : "glass-chip text-gray-800"}`}
               >
                 {c.name}
@@ -44,8 +45,15 @@ export function StepClient({ form, set, errors, clients, tax, query }: StepProps
           <ul className="space-y-1 text-xs">
             <li className={picked.email ? "text-gray-700" : "text-amber-700"}>✉️ {picked.email ?? "No email on file — email sending will be disabled"}</li>
             <li className={picked.whatsapp ? "text-gray-700" : "text-amber-700"}>💬 {picked.whatsapp ?? "No WhatsApp number — WhatsApp sending will be disabled"}</li>
-            {picked.tdsPercent != null ? <li className="text-gray-700">TDS {picked.tdsPercent}% is deducted by this client</li> : null}
           </ul>
+          <div className="border-t border-white/60">
+            <Toggle
+              checked={form.tdsApplicable}
+              onChange={(v) => set({ tdsApplicable: v })}
+              label="This client will deduct TDS"
+              hint={picked.tdsPercent != null ? `${picked.tdsPercent}% on the client card — the payment sheet pre-fills it` : "No TDS % on the client card; you can still enter it when recording the payment"}
+            />
+          </div>
           {warnings.length === 2 ? <p className="text-xs font-medium text-red-600">This client has no contact channel; add an email or WhatsApp number before approving.</p> : null}
         </div>
       ) : null}

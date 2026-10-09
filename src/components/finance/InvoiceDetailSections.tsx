@@ -110,6 +110,9 @@ export function ClientBlock({ inv, tz }: { inv: InvoiceDetail; tz: string }) {
         <li className={c.whatsapp ? "text-gray-700" : "text-amber-700"}>💬 {c.whatsapp ?? "No WhatsApp number"}</li>
         {c.phone ? <li className="text-gray-700">📞 {c.phone}</li> : null}
         {c.gstNumber ? <li className="text-gray-700">GSTIN {c.gstNumber}</li> : null}
+        {inv.docType !== "CREDIT_NOTE" ? (
+          <li className={inv.tdsApplicable ? "text-gray-700" : "text-gray-500"}>{inv.tdsApplicable ? `TDS deducted by client${c.tdsPercent != null ? ` · ${c.tdsPercent}%` : ""}` : "No TDS expected on this invoice"}</li>
+        ) : null}
       </ul>
       {c.workOnHold ? (
         <div className="mt-2 rounded-lg border border-white/60 bg-red-100/70 px-2.5 py-1.5 text-xs text-red-800 backdrop-blur-sm">

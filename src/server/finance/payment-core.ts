@@ -50,7 +50,8 @@ export async function recordPaymentCore(input: PaymentInput, actorId: string | n
     });
     const s = settleInvoice({ ...inv, payments: [...inv.payments, { amount: payment.amount, tdsAmount: payment.tdsAmount }] });
     const status = s.paid ? "PAID" : "PARTIALLY_PAID";
-    await tx.invoice.update({ where: { id: inv.id }, data: { status } });
+    // ADR 0006: a TDS deduction on an invoice marked "no TDS" flips the flag so the year-end total stays right.
+    await tx.invoice.update({ where: { id: inv.id }, data: { status, ...(tdsAmount > 0 && !inv.tdsApplicable ? { tdsApplicable: true } : {}) } });
     if (status === "PAID") await syncPartFromInvoice(tx, inv.id, "PAID");
     await audit(actorId, "invoice.payment", "Invoice", inv.id, { status: inv.status }, { status, amount: input.amount, tdsAmount, method: input.method, receiptNumber }, tx);
     return { inv, payment, status, settlement: s } as const;

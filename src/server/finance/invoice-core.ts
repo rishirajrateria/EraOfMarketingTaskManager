@@ -30,6 +30,7 @@ export async function createInvoiceRecord(input: InvoiceInput, actorId: string):
     dueDate: input.dueDate,
     notes: input.notes,
     paymentTerms: input.paymentTerms ?? company.invoiceTerms,
+    tdsApplicable: input.tdsApplicable ?? client.tdsPercent != null,
   };
 
   if (input.plan === "PART") {
@@ -46,7 +47,7 @@ export async function createInvoiceRecord(input: InvoiceInput, actorId: string):
         createdById: actorId,
       }),
     );
-    return issuePartCore(plan.id, parts[0].seq, actorId, { description: input.description });
+    return issuePartCore(plan.id, parts[0].seq, actorId, { description: input.description, tdsApplicable: base.tdsApplicable });
   }
 
   const now = new Date();
@@ -82,6 +83,7 @@ export async function cloneRecurringOccurrence(template: InvoiceFull, occurrence
         notes: template.notes,
         paymentTerms: template.paymentTerms,
         dueDate: shiftedDueDate(template.approvedAt ?? template.sentAt ?? template.createdAt, template.dueDate, occurrenceAt),
+        tdsApplicable: template.tdsApplicable,
       },
       actorId,
       "invoice.recur_generate",

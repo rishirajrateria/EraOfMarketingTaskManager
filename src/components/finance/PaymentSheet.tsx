@@ -2,22 +2,30 @@
 import { useState } from "react";
 import { Sheet } from "@/components/ui/Sheet";
 import { Field, btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
+import { Toggle } from "@/components/admin/AdminUi";
 import { formatINR, round2 } from "@/server/finance/money";
 import { recordPayment, sendReceipt, type RecordPaymentView } from "@/server/finance/payments";
 import type { InvoiceDetail } from "@/server/finance/queries";
 import { METHOD_LABEL, PAYMENT_METHODS, dateKeyLocal, segActive, segIdle, type PaymentMethod } from "@/components/finance/finance-ui";
 import { useAction } from "@/components/finance/useAction";
 
-/** Record payment (amount / date / CASH BANK UPI OTHER / TDS % + amount / reference / notes), then offer "Send receipt". */
+/**
+ * Record payment (amount / date / CASH BANK UPI OTHER / TDS % + amount / reference / notes), then offer "Send receipt".
+ * ADR 0006: when the invoice is marked `tdsApplicable` the TDS fields are pre-filled from the client's %; otherwise they
+ * start empty behind a "Client deducted TDS?" toggle (recording TDS anyway flips the invoice flag server-side).
+ */
 export function PaymentSheet({ inv, tdsPercent, open, onClose }: { inv: InvoiceDetail; tdsPercent: number | null; open: boolean; onClose: () => void }) {
   const { pending, run } = useAction();
-  const initialTds = tdsPercent != null ? round2((inv.subtotal * tdsPercent) / 100) : 0;
+  const clientPct = tdsPercent ?? inv.client.tdsPercent;
+  const prefilled = inv.tdsApplicable && clientPct != null;
+  const initialTds = prefilled ? round2((inv.subtotal * clientPct) / 100) : 0;
+  const [tdsOn, setTdsOn] = useState(inv.tdsApplicable);
   // Default: the client pays the balance net of the TDS they deduct; stops following TDS once the amount is edited.
   const [amount, setAmount] = useState(String(round2(Math.max(0, inv.balance - initialTds))));
   const [amountTouched, setAmountTouched] = useState(false);
   const [receivedAt, setReceivedAt] = useState(dateKeyLocal());
   const [method, setMethod] = useState<PaymentMethod>("BANK");
-  const [tdsPct, setTdsPct] = useState(tdsPercent != null ? String(tdsPercent) : "");
+  const [tdsPct, setTdsPct] = useState(prefilled ? String(clientPct) : "");
   const [tdsAmount, setTdsAmount] = useState(initialTds ? String(initialTds) : "");
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
@@ -34,10 +42,19 @@ export function PaymentSheet({ inv, tdsPercent, open, onClose }: { inv: InvoiceD
     const n = Number(v);
     onTdsAmount(v === "" || !Number.isFinite(n) ? "" : String(round2((inv.subtotal * n) / 100)));
   };
+  const toggleTds = (on: boolean) => {
+    setTdsOn(on);
+    if (on) onTdsPct(clientPct != null ? String(clientPct) : "");
+    else {
+      setTdsPct("");
+      onTdsAmount("");
+    }
+  };
+  const tdsFields = tdsOn ? { tdsPercent: tdsPct === "" ? null : Number(tdsPct), tdsAmount: tdsAmount === "" ? null : Number(tdsAmount) } : { tdsPercent: null, tdsAmount: null };
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     run(
-      () => recordPayment({ invoiceId: inv.id, amount, receivedAt, method, tdsPercent: tdsPct === "" ? null : Number(tdsPct), tdsAmount: tdsAmount === "" ? null : Number(tdsAmount), reference: reference || null, notes: notes || null }),
+      () => recordPayment({ invoiceId: inv.id, amount, receivedAt, method, ...tdsFields, reference: reference || null, notes: notes || null }),
       (d) => {
         setSaved(d);
         return d.status === "PAID" ? `Receipt ${d.receiptNumber} · paid in full` : `Receipt ${d.receiptNumber} · balance ${formatINR(d.balance)}`;
@@ -103,14 +120,19 @@ export function PaymentSheet({ inv, tdsPercent, open, onClose }: { inv: InvoiceD
               ))}
             </div>
           </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="TDS %" hint="from the client card">
-              <input type="number" min="0" max="100" step="0.01" value={tdsPct} onChange={(e) => onTdsPct(e.target.value)} className={inputCls} inputMode="decimal" />
-            </Field>
-            <Field label="TDS amount (₹)" hint={`= taxable ${formatINR(inv.subtotal)} × %`}>
-              <input type="number" min="0" step="0.01" value={tdsAmount} onChange={(e) => onTdsAmount(e.target.value)} className={inputCls} inputMode="decimal" />
-            </Field>
+          <div className="glass rounded-2xl px-3">
+            <Toggle checked={tdsOn} onChange={toggleTds} label="Client deducted TDS?" hint={inv.tdsApplicable ? "Marked on the invoice — pre-filled from the client card" : "Not expected on this invoice; turn on if the client deducted it anyway"} />
           </div>
+          {tdsOn ? (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="TDS %" hint={clientPct != null ? "from the client card" : undefined}>
+                <input type="number" min="0" max="100" step="0.01" value={tdsPct} onChange={(e) => onTdsPct(e.target.value)} className={inputCls} inputMode="decimal" />
+              </Field>
+              <Field label="TDS amount (₹)" hint={`= taxable ${formatINR(inv.subtotal)} × %`}>
+                <input type="number" min="0" step="0.01" value={tdsAmount} onChange={(e) => onTdsAmount(e.target.value)} className={inputCls} inputMode="decimal" />
+              </Field>
+            </div>
+          ) : null}
           <Field label="Reference / UTR">
             <input value={reference} onChange={(e) => setReference(e.target.value)} className={inputCls} />
           </Field>

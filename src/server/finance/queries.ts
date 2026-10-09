@@ -19,6 +19,9 @@ export type ExpenseRow = {
   vendor: string | null;
   note: string | null;
   tags: string[];
+  tdsApplied: boolean;
+  tdsPercent: number | null;
+  tdsAmount: number;
   hasReceipt: boolean;
   hasVoice: boolean;
   voiceDurationSec: number | null;
@@ -46,7 +49,7 @@ export async function listExpenses(f: ExpenseFilter = {}): Promise<{ rows: Expen
     where: await expenseWhere(f),
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     select: {
-      id: true, date: true, amount: true, category: true, vendor: true, note: true, tags: true,
+      id: true, date: true, amount: true, category: true, vendor: true, note: true, tags: true, tdsApplied: true, tdsPercent: true, tdsAmount: true,
       receiptImageMime: true, receiptImageDriveId: true, voiceNoteDurationSec: true, voiceNoteDriveId: true,
       createdBy: { select: { name: true } },
     },
@@ -59,6 +62,9 @@ export async function listExpenses(f: ExpenseFilter = {}): Promise<{ rows: Expen
     vendor: e.vendor,
     note: e.note,
     tags: e.tags,
+    tdsApplied: e.tdsApplied,
+    tdsPercent: e.tdsPercent?.toNumber() ?? null,
+    tdsAmount: e.tdsAmount.toNumber(),
     hasReceipt: !!e.receiptImageMime,
     hasVoice: e.voiceNoteDurationSec != null || !!e.voiceNoteDriveId,
     voiceDurationSec: e.voiceNoteDurationSec,
@@ -125,7 +131,9 @@ export async function listInvoices(f: { status?: InvoiceStatus | null; clientId?
 type DocRef = { id: string; number: string; status: InvoiceStatus };
 
 export type InvoiceDetail = InvoiceRow & {
-  client: { email: string | null; phone: string | null; whatsapp: string | null; gstNumber: string | null; workOnHold: boolean; holdInvoiceId: string | null; holdSince: string | null };
+  client: { email: string | null; phone: string | null; whatsapp: string | null; gstNumber: string | null; tdsPercent: number | null; workOnHold: boolean; holdInvoiceId: string | null; holdSince: string | null };
+  /** ADR 0006: the client deducts TDS on this invoice (drives the payment sheet defaults). */
+  tdsApplicable: boolean;
   gstPercent: number;
   subtotal: number;
   gstAmount: number;
@@ -164,7 +172,7 @@ export async function getInvoiceDetail(id: string): Promise<InvoiceDetail | null
   const i = await prisma.invoice.findUnique({
     where: { id },
     include: {
-      client: { select: { name: true, email: true, phone: true, whatsapp: true, gstNumber: true, workOnHold: true, holdInvoiceId: true, holdSince: true } },
+      client: { select: { name: true, email: true, phone: true, whatsapp: true, gstNumber: true, tdsPercent: true, workOnHold: true, holdInvoiceId: true, holdSince: true } },
       items: { orderBy: { sortOrder: "asc" } },
       payments: { orderBy: { receivedAt: "asc" } },
       schedule: true,
@@ -181,7 +189,8 @@ export async function getInvoiceDetail(id: string): Promise<InvoiceDetail | null
   const partInvoices = i.planRef ? await prisma.invoice.findMany({ where: { planId: i.planRef.id }, select: { id: true, number: true, status: true, partSeq: true } }) : [];
   return {
     ...base,
-    client: { email: i.client.email, phone: i.client.phone, whatsapp: i.client.whatsapp, gstNumber: i.client.gstNumber, workOnHold: i.client.workOnHold, holdInvoiceId: i.client.holdInvoiceId, holdSince: iso(i.client.holdSince) },
+    client: { email: i.client.email, phone: i.client.phone, whatsapp: i.client.whatsapp, gstNumber: i.client.gstNumber, tdsPercent: i.client.tdsPercent?.toNumber() ?? null, workOnHold: i.client.workOnHold, holdInvoiceId: i.client.holdInvoiceId, holdSince: iso(i.client.holdSince) },
+    tdsApplicable: i.tdsApplicable,
     gstPercent: i.gstPercent.toNumber(),
     subtotal: i.subtotal.toNumber(),
     gstAmount: i.gstAmount.toNumber(),

@@ -65,9 +65,11 @@ export async function listClients() {
     select: {
       id: true,
       name: true,
+      businessName: true,
       contact: true,
       email: true,
       gstNumber: true,
+      pan: true,
       address: true,
       country: true,
       stateCode: true,
@@ -131,6 +133,7 @@ export async function getSettingsDto() {
     recurrenceCreatesNewWorkspace: s.recurrenceCreatesNewWorkspace,
     halfDayMinutes: s.halfDayMinutes,
     expenseCategories: s.expenseCategories,
+    tdsThresholdAmount: Number(s.tdsThresholdAmount),
     updatedAt: s.updatedAt.toISOString(),
   };
 }

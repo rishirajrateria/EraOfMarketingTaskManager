@@ -9,19 +9,22 @@ import { formatINR } from "@/server/finance/money";
 import type { ExpenseRow } from "@/server/finance/queries";
 import { deleteExpense, exportExpensesCsv, syncExpensesToSheet } from "@/server/finance/expenses";
 import { ExpenseForm } from "@/components/finance/ExpenseForm";
+import { VendorTdsSheet } from "@/components/finance/VendorTdsSheet";
+import type { VendorTdsSummary } from "@/server/finance/tds";
 import { downloadText, fmtDay, monthLabel, shiftMonthKey } from "@/components/finance/finance-ui";
 
-type Props = { rows: ExpenseRow[]; total: number; categories: string[]; month: string; category: string | null; canWrite: boolean; tz: string };
+type Props = { rows: ExpenseRow[]; total: number; categories: string[]; month: string; category: string | null; canWrite: boolean; tz: string; tds: VendorTdsSummary };
 
 /**
  * Expense log (SPEC §11.2): month + category filters, totals, CSV export, Sheet sync, add/edit/delete.
  * `categories` is the fixed list from Settings (ADR 0004); a filter on a removed category still shows as a chip.
  */
-export function ExpensesView({ rows, total, categories, month, category, canWrite, tz }: Props) {
+export function ExpensesView({ rows, total, categories, month, category, canWrite, tz, tds }: Props) {
   const router = useRouter();
   const chips = category && !categories.some((c) => c.toLowerCase() === category.toLowerCase()) ? [...categories, category] : categories;
   const toast = useToast();
   const [editing, setEditing] = useState<ExpenseRow | null | "new">(null);
+  const [tdsOpen, setTdsOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
 
   function navigate(next: { month?: string; category?: string | null }) {
@@ -100,6 +103,7 @@ export function ExpensesView({ rows, total, categories, month, category, canWrit
               </div>
               <div className="text-right">
                 <div className="text-sm font-bold">{formatINR(r.amount)}</div>
+                {r.tdsAmount > 0 ? <span className="inline-block rounded-full bg-amber-100/80 px-2 py-0.5 text-[10px] font-semibold text-amber-800">TDS {formatINR(r.tdsAmount)}</span> : null}
                 {canWrite ? (
                   <div className="mt-1 flex justify-end gap-2 text-xs">
                     <button type="button" className="text-brand-blue" onClick={() => setEditing(r)}>
@@ -136,6 +140,7 @@ export function ExpensesView({ rows, total, categories, month, category, canWrit
         left={
           <>
             <ZonePill onClick={onExport} className={busy === "csv" ? "opacity-60" : ""}>Export CSV</ZonePill>
+            <ZonePill onClick={() => setTdsOpen(true)} label="TDS by payee">TDS</ZonePill>
             {canWrite ? <ZonePill onClick={onSync} className={busy === "sync" ? "opacity-60" : ""}>{busy === "sync" ? "Syncing…" : "Sync to Sheet"}</ZonePill> : null}
           </>
         }
@@ -147,6 +152,7 @@ export function ExpensesView({ rows, total, categories, month, category, canWrit
           ) : null
         }
       />
+      <VendorTdsSheet summary={tds} open={tdsOpen} onClose={() => setTdsOpen(false)} />
       <Sheet open={editing !== null} onClose={() => setEditing(null)} title={editing === "new" ? "Add expense" : "Edit expense"}>
         {editing !== null ? (
           <ExpenseForm

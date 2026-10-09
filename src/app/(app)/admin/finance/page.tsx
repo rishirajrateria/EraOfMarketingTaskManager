@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireFinancePage } from "@/server/finance/guard";
 import { financeSummary } from "@/server/finance/queries";
+import { fyRange, tdsSummary } from "@/server/finance/tds";
+import { getSettings } from "@/lib/settings";
 import { formatINR } from "@/server/finance/money";
 import { env } from "@/lib/env";
 import { MonthlyBars, ClientBars } from "@/components/finance/FinanceCharts";
@@ -10,9 +12,15 @@ import { Screen } from "@/components/admin/AdminUi";
 export const dynamic = "force-dynamic";
 
 /** Finance sheet dashboard (SPEC §11.4): invoiced vs received vs outstanding, expenses, net; push-only Sheets mirror. ADMIN only. */
-export default async function FinancePage() {
+export default async function FinancePage({ searchParams }: { searchParams: Promise<{ fy?: string }> }) {
   const user = await requireFinancePage();
-  const summary = await financeSummary();
+  const sp = await searchParams;
+  const previous = sp.fy === "previous";
+  // ADR 0006: TDS tiles for the current FY, or the previous one (any instant before this FY's 1 April).
+  const tz = (await getSettings()).timezone;
+  const now = new Date();
+  const tdsAt = previous ? new Date(fyRange(now, tz).start.getTime() - 1) : now;
+  const [summary, tds] = await Promise.all([financeSummary(), tdsSummary(tdsAt)]);
   const t = summary.totals;
   const tiles = [
     { label: "Invoiced", value: t.invoiced, cls: "text-brand-blue" },
@@ -46,6 +54,43 @@ export default async function FinancePage() {
       <section className="px-4 pt-4">
         <h2 className="mb-2 text-sm font-semibold">Per client</h2>
         {summary.clients.length === 0 ? <p className="text-xs text-gray-500">No sent invoices yet.</p> : <ClientBars clients={summary.clients} />}
+      </section>
+      <section className="px-4 pt-4">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">TDS · FY {tds.fyKey}</h2>
+          <div className="flex gap-1 text-[11px]">
+            <Link href="/admin/finance" className={`rounded-full px-2 py-0.5 ${!previous ? "bg-white/90 shadow-sm" : "bg-white/40"}`}>This FY</Link>
+            <Link href="/admin/finance?fy=previous" className={`rounded-full px-2 py-0.5 ${previous ? "bg-white/90 shadow-sm" : "bg-white/40"}`}>Previous FY</Link>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="glass rounded-2xl px-3 py-2">
+            <div className="text-[11px] uppercase text-gray-600">TDS receivable (FY {tds.fyKey})</div>
+            <div className="text-base font-bold text-brand-blue">{formatINR(tds.receivable)}</div>
+            <div className="text-[10px] text-gray-500">deducted by clients · credit at year end</div>
+          </div>
+          <div className="glass rounded-2xl px-3 py-2">
+            <div className="text-[11px] uppercase text-gray-600">TDS deducted on expenses (FY)</div>
+            <div className="text-base font-bold text-amber-700">{formatINR(tds.onExpenses)}</div>
+            <div className="text-[10px] text-gray-500">withheld from payees · to deposit</div>
+          </div>
+        </div>
+        <h3 className="mb-1 mt-3 text-xs font-semibold uppercase text-gray-500">TDS by client (FY {tds.fyKey})</h3>
+        {tds.byClient.length === 0 ? (
+          <p className="text-xs text-gray-500">No TDS recorded on payments in this financial year.</p>
+        ) : (
+          <ul className="glass divide-y divide-white/60 rounded-2xl">
+            {tds.byClient.map((c) => (
+              <li key={c.clientId} className="flex items-center justify-between px-3 py-2 text-sm">
+                <span className="truncate">
+                  {c.clientName}
+                  <span className="ml-1 text-[11px] text-gray-500">· {c.payments} payment{c.payments === 1 ? "" : "s"}</span>
+                </span>
+                <span className="font-semibold">{formatINR(c.tds)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
       <section className="px-4 pt-4">
         <h2 className="mb-2 text-sm font-semibold">Per month</h2>

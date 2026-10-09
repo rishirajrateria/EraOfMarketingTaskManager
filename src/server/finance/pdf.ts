@@ -21,7 +21,16 @@ export type PdfCompany = {
   logoData?: Uint8Array | Buffer | null;
 };
 
-export type PdfParty = { name: string; address?: string | null; gstNumber?: string | null; email?: string | null; phone?: string | null };
+export type PdfParty = {
+  name: string;
+  /** Legal name printed in the bill-to block (ADR 0006); `name` is the display name and the fallback. */
+  businessName?: string | null;
+  pan?: string | null;
+  address?: string | null;
+  gstNumber?: string | null;
+  email?: string | null;
+  phone?: string | null;
+};
 
 export type PdfInvoice = {
   number: string;
@@ -130,10 +139,11 @@ function header(doc: PDFKit.PDFDocument, company: PdfCompany, title: string, sub
 
 function party(doc: PDFKit.PDFDocument, label: string, p: PdfParty) {
   doc.font("Helvetica-Bold").fontSize(9).fillColor(GREY).text(label, M, doc.y);
-  doc.font("Helvetica-Bold").fontSize(11).fillColor(DARK).text(p.name, { width: W });
+  doc.font("Helvetica-Bold").fontSize(11).fillColor(DARK).text(p.businessName?.trim() || p.name, { width: W });
   doc.font("Helvetica").fontSize(9).fillColor(DARK);
   if (p.address) doc.text(p.address, { width: W });
   if (p.gstNumber) doc.text(`GSTIN: ${p.gstNumber}`);
+  if (p.pan) doc.text(`PAN: ${p.pan}`);
   const contact = [p.phone, p.email].filter(Boolean).join(" · ");
   if (contact) doc.text(contact);
   doc.moveDown(0.8);

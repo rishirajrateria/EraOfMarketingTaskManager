@@ -51,9 +51,31 @@ async function main() {
   await prisma.team.update({ where: { id: teams[2]!.id }, data: { leaderId: neha.id } });
 
   const clientsData = ["Repo", "Robam", "Pharma Bag Co", "Sunrise Realty"];
+  const clientExtras: Record<string, { businessName: string; pan: string; tdsPercent?: number }> = {
+    Repo: { businessName: "Repo Technologies Pvt Ltd", pan: "AAACR1234B", tdsPercent: 10 },
+    Robam: { businessName: "Robam Appliances India LLP", pan: "AABFR5678C", tdsPercent: 2 },
+    "Pharma Bag Co": { businessName: "Pharma Bag Company", pan: "AAEPP9012D" },
+    "Sunrise Realty": { businessName: "Sunrise Realty Developers Pvt Ltd", pan: "AABCS3456E", tdsPercent: 10 },
+  };
   const clients = await Promise.all(
-    clientsData.map((name) => prisma.client.upsert({ where: { name }, update: {}, create: { name, email: `billing@${name.toLowerCase().replace(/\s+/g, "")}.example`, gstNumber: "29XXXXX1234X1Z1", address: "Bengaluru", visibleInFilters: true } })),
+    clientsData.map((name) =>
+      prisma.client.upsert({
+        where: { name },
+        update: { businessName: clientExtras[name]!.businessName, pan: clientExtras[name]!.pan, tdsPercent: clientExtras[name]!.tdsPercent ?? null },
+        create: { name, ...clientExtras[name]!, email: `billing@${name.toLowerCase().replace(/\s+/g, "")}.example`, gstNumber: "29XXXXX1234X1Z1", address: "Bengaluru", visibleInFilters: true },
+      }),
+    ),
   );
+
+  // Demo expenses (ADR 0006): one payee over the TDS threshold with TDS deducted, one under it.
+  const demoExpenses = [
+    { note: "[demo] Studio rent — this month", vendor: "Skyline Spaces", category: "Rent", amount: 25000, tdsApplied: true, tdsPercent: 10, tdsAmount: 2500 },
+    { note: "[demo] Design tool subscription", vendor: "Figma", category: "Software", amount: 1800, tdsApplied: false, tdsPercent: null, tdsAmount: 0 },
+  ];
+  for (const e of demoExpenses) {
+    const existing = await prisma.expense.findFirst({ where: { note: e.note } });
+    if (!existing) await prisma.expense.create({ data: { ...e, date: new Date(), createdById: admin.id } });
+  }
 
   const wts = ["Pharma bag", "Robam", "Social post", "Landing page", "Reel"];
   const workTypes = await Promise.all(wts.map((name, i) => prisma.workType.upsert({ where: { name }, update: {}, create: { name, colour: colours[i]! } })));

@@ -11,6 +11,7 @@ import {
   InvoicingSection,
   LogoSection,
   NotificationsSection,
+  TdsSection,
   WorkingTimeSection,
   type SettingsValues,
 } from "@/components/admin/SettingsSections";
@@ -84,6 +85,7 @@ export function SettingsForm({ settings, google }: { settings: SettingsDto; goog
         <HolidaysSection v={v} patch={patch} />
         <InvoicingSection v={v} patch={patch} />
         <ExpenseCategoriesSection v={v} patch={patch} />
+        <TdsSection v={v} patch={patch} />
         <NotificationsSection v={v} patch={patch} />
         <GoogleStatusSection status={google} />
       </Screen>

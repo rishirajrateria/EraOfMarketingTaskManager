@@ -78,7 +78,7 @@ function partDescription(plan: InvoicePlan, part: InvoicePart, pos: { index: num
  * Issue one PENDING part as an AWAITING_APPROVAL invoice. Tax is resolved for the client at issue time and the
  * invoice inherits the plan's GST percent. Idempotent: an already issued part returns its invoice.
  */
-export async function issuePartCore(planId: string, seq: number, actorId: string | null, opts: { dueDate?: Date | null; description?: string | null } = {}): Promise<InvoiceFull> {
+export async function issuePartCore(planId: string, seq: number, actorId: string | null, opts: { dueDate?: Date | null; description?: string | null; tdsApplicable?: boolean | null } = {}): Promise<InvoiceFull> {
   const plan = await loadPlan(planId);
   const part = plan.parts.find((p) => p.seq === seq);
   if (!part) throw new Error(`Part ${seq} not found`);
@@ -105,6 +105,7 @@ export async function issuePartCore(planId: string, seq: number, actorId: string
         items: singleRow(partDescription(plan, part, pos), part.amount.toNumber()),
         description: opts.description ?? plan.description,
         dueDate: opts.dueDate ?? part.dueDate,
+        tdsApplicable: opts.tdsApplicable ?? null,
       },
       actorId,
       "invoice.part_issue",

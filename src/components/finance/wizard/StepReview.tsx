@@ -28,6 +28,7 @@ export function StepReview({ form, set, errors, clients, tax }: StepProps) {
         <Row k="Client" v={<b>{client?.name ?? "—"}</b>} />
         <Row k="Document" v={tax ? <TaxBadge tax={tax} /> : "—"} />
         <Row k="Plan" v={`${plan.icon} ${plan.title}`} />
+        <Row k="TDS" v={form.tdsApplicable ? `Client deducts TDS${client?.tdsPercent != null ? ` (${client.tdsPercent}%)` : ""}` : "Not deducted"} />
         {form.plan === "ONE_TIME" ? <Row k="Due" v={fmtKey(form.dueDate)} /> : null}
         {form.plan === "RECURRING" ? (
           <Row k="Repeats" v={`${form.frequency === "CUSTOM" ? `every ${form.interval} days` : form.frequency === "MONTHLY" ? `monthly · ${form.monthAnchor === "END" ? "last day" : "1st"}` : "weekly"}${form.infinite ? " · infinite" : ` · until ${fmtKey(form.endDate)}`} · due +${form.dueDays || 0}d`} />

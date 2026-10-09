@@ -1,5 +1,6 @@
 import { requireFinancePage } from "@/server/finance/guard";
 import { listExpenses } from "@/server/finance/queries";
+import { vendorTdsSummary } from "@/server/finance/tds";
 import { getSettings } from "@/lib/settings";
 import { fmtDate } from "@/lib/time";
 import { ExpensesView } from "@/components/finance/ExpensesView";
@@ -13,6 +14,6 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   const sp = await searchParams;
   const month = sp.month === undefined ? fmtDate(new Date(), settings.timezone, "yyyy-MM") : /^\d{4}-\d{2}$/.test(sp.month) ? sp.month : "";
   const category = sp.category?.trim() || null;
-  const { rows, total } = await listExpenses({ month: month || null, category });
-  return <ExpensesView rows={rows} total={total} categories={settings.expenseCategories} month={month} category={category} canWrite={user.canWrite} tz={settings.timezone} />;
+  const [{ rows, total }, tds] = await Promise.all([listExpenses({ month: month || null, category }), vendorTdsSummary()]);
+  return <ExpensesView rows={rows} total={total} categories={settings.expenseCategories} month={month} category={category} canWrite={user.canWrite} tz={settings.timezone} tds={tds} />;
 }

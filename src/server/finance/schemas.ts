@@ -67,6 +67,8 @@ export const invoiceInputSchema = z
     dueDate: optionalDateInput,
     recurrence: recurrenceInputSchema.optional().nullable(),
     parts: z.array(partInputSchema).optional().nullable(),
+    /** ADR 0006: the client will deduct TDS on this invoice. Omitted/null → true when the client has a TDS %. */
+    tdsApplicable: z.boolean().optional().nullable(),
   })
   .superRefine((v, ctx) => {
     const hasItems = (v.items?.length ?? 0) > 0;
@@ -109,23 +111,50 @@ export const paymentInputSchema = z.object({
 });
 export type PaymentInput = z.infer<typeof paymentInputSchema>;
 
-export const expenseFieldsSchema = z.object({
-  date: dateInput,
-  amount: z.coerce.number().min(0),
-  category: z.string().trim().min(1, "category required").max(100), // must also match CompanySettings.expenseCategories — see expenses.ts
-  vendor: optionalStr,
-  note: optionalStr,
-  tags: z
-    .string()
-    .optional()
-    .nullable()
-    .transform((s) =>
-      (s ?? "")
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
-    ),
-});
+/** Checkbox / boolean input: "on", "true", "1", true → true; anything else → false. */
+export const checkboxInput = z
+  .union([z.boolean(), z.string(), z.null(), z.undefined()])
+  .transform((v) => v === true || v === "on" || v === "true" || v === "1");
+
+/** Optional number from a form field: "" / null / undefined → null. */
+const optionalNumber = z
+  .union([z.number(), z.string(), z.null(), z.undefined()])
+  .transform((v) => (v === "" || v == null ? null : Number(v)))
+  .refine((v) => v === null || Number.isFinite(v), "must be a number");
+
+const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+/**
+ * Expense fields (SPEC §11.2 + ADR 0006). `amount` is the gross bill; when `tdsApplied` the TDS amount is
+ * computed from the % unless given explicitly, and net paid = amount − tdsAmount.
+ */
+export const expenseFieldsSchema = z
+  .object({
+    date: dateInput,
+    amount: z.coerce.number().min(0),
+    category: z.string().trim().min(1, "category required").max(100), // must also match CompanySettings.expenseCategories — see expenses.ts
+    vendor: optionalStr,
+    note: optionalStr,
+    tags: z
+      .string()
+      .optional()
+      .nullable()
+      .transform((s) =>
+        (s ?? "")
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
+      ),
+    tdsApplied: checkboxInput,
+    tdsPercent: optionalNumber.refine((v) => v === null || (v >= 0 && v <= 100), "tdsPercent must be between 0 and 100"),
+    tdsAmount: optionalNumber.refine((v) => v === null || v >= 0, "tdsAmount must be positive"),
+  })
+  .transform((f) => {
+    if (!f.tdsApplied) return { ...f, tdsPercent: null, tdsAmount: 0 };
+    const tdsAmount = f.tdsAmount ?? (f.tdsPercent != null ? round2((f.amount * f.tdsPercent) / 100) : 0);
+    return { ...f, tdsAmount: round2(tdsAmount) };
+  })
+  .refine((f) => f.tdsAmount <= f.amount + 0.005, { message: "TDS cannot exceed the bill amount", path: ["tdsAmount"] });
 export type ExpenseFields = z.infer<typeof expenseFieldsSchema>;
 
 export const monthKeySchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "month must be yyyy-MM");

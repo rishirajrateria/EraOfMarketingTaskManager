@@ -69,8 +69,13 @@ export type TeamInput = z.input<typeof teamInputSchema>;
 export type UpdateTeamInput = z.input<typeof updateTeamSchema>;
 
 // ---------- Clients ----------
+/** PAN card: 5 letters, 4 digits, 1 letter (e.g. ABCDE1234F). Stored uppercase; optional. */
+export const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+
 export const clientInputSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(120),
+  /** Legal / business name printed on invoices; `name` stays the display name. */
+  businessName: optionalText(200),
   contact: optionalText(120),
   email: z
     .string()
@@ -80,6 +85,9 @@ export const clientInputSchema = z.object({
     .transform((v) => (v ? v.toLowerCase() : null))
     .refine((v) => v === null || z.email().safeParse(v).success, "Enter a valid email"),
   gstNumber: optionalText(30).transform((v) => (v ? v.replace(/\s+/g, "").toUpperCase() : null)),
+  pan: optionalText(20)
+    .transform((v) => (v ? v.replace(/\s+/g, "").toUpperCase() : null))
+    .refine((v) => v === null || PAN_REGEX.test(v), "PAN must be 5 letters, 4 digits and a letter (e.g. ABCDE1234F)"),
   address: optionalText(1000),
   /** ISO-3166 alpha-2; anything but IN is billed as an export (ADR 0005). */
   country: z
@@ -160,6 +168,8 @@ export const settingsInputSchema = z
     recurrenceCreatesNewWorkspace: z.boolean(),
     halfDayMinutes: minutesOfDay,
     expenseCategories: expenseCategoryListSchema,
+    /** ADR 0006: TDS applies once payments to one payee reach this amount within a financial year. */
+    tdsThresholdAmount: z.number().min(0).max(1_000_000_000).default(20000),
   })
   .refine((s) => s.workStartMinutes < s.workEndMinutes, { message: "Work start must be before work end", path: ["workEndMinutes"] })
   .refine((s) => s.lunchStartMinutes <= s.lunchEndMinutes, { message: "Lunch start must be before lunch end", path: ["lunchEndMinutes"] })

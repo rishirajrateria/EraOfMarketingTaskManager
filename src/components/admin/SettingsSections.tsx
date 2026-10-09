@@ -20,6 +20,7 @@ export const SETTINGS_SECTIONS: { id: string; label: string }[] = [
   { id: "holidays", label: "Holidays" },
   { id: "invoicing", label: "Invoicing" },
   { id: "expenses", label: "Expenses" },
+  { id: "tds", label: "TDS" },
   { id: "notifications", label: "Notifications" },
   { id: "google", label: "Google" },
 ];
@@ -218,6 +219,18 @@ export function InvoicingSection({ v, patch }: { v: SettingsValues; patch: Patch
         value={v.invoiceEmailTemplate}
         onChange={(invoiceEmailTemplate) => patch({ invoiceEmailTemplate })}
       />
+    </Section>
+  );
+}
+
+/** ADR 0006: TDS threshold on expenses — per payee, per financial year. */
+export function TdsSection({ v, patch }: { v: SettingsValues; patch: Patch }) {
+  return (
+    <Section id="tds" title="TDS">
+      <Field label="TDS threshold on expenses (₹)" hint="Per payee, per financial year (resets every 1 April)">
+        <input className={inputCls} type="number" min={0} step={1} inputMode="decimal" value={v.tdsThresholdAmount} onChange={(e) => patch({ tdsThresholdAmount: e.target.value === "" ? 0 : Number(e.target.value) })} />
+      </Field>
+      <p className="text-[11px] text-gray-400">Once payments to one payee reach this amount within the financial year, the expense form warns and admins are notified to deduct TDS.</p>
     </Section>
   );
 }

@@ -17,7 +17,7 @@ const LOGO_MAX_BYTES = 2 * 1024 * 1024;
 /** Audit snapshot without the binary logo. */
 function snapshot(s: CompanySettings) {
   const { logoData: _logo, ...rest } = s;
-  return { ...rest, defaultGstPercent: Number(rest.defaultGstPercent), hasLogo: Boolean(s.logoData) };
+  return { ...rest, defaultGstPercent: Number(rest.defaultGstPercent), tdsThresholdAmount: Number(rest.tdsThresholdAmount), hasLogo: Boolean(s.logoData) };
 }
 
 async function current(): Promise<CompanySettings> {

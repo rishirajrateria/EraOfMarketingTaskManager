@@ -26,6 +26,8 @@ export type InvoiceFormState = {
   dueDays: string;
   parts: PartRow[];
   proforma: boolean;
+  /** ADR 0006: the client deducts TDS on this invoice (defaults to "has a TDS %" when a client is picked). */
+  tdsApplicable: boolean;
   notes: string;
   paymentTerms: string;
 };
@@ -50,6 +52,7 @@ export function emptyForm(defaults: { gstPercent: number; paymentTerms: string; 
     dueDays: "15",
     parts: defaultPartsFor(2, defaults.today),
     proforma: false,
+    tdsApplicable: false,
     notes: "",
     paymentTerms: defaults.paymentTerms,
   };
@@ -186,6 +189,7 @@ export function buildInvoiceInput(f: InvoiceFormState) {
     dueDate,
     recurrence,
     parts,
+    tdsApplicable: f.tdsApplicable,
   };
 }
 

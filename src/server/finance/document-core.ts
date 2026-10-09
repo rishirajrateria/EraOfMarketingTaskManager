@@ -107,13 +107,23 @@ export type DocumentDraft = {
   scheduleId?: string | null;
   proformaOfId?: string | null;
   creditNoteOfId?: string | null;
+  /** ADR 0006: client deducts TDS. Undefined → true when the client has a TDS % on file. */
+  tdsApplicable?: boolean | null;
 };
+
+async function defaultTdsApplicable(tx: Tx, draft: DocumentDraft): Promise<boolean> {
+  if (draft.tdsApplicable != null) return draft.tdsApplicable;
+  if (draft.docType === "CREDIT_NOTE") return false;
+  const c = await tx.client.findUnique({ where: { id: draft.clientId }, select: { tdsPercent: true } });
+  return c?.tdsPercent != null;
+}
 
 /** Create the Invoice row as AWAITING_APPROVAL with number `DRAFT-<id>`; amounts from `splitTax`. */
 export async function insertDocument(tx: Tx, draft: DocumentDraft, actorId: string | null, auditAction: string, auditExtra: Record<string, unknown> = {}): Promise<InvoiceFull> {
   const gstPercent = effectiveGstPercent(draft.gstPercent, draft.taxMode);
   const subtotal = subtotalOf(draft.items);
   const t = splitTax(subtotal, gstPercent, draft.taxMode);
+  const tdsApplicable = await defaultTdsApplicable(tx, draft);
   const created = await tx.invoice.create({
     data: {
       clientId: draft.clientId,
@@ -142,6 +152,7 @@ export async function insertDocument(tx: Tx, draft: DocumentDraft, actorId: stri
       notes: draft.notes ?? null,
       paymentTerms: draft.paymentTerms ?? null,
       dueDate: draft.dueDate,
+      tdsApplicable,
       status: "AWAITING_APPROVAL",
     },
     select: { id: true },
