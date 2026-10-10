@@ -761,6 +761,12 @@ select.in{padding-right:10px}
 .ntt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nwhat{font-size:13px;color:var(--ink)}
 .nrow{padding-block:9px!important}
+.crow{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--hair);color:var(--ink);text-decoration:none}
+.crow .m{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.crow small{color:var(--muted);font-size:12px}
+.crow.off{opacity:.55}
+.cav{width:38px;height:38px;border-radius:999px;display:grid;place-items:center;color:#fff;flex-shrink:0}
+.cav.call{background:linear-gradient(150deg,#3b82f6,#1d4ed8)}.cav.wa{background:linear-gradient(150deg,#34d399,#059669)}
+.crow.off{opacity:1}.crow.off .m{opacity:.55}
 </style><div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
@@ -868,6 +874,8 @@ const I={
  folder:'<path d="M6 14l1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/>',
  video:'<path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
  chat:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+ phone:'<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',
+ wa:'<path d="M3 21l1.6-4.6A8.5 8.5 0 1 1 7.7 19.5z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1-1.5-2-1-1 .8a3.5 3.5 0 0 1-2-2l.8-1-1-2z"/>',
  cal:'<path d="M8 2v4M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/>',
  mic:'<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/>',
  restart:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
@@ -888,12 +896,12 @@ const dk=(d=new Date())=>{const p=n=>String(n).padStart(2,"0");return `${d.getFu
 const uid=()=>Math.random().toString(36).slice(2,9);
 function seed(){
  const users=[
-  {id:"u1",name:"Rishi Rateria",role:"ADMIN",email:"rishi@eraofmarketing.com",teamId:null},
-  {id:"u2",name:"Priya Sharma",role:"TEAM_LEADER",email:"priya@eraofmarketing.com",teamId:"t1",skills:["w1","w4"]},
-  {id:"u3",name:"Arjun Kumar",role:"EXECUTIVE",email:"arjun@eraofmarketing.com",teamId:"t1",skills:["w5","w3"]},
-  {id:"u4",name:"Neha Verma",role:"EXECUTIVE",email:"neha@eraofmarketing.com",teamId:"t1",skills:["w1","w4"]},
-  {id:"u5",name:"Karan Mehta",role:"TEAM_LEADER",email:"karan@eraofmarketing.com",teamId:"t2",skills:["w2"]},
-  {id:"u6",name:"Sana Ali",role:"EXECUTIVE",email:"sana@eraofmarketing.com",teamId:"t2",skills:["w2","w6"]},
+  {id:"u1",name:"Rishi Rateria",role:"ADMIN",email:"rishi@eraofmarketing.com",phone:"+91 89103 58506",teamId:null},
+  {id:"u2",name:"Priya Sharma",role:"TEAM_LEADER",email:"priya@eraofmarketing.com",phone:"+91 98300 11122",teamId:"t1",skills:["w1","w4"]},
+  {id:"u3",name:"Arjun Kumar",role:"EXECUTIVE",email:"arjun@eraofmarketing.com",phone:"+91 98300 22233",teamId:"t1",skills:["w5","w3"]},
+  {id:"u4",name:"Neha Verma",role:"EXECUTIVE",email:"neha@eraofmarketing.com",phone:"+91 98300 33344",teamId:"t1",skills:["w1","w4"]},
+  {id:"u5",name:"Karan Mehta",role:"TEAM_LEADER",email:"karan@eraofmarketing.com",phone:"+91 98300 44455",teamId:"t2",skills:["w2"]},
+  {id:"u6",name:"Sana Ali",role:"EXECUTIVE",email:"sana@eraofmarketing.com",phone:"+91 98300 55566",teamId:"t2",skills:["w2","w6"]},
   {id:"u7",name:"Meera Nair",role:"HR",email:"meera@eraofmarketing.com",teamId:null},
  ];
  const teams=[{id:"t1",name:"Social"},{id:"t2",name:"Graphic"},{id:"t3",name:"SEO"}];
@@ -1216,7 +1224,8 @@ function taskRow(t){
     ib("Drive folder",I.folder,()=>driveInfo(t)),
     ib("Google Meet",I.video,()=>toast("Joins meet.google.com/"+meetCode(t)+" · anyone with the link can join")),
     ib("Chat space",I.chat,()=>toast("Opens the task's Google Chat space")),
-    ib("Calendar",I.cal,()=>toast("Opens Google Calendar on "+fmtD(t.start))),
+    ib("Call",I.phone,()=>contactSheet(t,"call")),
+    ib("WhatsApp",I.wa,()=>contactSheet(t,"wa")),
     t.voice?ib("Voice notes",I.mic,()=>openDetail(t,true)):null),
    el("div",{class:"rp"},rpill(t,"time",od?"od":"",fmtT(t.start)+" – "+fmtT(t.end)))),
   t.actualStart?el("div",{class:"rline end"},el("span",{class:"pill act "+(actualTone(t)||"dim"),title:"Actual start – finish"},"▶ "+fmtT(t.actualStart)+" – "+(t.actualEnd?fmtT(t.actualEnd):"…"))):null);
@@ -1268,6 +1277,19 @@ function driveInfo(t){const c=clientById(t.client);const base=c.kit?"Client Kit 
  openSheet("Drive · "+t.title,el("div",{class:"card",style:"margin:0 0 10px"},el("div",{class:"kv"},el("span",{class:"pre"},base+" › "+t.title)),el("div",{class:"kv"},el("span",{},"📁 Meeting notes"),el("span",{class:"num"},(t.type==="MEETING"?1:0)+" by Gemini")),el("div",{class:"kv"},el("span",{},"📄 Files"),el("span",{class:"num"},"shared with the team"))),
   el("p",{class:"pre",style:"margin:0 0 10px"},"Every call on this task's Meet link is noted by Gemini; the notes land in “Meeting notes” here automatically."),
   el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Close"),el("button",{class:"btn blue",onclick:()=>toast("Opens the folder in Drive")},"Open in Drive")));}
+/* Call / WhatsApp the client or the task's Team Leader straight from the card (opens the phone or WhatsApp app). */
+function contactSheet(t,mode){
+ const c=clientById(t.client)||{};const tl=S.users.find(u=>u.role==="TEAM_LEADER"&&u.teamId===t.team);
+ const digits=p=>(p||"").replace(/[^0-9]/g,"");const tlU=tl;
+ const row=(who,name,phone)=>{const d=digits(phone);const href=mode==="call"?"tel:+"+d:"https://wa.me/"+d+"?text="+encodeURIComponent("Hi "+first(name||"")+", about “"+t.title+"”: ");
+  return d?el("a",{class:"crow",href,target:mode==="call"?null:"_blank",rel:"noopener",onclick:()=>{closeSheet();toast((mode==="call"?"Calling ":"Opening WhatsApp · ")+name);}},
+   el("span",{class:"cav "+(mode==="call"?"call":"wa"),html:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'+(mode==="call"?I.phone:I.wa)+'</svg>'}),
+   el("span",{class:"m"},el("b",{},(mode==="call"?"Call ":"WhatsApp ")+who),el("small",{},name+" · "+phone)),el("span",{class:"nchev"},"›"))
+  :el("div",{class:"crow off"},el("span",{class:"m"},el("b",{},(mode==="call"?"Call ":"WhatsApp ")+who),el("small",{},(name||"—")+" · no number saved")),role()==="ADMIN"&&who!=="client"&&tlU?el("button",{class:"pill",style:"height:30px;opacity:1",onclick:()=>{closeSheet();personForm(tlU.role,tlU);}},"Add number"):role()==="ADMIN"&&who==="client"?el("button",{class:"pill",style:"height:30px",onclick:()=>{closeSheet();clientForm(c);}},"Add number"):null);};
+ const rows=[row("client",c.contact||c.name,c.phone),tl?row("team leader",tl.name,tl.phone):null];
+ if(role()==="TEAM_LEADER"){const ad=S.users.find(u=>u.role==="ADMIN");rows[1]=row("Admin",ad.name,ad.phone);}
+ openSheet((mode==="call"?"Call":"WhatsApp")+" · "+t.title,...rows.filter(Boolean),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel")));
+}
 function openDetail(t,attach){
  const c=clientById(t.client);
  const kv=(k,v)=>el("div",{class:"kv"},el("span",{},k),el("span",{class:"num"},v));
@@ -2242,20 +2264,22 @@ PAGES.settings=function(){
 };
 PAGES.people=function(roleArg){
  const r=roleArg||"EXECUTIVE";const list=S.users.filter(u=>u.role===r);
- page(r==="EXECUTIVE"?"Executives":"Team leaders",[...list.map(u=>el("div",{class:"item",onclick:()=>personForm(r,u)},el("div",{class:"m"},el("b",{},u.name),el("small",{},(S.teams.find(t=>t.id===u.teamId)?.name||"no team")+" · "+u.email),el("div",{style:"display:flex;gap:4px;flex-wrap:wrap;margin-top:4px"},...(skillNames(u).length?skillNames(u).map(n=>el("span",{class:"tag draft"},"✓ "+n)):[el("span",{class:"tag draft",style:"opacity:.6"},"no speciality set")]))),el("span",{class:"pill"},"edit")))],
+ page(r==="EXECUTIVE"?"Executives":"Team leaders",[...list.map(u=>el("div",{class:"item",onclick:()=>personForm(r,u)},el("div",{class:"m"},el("b",{},u.name),el("small",{},(S.teams.find(t=>t.id===u.teamId)?.name||"no team")+" · "+(u.phone||"no number")+" · "+u.email),el("div",{style:"display:flex;gap:4px;flex-wrap:wrap;margin-top:4px"},...(skillNames(u).length?skillNames(u).map(n=>el("span",{class:"tag draft"},"✓ "+n)):[el("span",{class:"tag draft",style:"opacity:.6"},"no speciality set")]))),el("span",{class:"pill"},"edit")))],
   [zoneTabs([["EXECUTIVE","Executives"],["TEAM_LEADER","Team leaders"]],r,k=>PAGES.people(k)),zoneActions(el("button",{class:"btn blue",onclick:()=>personForm(r)},"+ Add"))]);
 };
 function personForm(r,u){
  const n=el("input",{class:"in",placeholder:"Full name",value:u?u.name:""}),e=el("input",{class:"in",type:"email",placeholder:"name@eraofmarketing.com",value:u?u.email:"",disabled:u?true:null});
+ const ph=el("input",{class:"in",type:"tel",inputmode:"tel",placeholder:"+91 98765 43210",value:u&&u.phone||""});
  let team=u?u.teamId:S.teams[0].id,skills=u?[...(u.skills||[])]:[];
  const t=el("select",{class:"in",onchange:()=>{team=t.value;skills=skills.filter(id=>workFor([team]).some(w=>w.id===id));drawSk();}},...S.teams.map(x=>el("option",{value:x.id,selected:x.id===team||null},x.name)));
  const sk=el("div",{class:"seg"});const drawSk=()=>{const wl=workFor([team]);sk.replaceChildren(...(wl.length?wl.map(w=>el("button",{class:skills.includes(w.id)?"on":"",onclick:()=>{skills=tog(skills,w.id);drawSk();}},w.name)):[el("span",{class:"pre"},"This team has no work types yet · Menu → Add Work")]));};drawSk();
  const label=r==="EXECUTIVE"?"executive":"team leader";
- openSheet(u?u.name:"Invite "+label,field("Name",n),field("Google Workspace email",e,u?"Email can't be changed":"Sign-in is invite-only; the domain is restricted"),field("Team",t,r==="TEAM_LEADER"?"One team leader per team":null),field("Speciality",sk,"Work types they're best at · shown as ✓ when you add a task"),
+ openSheet(u?u.name:"Invite "+label,field("Name",n),field("Google Workspace email",e,u?"Email can't be changed":"Sign-in is invite-only; the domain is restricted"),field("Mobile / WhatsApp",ph,"Used by the Call and WhatsApp buttons on task cards"),field("Team",t,r==="TEAM_LEADER"?"One team leader per team":null),field("Speciality",sk,"Work types they're best at · shown as ✓ when you add a task"),
   el("div",{class:"btnrow"},u?el("button",{class:"btn ghost",style:"color:#dc2626",onclick:()=>{closeSheet();toast("Deactivated (prototype keeps the user)");}},"Deactivate"):el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),
    el("button",{class:"btn",onclick:()=>{if(!n.value.trim()||!e.value.trim())return toast("Name and email required","err");
     if(r==="TEAM_LEADER"&&S.users.some(x=>x.role==="TEAM_LEADER"&&x.teamId===team&&x!==u))return toast(S.teams.find(x=>x.id===team).name+" already has a team leader","err");
-    if(u){u.name=n.value.trim();u.teamId=team;u.skills=skills;}else S.users.push({id:uid(),name:n.value.trim(),role:r,email:e.value.trim(),teamId:team,skills});
+    const phone=ph.value.trim();if(phone&&phone.replace(/[^0-9]/g,"").length<10)return toast("Phone number looks too short","err");
+    if(u){u.name=n.value.trim();u.teamId=team;u.skills=skills;u.phone=phone;}else S.users.push({id:uid(),name:n.value.trim(),role:r,email:e.value.trim(),teamId:team,skills,phone});
     save();closeSheet();PAGES.people(r);toast(u?"Saved":"Invited · they can sign in with Google now");}},u?"Save":"Invite")));
 }
 PAGES.worktypes=function(){
@@ -2494,6 +2518,8 @@ openInvoice=track("invoice",openInvoice);openWizard=track("wizard",openWizard);i
 const TRANSIENT=new Set(["wizard","bill","clientForm"]);
 function goBack(){HIST.pop();while(HIST.length&&TRANSIENT.has(HIST[HIST.length-1].key))HIST.pop();const prev=HIST[HIST.length-1];if(!prev){nav("dash");return;}replaying=true;try{show("page");prev.fn.apply(null,prev.a);}finally{replaying=false;}}
 /* ---------- boot ---------- */
+/* older saved data had no staff phone numbers: fill them from the sample data */
+try{const fresh=seed();S.users.forEach(u=>{if(u.phone===undefined){const f=fresh.users.find(x=>x.id===u.id);if(f&&f.phone)u.phone=f.phone;}});}catch(e){}
 document.querySelectorAll("[data-login]").forEach(b=>b.onclick=()=>{const r=b.dataset.login;S.me=S.users.find(u=>u.role===r).id;save();if(r==="HR"){show("page");PAGES.attendance();}else{show("dash");renderDash();}});
 $("#resetData").onclick=()=>{try{localStorage.removeItem(KEY);}catch(e){}S=seed();toast("Sample data reset");};
 try{if(location.hash){const h=location.hash.slice(1).toUpperCase();const u=S.users.find(x=>x.role===h);if(u){S.me=u.id;}}}catch(e){}
