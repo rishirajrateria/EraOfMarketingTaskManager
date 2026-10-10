@@ -852,7 +852,7 @@ select.in{padding-right:10px}
 .btnrow:has(.fx){align-items:center}
 #addNav.solo .nl{visibility:hidden}
 .r2:has(.fx){align-items:center}
-.topbar .tsep,.topbar #dbBtn,.topbar #reqBtn,.topbar #notifBtn,.topbar #meBtn,.topbar [data-id=dbBtn],.topbar [data-id=reqBtn],.topbar [data-id=notifBtn],.topbar [data-id=meBtn]{display:none!important}
+.topbar #dbBtn,.topbar #reqBtn,.topbar #notifBtn,.topbar [data-id=dbBtn],.topbar [data-id=reqBtn],.topbar [data-id=notifBtn]{display:none!important}
 /* global bottom nav (dashboard + every page): tabs toggle; + always at the right */
 #gNav{position:absolute;left:0;right:0;bottom:0;z-index:27;height:calc(64px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px)}
 #gNav[hidden]{display:none!important}
@@ -876,6 +876,25 @@ select.in{padding-right:10px}
 /* sheets stop above the bottom row so its corner button (+ → ×) stays reachable */
 .hasnav .dim,.addmode .dim{bottom:calc(64px + env(safe-area-inset-bottom,0px))}
 .hasnav .dim .sheet,.addmode .dim .sheet{padding-bottom:14px}
+/* nav v3: + in the middle, Home on the right, Profile in the top bar */
+#gNav{gap:2px;padding-left:6px;padding-right:6px}
+#gNav .nl{flex:1 1 0;min-width:0;overflow:visible}
+#gNav .nl .nv{flex:1 1 0;min-width:0}
+#gNav #addChoose{margin:0 4px}
+.topbar .tsep{margin:0 2px}
+/* speed dial: icons in one column centred over the middle +, labels to the left, eye to the right */
+.fabdim{align-items:stretch}
+.fabstack{align-items:stretch;padding-left:0;padding-right:0}
+.fabrow{display:grid;grid-template-columns:calc(50% + 25px) 1fr;align-items:center;gap:0}
+.fabrow .fabi{justify-self:end}
+.fabrow .fabi:not(.main) .ic{margin-right:3px}
+.fabrow .fabeye{justify-self:start;margin-left:12px}
+.fabsep{align-self:center;margin:2px auto}
+/* add task: × in the middle (same spot as the +), type toggles left, other adds right */
+#addNav{display:grid;grid-template-columns:minmax(0,1fr) 52px minmax(0,1fr);column-gap:8px}
+#addNav .nfix{grid-column:1;grid-row:1;justify-self:start}
+#addNav #tClose{grid-column:2;grid-row:1}
+#addNav .nl{grid-column:3;grid-row:1}
 </style>
 <div class="phone" id="phone">
   <!-- role picker -->
@@ -967,7 +986,7 @@ select.in{padding-right:10px}
     </div>
   </div>
 
-  <div class="navrow" id="gNav" hidden><div class="nl" id="dashNavL"></div><button class="sq" id="addChoose" aria-label="Add" aria-haspopup="menu" aria-expanded="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
+  <div class="navrow" id="gNav" hidden><div class="nl" id="dashNavL"></div><button class="sq" id="addChoose" aria-label="Add" aria-haspopup="menu" aria-expanded="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button><div class="nl" id="dashNavR"></div></div>
   <div class="fabdim" id="fab" hidden><div class="fabstack" id="fabStack" role="menu" aria-label="Add"></div></div>
   <div class="dim" id="sheetDim" hidden><div class="sheet" id="sheet"></div></div>
   <div class="toast" id="toast" hidden></div>
@@ -1247,7 +1266,7 @@ function renderDash(){
   el("button",{class:"comp"+(f.completed?" on":""),onclick:()=>{f.completed=!f.completed;save();renderDash();}},"completed"),
   el("button",{class:"itog"+(f.icons.includes("recurring")?" on":""),title:"Recurring tasks",onclick:()=>{f.icons=tog(f.icons,"recurring");save();renderDash();}},svg(I.repeat,15,2.5)),
   ...[["red","#F8CACA","Not started · start time passed"],["yellow","#F6E7B4","Paused"],["green","#CBEFCB","Started"],["purple","#E4D7FB","Doubt raised (?)"]].map(([k,hex,l])=>el("button",{class:"sw"+(f.colours.includes(k)?" on":""),style:"background:"+hex,title:l,"aria-label":l,onclick:()=>{f.colours=tog(f.colours,k);save();renderDash();}})),
-  r==="ADMIN"?el("button",{class:"itog pall",title:"Pause or resume all tasks shown","aria-label":"Pause all",onclick:pauseAllSheet},svg(I.pause,13,0),el("span",{},"all")):null,
+  ...(r==="ADMIN"?[el("button",{class:"itog pall",title:"Pause or resume all tasks shown","aria-label":"Pause all",onclick:pauseAllSheet},svg(I.pause,13,0),el("span",{},"all"))]:[]),
   el("button",{class:"rdbtn"+(f.icons.includes("review")?" on":""),title:"Review requested",onclick:()=>{f.icons=tog(f.icons,"review");save();renderDash();}},el("i")));
  // bottom dock: Team / Client / Day pickers (neutral glass, one row) + Meet and + buttons
  const vis=visibleTasks();
@@ -1633,6 +1652,7 @@ const MI={
  calcheck:'<path d="M8 2v4M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M9 16l2 2 4-4"/>',
  clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
  eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+ home:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z"/>',
  usercheck:'<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="m16 11 2 2 4-4"/>',
  user:'<circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/>',
  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
@@ -1699,10 +1719,10 @@ const menuEl=$("#menu");
 function openMenu(){$("#mSearch").value="";renderMenu();menuEl.hidden=false;$("#mBody").scrollTop=0;}function closeMenu(){menuEl.hidden=true;}
 menuEl.addEventListener("click",e=>{if(e.target===menuEl)closeMenu();});
 $("#menuBtn").onclick=openMenu;$("#pgMenu").onclick=()=>{if(role()==="ADMIN")openMenu();else nav("dash");};
-$("#reqBtn").onclick=()=>nav("requests");$("#notifBtn").onclick=()=>nav("notifications");$("#meBtn").onclick=()=>nav("me");
+$("#reqBtn").onclick=()=>nav("requests");$("#notifBtn").onclick=()=>nav("notifications");$("#meBtn").onclick=()=>{if(navActive()==="me")nav("dash");else nav("me");};
 $("#demoChip").onclick=()=>{S.me=null;save();show("login");};
 $("#pgBack").onclick=()=>goBack();
-$("#pgTop").onclick=e=>{const b=e.target.closest("button[data-id],a[data-id]");if(!b)return;const id=b.dataset.id;const go={menuBtn:()=>openMenu(),dbBtn:()=>nav("insights"),reqBtn:()=>nav("requests"),notifBtn:()=>nav("notifications"),meBtn:()=>nav("me")}[id];if(go){e.preventDefault();go();}};
+$("#pgTop").onclick=e=>{const b=e.target.closest("button[data-id],a[data-id]");if(!b)return;const id=b.dataset.id;const go={menuBtn:()=>openMenu(),dbBtn:()=>nav("insights"),reqBtn:()=>nav("requests"),notifBtn:()=>nav("notifications"),meBtn:()=>{if(navActive()==="me")nav("dash");else nav("me");}}[id];if(go){e.preventDefault();go();}};
 function nav(go){
  const [page,arg]=go.split(":");
  if(page==="dash"){PEEK=null;show("dash");renderDash();return;}
@@ -1860,7 +1880,7 @@ function openFab(){
   if(i===2)nodes.push(el("div",{class:"fabsep"}));
   const ic=el("span",{class:"ic "+x.cls});if(x.ic)ic.append(msvg(x.ic,x.main?22:20));else ic.innerHTML=MEET_ICON;
   const main=el("button",{class:"fabi"+(x.main?" main":""),role:"menuitem","data-add":x.k,"aria-label":"Add "+x.l.toLowerCase(),onclick:()=>{closeFab();x.fn();}},el("b",{},x.l),ic);
-  nodes.push(el("div",{class:"fabrow",style:"animation-delay:"+(i*18)+"ms"},x.view?el("button",{class:"fabeye",role:"menuitem","data-view":x.k,"aria-label":"View "+(x.k==="KIT"?"client kits":x.l.toLowerCase()+"s"),title:"View existing",onclick:()=>{closeFab();x.view();}},msvg("eye",18)):null,main));
+  nodes.push(el("div",{class:"fabrow",style:"animation-delay:"+(i*18)+"ms"},main,x.view?el("button",{class:"fabeye",role:"menuitem","data-view":x.k,"aria-label":"View "+(x.k==="KIT"?"client kits":x.l.toLowerCase()+"s"),title:"View existing",onclick:()=>{closeFab();x.view();}},msvg("eye",18)):el("span")));
  });
  $("#fabStack").replaceChildren(...nodes);$("#fab").hidden=false;document.body.classList.add("fabon");syncCorner();
  $("#fabStack [data-add=TASK]").focus();
@@ -1877,7 +1897,7 @@ function cornerTap(){const m=cornerMode();
  else openFab();
  syncCorner();}
 function toggleFab(){$("#fab").hidden?openFab():closeFab();}
-$("#fab").onclick=e=>{if(e.target===$("#fab")||e.target===$("#fabStack"))closeFab();};
+$("#fab").onclick=e=>{if(e.target===$("#fab")||e.target===$("#fabStack")||e.target.classList.contains("fabrow")||(e.target.tagName==="SPAN"&&e.target.parentNode.classList.contains("fabrow")))closeFab();};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#fab").hidden){closeFab();$("#addChoose").focus();}});
 document.addEventListener("click",e=>{if(!$("#fab").hidden&&!e.target.closest("#fab,#addChoose"))closeFab();},true);
 /* New client kit: pick the client (clients without a kit first). */
@@ -1897,14 +1917,17 @@ function openListFlow(view,label,form,expanded){nav(view);PEEK={label,open:form}
 function renderPeek(){const pk=$("#peek");if(!pk)return;const on=!!PEEK&&!$("#s-page").hidden&&sheetDim.hidden;pk.hidden=!on;$("#s-page").classList.toggle("peeking",!!PEEK);if(!on)return;
  pk.replaceChildren(el("button",{class:"peekbtn","aria-label":PEEK.label+" (expand)",onclick:()=>{pk.hidden=true;PEEK.open();}},el("span",{class:"pplus"},msvg("plus",18,2.5)),el("b",{},PEEK.label),el("span",{class:"pchev"},svg('<path d="m6 15 6-6 6 6"/>',20,2.25))));}
 const NAVKEYS=["insights","requests","notifications","me"];
-function navActive(){if($("#s-page").hidden)return null;const t=typeof HIST!=="undefined"&&HIST[HIST.length-1];return t&&NAVKEYS.includes(t.key)?t.key:null;}
+function navActive(){if(!$("#s-dash").hidden)return "home";if($("#s-page").hidden)return null;const t=typeof HIST!=="undefined"&&HIST[HIST.length-1];return t&&NAVKEYS.includes(t.key)?t.key:null;}
 function afterShow(name){const g=$("#gNav");if(!g)return;if(name!=="page")PAGEX=null;$("#phone").classList.toggle("addmode",name==="add");const on=(name==="dash"||name==="page")&&!!me();g.hidden=!on;$("#phone").classList.toggle("hasnav",on);if(on)renderDashNav();if(name!=="page"){const pk=$("#peek");if(pk)pk.hidden=true;}closeFab&&!$("#fab").hidden&&closeFab();syncCorner();}
 function renderDashNav(){const r=role(),m=me();if(!m||!$("#dashNavL"))return;const act=navActive();
  const tog=k=>()=>{closeFab();if(!sheetDim.hidden){PEEK=null;closeSheet();}if(navActive()===k)nav("dash");else nav(k);};
  const openReq=S.requests.filter(x=>x.status==="OPEN").length,unread=S.notifs.filter(n=>n.for===m.id&&!n.read).length;
  const av=el("span",{class:"avatar"},m.name.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase());
  const nb=(k,ic,l,b)=>{const x=navBtn(ic,l,tog(k),b);if(act===k){x.classList.add("on");x.setAttribute("aria-current","page");}return x;};
- $("#dashNavL").replaceChildren(...[r==="ADMIN"?nb("insights","chart","Dashboard"):null,r==="ADMIN"?nb("requests","inbox","Requests",openReq):null,nb("notifications","bell","Notifications",unread),nb("me",av,"Profile")].filter(Boolean));
+ /* Dashboard · Requests · [+] · Notifications · Home — the + sits in the middle; Profile lives in the top bar */
+ const home=navBtn("home","Home",()=>{closeFab();if(!sheetDim.hidden){PEEK=null;closeSheet();}nav("dash");});if(act==="home"){home.classList.add("on");home.setAttribute("aria-current","page");}
+ $("#dashNavL").replaceChildren(...(r==="ADMIN"?[nb("insights","chart","Dashboard"),nb("requests","inbox","Requests",openReq)]:[nb("notifications","bell","Notifications",unread)]));
+ $("#dashNavR").replaceChildren(...(r==="ADMIN"?[nb("notifications","bell","Notifications",unread),home]:[home]));
 }
 function renderAddNav(){
  const items=fabItems().filter(x=>x.k!=="TASK"&&x.k!=="MEETING");const short={INVOICE:"Invoice",EXPENSE:"Expense",EXECUTIVE:"Exec",WORK:"Work",TEAM:"Team",TEAM_LEADER:"Leader",KIT:"Kit"};
