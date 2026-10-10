@@ -4,6 +4,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import type { Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
+import { hostedDomainParam, signInEmailAllowed } from "@/lib/domains";
 
 declare module "next-auth" {
   interface Session {
@@ -29,10 +30,9 @@ export const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/spreadsheets",
 ].join(" ");
 
+/** Any configured workspace domain (staff + admin, ADR 0018) or an explicitly listed bootstrap admin. */
 function emailAllowed(email: string): boolean {
-  const lower = email.toLowerCase();
-  if (!env.workspaceDomain) return true;
-  return lower.endsWith("@" + env.workspaceDomain.toLowerCase());
+  return signInEmailAllowed(email, { domains: env.workspaceDomains, bootstrapAdmins: env.bootstrapAdmins });
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -48,7 +48,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           access_type: "offline",
           prompt: "consent",
           include_granted_scopes: "true",
-          ...(env.workspaceDomain ? { hd: env.workspaceDomain } : {}),
+          ...hostedDomainParam(env.workspaceDomains), // only with exactly one domain
         },
       },
     }),

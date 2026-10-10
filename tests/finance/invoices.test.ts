@@ -113,7 +113,7 @@ describe("invoicing v2", () => {
     expect(Buffer.from(inv.pdfData!).subarray(0, 4).toString()).toBe("%PDF");
     expect(inv.pdfDriveFileId).toMatch(/^file_/);
     expect(inv.pdfBackendFileId).toMatch(/^file_/);
-    expect(sentMailLog).toEqual([{ to: "billing@repo.test", subject: `Invoice ${INV(1)} from Era Of Marketing`, at: expect.any(Date) }]);
+    expect(sentMailLog).toEqual([{ to: "billing@repo.test", subject: `Invoice ${INV(1)} from Era Of Marketing`, sender: "finance", from: "", at: expect.any(Date) }]);
     expect(sentWhatsappLog).toHaveLength(1);
     expect(sentWhatsappLog[0].to).toBe("+919876543210");
     expect(sentWhatsappLog[0].body).toContain(`invoice ${INV(1)} for INR 23,600.00 is due on 25 Sep 2026`);

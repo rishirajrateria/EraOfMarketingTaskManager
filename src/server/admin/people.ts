@@ -2,6 +2,7 @@ import type { Prisma, Role, User } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { getSettings } from "@/lib/settings";
+import { domainList, emailInDomains } from "@/lib/domains";
 
 /** Helpers for the people actions (SPEC §4, §11.7). No "use server" here — plain module. */
 
@@ -29,11 +30,12 @@ export function publicUser(u: User) {
   };
 }
 
-/** Workspace-domain rule (SPEC §4). Applies to every role — CA access (the only external role) is parked (ADR 0004). */
-export function assertWorkspaceEmail(email: string): void {
-  const domain = env.workspaceDomain.trim().toLowerCase();
-  if (!domain) return;
-  if (!email.endsWith("@" + domain)) throw new Error(`Email must end with @${domain}`);
+/**
+ * Workspace-domain rule (SPEC §4, ADR 0018): any configured domain (staff + admin). Applies to every role — CA access
+ * (the only external role) is parked (ADR 0004).
+ */
+export function assertWorkspaceEmail(email: string, domains: readonly string[] = env.workspaceDomains): void {
+  if (!emailInDomains(email, domains)) throw new Error(`Email must end with ${domainList(domains)}`);
 }
 
 export type HierarchyInput = { role: Role; teamId: string | null; teamLeaderId: string | null };

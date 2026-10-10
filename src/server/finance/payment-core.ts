@@ -123,6 +123,7 @@ export async function sendReceiptCore(paymentId: string, opts: SendOptions, acto
           subject: `Payment receipt ${p.receiptNumber} — ${company.companyName}`,
           text: `Dear ${inv.client.name},\n\nThank you. ${summary}\n\nRegards,\n${company.companyName}`,
           attachments: pdf ? [{ filename: `${p.receiptNumber}.pdf`, mimeType: "application/pdf", data: pdf }] : [],
+          sender: "finance",
         });
         emailed = true;
       } catch (e) {

@@ -262,7 +262,8 @@ export function GoogleStatusSection({ status }: { status: GoogleStatus }) {
       )}
       {row("Service account key", status.serviceAccountKeySet ? "set" : "not set")}
       {row("Impersonated user", status.impersonateUser ?? "—")}
-      {row("Workspace domain", status.workspaceDomain ?? "any")}
+      {row(status.workspaceDomains.length > 1 ? "Workspace domains" : "Workspace domain", status.workspaceDomains.length ? status.workspaceDomains.join(", ") : "any")}
+      {row("Finance mail from", status.financeSender ?? (status.impersonateUser ? `${status.impersonateUser} (default)` : "—"))}
       {row("Drive root folder", status.driveRootFolderId ?? "auto")}
       {row("Finance sheet", status.financeSheetId ?? "auto")}
       {row("Expenses sheet", status.expensesSheetId ?? "auto")}
