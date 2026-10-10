@@ -3,6 +3,12 @@ import { env } from "@/lib/env";
 
 export type MailAttachment = { filename: string; mimeType: string; data: Buffer };
 
+/** RFC 2047 encoded-word for non-ASCII attachment names (e.g. "Invoice No. … (शर्मा ट्रेडर्स).pdf"); quotes stripped. */
+export function mimeFileName(name: string): string {
+  const clean = name.replace(/["\\\r\n]/g, "");
+  return /^[\x20-\x7e]*$/.test(clean) ? clean : `=?UTF-8?B?${Buffer.from(clean).toString("base64")}?=`;
+}
+
 function encodeMime(opts: { to: string; from: string; subject: string; text: string; attachments?: MailAttachment[] }) {
   const boundary = "eom_" + Math.random().toString(36).slice(2);
   const lines = [
@@ -21,9 +27,9 @@ function encodeMime(opts: { to: string; from: string; subject: string; text: str
   for (const a of opts.attachments ?? []) {
     lines.push(
       `--${boundary}`,
-      `Content-Type: ${a.mimeType}; name="${a.filename}"`,
+      `Content-Type: ${a.mimeType}; name="${mimeFileName(a.filename)}"`,
       "Content-Transfer-Encoding: base64",
-      `Content-Disposition: attachment; filename="${a.filename}"`,
+      `Content-Disposition: attachment; filename="${mimeFileName(a.filename)}"`,
       "",
       a.data.toString("base64"),
     );

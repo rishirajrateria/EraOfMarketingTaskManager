@@ -14,11 +14,14 @@ export async function tryUpload(pathSegments: string[] | { folderId: string }, f
   }
 }
 
-/** Save a document to the client's Drive folder and to the backend Finance/<sub> folder (SPEC §11.3). */
-export async function storeForClientAndFinance(client: ClientRef, financeSub: string, file: StoredFile) {
+/**
+ * Save a document to the client's Drive folder and to the backend Finance/<sub> folder (SPEC §11.3). A null `financeSub`
+ * keeps it out of Finance (ADR 0013: proformas are not finance records).
+ */
+export async function storeForClientAndFinance(client: ClientRef, financeSub: string | null, file: StoredFile) {
   const [clientFileId, backendFileId] = await Promise.all([
     tryUpload(client.driveFolderId ? { folderId: client.driveFolderId } : ["Clients", client.name], file),
-    tryUpload(["Finance", financeSub], file),
+    financeSub ? tryUpload(["Finance", financeSub], file) : Promise.resolve(null),
   ]);
   return { clientFileId, backendFileId };
 }

@@ -47,14 +47,17 @@ describe("cancel a sent invoice", () => {
     const inv = await testDb.invoice.findUniqueOrThrow({ where: { id } });
     expect(inv).toMatchObject({ number: INV(1), status: "CANCELLED", cancelReason: "Wrong amount, will reissue", remindAt: null });
     expect(inv.cancelledAt).not.toBeNull();
-    expect(inv.monthDriveFileId).not.toBe(before.monthDriveFileId); // moved to "Cancelled invoices"
-    expect((await import("@/google/drive")).trashedMockFiles).toContain(before.monthDriveFileId);
+    // ADR 0013: the Sales invoices copy is moved to "Cancelled invoices", renamed and replaced by the stamped PDF
+    expect(inv.monthDriveFileId).toBe(before.monthDriveFileId);
+    const folder = await testDb.financeMonthFolder.findFirstOrThrow();
+    const cName = `C Invoice No. ${INV(1).replace(/\//g, "-")} (Repo).pdf`;
+    expect((await import("@/google/drive")).mockDriveLog).toContainEqual({ op: "update", id: before.monthDriveFileId, name: cName, parentId: folder.cancelledId, removedParent: folder.salesId });
     const { text } = await pdfText(Buffer.from(inv.pdfData!));
     expect(text.replace(/\s+/g, "")).toContain("CANCELLED"); // the rotated stamp (extracted in pieces)
     expect(text).toContain("Reason: Wrong amount, will reissue");
     const mail = (await import("@/google/gmail")).sentMailDetails.at(-1)!;
     expect(mail.subject).toBe(`Invoice ${INV(1)} cancelled · Era Of Marketing`);
-    expect(mail.attachments[0].filename).toMatch(/-CANCELLED\.pdf$/);
+    expect(mail.attachments[0].filename).toBe(cName);
     expect(await testDb.auditLog.count({ where: { action: "invoice.cancel", entityId: id } })).toBe(1);
     expect((await cancelInvoice(id, { reason: "again" })).ok).toBe(false);
 

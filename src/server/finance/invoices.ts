@@ -10,7 +10,7 @@ import { issuePartCore, mergeRemainingPartsCore, updatePartScheduleCore } from "
 import { convertProformaCore, createCreditNoteCore } from "@/server/finance/credit-notes";
 import { holdWorkCore, resumeWorkCore, type HoldResult, type ResumeResult } from "@/server/finance/hold-work";
 import { sendReminderCore } from "@/server/finance/reminder-core";
-import { cancelInvoiceCore, type CancelResult } from "@/server/finance/cancel-core";
+import { assertCancellableDocType, cancelInvoiceCore, type CancelResult } from "@/server/finance/cancel-core";
 import { approveOptionsSchema, cancelInvoiceSchema, creditNoteInputSchema, dateInput, invoiceInputSchema, mergePartsSchema, parseInput, partScheduleSchema } from "@/server/finance/schemas";
 
 /** Invoicing v2 server actions (ADR 0005). All mutations are ADMIN-only; nothing here sends without approval. */
@@ -161,13 +161,18 @@ export async function stopRecurrence(invoiceId: string): Promise<ActionResult<un
   });
 }
 
-/** Unapproved documents can be deleted; numbered ones are immutable (the series stays gap-free). */
+/**
+ * Unapproved documents can be deleted; numbered ones are immutable (the series stays gap-free). A proforma is not a
+ * record (ADR 0013), so it can be deleted at any time unless it was converted into a tax invoice (the link is kept).
+ */
 export async function deleteInvoice(id: string): Promise<ActionResult<undefined>> {
   return wrap(async () => {
     const actor = await requireWrite();
-    const inv = await prisma.invoice.findUnique({ where: { id }, select: { status: true, number: true, approvedAt: true, planId: true } });
+    const inv = await prisma.invoice.findUnique({ where: { id }, select: { status: true, number: true, approvedAt: true, planId: true, docType: true, convertedTo: { select: { id: true } } } });
     if (!inv) throw new Error("Invoice not found");
-    if (inv.approvedAt || (inv.status !== "DRAFT" && inv.status !== "AWAITING_APPROVAL")) throw new Error("Only unapproved documents can be deleted");
+    const freeProforma = inv.docType === "PROFORMA" && !inv.convertedTo;
+    if (inv.docType === "PROFORMA" && inv.convertedTo) throw new Error("This proforma was converted into a tax invoice; it stays linked to it");
+    if (!freeProforma && (inv.approvedAt || (inv.status !== "DRAFT" && inv.status !== "AWAITING_APPROVAL"))) throw new Error("Only unapproved documents can be deleted");
     await prisma.$transaction([
       prisma.invoicePart.updateMany({ where: { invoiceId: id }, data: { status: "PENDING", invoiceId: null } }),
       prisma.invoice.delete({ where: { id } }),
@@ -185,6 +190,7 @@ export async function deleteInvoice(id: string): Promise<ActionResult<undefined>
 export async function cancelInvoice(id: string, raw: unknown): Promise<ActionResult<CancelResult>> {
   return wrap(async () => {
     const actor = await requireWrite();
+    await assertCancellableDocType(id); // ADR 0013: proformas get a clear "cannot be cancelled" before form checks
     const opts = parseInput(cancelInvoiceSchema, raw);
     const res = await cancelInvoiceCore(id, opts, actor.id);
     safeRevalidate(...paths(id), "/admin/drive-folders", "/dashboard");

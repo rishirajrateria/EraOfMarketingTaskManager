@@ -13,10 +13,16 @@ export function fileUrl(id: string) {
   return `https://drive.google.com/file/d/${id}/view`;
 }
 
+/**
+ * Folder lookup by name. Without a parent the search is limited to the impersonated user's My Drive root
+ * (`'root' in parents`, where `ensureFolder` creates it), so a same-named folder somebody else shared with that user
+ * is never picked up by mistake. Shared-drive parents are supported.
+ */
 async function findChild(name: string, parentId?: string): Promise<string | null> {
-  const q = [`name = '${name.replace(/'/g, "\\'")}'`, `mimeType = '${FOLDER}'`, "trashed = false"];
-  if (parentId) q.push(`'${parentId}' in parents`);
-  const res = await withRetry(() => drive().files.list({ q: q.join(" and "), fields: "files(id)", pageSize: 1 }));
+  const q = [`name = '${name.replace(/'/g, "\\'")}'`, `mimeType = '${FOLDER}'`, "trashed = false", `'${parentId ?? "root"}' in parents`];
+  const res = await withRetry(() =>
+    drive().files.list({ q: q.join(" and "), fields: "files(id)", pageSize: 1, supportsAllDrives: true, includeItemsFromAllDrives: true }),
+  );
   return res.data.files?.[0]?.id ?? null;
 }
 
@@ -66,6 +72,9 @@ export async function shareWith(fileId: string, emails: string[], role: "reader"
   }
 }
 
+/** Mock-mode log of uploads and in-place updates (tests check names and folders). */
+export const mockDriveLog: { op: "upload" | "update"; id: string; name: string | null; parentId: string | null; removedParent?: string | null }[] = [];
+
 export async function uploadFile(opts: {
   name: string;
   mimeType: string;
@@ -74,6 +83,7 @@ export async function uploadFile(opts: {
 }): Promise<{ id: string; url: string }> {
   if (isMock()) {
     const id = mockId("file", `${opts.parentId}/${opts.name}/${opts.data.length}`);
+    mockDriveLog.push({ op: "upload", id, name: opts.name, parentId: opts.parentId ?? null });
     return { id, url: fileUrl(id) };
   }
   const res = await withRetry(() =>
@@ -106,4 +116,33 @@ export async function trashFile(fileId: string) {
   await withRetry(() => drive().files.update({ fileId, requestBody: { trashed: true }, supportsAllDrives: true })).catch((e: unknown) => {
     if ((e as { code?: number }).code !== 404) throw e;
   });
+}
+
+/**
+ * Rename / move / replace the content of an existing file in one call (a cancelled invoice is renamed to
+ * "C Invoice No. …", moved to Cancelled invoices and replaced by the stamped PDF). Returns false when the file no
+ * longer exists (404) so the caller can upload a fresh copy instead.
+ */
+export async function updateFile(opts: { fileId: string; name?: string; addParent?: string; removeParent?: string; mimeType?: string; data?: Buffer }): Promise<boolean> {
+  if (isMock()) {
+    mockDriveLog.push({ op: "update", id: opts.fileId, name: opts.name ?? null, parentId: opts.addParent ?? null, removedParent: opts.removeParent ?? null });
+    return true;
+  }
+  try {
+    await withRetry(() =>
+      drive().files.update({
+        fileId: opts.fileId,
+        requestBody: opts.name ? { name: opts.name } : {},
+        addParents: opts.addParent,
+        removeParents: opts.removeParent,
+        media: opts.data ? { mimeType: opts.mimeType ?? "application/octet-stream", body: Readable.from(opts.data) } : undefined,
+        fields: "id",
+        supportsAllDrives: true,
+      }),
+    );
+    return true;
+  } catch (e) {
+    if ((e as { code?: number }).code === 404) return false;
+    throw e;
+  }
 }

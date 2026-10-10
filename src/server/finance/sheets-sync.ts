@@ -40,7 +40,8 @@ export async function syncFinanceSheet(actorId: string | null): Promise<SheetSyn
   const tz = (await getSettings()).timezone;
   const spreadsheetId = await ensureSpreadsheet("Finance", env.financeSheetId || undefined);
   const [invoices, payments, expenses, summary] = await Promise.all([
-    listInvoices(),
+    // ADR 0013: proformas are not finance records, so they never reach the Finance sheet.
+    listInvoices().then((rows) => rows.filter((r) => r.docType !== "PROFORMA")),
     prisma.payment.findMany({ include: { invoice: { select: { number: true, client: { select: { name: true } } } } }, orderBy: { receivedAt: "asc" } }),
     listPaidOccurrences(),
     financeSummary(),

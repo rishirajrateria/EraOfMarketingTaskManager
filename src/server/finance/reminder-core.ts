@@ -5,6 +5,7 @@ import { sendWhatsapp } from "@/integrations/whatsapp";
 import { loadCompany, loadInvoiceFull, toPdfInvoice } from "@/server/finance/document-core";
 import { renderInvoicePdf } from "@/server/finance/pdf";
 import { renderTemplate } from "@/server/finance/drive-store";
+import { invoiceFileName } from "@/server/finance/file-names";
 import { templateVars } from "@/server/finance/approve-core";
 import { loadSettlement } from "@/server/finance/settlement";
 
@@ -37,7 +38,7 @@ export async function sendReminderCore(id: string, actorId: string | null): Prom
         to: inv.client.email,
         subject: `Reminder: invoice ${inv.number} from ${company.companyName}`,
         text: renderTemplate(REMINDER_TEMPLATE, vars),
-        attachments: [{ filename: `${inv.number}.pdf`, mimeType: "application/pdf", data: pdf }],
+        attachments: [{ filename: invoiceFileName(inv), mimeType: "application/pdf", data: pdf }],
       });
       emailed = true;
     } catch (e) {

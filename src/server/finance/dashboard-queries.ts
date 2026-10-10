@@ -64,7 +64,7 @@ export async function paymentsDashboard(f: { month?: string | null; method?: Pay
       where: { docType: { in: [...BILLED_DOCS] }, status: { in: OPEN_STATUSES } },
       select: { id: true, number: true, status: true, dueDate: true, total: true, clientId: true, client: { select: { name: true, workOnHold: true } }, ...SETTLEMENT_INCLUDE },
     }),
-    prisma.invoice.aggregate({ where: { status: "AWAITING_APPROVAL", approvedAt: null }, _sum: { total: true }, _count: { _all: true } }),
+    prisma.invoice.groupBy({ by: ["docType"], where: { status: "AWAITING_APPROVAL", approvedAt: null }, _sum: { total: true }, _count: { _all: true } }),
     prisma.payment.findMany({
       where: { receivedAt: { gte: start, lt: end } },
       orderBy: { receivedAt: "desc" },
@@ -97,8 +97,9 @@ export async function paymentsDashboard(f: { month?: string | null; method?: Pay
       outstanding: round2(withBalance.reduce((s, r) => s + r.balance, 0)),
       overdue: round2(overdueRows.reduce((s, r) => s + r.balance, 0)),
       receivedThisMonth: round2(filtered.reduce((s, p) => s + p.amount.toNumber(), 0)),
-      awaitingApproval: awaiting._sum.total?.toNumber() ?? 0,
-      awaitingApprovalCount: awaiting._count._all,
+      // ADR 0013: proformas wait for approval too (count) but are not money owed, so they stay out of the ₹ total.
+      awaitingApproval: round2(awaiting.filter((g) => g.docType !== "PROFORMA").reduce((s, g) => s + (g._sum.total?.toNumber() ?? 0), 0)),
+      awaitingApprovalCount: awaiting.reduce((s, g) => s + g._count._all, 0),
     },
     dueSoon: groupByClient(dueSoonRows),
     overdue: groupByClient(overdueRows),

@@ -125,7 +125,8 @@ describe("invoicing v2", () => {
     const res = await GET(new Request("http://localhost/api/public/invoice/x"), { params: Promise.resolve({ token: inv.publicToken! }) });
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("application/pdf");
-    expect(res.headers.get("Content-Disposition")).toBe(`inline; filename="${INV(1).replace(/\//g, "_")}.pdf"`);
+    const fileName = `Invoice No. ${INV(1).replace(/\//g, "-")} (Repo).pdf`; // ADR 0013
+    expect(res.headers.get("Content-Disposition")).toBe(`inline; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(fileName).replace(/[()]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)}`);
     expect(res.headers.get("X-Robots-Tag")).toContain("noindex");
     expect(res.headers.get("Cache-Control")).toBe("private, no-store");
     expect(Buffer.from(await res.arrayBuffer()).subarray(0, 4).toString()).toBe("%PDF");

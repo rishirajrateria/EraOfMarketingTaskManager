@@ -13,9 +13,10 @@ export const dynamic = "force-dynamic";
 const OPEN_TASKS = ["ASSIGNED", "STARTED", "FINISH_REQUESTED"] as const;
 
 /** Invoice detail (ADR 0005): header, amounts, client, schedule, approval + delivery, related docs, payments, actions. */
-export default async function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function InvoicePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ approve?: string }> }) {
   const user = await requireFinancePage();
   const { id } = await params;
+  const autoApprove = (await searchParams).approve === "1";
   const [inv, settings] = await Promise.all([getInvoiceDetail(id), getSettings()]);
   if (!inv) notFound();
   const [client, openTasks, nextNumber] = await Promise.all([
@@ -31,6 +32,14 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
         {inv.status === "AWAITING_APPROVAL" ? (
           <div role="status" className="mx-4 mb-3 rounded-xl border border-white/60 bg-amber-100/70 px-3 py-2 text-sm text-amber-900 backdrop-blur-sm">
             <b>Awaiting your approval.</b> Nothing has been sent. Review, then tap <b>Approve &amp; send</b> below to allocate the number and deliver it.
+          </div>
+        ) : null}
+        {inv.docType === "PROFORMA" ? (
+          <div role="note" className="mx-4 mb-3 rounded-xl border border-hair bg-violet-100/70 px-3 py-2 text-sm text-violet-950 backdrop-blur-sm dark:bg-violet-500/15 dark:text-violet-100">
+            <b className="block">Proforma · for reference only</b>
+            <div className="text-xs">
+              It can&apos;t be cancelled and no record is kept: it never counts in sales, outstanding or GST, isn&apos;t filed in the monthly Drive folders and doesn&apos;t use an invoice number. {inv.convertedTo ? "It was converted into a tax invoice." : "Delete it when you no longer need it, or convert it into a tax invoice."}
+            </div>
           </div>
         ) : null}
         {inv.status === "CANCELLED" && inv.cancelReason ? (
@@ -58,6 +67,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
           tdsPercent={client?.tdsPercent?.toNumber() ?? null}
           openTasks={openTasks}
           nextNumber={nextNumber}
+          autoApprove={autoApprove}
         />
       ) : null}
     </div>
