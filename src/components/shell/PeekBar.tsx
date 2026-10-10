@@ -27,9 +27,9 @@ export function PeekButton({ label, onExpand }: { label: string; onExpand: () =>
 }
 
 /**
- * A list page's bottom zone while the bar shows: the page's filter rows (if any) stay, its "+ Add" bar gives way to
- * the peek button (no duplicate add button).
+ * A list page's bottom zone while the bar shows: the page's search strip and filter rows (if any) stay, its "+ Add" bar
+ * gives way to the peek button (no duplicate add button).
  */
-export function PeekZone({ label, onExpand, rows }: { label: string; onExpand: () => void; rows?: React.ReactNode }) {
-  return <BottomZone rows={rows} actions={<PeekButton label={label} onExpand={onExpand} />} />;
+export function PeekZone({ label, onExpand, strip, rows }: { label: string; onExpand: () => void; strip?: React.ReactNode; rows?: React.ReactNode }) {
+  return <BottomZone strip={strip} rows={rows} actions={<PeekButton label={label} onExpand={onExpand} />} />;
 }

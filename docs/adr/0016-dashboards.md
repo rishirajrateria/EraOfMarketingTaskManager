@@ -238,3 +238,44 @@ Reference: prototype `traytog`, `#dashTray.min`, `pageSig`, `menuModel`.
 - The list flow's bar is tied to the exact list page: it lives in that page's URL (`?add=…&from=add`), so opening one
   client's kit from the client-kit list (or any other page) shows that page's own buttons, no bar, and the corner ×
   there closes a sheet rather than leaving for `/dashboard`.
+
+### Add-task = the dashboard's bottom, Client in the +, trays on /admin/dashboards, Work filters, slimmest menu (2026-10-10, night)
+Reference: prototype `typeseg`, `#addTray` / `addTrayTog`, `.hasnav #s-add`, `cornerMode` ("add"), `lv("CLIENT"`,
+`menuModel`, `reqTeam` / `wOk`. Supersedes the add-task row (type toggles · × · icon strip) of the sections above.
+- **Add-task bottom = the dashboard's.** The pill rows (Prefer · Work · Team / Exec / Invite · Client · Start) and the
+  time row (📅 · Up next · Today · Tomorrow) sit in a **details tray** with the dashboard's minimise tab
+  (`MinimisableTray`, the generalised `FilterTray`: chevron tab on the top edge; minimised = a 40px bar
+  "⌃ Details · Social · Acme · Today 11 am" — picked teams, client, start or "Up next", `details-caption.ts`, tested).
+  Remembered per user under its own key (`tray-key.ts`: `eom:add-tray-min:<user>`; the task dashboard keeps
+  `eom:dash-tray-min:<user>`).
+- **The global bottom nav stays below the add-task screen.** `Sheet` lost `cover`: the add-task sheet stops above the
+  64px nav like every sheet, and its own row (`AddTaskBottomBar`, `CloseX`) is gone. The nav's centre button is the ×
+  while it is up — the corner stack closes an open sub-sheet (calendar, guests, options, find a time, repeat) first,
+  then the screen (`onCornerClose` always closes; Escape still waits for a sub-sheet). No tab is highlighted meanwhile
+  (`add-task-store` `setShown` / `useAddTaskShown`, `nav-model` `shownNavKey`, tested). A tab tapped there leaves for
+  that tab (the dashboard unmounts, no draft prompt); Home closes the screen in place (`cornerStore.closeAll()`).
+- **Task | Meeting** is a small segmented switch at the top of the form, above the title (`TypeSwitch`: `[list icon]
+  Task | [Meet glyph] Meeting`, selected = raised glass, `aria-pressed`, `role="group"` "Type").
+- The add-task **admin icon strip** (Invoice · Expense · Exec · Work · Team · Leader · Kit) is gone — the + speed dial
+  covers them; `FabItem.short`, `NavAddButton` and the dashboard's `onPick` plumbing went with it.
+- **Speed dial: Client.** Admin's dial gains Client (blue `#60a5fa → #2563eb`, building icon) with an eye, just below
+  Client kit: bottom → top Task, Meeting | Invoice, Expense, Executive, Work type, Team, Team leader, Client, Client kit.
+  It is a list flow (`LIST_FLOWS.CLIENT`: `/admin/clients`, bar "Add client", eye "View clients"): eye →
+  `?add=min&from=add` (the list + the bar), item → `?add=1&from=add` (the add-client sheet expanded). `ClientsManager`
+  now uses `useAddForm` like the other lists: Escape / tap outside minimise (draft kept), the corner × returns to
+  `/dashboard`, a save comes back to the list with the bar; editing a client is its own sheet. The kit picker's
+  "+ New client" (`NEW_CLIENT_HREF`) is the same link, so it follows the same rules (a save now lands on the clients
+  list with the bar instead of the dashboard). `PeekZone` keeps a page's search strip.
+- **Menu**: Finance, Clients, Requests and Notifications tiles leave (bottom nav tabs, the dashboards and the +
+  cover them), and so does the quick-actions row (Approvals = Requests › Finance › Approvals). Left: Money · Drive
+  folders; Clients · Shared links; Team · HR, Tasks, Attendance, Inventory; Other · Settings, Sign out. `financeSub` and
+  `QUICK_ACTIONS` are gone; only Tasks keeps a badge (amber, late to start).
+- **/admin/dashboards tray**: the Show / Teams / Clients / When / View rows sit in the same `MinimisableTray`
+  (`kind="dashboards"`, `zone-sticky` above the nav); minimised "⌃ Filters · Finance · Overview · <team / client that
+  apply> · This month" (`dashTrayCaption`, tested), remembered per user (`eom:dashboards-tray-min:<user>`).
+- **/admin/requests → Work**: two rows above the inbox tabs (which stay lowest) — TEAMS (All · Social · 1 · Graphic ·
+  SEO · 1 …, active teams) and CLIENTS (All · Zenith Foods · …, active clients); counts = OPEN work requests whose task
+  is in that team / for that client, shown only when > 0. Picks narrow the Work list by the request's task team(s)
+  and client, combine, and a second tap clears (All); they live in the URL (`?tab=WORK&team=&client=`, dropped on
+  other tabs) and only show on Work. `RequestItem.task` carries `clientId` / `teamIds`; `matchesWorkFilter`,
+  `workFilterCounts`, `parseWorkFilter` (`areas.ts`) and `workFilterOptions` are tested.

@@ -2,9 +2,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useOptimistic, useState, useTransition } from "react";
-import type { RequestItem } from "@/server/requests/queries";
+import type { NamedOption, RequestItem } from "@/server/requests/queries";
 import type { RequestInbox } from "@/server/requests/inbox";
-import { FINANCE_GROUPS, FINANCE_GROUP_LABEL, groupOfKind, inboxCounts, type FinanceGroup } from "@/server/requests/areas";
+import {
+  FINANCE_GROUPS, FINANCE_GROUP_LABEL, groupOfKind, inboxCounts, matchesWorkFilter, workFilterCounts, type FinanceGroup, type WorkFilter,
+} from "@/server/requests/areas";
 import { approveFinish, rejectFinish, resolveDoubt } from "@/server/tasks/lifecycle";
 import { setTaskProtected } from "@/server/tasks/manage";
 import { resolveRequest } from "@/server/requests/actions";
@@ -22,8 +24,9 @@ import { clsx } from "@/lib/clsx";
  * Admin's one requests inbox (ADR 0016, prototype `PAGES.requests`): tabs All · Finance · Work · HR in the bottom zone
  * (?tab=), finance items from the hub's "Needs you" (approve sheet, overdue invoice, Mark paid), work requests (finish,
  * doubt, review incl. per-pill review, time change, fix) and HR (leave). The primary pill row sits lowest, nearest the
- * thumb (just above the bottom nav): Finance's sub-row above the inbox tabs. The old Task list · Dashboards buttons are
- * gone — the bottom nav covers both (ADR 0016 addendum).
+ * thumb (just above the bottom nav): Finance's sub-row above the inbox tabs; on Work, Teams and Clients rows narrow the
+ * list by the request's task team / client (?team= / ?client=, both combine; counts = open work requests, shown when
+ * > 0). The old Task list · Dashboards buttons are gone — the bottom nav covers both (ADR 0016 addendum).
  */
 const small = "inline-flex h-9 items-center justify-center rounded-xl px-3 text-[13px] font-semibold";
 const pri = `${small} bg-primary text-primary-ink disabled:opacity-45`;
@@ -33,29 +36,52 @@ const card = "mx-3 overflow-hidden rounded-[18px] border border-hair bg-glass sh
 
 type Note = { action: "reject" | "resolve"; taskId: string };
 
-export function RequestsInbox({ inbox, tab, fin, showAll, tz }: { inbox: RequestInbox; tab: RequestTab; fin: FinanceGroup | null; showAll: boolean; tz: string }) {
+const ALL_WORK: WorkFilter = { team: null, client: null };
+
+export function RequestsInbox({
+  inbox,
+  tab,
+  fin,
+  work = ALL_WORK,
+  names = { teams: [], clients: [] },
+  showAll,
+  tz,
+}: {
+  inbox: RequestInbox;
+  tab: RequestTab;
+  fin: FinanceGroup | null;
+  /** Work tab: the Teams / Clients picks. */
+  work?: WorkFilter;
+  /** Active teams and clients for those rows. */
+  names?: { teams: NamedOption[]; clients: NamedOption[] };
+  showAll: boolean;
+  tz: string;
+}) {
   const [note, setNote] = useState<Note | null>(null);
   const [text, setText] = useState("");
   const [pending, start] = useTransition();
   const [navPending, startNav] = useTransition();
-  const [shown, setShown] = useOptimistic({ tab, fin });
+  const [shown, setShown] = useOptimistic({ tab, fin, work });
   const shownTab = shown.tab;
   const toast = useToast();
   const router = useRouter();
 
-  const href = (t: RequestTab, all = showAll, f: FinanceGroup | null = null) => {
+  const href = (t: RequestTab, all = showAll, f: FinanceGroup | null = null, w: WorkFilter = ALL_WORK) => {
     const q = new URLSearchParams();
     if (t !== "ALL") q.set("tab", t);
     if (t === "FIN" && f) q.set("fin", f);
+    if (t === "WORK" && w.team) q.set("team", w.team);
+    if (t === "WORK" && w.client) q.set("client", w.client);
     if (all) q.set("all", "1");
     const s = q.toString();
     return `/admin/requests${s ? `?${s}` : ""}`;
   };
-  const pick = (t: RequestTab, f: FinanceGroup | null) =>
+  const pick = (t: RequestTab, f: FinanceGroup | null, w: WorkFilter = ALL_WORK) =>
     startNav(() => {
-      setShown({ tab: t, fin: f });
-      router.replace(href(t, showAll, f), { scroll: false });
+      setShown({ tab: t, fin: f, work: w });
+      router.replace(href(t, showAll, f, w), { scroll: false });
     });
+  const pickWork = (patch: Partial<WorkFilter>) => pick("WORK", null, { ...shown.work, ...patch });
 
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>) =>
     start(async () => {
@@ -70,7 +96,7 @@ export function RequestsInbox({ inbox, tab, fin, showAll, tz }: { inbox: Request
   const counts = inboxCounts(inbox);
   const showFin = shownTab === "ALL" || shownTab === "FIN";
   const finItems = shownTab === "FIN" && shown.fin ? inbox.finance.filter((f) => groupOfKind(f.kind) === shown.fin) : inbox.finance;
-  const rows = shownTab === "WORK" ? inbox.work : shownTab === "HR" ? inbox.hr : shownTab === "ALL" ? [...inbox.work, ...inbox.hr].sort((a, b) => b.createdAt.localeCompare(a.createdAt)) : [];
+  const rows = shownTab === "WORK" ? inbox.work.filter((r) => matchesWorkFilter(r, shown.work)) : shownTab === "HR" ? inbox.hr : shownTab === "ALL" ? [...inbox.work, ...inbox.hr].sort((a, b) => b.createdAt.localeCompare(a.createdAt)) : [];
   const openRows = open(rows);
   const handled = rows.filter((r) => r.status !== "OPEN");
   const nothing = (!showFin || finItems.length === 0) && openRows.length === 0;
@@ -122,8 +148,15 @@ export function RequestsInbox({ inbox, tab, fin, showAll, tz }: { inbox: Request
   );
 
   const label = (t: string, n: number) => (n ? `${t} · ${n}` : t);
+  const workCounts = workFilterCounts(inbox.work);
   const zone = (
     <section className="zone-top bar-glass zone-sticky z-20 shrink-0 border-t border-hair pb-1.5 pt-1" aria-label="Requests">
+      {shownTab === "WORK" ? (
+        <>
+          <FilterRow dense label="Teams" value={shown.work.team} onChange={(team) => pickWork({ team })} items={names.teams.map((t) => ({ id: t.id, label: label(t.name, workCounts.teams[t.id] ?? 0) }))} />
+          <FilterRow dense label="Clients" value={shown.work.client} onChange={(client) => pickWork({ client })} items={names.clients.map((c) => ({ id: c.id, label: label(c.name, workCounts.clients[c.id] ?? 0) }))} />
+        </>
+      ) : null}
       {shownTab === "FIN" ? (
         <FilterRow
           dense
@@ -177,7 +210,11 @@ export function RequestsInbox({ inbox, tab, fin, showAll, tz }: { inbox: Request
             {list(openRows)}
           </>
         ) : null}
-        {shownTab !== "FIN" && nothing ? <p className="px-6 py-10 text-center text-[13px] text-muted">{shownTab === "HR" ? "No leave requests." : shownTab === "WORK" ? "No work requests." : "Inbox zero."}</p> : null}
+        {shownTab !== "FIN" && nothing ? (
+          <p className="px-6 py-10 text-center text-[13px] text-muted">
+            {shownTab === "HR" ? "No leave requests." : shownTab === "WORK" ? (shown.work.team || shown.work.client ? "No work requests for this team / client." : "No work requests.") : "Inbox zero."}
+          </p>
+        ) : null}
         {shownTab !== "FIN" && showAll && handled.length ? (
           <>
             <h2 className={sectionHead}>Handled</h2>
@@ -186,7 +223,7 @@ export function RequestsInbox({ inbox, tab, fin, showAll, tz }: { inbox: Request
         ) : null}
         {shownTab !== "FIN" ? (
           <div className="px-4 pt-3 text-center">
-            <Link href={href(shownTab, !showAll)} replace scroll={false} className="text-[12.5px] font-semibold text-muted underline underline-offset-2">
+            <Link href={href(shownTab, !showAll, null, shown.work)} replace scroll={false} className="text-[12.5px] font-semibold text-muted underline underline-offset-2">
               {showAll ? "Hide handled requests" : "Show handled requests"}
             </Link>
           </div>

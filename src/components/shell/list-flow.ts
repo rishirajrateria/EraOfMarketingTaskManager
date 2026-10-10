@@ -1,8 +1,8 @@
 /**
  * The "+" list flow (ADR 0016 addendum, prototype `openListFlow` / `renderPeek` / `.peekbtn`): the speed dial's
- * Executive, Work type, Team, Team leader and Client kit open their list page with the add form either EXPANDED (the
- * item itself, `?add=1`) or MINIMISED to a bar just above the bottom nav (the eye, `?add=min`). Both carry
- * `from=add`, so the form's blue × leaves for the dashboard. Pure URL helpers so tests can check them.
+ * Executive, Work type, Team, Team leader, Client and Client kit open their list page with the add form either
+ * EXPANDED (the item itself, `?add=1`) or MINIMISED to a bar just above the bottom nav (the eye, `?add=min`). Both
+ * carry `from=add`, so the form's blue × leaves for the dashboard. Pure URL helpers so tests can check them.
  */
 
 /** `from=add`: the screen was opened by the "+"; its blue × (and, outside the list flow, a save) returns to /dashboard. */
@@ -45,7 +45,7 @@ export function withAddState(pathname: string, search: string, state: AddState):
   return `${pathname}?${p.toString()}`;
 }
 
-export type ListFlowKey = "EXECUTIVE" | "WORK_TYPE" | "TEAM" | "TEAM_LEADER" | "KIT";
+export type ListFlowKey = "EXECUTIVE" | "WORK_TYPE" | "TEAM" | "TEAM_LEADER" | "CLIENT" | "KIT";
 /** `base` = the list page; `peek` = the minimised bar's label; `view` = the eye's aria-label. */
 export type ListFlow = { base: string; peek: string; view: string };
 
@@ -54,5 +54,6 @@ export const LIST_FLOWS: Record<ListFlowKey, ListFlow> = {
   WORK_TYPE: { base: "/admin/work-types", peek: "Add work type", view: "View work types" },
   TEAM: { base: "/admin/teams", peek: "Add team", view: "View teams" },
   TEAM_LEADER: { base: "/admin/people?role=TEAM_LEADER", peek: "Add team leader", view: "View team leaders" },
+  CLIENT: { base: "/admin/clients", peek: "Add client", view: "View clients" },
   KIT: { base: "/admin/client-kit", peek: "New client kit", view: "View client kits" },
 };

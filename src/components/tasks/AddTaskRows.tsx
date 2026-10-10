@@ -56,7 +56,8 @@ type Props = { form: AddTaskForm; patch: (p: Partial<AddTaskForm>) => void; data
 
 /**
  * TAG ROWS (ADR 0008; neutral glass since ADR 0015), top to bottom: PREFER (Admin) · WORK · TEAM (Admin) / EXEC (Team Leader) · CLIENT.
- * TEAM stays fixed directly above CLIENT; WORK and PREFER appear above it once a team is picked.
+ * TEAM stays fixed directly above CLIENT; WORK and PREFER appear above it once a team is picked. They sit in the
+ * add-task screen's details tray (AddTaskTray), which draws the glass behind them.
  */
 export function AddTaskGreenRows({ form, patch, data }: Props) {
   const role = data.role;
@@ -137,7 +138,7 @@ export function AddTaskGreenRows({ form, patch, data }: Props) {
   }
 
   return (
-    <div className="bar-glass shrink-0 border-t border-hair pb-0.5 pt-1">
+    <div className="pb-0.5">
       {preferRow}
       {workRow}
       {teamRow}

@@ -58,6 +58,12 @@ export function activeNavKey(pathname: string, items: readonly NavItem[]): NavKe
   return items.find((i) => under(pathname, i.href))?.key ?? null;
 }
 
+/**
+ * The tab drawn as open: none while the add-task screen is up (it covers the page; prototype `navActive`), else the
+ * path's. Tapping still follows the path's tab (`navTarget`, Home on the home screen closes what is open there).
+ */
+export const shownNavKey = (active: NavKey | null, addTaskOpen: boolean): NavKey | null => (addTaskOpen ? null : active);
+
 /** Tapping a tab: the open one closes (→ home), any other one opens; Home always goes home. */
 export function navTarget(item: NavItem, active: NavKey | null, role: Role): string {
   return item.key !== "HOME" && item.key === active ? navHome(role) : item.href;

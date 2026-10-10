@@ -48,6 +48,7 @@ describe("list flows", () => {
       WORK_TYPE: ["/admin/work-types", "Add work type", "View work types"],
       TEAM: ["/admin/teams", "Add team", "View teams"],
       TEAM_LEADER: ["/admin/people?role=TEAM_LEADER", "Add team leader", "View team leaders"],
+      CLIENT: ["/admin/clients", "Add client", "View clients"],
       KIT: ["/admin/client-kit", "New client kit", "View client kits"],
     });
   });

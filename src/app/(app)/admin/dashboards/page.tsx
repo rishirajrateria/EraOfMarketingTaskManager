@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
  * numbers are computed.
  */
 export default async function DashboardsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  await requireAdminPage();
+  const me = await requireAdminPage();
   const raw = parseDashParams(await searchParams);
   const p = effective(raw);
   const now = new Date();
@@ -35,7 +35,7 @@ export default async function DashboardsPage({ searchParams }: { searchParams: P
         : taskDashboard(p, now).then((d) => <TaskBody data={d} />),
   ]);
   return (
-    <DashboardsScreen params={raw} teams={teams} clients={clients} caption={`${range.label} · ${range.detail}`}>
+    <DashboardsScreen userId={me.id} params={raw} teams={teams} clients={clients} caption={`${range.label} · ${range.detail}`}>
       {body}
     </DashboardsScreen>
   );

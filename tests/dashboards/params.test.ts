@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dashHref, effective, parseDashParams, requestsHref, showsClients, showsTeams, tabForView, viewForTab } from "@/server/dashboards/params";
+import { dashHref, dashTrayCaption, effective, parseDashParams, requestsHref, showsClients, showsTeams, tabForView, viewForTab } from "@/server/dashboards/params";
 import { addMonthKey, dashRange, lastMonths } from "@/server/dashboards/period";
 import { hrs, inrShort, loadTone, niceMax } from "@/components/dashboards/format";
 
@@ -26,6 +26,18 @@ describe("dashboard params", () => {
     expect(dashHref(p, { view: "HR" })).toBe("/admin/dashboards?view=HR");
     expect(dashHref(p, { view: "TASK", team: "t1", period: "QUARTER" })).toBe("/admin/dashboards?view=TASK&team=t1&period=QUARTER");
     expect(dashHref({ ...p, fin: "INC", client: "c9" }, { view: "TASK" })).toBe("/admin/dashboards?view=TASK&fin=INC&client=c9");
+  });
+
+  it("captions the minimised filter tray: view, Finance's Show, the team / client that apply, period", () => {
+    const teams = [{ id: "t1", name: "Social" }];
+    const clients = [{ id: "c1", name: "Zenith Foods" }];
+    const p = parseDashParams({});
+    expect(dashTrayCaption(p, teams, clients)).toBe("Filters · Finance · Overview · This month");
+    expect(dashTrayCaption({ ...p, client: "c1", team: "t1" }, teams, clients)).toBe("Filters · Finance · Overview · Zenith Foods · This month");
+    expect(dashTrayCaption({ ...p, fin: "EXP", client: "c1" }, teams, clients)).toBe("Filters · Finance · Expense · This month");
+    expect(dashTrayCaption({ ...p, view: "HR", team: "t1", client: "c1", period: "LAST" }, teams, clients)).toBe("Filters · HR · Social · Last month");
+    expect(dashTrayCaption({ ...p, view: "TASK", team: "t1", client: "c1", period: "FY" }, teams, clients)).toBe("Filters · Tasks · Social · Zenith Foods · This FY");
+    expect(dashTrayCaption({ ...p, view: "TASK", team: "gone" }, teams, clients)).toBe("Filters · Tasks · This month");
   });
 
   it("maps request tabs to dashboard views and back", () => {

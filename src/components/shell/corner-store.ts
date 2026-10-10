@@ -2,11 +2,11 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
 /**
- * One close control (ADR 0016 addendum, prototype `cornerMode` / `syncCorner` / `cornerTap`): the bottom-right 52px
+ * One close control (ADR 0016 addendum, prototype `cornerMode` / `syncCorner` / `cornerTap`): the centre 52px
  * button of the bottom row is the only ×. Whatever is open — a bottom sheet, a form page such as the new expense
  * editor — registers how to close itself here; the row's button turns + into × while anything is registered and a tap
- * closes the most recent one (a sheet opened over a page closes before the page). The global nav's + reads it, and so
- * does the add-task screen's own × (a sheet first, then the screen).
+ * closes the most recent one (a sheet opened over a page closes before the page; on the add-task screen a sub-sheet
+ * before the screen). The global nav's centre button reads it.
  */
 type Entry = { id: number; close: () => void };
 

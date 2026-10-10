@@ -2,46 +2,48 @@
 import { useCallback, useEffect, useId, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { clsx } from "@/lib/clsx";
+import { TRAY_NAME, trayStorageKey, type TrayKind } from "@/components/dashboard/tray-key";
 
-const key = (userId: string) => `eom:dash-tray-min:${userId}`;
-
-/** Minimised or not, remembered per user in this browser (a convenience: falls back to expanded without storage). */
-function useTrayMin(userId: string): [boolean, (min: boolean) => void] {
+/** Minimised or not, remembered per user and tray in this browser (a convenience: falls back to expanded without storage). */
+function useTrayMin(storageKey: string): [boolean, (min: boolean) => void] {
   const [min, setMin] = useState(false);
   useEffect(() => {
     try {
-      setMin(window.localStorage.getItem(key(userId)) === "1");
+      setMin(window.localStorage.getItem(storageKey) === "1");
     } catch {
       /* storage blocked: stay expanded */
     }
-  }, [userId]);
+  }, [storageKey]);
   const set = useCallback(
     (next: boolean) => {
       setMin(next);
       try {
-        if (next) window.localStorage.setItem(key(userId), "1");
-        else window.localStorage.removeItem(key(userId));
+        if (next) window.localStorage.setItem(storageKey, "1");
+        else window.localStorage.removeItem(storageKey);
       } catch {
         /* storage blocked: only this visit */
       }
     },
-    [userId],
+    [storageKey],
   );
   return [min, set];
 }
 
 /**
- * The dashboard's bottom filter tray (ADR 0016 addendum, prototype `#dashTray` / `.traytog`): the strip, the pill rows
- * and the time row, with a small glass tab centred on its top edge. Tapping the tab (chevron down) collapses the tray
- * to a slim 40px bar that only shows the tab — chevron up and "Filters · Social · Today" (`label`) — and the task list
- * gains the space; tapping it again expands. Remembered per user.
+ * A minimisable bottom tray (ADR 0016 addendum, prototype `.tray` / `.traytog`): its rows, with a small glass tab
+ * centred on its top edge. Tapping the tab (chevron down) collapses the tray to a slim 40px bar that only shows the tab
+ * — chevron up and the caption (`label`: "Filters · Social · Today", "Details · Social · Acme · Up next") — and the
+ * screen above gains the space; tapping it again expands. Remembered per user and per tray (`kind`, tray-key). The
+ * task dashboard's filters (`FilterTray`), the add-task screen's details and the Admin dashboards' filters share it.
+ * `className` positions it (default `relative`; the Admin dashboards pass `zone-sticky`, also a positioned box).
  */
-export function FilterTray({ userId, label, children }: { userId: string; label: string; children: React.ReactNode }) {
-  const [min, setMin] = useTrayMin(userId);
+export function MinimisableTray({ kind, userId, label, className, children }: { kind: TrayKind; userId: string; label: string; className?: string; children: React.ReactNode }) {
+  const [min, setMin] = useTrayMin(trayStorageKey(kind, userId));
   const bodyId = useId();
-  const name = min ? "Show filters" : "Hide filters";
+  const names = TRAY_NAME[kind];
+  const name = min ? names.show : names.hide;
   return (
-    <section aria-label="Filters" data-tray={min ? "min" : "open"} className={clsx("relative shrink-0", min && "zone-top bar-glass h-10 border-t border-hair")}>
+    <section aria-label={names.region} data-tray={min ? "min" : "open"} data-tray-kind={kind} className={clsx(className ?? "relative", "shrink-0", min && "zone-top bar-glass h-10 border-t border-hair")}>
       <button
         type="button"
         onClick={() => setMin(!min)}
@@ -66,5 +68,17 @@ export function FilterTray({ userId, label, children }: { userId: string; label:
         {children}
       </div>
     </section>
+  );
+}
+
+/**
+ * The dashboard's bottom filter tray (prototype `#dashTray`): the strip, the pill rows and the time row; minimised it
+ * reads "Filters · Social · Today".
+ */
+export function FilterTray({ userId, label, children }: { userId: string; label: string; children: React.ReactNode }) {
+  return (
+    <MinimisableTray kind="filters" userId={userId} label={label}>
+      {children}
+    </MinimisableTray>
   );
 }

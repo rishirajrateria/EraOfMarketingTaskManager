@@ -11,6 +11,8 @@ import { describeRule } from "@/server/tasks/repeat-rule";
 import { DURATION_PRESETS, fmtDuration } from "@/components/tasks/meeting-helpers";
 
 type Props = {
+  /** Above the title: the Task | Meeting switch (ADR 0016 addendum). */
+  header?: React.ReactNode;
   form: AddTaskForm;
   patch: (p: Partial<AddTaskForm>) => void;
   titleError?: string;
@@ -36,12 +38,13 @@ type Props = {
 };
 
 /**
- * Add-task body (prototype `renderAdd`, ADR 0010/0013): title, rich description, ⟳ Repeat / files pills, "How long"
- * pills + stepper and the round voice-note mic. No date / time inputs: scheduling happens from the bottom bar (calendar
- * icon, upnext / Tom / today). No ★ Important chip, schedule line or "Goes to …" card (owner's revision, ADR 0015).
+ * Add-task body (prototype `renderAdd`, ADR 0010/0013): the Task | Meeting switch (`header`), title, rich description,
+ * ⟳ Repeat / files pills, "How long" pills + stepper and the round voice-note mic. No date / time inputs: scheduling
+ * happens in the details tray below (calendar icon, Up next / Today / Tomorrow). No ★ Important chip, schedule line or
+ * "Goes to …" card (owner's revision, ADR 0015).
  */
 export function AddTaskBody(p: Props) {
-  const { form, patch, titleError, hoursError, canPickAssignees, onOpenAssignees, onOpenOptions, guestCount = 0, onOpenRepeat, onSubmit, voiceNotes, setVoiceNotes, files, setFiles, busy, onError, onToast, formError } = p;
+  const { header, form, patch, titleError, hoursError, canPickAssignees, onOpenAssignees, onOpenOptions, guestCount = 0, onOpenRepeat, onSubmit, voiceNotes, setVoiceNotes, files, setFiles, busy, onError, onToast, formError } = p;
   const editor = useRef<RichTextEditorHandle>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const meeting = form.type === "MEETING";
@@ -49,6 +52,7 @@ export function AddTaskBody(p: Props) {
 
   return (
     <section className="relative flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pt-4 text-ink">
+      {header}
       <input
         value={form.title}
         onChange={(e) => patch({ title: e.target.value })}

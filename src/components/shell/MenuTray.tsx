@@ -4,12 +4,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Search, Settings, X } from "lucide-react";
 import { menuCounts, type MenuCounts } from "@/server/shell/menu";
-import { filterSections, menuSections, QUICK_ACTIONS, softHyphenate, type BadgeTone, type MenuItem, type Tone } from "@/components/shell/menu-model";
+import { filterSections, menuSections, softHyphenate, type BadgeTone, type MenuItem, type Tone } from "@/components/shell/menu-model";
 
 /**
  * Admin menu (ADR 0011 v3 tiles): a thumb-first bottom sheet. Search on top, then square icon tiles grouped and
- * coloured by category (Money green, Clients blue, Team yellow, Other purple), and quick actions pinned at the bottom
- * where the thumb rests. Portalled to <body> so blurred ancestors can never clip the fixed overlay.
+ * coloured by category (Money green, Clients blue, Team yellow, Other purple). The quick-actions row is gone (ADR 0016
+ * addendum): the bottom nav and the + cover it. Portalled to <body> so blurred ancestors can never clip the overlay.
  */
 const TONE: Record<Tone, string> = {
   money: "bg-[linear-gradient(150deg,#34d399,#059669)] text-white",
@@ -109,7 +109,7 @@ export function MenuTray({ open, onClose, user }: { open: boolean; onClose: () =
           <Search size={16} />
           <input value={q} onChange={(e) => setQ(e.target.value)} type="search" placeholder="Search menu" aria-label="Search menu" autoComplete="off" className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none" />
         </label>
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 pb-3 pt-1">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 pb-[calc(10px+env(safe-area-inset-bottom))] pt-1">
           {sections.length === 0 ? <p className="py-7 text-center text-[13px] text-muted">Nothing matches “{q}”</p> : null}
           {sections.map((s) => (
             <section key={s.title} className="mb-3.5" aria-label={s.title}>
@@ -124,26 +124,6 @@ export function MenuTray({ open, onClose, user }: { open: boolean; onClose: () =
               </div>
             </section>
           ))}
-        </div>
-        {/* one action spans the row as icon + label; several share it as stacked tiles */}
-        <div className="grid shrink-0 grid-cols-[repeat(auto-fit,minmax(0,1fr))] gap-2 border-t border-hair bg-glass px-4 pb-[calc(14px+env(safe-area-inset-bottom))] pt-3">
-          {QUICK_ACTIONS.map((a) => {
-            const Icon = a.icon;
-            const solo = QUICK_ACTIONS.length === 1;
-            return (
-              <Link
-                key={a.href}
-                href={a.href}
-                onClick={onClose}
-                className={`flex min-w-0 items-center whitespace-nowrap rounded-2xl border border-hair bg-glass-strong px-0.5 font-semibold shadow-[var(--shadow)] ${solo ? "flex-row justify-center gap-2.5 py-2 text-[13px]" : "flex-col gap-1.5 py-2.5 text-[11px]"} ${FOCUS}`}
-              >
-                <span className={`flex h-[38px] w-[38px] items-center justify-center rounded-xl ${TONE[a.tone]}`}>
-                  <Icon size={20} />
-                </span>
-                {a.label}
-              </Link>
-            );
-          })}
         </div>
       </div>
     </div>,

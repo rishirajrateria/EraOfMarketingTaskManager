@@ -84,8 +84,8 @@ function stackTarget(root: HTMLElement, key: string): HTMLElement | null {
  * most recent one. Otherwise it is the 52px blue "+" in the middle of the nav: tapping it turns it into × and opens a
  * speed dial stacked upward, its icons in one column exactly over the + (nav v3) — Task nearest the thumb, Meeting,
  * then (Admin) the create shortcuts above a thin separator; labels sit left of the icons and the list items
- * (Executive, Work type, Team, Team leader, Client kit) get a 38px glass eye right of theirs. The dimmed backdrop
- * covers everything above the 64px nav row so the × stays tappable. The dial closes on ×, backdrop (also the empty
+ * (Executive, Work type, Team, Team leader, Client, Client kit) get a 38px glass eye right of theirs. The dimmed
+ * backdrop covers everything above the 64px nav row so the × stays tappable. The dial closes on ×, backdrop (also the empty
  * space beside a row), a tap elsewhere on the nav row, Escape (focus back to +) or after choosing. Portalled to
  * <body>, centred like `.phone-frame`.
  * `role: null` (HR, CA: no task adding) → only the × shows, while something is open.

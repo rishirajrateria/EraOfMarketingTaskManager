@@ -14,7 +14,6 @@ import { TimeStatus } from "@/components/dashboard/TimeStatus";
 import { DashboardTopBar, type TopBarUser } from "@/components/dashboard/DashboardTopBar";
 import { TaskList } from "@/components/dashboard/TaskList";
 import { BottomBar, type AddMode } from "@/components/dashboard/BottomBar";
-import { useFabRunner } from "@/components/dashboard/useFabRunner";
 import { addTaskStore } from "@/components/shell/add-task-store";
 import { TaskActionSheet, NOTE_PROMPTS, type NoteKind, type SimpleAction } from "@/components/dashboard/TaskActionSheet";
 import { TaskDetailSheet } from "@/components/dashboard/TaskDetailSheet";
@@ -61,9 +60,7 @@ export function Dashboard({
   const [assignId, setAssignId] = useState<string | null>(null);
   const [note, setNote] = useState<{ kind: NoteKind; taskId: string } | null>(null);
   const [addMode, setAddMode] = useState<AddMode | null>(null);
-  // The add-task icon strip: Task / Meeting → add sheet, Admin shortcuts → their screens. The bottom nav's + (GlobalNav,
-  // in the shell) reaches the add sheet through addTaskStore while the dashboard is mounted.
-  const runFab = useFabRunner(setAddMode);
+  // The bottom nav's + (GlobalNav, in the shell) reaches the add sheet through addTaskStore while the dashboard is mounted.
   useEffect(() => addTaskStore.register(setAddMode), []);
   // Review per pill (ADR 0015): the pill menu, then (Team Leader / Executive) the note for the request.
   const [pill, setPill] = useState<{ taskId: string; field: ReviewField } | null>(null);
@@ -357,7 +354,7 @@ export function Dashboard({
       <DeleteTaskSheet task={deleteId ? byId.get(deleteId) ?? null : null} open={!!deleteId} busy={busy} onConfirm={confirmDelete} onClose={() => setDeleteId(null)} />
       <AssignExecutiveSheet task={assignId ? byId.get(assignId) ?? null : null} data={data} open={!!assignId} busy={busy} onClose={() => setAssignId(null)} onAssign={assign} />
       <EditTaskSheet task={editId ? byId.get(editId) ?? null : null} data={data} open={!!editId} onClose={() => setEditId(null)} />
-      <AddTaskSheet open={addMode !== null} mode={addMode} onClose={() => setAddMode(null)} data={data} onPick={runFab} />
+      <AddTaskSheet open={addMode !== null} mode={addMode} onClose={() => setAddMode(null)} data={data} />
     </div>
   );
 }

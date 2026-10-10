@@ -8,9 +8,9 @@ import { AddSpeedDial } from "@/components/dashboard/AddSpeedDial";
 import { NavRow, navItemCls, navLabCls } from "@/components/dashboard/NavRow";
 import { useFabRunner } from "@/components/dashboard/useFabRunner";
 import { useLiveBadges } from "@/components/shell/useLiveBadges";
-import { addTaskStore, type AddTaskMode } from "@/components/shell/add-task-store";
+import { addTaskStore, useAddTaskShown, type AddTaskMode } from "@/components/shell/add-task-store";
 import { cornerStore } from "@/components/shell/corner-store";
-import { activeNavKey, addTaskHref, allNavItems, canAdd, navItems, navTarget, type NavItem, type NavKey } from "@/components/shell/nav-model";
+import { activeNavKey, addTaskHref, allNavItems, canAdd, navItems, navTarget, shownNavKey, type NavItem, type NavKey } from "@/components/shell/nav-model";
 import type { TopBarUser } from "@/components/shell/TopBar";
 
 const ICONS: Record<NavKey, LucideIcon> = { DASHBOARD: BarChart3, REQUESTS: Inbox, NOTIFICATIONS: Bell, HOME: House };
@@ -54,14 +54,16 @@ function NavTab({ it, on, href, count, onClick }: { it: NavItem; on: boolean; hr
  * Home, the corner exactly centred between two equal groups. Tabs toggle (nav-model); Home always goes to the task
  * list and, tapped there, closes whatever is open. The corner is the + speed dial for roles that add tasks and the
  * one × while a sheet or closable form page is open (corner-store). Task / Meeting open the dashboard's add-task sheet
- * (in place on the dashboard). The frame reserves the height (`.has-gnav`); sheets stop above the row, only the
- * add-task screen covers it with its own row. Profile is the avatar in the top bar.
+ * (in place on the dashboard). The frame reserves the height (`.has-gnav`); sheets stop above the row — the add-task
+ * screen too: its × is this centre button (a sub-sheet closes first, then the screen), no tab is highlighted while it
+ * is up, and a tab tapped there leaves it for that tab. Profile is the avatar in the top bar.
  */
 export function GlobalNav({ user, unread, openRequests }: { user: TopBarUser; unread: number; openRequests: number }) {
   const pathname = usePathname() ?? "/";
   const router = useRouter();
   const layout = useMemo(() => navItems(user.role), [user.role]);
   const active = activeNavKey(pathname, allNavItems(layout));
+  const shown = shownNavKey(active, useAddTaskShown());
   const badges = useLiveBadges(user.id, unread, openRequests);
   const onAdd = useCallback(
     (mode: AddTaskMode) => {
@@ -81,7 +83,7 @@ export function GlobalNav({ user, unread, openRequests }: { user: TopBarUser; un
       <NavTab
         key={it.key}
         it={it}
-        on={it.key === active}
+        on={it.key === shown}
         href={navTarget(it, active, user.role)}
         count={it.key === "REQUESTS" ? badges.requests : it.key === "NOTIFICATIONS" ? badges.unread : 0}
         onClick={it.key === "HOME" ? onHome : undefined}

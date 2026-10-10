@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Role } from "@prisma/client";
-import { activeNavKey, addTaskHref, allNavItems, canAdd, navHome, navItems, navTarget, profileOpen, profileTarget } from "@/components/shell/nav-model";
+import { activeNavKey, addTaskHref, allNavItems, canAdd, navHome, navItems, navTarget, profileOpen, profileTarget, shownNavKey } from "@/components/shell/nav-model";
 import { addTaskStore } from "@/components/shell/add-task-store";
 
 /** Bottom nav row of every signed-in screen (ADR 0016 addendum nav v3, prototype `#gNav` / `navActive` / `renderDashNav`). */
@@ -125,5 +125,26 @@ describe("add-task store (the shell's + reaching the dashboard's sheet)", () => 
     offNew();
     expect(addTaskStore.open("WORK")).toBe(false);
     expect(seen).toEqual(["MEETING", "new:WORK"]);
+  });
+});
+
+describe("the add-task screen over the nav (ADR 0016 addendum: the nav stays below it)", () => {
+  it("highlights no tab while it is up, the path's tab otherwise", () => {
+    expect(shownNavKey("HOME", true)).toBeNull();
+    expect(shownNavKey("HOME", false)).toBe("HOME");
+    expect(shownNavKey(null, false)).toBeNull();
+  });
+
+  it("the sheet reports itself up / gone and subscribers hear each flip once", () => {
+    const flips: boolean[] = [];
+    const off = addTaskStore.subscribe(() => flips.push(addTaskStore.isShown()));
+    expect(addTaskStore.isShown()).toBe(false);
+    addTaskStore.setShown(true);
+    addTaskStore.setShown(true);
+    addTaskStore.setShown(false);
+    off();
+    addTaskStore.setShown(true);
+    addTaskStore.setShown(false);
+    expect(flips).toEqual([true, false]);
   });
 });

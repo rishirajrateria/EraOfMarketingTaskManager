@@ -13,7 +13,7 @@ import { useCornerClose } from "@/components/shell/corner-store";
  * One close control (ADR 0016 addendum, prototype `.hasnav .dim` / `cornerMode`): the sheet and its dim stop above
  * the 64px bottom row (+ safe area) so the row's corner button stays visible — it turns into × while the sheet is open
  * and closes it (`onCornerClose`, default `onClose`). Sheets draw no ✕ of their own. Escape and a tap outside still
- * run `onClose`. Only the add-task screen (`cover`) covers the row: it brings its own row with the ×.
+ * run `onClose`. Every sheet stops there, the full-screen add-task one included (the nav stays below it).
  */
 export function Sheet({
   open,
@@ -21,7 +21,6 @@ export function Sheet({
   onCornerClose,
   children,
   full,
-  cover = false,
   title,
   minimised = false,
 }: {
@@ -32,8 +31,6 @@ export function Sheet({
   onCornerClose?: () => void;
   children: React.ReactNode;
   full?: boolean;
-  /** Covers the bottom row too (the add-task screen, which has its own row and ×). */
-  cover?: boolean;
   title?: string;
   /**
    * Kept mounted but hidden (the "+" flow's add form minimised to the bar above the bottom nav, ADR 0016 addendum):
@@ -55,11 +52,8 @@ export function Sheet({
   return createPortal(
     <div
       hidden={minimised}
-      className={clsx(
-        "fixed inset-x-0 top-0 z-50 flex items-end justify-center bg-[rgba(2,12,24,.35)] backdrop-blur-[2px]",
-        // inside a sheet the page's sticky zones need no room for the nav (`.zone-sticky`)
-        cover ? "bottom-0" : "bottom-[calc(64px+env(safe-area-inset-bottom))] [--gnav-h:0px] [--gnav-safe:0px]",
-      )}
+      // inside a sheet the page's sticky zones need no room for the nav (`.zone-sticky`)
+      className="fixed inset-x-0 top-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-50 flex items-end justify-center bg-[rgba(2,12,24,.35)] backdrop-blur-[2px] [--gnav-h:0px] [--gnav-safe:0px]"
       onClick={onClose}
       role="dialog"
       aria-modal
@@ -68,7 +62,7 @@ export function Sheet({
         onClick={(e) => e.stopPropagation()}
         className={clsx(
           "sheet-up sheet-panel w-full max-w-[480px] overflow-y-auto text-ink",
-          full ? (cover ? "h-[100dvh]" : "h-full") : "max-h-[min(88dvh,calc(100%-12px))] rounded-t-[26px] px-1 pb-3.5",
+          full ? "h-full" : "max-h-[min(88dvh,calc(100%-12px))] rounded-t-[26px] px-1 pb-3.5",
         )}
       >
         {full ? null : <div className="mx-auto mb-3 mt-2.5 h-[5px] w-10 rounded-full bg-muted opacity-35" aria-hidden />}

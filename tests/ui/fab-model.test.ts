@@ -1,13 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { NEW_CLIENT_HREF, fabMenu, fabOrder, kitHint, kitHref, sortKitClients } from "@/components/dashboard/fab-model";
+import { Building2 } from "lucide-react";
+import { FAB_TONE, NEW_CLIENT_HREF, fabMenu, fabOrder, kitHint, kitHref, sortKitClients } from "@/components/dashboard/fab-model";
+import { LIST_FLOWS, listFlowHref } from "@/components/shell/list-flow";
 
 /** Bottom-nav "+" speed dial (ADR 0016 addendum): order bottom → top, role filtering, links, the list items' eyes. */
 const keys = (role: Parameters<typeof fabMenu>[0]) => fabOrder(fabMenu(role)).map((i) => i.key);
 
 describe("fab menu model", () => {
-  it("puts Task nearest the thumb, then Meeting, then Admin's shortcuts in prototype order", () => {
-    expect(keys("ADMIN")).toEqual(["TASK", "MEETING", "INVOICE", "EXPENSE", "EXECUTIVE", "WORK_TYPE", "TEAM", "TEAM_LEADER", "KIT"]);
-    expect(fabOrder(fabMenu("ADMIN")).map((i) => i.label)).toEqual(["Task", "Meeting", "Invoice", "Expense", "Executive", "Work type", "Team", "Team leader", "Client kit"]);
+  it("puts Task nearest the thumb, then Meeting, then Admin's shortcuts in prototype order (Client just below Client kit)", () => {
+    expect(keys("ADMIN")).toEqual(["TASK", "MEETING", "INVOICE", "EXPENSE", "EXECUTIVE", "WORK_TYPE", "TEAM", "TEAM_LEADER", "CLIENT", "KIT"]);
+    expect(fabOrder(fabMenu("ADMIN")).map((i) => i.label)).toEqual(["Task", "Meeting", "Invoice", "Expense", "Executive", "Work type", "Team", "Team leader", "Client", "Client kit"]);
   });
 
   it("gives Team Leaders and Executives Task + Meeting only (no separator group)", () => {
@@ -36,17 +38,19 @@ describe("fab menu model", () => {
       WORK_TYPE: "/admin/work-types?add=1&from=add",
       TEAM: "/admin/teams?add=1&from=add",
       TEAM_LEADER: "/admin/people?role=TEAM_LEADER&add=1&from=add",
+      CLIENT: "/admin/clients?add=1&from=add",
       KIT: "/admin/client-kit?add=1&from=add",
     });
   });
 
-  it("gives the five list items an eye: the same list with the add form minimised, and a View … label", () => {
+  it("gives the six list items an eye: the same list with the add form minimised, and a View … label", () => {
     const eyes = Object.fromEntries(fabOrder(fabMenu("ADMIN")).filter((i) => i.view).map((i) => [i.key, i.view]));
     expect(eyes).toEqual({
       EXECUTIVE: { href: "/admin/people?role=EXECUTIVE&add=min&from=add", label: "View executives" },
       WORK_TYPE: { href: "/admin/work-types?add=min&from=add", label: "View work types" },
       TEAM: { href: "/admin/teams?add=min&from=add", label: "View teams" },
       TEAM_LEADER: { href: "/admin/people?role=TEAM_LEADER&add=min&from=add", label: "View team leaders" },
+      CLIENT: { href: "/admin/clients?add=min&from=add", label: "View clients" },
       KIT: { href: "/admin/client-kit?add=min&from=add", label: "View client kits" },
     });
   });
@@ -64,13 +68,24 @@ describe("fab menu model", () => {
     }
   });
 
-  it("gives the add-task strip its short labels (prototype renderAddNav)", () => {
-    expect(fabMenu("ADMIN").more.map((i) => i.short)).toEqual(["Invoice", "Expense", "Exec", "Work", "Team", "Leader", "Kit"]);
+  it("colours by category: money green, team yellow, client blue (Client and Client kit)", () => {
+    const tone = Object.fromEntries(fabOrder(fabMenu("ADMIN")).map((i) => [i.key, i.tone]));
+    expect(tone).toEqual({ TASK: "task", MEETING: "meet", INVOICE: "money", EXPENSE: "money", EXECUTIVE: "team", WORK_TYPE: "team", TEAM: "team", TEAM_LEADER: "team", CLIENT: "client", KIT: "client" });
+    expect(FAB_TONE.client).toContain("#60a5fa");
+    expect(FAB_TONE.client).toContain("#2563eb");
   });
 
-  it("colours by category: money green, team yellow, client blue", () => {
-    const tone = Object.fromEntries(fabOrder(fabMenu("ADMIN")).map((i) => [i.key, i.tone]));
-    expect(tone).toMatchObject({ TASK: "task", MEETING: "meet", INVOICE: "money", EXPENSE: "money", EXECUTIVE: "team", WORK_TYPE: "team", TEAM: "team", TEAM_LEADER: "team", KIT: "client" });
+  it("Client is the clients list flow (Admin only): item = add form expanded, eye = the list with the Add client bar", () => {
+    const client = fabMenu("ADMIN").more.find((i) => i.key === "CLIENT")!;
+    expect(client.icon).toBe(Building2);
+    expect(client.action).toEqual({ kind: "href", href: listFlowHref(LIST_FLOWS.CLIENT.base, "open") });
+    expect(client.view).toEqual({ href: listFlowHref(LIST_FLOWS.CLIENT.base, "min"), label: "View clients" });
+    expect(LIST_FLOWS.CLIENT.peek).toBe("Add client");
+    for (const role of ["TEAM_LEADER", "EXECUTIVE"] as const) expect(keys(role)).not.toContain("CLIENT");
+  });
+
+  it("the add-task screen lost its icon strip: items carry no short strip labels any more", () => {
+    for (const it of fabOrder(fabMenu("ADMIN"))) expect(Object.keys(it)).not.toContain("short");
   });
 });
 
@@ -87,8 +102,10 @@ describe("client kit picker helpers", () => {
     expect(kitHint(c("A", false, true))).toBe("Kit incomplete · repair it");
   });
 
-  it("goes to the client's kit page, or adds a client", () => {
+  it("goes to the client's kit page, or adds a client (the same clients list flow as the dial's Client)", () => {
     expect(kitHref("ck123")).toBe("/admin/client-kit/ck123");
     expect(NEW_CLIENT_HREF).toBe("/admin/clients?add=1&from=add");
+    const client = fabMenu("ADMIN").more.find((i) => i.key === "CLIENT")!;
+    expect(client.action).toEqual({ kind: "href", href: NEW_CLIENT_HREF });
   });
 });

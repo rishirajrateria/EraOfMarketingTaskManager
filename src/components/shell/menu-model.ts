@@ -1,13 +1,11 @@
-import {
-  BarChart3, Bell, Building2, CalendarCheck, Clock, Folder, HardDrive, Inbox, ListChecks, LogOut, Settings, UserCheck,
-  type LucideIcon,
-} from "lucide-react";
+import { CalendarCheck, Clock, Folder, HardDrive, ListChecks, LogOut, Settings, UserCheck, type LucideIcon } from "lucide-react";
 import type { MenuCounts } from "@/server/shell/menu";
-import { inrShort } from "@/components/dashboards/format";
 
 /**
  * Admin menu model (ADR 0011 v3 tiles, ADR 0016 dashboards). Pure data so tests can check groups, order, labels,
  * badges and links without rendering. Colour = category: Money green, Clients blue, Team yellow, Other purple.
+ * Only what nothing else reaches stays (ADR 0016 addendum): Finance, Requests and Notifications are the bottom nav /
+ * dashboards, Clients and every add are the + speed dial (with its eyes), Approvals is Requests › Finance › Approvals.
  */
 export type Tone = "money" | "client" | "team" | "other" | "red";
 export type BadgeTone = "red" | "amber" | "soft";
@@ -15,18 +13,8 @@ export type Badge = { n: number; tone: BadgeTone } | null;
 /** `sub` is the old one-line status: on a tile it becomes the title / aria-label and is still searched. */
 export type MenuItem = { href: string; icon: LucideIcon; label: string; sub?: string; badge?: Badge; danger?: boolean };
 export type MenuSection = { title: string; tone: Tone; items: MenuItem[] };
-export type QuickAction = { label: string; icon: LucideIcon; tone: Tone; href: string };
 
-const inr = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
 const badge = (n: number, tone: BadgeTone): Badge => (n > 0 ? { n, tone } : null);
-
-export function financeSub(c: MenuCounts | null): string {
-  if (!c) return "Income, expense, invoices, bills";
-  // compact rupees next to an approval count so the line stays short
-  const owed = c.invoicesToApprove ? inrShort(c.outstanding) : inr(c.outstanding);
-  const parts = [c.invoicesToApprove ? `${c.invoicesToApprove} to approve` : "", c.outstanding ? `${owed} outstanding` : ""].filter(Boolean);
-  return parts.length ? parts.join(" · ") : "Income, expense, invoices, bills";
-}
 
 export function hrSub(c: MenuCounts | null): string {
   if (!c || !c.attendanceMarkedToday) return "Attendance, inventory, leave";
@@ -51,17 +39,16 @@ export function menuSections(c: MenuCounts | null): MenuSection[] {
     {
       title: "Money",
       tone: "money",
+      // Finance left the menu: the nav's Dashboard tab opens the dashboards (Finance first)
       items: [
-        { href: "/admin/dashboards?view=FIN", icon: BarChart3, label: "Finance", sub: financeSub(c), badge: badge(k(c?.invoicesToApprove) + k(c?.billsOverdue), "red") },
         { href: "/admin/drive-folders", icon: Folder, label: "Drive folders", sub: "Monthly Drive folders · invoices, bills, GST pack, cancelled" },
       ],
     },
     {
       title: "Clients",
       tone: "client",
+      // Clients and Client kit left the menu (ADR 0016 addendum): the + speed dial adds them, and their eyes open the lists
       items: [
-        { href: "/admin/clients", icon: Building2, label: "Clients", sub: `${k(c?.clients)} clients · GST, PAN, TDS` },
-        // Client kit left the menu (ADR 0016 addendum): the + speed dial adds one, and its eye opens the list
         { href: "/admin/vault?tab=SHARED_DRIVE_LINK", icon: HardDrive, label: "Shared links", sub: "Shared drive links · folders shared with clients" },
       ],
     },
@@ -80,9 +67,8 @@ export function menuSections(c: MenuCounts | null): MenuSection[] {
     {
       title: "Other",
       tone: "other",
+      // Requests and Notifications are bottom nav tabs (with their counts)
       items: [
-        { href: "/admin/requests", icon: Inbox, label: "Requests", sub: k(c?.requestsOpen) ? `${c!.requestsOpen} open` : "Finance, work and leave in one inbox", badge: badge(k(c?.requestsOpen), "red") },
-        { href: "/notifications", icon: Bell, label: "Notifications", sub: k(c?.unread) ? `${c!.unread} unread` : "All caught up", badge: badge(k(c?.unread), "soft") },
         { href: "/admin/settings", icon: Settings, label: "Settings", sub: "Company, bank, invoice, TDS" },
         { href: "/api/auth/signout", icon: LogOut, label: "Sign out", danger: true },
       ],
@@ -98,12 +84,6 @@ export function filterSections(sections: MenuSection[], q: string): MenuSection[
     .map((s) => ({ ...s, items: s.items.filter((it) => `${it.label} ${it.sub ?? ""} ${s.title}`.toLowerCase().includes(term)) }))
     .filter((s) => s.items.length);
 }
-
-/**
- * Quick actions pinned at the bottom. New invoice / Add expense left with the "+" speed dial taking over every add
- * (ADR 0016 addendum); Approvals stays — alone it spans the row as icon + label.
- */
-export const QUICK_ACTIONS: QuickAction[] = [{ href: "/admin/requests?tab=FIN&fin=APPR", icon: Inbox, label: "Approvals", tone: "red" }];
 
 /** Long single words get a soft hyphen in the middle so a narrow tile wraps them as "Notifi-cations" / "Atten-dance". */
 export const SOFT_HYPHEN = "­";

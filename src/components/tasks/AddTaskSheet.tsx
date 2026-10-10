@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { JSX } from "react";
 import { Sheet } from "@/components/ui/Sheet";
-import { cornerStore } from "@/components/shell/corner-store";
+import { addTaskStore } from "@/components/shell/add-task-store";
 import { useToast } from "@/components/ui/Toast";
 import type { DashboardData } from "@/server/tasks/types";
 import { describeRule } from "@/server/tasks/repeat-rule";
@@ -11,8 +11,7 @@ import { addTaskInventory, createTask } from "@/server/tasks/create";
 import { uploadAttachment } from "@/server/tasks/manage";
 import { AddTaskHeader } from "@/components/tasks/AddTaskHeader";
 import { AddTaskBody } from "@/components/tasks/AddTaskBody";
-import { AddTaskBottomBar, type Shortcut } from "@/components/tasks/AddTaskFooter";
-import { AddTaskGreenRows } from "@/components/tasks/AddTaskRows";
+import { AddTaskTray, TypeSwitch, type Shortcut } from "@/components/tasks/AddTaskTray";
 import { AssigneeSheet, ScheduleSheet } from "@/components/tasks/AddTaskDetails";
 import { RepeatSheet } from "@/components/tasks/RecurrencePicker";
 import { MeetingGuestsSheet } from "@/components/tasks/MeetingGuestsSheet";
@@ -20,7 +19,6 @@ import { MeetingOptionsSheet } from "@/components/tasks/MeetingOptionsSheet";
 import { FindTimeSheet } from "@/components/tasks/FindTimeSheet";
 import { clientGuestFields, findTimeDay, guestCount, meetingShortcut, meetingTz, voiceNotesFor } from "@/components/tasks/meeting-helpers";
 import type { VoiceNote } from "@/components/tasks/VoiceRecorder";
-import type { FabItem } from "@/components/dashboard/fab-model";
 import {
   EMPTY_LOADS,
   allowedAssignees,
@@ -40,11 +38,15 @@ import {
   type TaskMode,
 } from "@/components/tasks/add-task-helpers";
 
-/** `onPick`: an Admin shortcut from the bottom icon strip (the sheet closes first, then the dashboard runs it). */
-type Props = { open: boolean; mode: "WORK" | "MEETING" | "CHOOSE" | null; onClose: () => void; data: DashboardData; onPick?: (it: FabItem) => void };
+type Props = { open: boolean; mode: "WORK" | "MEETING" | "CHOOSE" | null; onClose: () => void; data: DashboardData };
 
-/** Full-screen "after clicking +" sheet (SPEC §6). Creates a Work task or a Meeting via `createTask`. */
-export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data, onPick }: Props): JSX.Element | null {
+/**
+ * Full-screen "after clicking +" sheet (SPEC §6). Creates a Work task or a Meeting via `createTask`. Top → bottom
+ * (ADR 0016 addendum, prototype `#s-add`): capacity header, the form (Task | Meeting switch above the title), the
+ * minimisable details tray (pill rows + time row) — and below the sheet the shell's bottom nav, whose centre × closes
+ * an open sub-sheet first, then this screen (corner-store); Escape does the same.
+ */
+export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: Props): JSX.Element | null {
   const toast = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -66,6 +68,12 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data, on
     onClose();
   }, [onClose, urlMode]);
 
+  // The bottom nav highlights no tab while this screen is up.
+  useEffect(() => {
+    addTaskStore.setShown(open);
+    return () => addTaskStore.setShown(false);
+  }, [open]);
+
   const [chosen, setChosen] = useState<TaskMode | null>(null);
   const [form, setForm] = useState<AddTaskForm>(() => emptyForm("WORK", data.me.id, data.role));
   const [voiceNotes, setVoiceNotes] = useState<VoiceNote[]>([]);
@@ -84,7 +92,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data, on
   // Reset everything each time the sheet opens (or the entry mode changes while open).
   useEffect(() => {
     if (!open) return;
-    // The "+" speed dial: Task opens a task, Meeting opens a meeting; the bottom Task / Meeting toggles switch later.
+    // The "+" speed dial: Task opens a task, Meeting opens a meeting; the Task | Meeting switch changes it later.
     const type: TaskMode = mode === "MEETING" ? "MEETING" : "WORK";
     setChosen(type);
     setForm(emptyForm(type, data.me.id, data.role));
@@ -223,11 +231,13 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data, on
 
   return (
     <>
-      {/* `cover`: the add-task screen hides the bottom nav and brings its own row, whose × closes an open sheet first. */}
-      <Sheet open={open} onClose={subSheetOpen ? () => undefined : close} full cover>
+      {/* Stops above the bottom nav like every sheet. Escape: a sub-sheet handles its own (this one waits); the nav's ×
+          and Home close the newest first, so this sheet's corner close can always close. */}
+      <Sheet open={open} onClose={subSheetOpen ? () => undefined : close} onCornerClose={close} full>
         <div className="flex h-full min-h-full flex-col" style={{ background: "var(--aurora), var(--bg)" }}>
           <AddTaskHeader loads={loads} teamName={headerName} />
           <AddTaskBody
+            header={<TypeSwitch type={chosen} onType={choose} disabled={!!busy} />}
             form={liveForm}
             patch={patch}
             titleError={errors.title}
@@ -247,24 +257,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data, on
             onToast={(m) => toast(m)}
             formError={formError}
           />
-          <AddTaskGreenRows form={liveForm} patch={patch} data={data} />
-          <AddTaskBottomBar
-            form={liveForm}
-            type={chosen}
-            tz={zone}
-            onShortcut={setShortcut}
-            onType={choose}
-            onOpenSchedule={() => setScheduleOpen(true)}
-            role={data.role}
-            onPick={
-              onPick &&
-              ((it) => {
-                close();
-                onPick(it);
-              })
-            }
-            onClose={() => cornerStore.closeTop() || close()}
-          />
+          <AddTaskTray form={liveForm} patch={patch} data={data} type={chosen} tz={zone} onShortcut={setShortcut} onOpenSchedule={() => setScheduleOpen(true)} />
         </div>
       </Sheet>
       <ScheduleSheet open={scheduleOpen} onClose={() => setScheduleOpen(false)} value={form.scheduledStart} tz={zone} onSet={(scheduledStart) => patch({ scheduledStart })} onError={(m) => toast(m, "err")} />

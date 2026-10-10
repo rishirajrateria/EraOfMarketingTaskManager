@@ -52,6 +52,27 @@ export function effective(p: DashParams): DashParams {
   return { ...p, team: showsTeams(p) ? p.team : null, client: showsClients(p) ? p.client : null };
 }
 
+type Named = { id: string; name: string };
+
+/**
+ * Caption of the minimised filter tray (ADR 0016 addendum, same tab as the task dashboard's): the view, Finance's
+ * Show, the team / client that apply (when picked) and the period — "Filters · Finance · Overview · Acme · This month",
+ * "Filters · HR · Social · Last month".
+ */
+export function dashTrayCaption(p: DashParams, teams: readonly Named[], clients: readonly Named[]): string {
+  const e = effective(p);
+  return [
+    "Filters",
+    VIEW_LABEL[p.view],
+    p.view === "FIN" ? FIN_LABEL[p.fin] : null,
+    e.team ? teams.find((t) => t.id === e.team)?.name : null,
+    e.client ? clients.find((c) => c.id === e.client)?.name : null,
+    PERIOD_LABEL[p.period],
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 /** Canonical URL: defaults are left out so links stay short ("/admin/dashboards?view=HR"). */
 export function dashHref(p: DashParams, patch: Partial<DashParams> = {}): string {
   const n = { ...p, ...patch };
