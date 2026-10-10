@@ -13,6 +13,7 @@ const SCHEDULE: Record<JobName, number> = {
   "leave-sync": 30 * 60_000,
   payables: 60 * 60_000, // ADR 0009: next recurring bill + payment reminders (idempotent)
   "month-folders": 12 * 60 * 60_000, // ADR 0009: Finance/YYYY-MM in Drive (cached after the first run each month)
+  "meeting-notes": 30 * 60_000, // ADR 0015: file Gemini meeting notes into each task's Drive "Meeting notes" folder
 };
 
 const g = globalThis as unknown as { __eomJobsStarted?: boolean };

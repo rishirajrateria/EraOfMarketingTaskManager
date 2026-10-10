@@ -19,14 +19,12 @@ export const NOTE_PROMPTS: Record<NoteKind, { title: string; placeholder: string
 /** Simple actions (no note) the sheet can ask the root to run. */
 export type SimpleAction =
   | "start"
-  | "request_finish"
-  | "approve_finish"
+  /** Same as tapping the circle (ADR 0015): Admin completes, others mark their side done — with Undo. */
+  | "done"
   | "pause"
   | "resume"
   | "restart"
   | "resolve_doubt"
-  | "protect"
-  | "unprotect"
   | "retry"
   | "edit"
   | "delete"
@@ -77,8 +75,7 @@ export function TaskActionSheet({
 
   if (role === "ADMIN") {
     if (canTransition(s, "START")) items.push({ label: "Start", onClick: act("start") });
-    if (canTransition(s, "REQUEST_FINISH")) items.push({ label: "Request finish", onClick: act("request_finish") });
-    if (canTransition(s, "APPROVE_FINISH")) items.push({ label: "Approve finish", onClick: act("approve_finish"), hint: s === "FINISH_REQUESTED" ? "Requested" : undefined });
+    if (canTransition(s, "APPROVE_FINISH")) items.push({ label: s === "FINISH_REQUESTED" ? "Approve finish" : "Mark complete", onClick: act("done"), hint: s === "FINISH_REQUESTED" ? "Requested" : "same as tapping the circle" });
     if (canTransition(s, "REJECT_FINISH")) items.push({ label: "Reject finish", onClick: note("reject"), hint: "with note" });
     if (canTransition(s, "PAUSE")) items.push({ label: "Pause", onClick: act("pause") });
     if (canTransition(s, "RESUME")) items.push({ label: "Resume", onClick: act("resume") });
@@ -87,26 +84,24 @@ export function TaskActionSheet({
     if (canTransition(s, "RESTART")) items.push({ label: "Restart", onClick: act("restart"), hint: "duplicate as new" });
     if (t.doubtRaised) items.push({ label: "Resolve doubt", onClick: act("resolve_doubt"), hint: "unflag" });
     items.push({ label: "Open request", onClick: () => { onClose(); router.push("/requests"); }, hint: t.reviewRequested || t.doubtRaised || s === "FINISH_REQUESTED" ? "pending" : undefined });
-    if (t.selfAssigned) items.push(t.protected ? { label: "Mark unprotected", onClick: act("unprotect") } : { label: "Mark protected", onClick: act("protect"), hint: "fix in place" });
     if (t.integrationError) items.push({ label: "Retry integrations", onClick: act("retry"), hint: "Google" });
     items.push({ label: "Delete", onClick: act("delete"), danger: true });
   } else if (role === "TEAM_LEADER") {
     if (canAssign) items.push(assignItem);
     if (canTransition(s, "START")) items.push({ label: "Start", onClick: act("start") });
-    if (canTransition(s, "REQUEST_FINISH")) items.push({ label: "Request finish", onClick: act("request_finish") });
+    if (canTransition(s, "REQUEST_FINISH")) items.push({ label: "Done from my side", onClick: act("done"), hint: "Admin approves" });
     if (s !== "COMPLETED" && !t.doubtRaised) items.push({ label: "Raise doubt", onClick: note("doubt"), hint: "with note" });
     if (s !== "COMPLETED") {
       items.push({ label: "Raise review request", onClick: note("review"), hint: "with note" });
       items.push({ label: "Raise time-change request", onClick: note("time_change"), hint: "with note" });
     }
     if (canTransition(s, "RESTART")) items.push({ label: "Restart", onClick: act("restart"), hint: "duplicate as new" });
-    if (t.selfAssigned && mine && !t.protected && s !== "COMPLETED") items.push({ label: "Request fix for self-assigned task", onClick: note("fix_self") });
   } else {
     items.push({ label: "Open details", onClick: act("details") });
+    if (mine && canTransition(s, "REQUEST_FINISH")) items.push({ label: "Done from my side", onClick: act("done"), hint: "Admin approves" });
     if (mine && s !== "COMPLETED") {
       items.push({ label: "Raise review request", onClick: note("review"), hint: "with note" });
       items.push({ label: "Raise time-change request", onClick: note("time_change"), hint: "with note" });
-      if (t.selfAssigned && !t.protected) items.push({ label: "Request fix for self-assigned task", onClick: note("fix_self") });
     }
   }
 
@@ -118,7 +113,6 @@ export function TaskActionSheet({
           {statusLabel(t)}
           {t.paused ? " · paused" : ""}
           {t.reviewRequested ? " · review requested" : ""}
-          {t.protected ? " · protected" : ""}
         </p>
       </div>
       <ActionList items={items} />

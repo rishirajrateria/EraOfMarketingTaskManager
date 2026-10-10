@@ -6,14 +6,17 @@ import { isShortcutDay } from "@/components/tasks/meeting-helpers";
 
 export type Shortcut = "upnext" | "tomorrow" | "today";
 
-/** Frosted green pill (28px; near-white when active). */
+/** Neutral glass pill (32px; ink-filled when active) — same as the tag rows (ADR 0015). */
 function TagPill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={clsx("no-select h-7 shrink-0 rounded-full px-[13px] text-xs font-medium leading-none transition", active ? "bg-green-pill-on" : "bg-green-pill")}
+      className={clsx(
+        "no-select h-8 shrink-0 whitespace-nowrap rounded-[12px] border px-[11px] text-[12.5px] font-semibold leading-none transition",
+        active ? "border-transparent bg-primary text-primary-ink" : "glass-chip border-hair text-ink",
+      )}
     >
       {children}
     </button>
@@ -35,7 +38,7 @@ function MeetIcon({ size = 22 }: { size?: number }) {
   );
 }
 
-/** BOTTOM BAR (56px): calendar (opens "When should it start?") + upnext/Tom/today (green 62%) · Meet / Work / X (glass 38%). */
+/** BOTTOM BAR (56px, neutral glass): calendar (opens "When should it start?") + upnext / Tom / today · Meet / Work / X. */
 export function AddTaskBottomBar({
   form,
   type,
@@ -57,8 +60,8 @@ export function AddTaskBottomBar({
   const startIs = (kind: "tomorrow" | "today") =>
     type === "MEETING" ? isShortcutDay(kind, form.scheduledStart, new Date(), tz) : !!form.scheduledStart && form.scheduledStart === shortcutStart(kind, new Date(), tz);
   return (
-    <div className="flex h-14 shrink-0 items-stretch pb-[env(safe-area-inset-bottom)]">
-      <div className="bg-green-bar scrollbar-none flex w-[62%] items-center gap-2 overflow-x-auto px-3 text-white">
+    <div className="bar-glass flex h-14 shrink-0 items-stretch pb-[env(safe-area-inset-bottom)]">
+      <div className="scrollbar-none flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pl-3 pr-1 text-ink">
         <button type="button" onClick={onOpenSchedule} aria-label="When should it start?" title="When should it start?" className="flex h-8 w-7 shrink-0 items-center justify-center">
           <CalendarDays size={22} aria-hidden />
         </button>
@@ -72,7 +75,7 @@ export function AddTaskBottomBar({
           today
         </TagPill>
       </div>
-      <div className="bar-glass flex w-[38%] items-center justify-between gap-1 px-2">
+      <div className="flex shrink-0 items-center gap-1 pr-2">
         <button type="button" onClick={() => onType("MEETING")} aria-pressed={type === "MEETING"} aria-label="Meeting" className={clsx("flex h-10 w-9 items-center justify-center rounded-xl", type === "MEETING" && "bg-chip")}>
           <MeetIcon size={24} />
         </button>
@@ -80,7 +83,10 @@ export function AddTaskBottomBar({
           type="button"
           onClick={() => onType("WORK")}
           aria-pressed={type === "WORK"}
-          className={clsx("no-select glass-chip h-[30px] rounded-full px-3 text-xs font-semibold leading-none text-ink", type === "WORK" && "ring-1 ring-ink/50")}
+          className={clsx(
+            "no-select h-8 rounded-[12px] border px-[11px] text-[12.5px] font-semibold leading-none",
+            type === "WORK" ? "border-transparent bg-primary text-primary-ink" : "glass-chip border-hair text-ink",
+          )}
         >
           Work
         </button>

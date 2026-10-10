@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import type { RequestItem } from "@/server/requests/queries";
 import { approveFinish, rejectFinish, resolveDoubt } from "@/server/tasks/lifecycle";
 import { setTaskProtected } from "@/server/tasks/manage";
+import { REVIEW_FIELD_NAME, isReviewField } from "@/server/tasks/review-fields";
 import { resolveRequest } from "@/server/requests/actions";
 import { useToast } from "@/components/ui/Toast";
 import { Sheet } from "@/components/ui/Sheet";
@@ -72,7 +73,10 @@ export function RequestsInbox({ items, showAll, tz }: { items: RequestItem[]; sh
           <li key={r.id} className="px-4 py-3">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <div className="text-xs font-semibold uppercase text-brand-blue">{LABEL[r.type] ?? r.type}</div>
+                <div className="text-xs font-semibold uppercase text-brand-blue">
+                  {LABEL[r.type] ?? r.type}
+                  {r.field && isReviewField(r.field) ? ` · ${REVIEW_FIELD_NAME[r.field]}` : ""}
+                </div>
                 {r.task ? (
                   <Link href={`/dashboard?task=${r.task.id}`} className="block truncate text-sm font-medium">
                     {r.task.title} <span className="text-gray-400">· {r.task.client}</span>

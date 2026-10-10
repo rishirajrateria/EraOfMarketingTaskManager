@@ -31,19 +31,17 @@ type Props = {
   busy: false | "saving" | "uploading";
   onError: (message: string) => void;
   onToast: (message: string) => void;
-  /** "📅 09 Oct 2026 at 10:00 · 2h · for Priya · change with the calendar icon below" */
-  scheduleText: string;
-  /** "Goes to Priya (TL, Social)…" card (ADR 0008). */
-  summary?: React.ReactNode;
+  /** A missing team / work type / client / invitee, shown next to Save (ADR 0015 removed the summary card). */
+  formError?: string;
 };
 
 /**
- * Add-task body (prototype `renderAdd`, ADR 0010): title, rich description, ★ Important / ⟳ Repeat / files pills,
- * "How long" pills + stepper, the round voice-note mic, the schedule line and who gets it. No date / time inputs:
- * scheduling happens from the bottom bar (calendar icon, upnext / Tom / today).
+ * Add-task body (prototype `renderAdd`, ADR 0010/0013): title, rich description, ⟳ Repeat / files pills, "How long"
+ * pills + stepper and the round voice-note mic. No date / time inputs: scheduling happens from the bottom bar (calendar
+ * icon, upnext / Tom / today). No ★ Important chip, schedule line or "Goes to …" card (owner's revision, ADR 0015).
  */
 export function AddTaskBody(p: Props) {
-  const { form, patch, titleError, hoursError, canPickAssignees, onOpenAssignees, onOpenOptions, guestCount = 0, onOpenRepeat, onSubmit, voiceNotes, setVoiceNotes, files, setFiles, busy, onError, onToast, scheduleText, summary } = p;
+  const { form, patch, titleError, hoursError, canPickAssignees, onOpenAssignees, onOpenOptions, guestCount = 0, onOpenRepeat, onSubmit, voiceNotes, setVoiceNotes, files, setFiles, busy, onError, onToast, formError } = p;
   const editor = useRef<RichTextEditorHandle>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const meeting = form.type === "MEETING";
@@ -77,12 +75,6 @@ export function AddTaskBody(p: Props) {
       />
 
       <div className="mt-2 flex flex-wrap gap-2">
-        {/* Meetings: no ★ Important (owner's revision); Recurring, Guests and Options instead. */}
-        {meeting ? null : (
-          <ChipButton on={form.important} onClick={() => patch({ important: !form.important })} onClass="border-transparent bg-[#fde68a] text-[#3b2a00]">
-            ★ Important
-          </ChipButton>
-        )}
         <ChipButton on={!!form.recurrence} onClick={onOpenRepeat} onClass="border-transparent bg-[#bfdbfe] text-[#0b1b2b]" label={form.recurrence ? `Repeats: ${describeRule(form.recurrence)}` : "Recurring"}>
           ⟳ {form.recurrence ? describeRule(form.recurrence) : "Recurring"}
         </ChipButton>
@@ -133,12 +125,6 @@ export function AddTaskBody(p: Props) {
         </ul>
       ) : null}
 
-      <p className="mt-3.5 text-[12.5px] leading-[1.4] text-muted" aria-live="polite">
-        {scheduleText}
-      </p>
-
-      {summary}
-
       <div className="pointer-events-none sticky bottom-3 mt-auto flex items-center justify-between pb-0 pt-3">
         {canPickAssignees ? (
           <button type="button" onClick={onOpenAssignees} aria-label={`Guests (${guestCount})`} className="glass pointer-events-auto relative flex h-10 w-10 items-center justify-center rounded-full text-ink">
@@ -152,6 +138,11 @@ export function AddTaskBody(p: Props) {
         ) : (
           <span />
         )}
+        {formError ? (
+          <span role="alert" className="glass pointer-events-auto mx-2 min-w-0 flex-1 rounded-xl px-3 py-1.5 text-[11.5px] font-medium leading-snug text-late">
+            {formError}
+          </span>
+        ) : null}
         <button
           type="button"
           onClick={onSubmit}

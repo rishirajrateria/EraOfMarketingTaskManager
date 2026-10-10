@@ -3,16 +3,13 @@ import {
   allowedAssignees,
   defaultTeamIds,
   emptyForm,
-  fallbackNextSlot,
   fmtHours,
   fmtSecs,
-  forWhom,
   formatSlot,
   fromDatetimeLocal,
   HOUR_PRESETS,
   hoursToMinutes,
   repeatBaseDay,
-  scheduleLine,
   shortcutStart,
   stepHours,
   toDatetimeLocal,
@@ -164,24 +161,7 @@ describe("add-task body helpers (ADR 0010)", () => {
     expect(emptyForm("WORK", "me").hours).toBe(2);
     expect(fmtSecs(65)).toBe("1:05");
   });
-  it("schedule line: picked date or the next free slot, hours and who it is for", () => {
-    const now = new Date("2026-10-09T05:00:00Z"); // Fri 10:30 IST
-    const picked = { scheduledStart: "2026-10-12T15:30", hours: 2 };
-    expect(scheduleLine(picked, "Tina", null, now, TZ)).toBe("📅 12 Oct 2026 at 15:30 · 2h · for Tina · change with the calendar icon below");
-    const slot = new Date("2026-10-10T04:30:00Z"); // Sat 10:00 IST
-    expect(scheduleLine({ scheduledStart: "", hours: 0.5 }, null, slot, now, TZ)).toBe("📅 Next free slot: Tom 10:00am · ½h · change with the calendar icon below");
-    // prototype nextSlot(): next full hour, after 18:00 tomorrow 10:00 (company tz)
-    expect(fallbackNextSlot(now, TZ).toISOString()).toBe("2026-10-09T05:30:00.000Z"); // 11:00 IST
-    expect(fallbackNextSlot(new Date("2026-10-09T13:00:00Z"), TZ).toISOString()).toBe("2026-10-10T04:30:00.000Z");
-    expect(fallbackNextSlot(new Date("2026-10-08T21:30:00Z"), TZ).toISOString()).toBe("2026-10-09T04:30:00.000Z"); // 03:00 IST → 10:00
-  });
-  it("forWhom and the repeat base day (company tz)", () => {
-    const form = { ...emptyForm("WORK", "admin"), teamIds: ["teamA"] };
-    expect(forWhom(form, dataFor("admin"))).toBe("Tina");
-    expect(forWhom({ ...form, teamIds: [] }, dataFor("admin"))).toBeNull();
-    expect(forWhom({ ...form, assigneeIds: [] }, dataFor("tl1"))).toBe("whole team");
-    expect(forWhom({ ...form, assigneeIds: ["tl1", "ex1"] }, dataFor("tl1"))).toBe("me, Eve");
-    expect(forWhom(form, dataFor("ex1"))).toBe("me");
+  it("the repeat base day (company tz)", () => {
     expect(repeatBaseDay({ scheduledStart: "2026-12-01T10:00" })).toBe("2026-12-01");
     // 20:00 UTC on the 9th is already the 10th in Asia/Kolkata
     expect(repeatBaseDay({ scheduledStart: "" }, new Date("2026-10-09T20:00:00Z"), TZ)).toBe("2026-10-10");

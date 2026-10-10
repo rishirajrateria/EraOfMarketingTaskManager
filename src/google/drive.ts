@@ -107,3 +107,45 @@ export async function trashFile(fileId: string) {
     if ((e as { code?: number }).code !== 404) throw e;
   });
 }
+
+/** Does a (non-trashed) folder with this exact name already exist under the parent? Always false in mock mode. */
+export async function folderExists(name: string, parentId?: string): Promise<boolean> {
+  if (isMock()) return false;
+  return (await findChild(name, parentId)) !== null;
+}
+
+/** Mock-mode log of filed Docs (tests): docId → folderId. */
+export const filedMockDocs = new Map<string, string>();
+
+/**
+ * Files a Doc into a folder (ADR 0015, Gemini meeting notes): re-parents it (MOVED) when the impersonated user may,
+ * otherwise adds a Drive shortcut to it in the folder (SHORTCUT). A doc already in the folder counts as MOVED.
+ */
+export async function moveOrShortcut(fileId: string, folderId: string): Promise<"MOVED" | "SHORTCUT"> {
+  if (isMock()) {
+    filedMockDocs.set(fileId, folderId);
+    return "MOVED";
+  }
+  let name = "Meeting notes";
+  try {
+    const cur = await withRetry(() => drive().files.get({ fileId, fields: "name,parents", supportsAllDrives: true }));
+    name = cur.data.name ?? name;
+    const parents = cur.data.parents ?? [];
+    if (parents.includes(folderId)) return "MOVED";
+    await withRetry(() =>
+      drive().files.update({ fileId, addParents: folderId, removeParents: parents.join(",") || undefined, fields: "id", supportsAllDrives: true }),
+    );
+    return "MOVED";
+  } catch (e) {
+    const code = (e as { code?: number }).code;
+    if (code !== 403 && code !== 404 && code !== 400) throw e;
+  }
+  await withRetry(() =>
+    drive().files.create({
+      requestBody: { name, mimeType: "application/vnd.google-apps.shortcut", shortcutDetails: { targetId: fileId }, parents: [folderId] },
+      fields: "id",
+      supportsAllDrives: true,
+    }),
+  );
+  return "SHORTCUT";
+}

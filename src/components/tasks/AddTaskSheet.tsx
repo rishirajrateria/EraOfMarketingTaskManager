@@ -6,31 +6,28 @@ import { Sheet } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import type { DashboardData } from "@/server/tasks/types";
 import { describeRule } from "@/server/tasks/repeat-rule";
-import { addTaskInventory, createTask, previewSlot } from "@/server/tasks/create";
+import { addTaskInventory, createTask } from "@/server/tasks/create";
 import { uploadAttachment } from "@/server/tasks/manage";
 import { AddTaskHeader } from "@/components/tasks/AddTaskHeader";
 import { AddTaskBody } from "@/components/tasks/AddTaskBody";
 import { AddTaskBottomBar, type Shortcut } from "@/components/tasks/AddTaskFooter";
-import { AddTaskGreenRows, AddTaskSummary } from "@/components/tasks/AddTaskRows";
+import { AddTaskGreenRows } from "@/components/tasks/AddTaskRows";
 import { AssigneeSheet, ScheduleSheet } from "@/components/tasks/AddTaskDetails";
 import { RepeatSheet } from "@/components/tasks/RecurrencePicker";
 import { MeetingGuestsSheet } from "@/components/tasks/MeetingGuestsSheet";
 import { MeetingOptionsSheet } from "@/components/tasks/MeetingOptionsSheet";
 import { FindTimeSheet } from "@/components/tasks/FindTimeSheet";
-import { clientEmails, findTimeDay, guestCount, meetingLine, meetingShortcut, meetingTz, voiceNotesFor } from "@/components/tasks/meeting-helpers";
+import { clientEmails, findTimeDay, guestCount, meetingShortcut, meetingTz, voiceNotesFor } from "@/components/tasks/meeting-helpers";
 import type { VoiceNote } from "@/components/tasks/VoiceRecorder";
 import {
   EMPTY_LOADS,
   allowedAssignees,
   effectiveAssignees,
   emptyForm,
-  fallbackNextSlot,
-  forWhom,
   hoursToMinutes,
   headerTeamIds,
   parseAddParam,
   repeatBaseDay,
-  scheduleLine,
   shortcutStart,
   syncWorkType,
   toTaskInput,
@@ -72,7 +69,6 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
   const [repeatOpen, setRepeatOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
-  const [nextSlot, setNextSlot] = useState<Date | null>(null);
 
   const patch = useCallback((p: Partial<AddTaskForm>) => setForm((f) => ({ ...f, ...p })), []);
 
@@ -122,23 +118,6 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, headerKey]);
   const headerName = headerTeams.length ? headerTeams.map((id) => data.teams.find((t) => t.id === id)?.name ?? "Team").join(" + ") : null;
-
-  // "📅 Next free slot: …" — the slot the server would pick for the effective assignees (debounced 400ms).
-  const slotIds = effectiveAssignees({ ...form, type: chosen ?? "WORK" }, data);
-  const slotKey = `${slotIds.join(",")}|${hoursToMinutes(form.hours)}|${form.scheduledStart}`;
-  useEffect(() => {
-    if (!open || form.scheduledStart) return;
-    let cancelled = false;
-    const t = setTimeout(async () => {
-      const res = slotIds.length ? await previewSlot(slotIds, hoursToMinutes(form.hours), chosen ?? "WORK").catch(() => null) : null;
-      if (!cancelled) setNextSlot(res && res.ok && res.data ? new Date(res.data.start) : null);
-    }, 400);
-    return () => {
-      cancelled = true;
-      clearTimeout(t);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, slotKey]);
 
   const assignees = useMemo(() => allowedAssignees(data, chosen ?? "WORK"), [data, chosen]);
   const meeting = chosen === "MEETING";
@@ -221,9 +200,10 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
   // Work: the green rows pick team / executives. Meetings can also invite anyone from the people glyph.
   const canPickAssignees = meeting;
 
-  const scheduleText = meeting
-    ? meetingLine(liveForm, data, nextSlot ?? fallbackNextSlot(new Date(), zone), new Date(), data.tz)
-    : scheduleLine(liveForm, forWhom(liveForm, data), nextSlot ?? fallbackNextSlot(new Date(), data.tz), new Date(), data.tz);
+  // Missing team / work / client / invitees: shown in one line next to Save (the summary card is gone, ADR 0015).
+  // Re-checked live so the line disappears as soon as the missing pick is made.
+  const liveErrors = Object.keys(errors).length ? validateForm(liveForm, data) : {};
+  const formError = liveErrors.teamIds ?? liveErrors.tagIds ?? liveErrors.clientId ?? liveErrors.assigneeIds;
   const guests = meeting ? guestCount(liveForm, data) : 0;
   const openFindTime = () => {
     setAssigneesOpen(false);
@@ -255,8 +235,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
             busy={busy}
             onError={(m) => toast(m, "err")}
             onToast={(m) => toast(m)}
-            scheduleText={scheduleText}
-            summary={<AddTaskSummary form={liveForm} data={data} />}
+            formError={formError}
           />
           <AddTaskGreenRows form={liveForm} patch={patch} data={data} />
           <AddTaskBottomBar

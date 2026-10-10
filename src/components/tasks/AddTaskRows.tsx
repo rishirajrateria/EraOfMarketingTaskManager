@@ -6,20 +6,20 @@ import {
   executivesOf,
   isSpecialist,
   specialistsFirst,
-  teamLeadersOf,
   toggleAdminTeam,
   toggleId,
   workTeamIds,
   workTypesFor,
-  externalGuests,
-  meetingInvitees,
   type AddTaskForm,
 } from "@/components/tasks/add-task-helpers";
 import { START_SLOTS, fmtStartPill, meetingTz, parseHHMM, pickClient, pickStartTime, startMinutes } from "@/components/tasks/meeting-helpers";
 
 const first = (name: string) => name.split(" ")[0] ?? name;
 
-/** Frosted green pill (28px; near-white when active). `pref` adds the dark ring of a preferred executive. */
+/**
+ * Neutral glass pill (ADR 0015 — same look as the dashboard filter rows): 32px, ink-filled when on. `pref` adds an inner
+ * ring to a preferred executive.
+ */
 export function TagPill({ active, pref, onClick, children }: { active: boolean; pref?: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
@@ -27,9 +27,9 @@ export function TagPill({ active, pref, onClick, children }: { active: boolean; 
       onClick={onClick}
       aria-pressed={active}
       className={clsx(
-        "no-select h-7 shrink-0 whitespace-nowrap rounded-full px-[13px] text-xs font-medium leading-none transition",
-        active ? "bg-green-pill-on" : "bg-green-pill",
-        active && pref && "bg-green-pill-pref",
+        "no-select h-8 shrink-0 whitespace-nowrap rounded-[12px] border px-[11px] text-[12.5px] font-semibold leading-none transition",
+        active ? "border-transparent bg-primary text-primary-ink" : "glass-chip border-hair text-ink",
+        active && pref && "shadow-[inset_0_0_0_2px_var(--bg)]",
       )}
     >
       {children}
@@ -37,22 +37,25 @@ export function TagPill({ active, pref, onClick, children }: { active: boolean; 
   );
 }
 
-/** One labelled green row: small uppercase white label on the left, scrollable pills on the right. */
+/**
+ * One labelled row: small uppercase muted label on the left, pills on the right. Only the pills scroll horizontally —
+ * the label stays put (ADR 0015; it used to scroll away on the long START / CLIENT rows).
+ */
 export function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="scrollbar-none flex h-10 items-center gap-2 overflow-x-auto px-3" role="group" aria-label={label}>
-      <span className="min-w-[52px] shrink-0 text-[10px] font-bold uppercase tracking-[.08em] text-z2label">{label}</span>
-      {children}
+    <div className="flex h-[42px] items-center" role="group" aria-label={label}>
+      <span className="w-[64px] shrink-0 pl-3 text-[10.5px] font-extrabold uppercase tracking-[.07em] text-muted">{label}</span>
+      <div className="scrollbar-none flex h-full min-w-0 flex-1 items-center gap-2 overflow-x-auto pl-2 pr-3 [mask-image:linear-gradient(to_right,transparent,#000_8px)]">{children}</div>
     </div>
   );
 }
 
-const Note = ({ children }: { children: React.ReactNode }) => <span className="shrink-0 whitespace-nowrap text-[11px] font-medium text-z2label">{children}</span>;
+const Note = ({ children }: { children: React.ReactNode }) => <span className="shrink-0 whitespace-nowrap text-[11px] font-medium text-muted">{children}</span>;
 
 type Props = { form: AddTaskForm; patch: (p: Partial<AddTaskForm>) => void; data: DashboardData };
 
 /**
- * GREEN AREA (TAG MODE, ADR 0008), top to bottom: PREFER (Admin) · WORK · TEAM (Admin) / EXEC (Team Leader) · CLIENT.
+ * TAG ROWS (ADR 0008; neutral glass since ADR 0015), top to bottom: PREFER (Admin) · WORK · TEAM (Admin) / EXEC (Team Leader) · CLIENT.
  * TEAM stays fixed directly above CLIENT; WORK and PREFER appear above it once a team is picked.
  */
 export function AddTaskGreenRows({ form, patch, data }: Props) {
@@ -134,7 +137,7 @@ export function AddTaskGreenRows({ form, patch, data }: Props) {
   }
 
   return (
-    <div className="bg-green-area shrink-0">
+    <div className="bar-glass shrink-0 border-t border-hair pb-0.5 pt-1">
       {preferRow}
       {workRow}
       {teamRow}
@@ -195,90 +198,5 @@ function StartRow({ form, patch, tz }: { form: AddTaskForm; patch: (p: Partial<A
         />
       </span>
     </Row>
-  );
-}
-
-/** Meetings: who is invited (internal names, teams, outside guests) and the client-without-email hint. */
-function MeetingSummary({ form, data }: Omit<Props, "patch">) {
-  // Only known names / addresses are joined — never "null" / "undefined" when there is no client or team.
-  const name = (id: string) => (id === data.me.id ? "me" : first(data.people.find((p) => p.id === id)?.name || "someone"));
-  const invitees = meetingInvitees(form, data);
-  const external = externalGuests(form).filter(Boolean);
-  const teams = data.teams.filter((t) => form.teamIds.includes(t.id) && !!t.name);
-  const led = teams.filter((t) => teamLeadersOf(data, [t.id]).length);
-  const leaderless = teams.filter((t) => !led.includes(t)).map((t) => t.name);
-  const client = form.clientId ? data.clients.find((c) => c.id === form.clientId) : undefined;
-  const noEmail = !!client?.name && !(client.emails ?? []).length;
-  return (
-    <div className="glass-card mt-3 px-3 py-2.5 text-[12.5px] leading-snug text-ink" aria-live="polite">
-      <div>
-        Inviting <b>{invitees.map(name).join(", ")}</b>
-        {led.length ? <span className="text-muted">{` · ${led.map((t) => t.name).join(", ")} (Team Leader${led.length === 1 ? "" : "s"})`}</span> : null}
-      </div>
-      {leaderless.length ? <div className="mt-1 text-amber-700 dark:text-amber-300">{`${leaderless.join(", ")}: no Team Leader yet — invite people in 👥 Guests`}</div> : null}
-      <div className={clsx("mt-1", !external.length && "text-muted")}>{external.length ? `Guests: ${external.join(", ")}` : "No outside guests · add emails in 👥 Guests"}</div>
-      {noEmail ? <div className="mt-1 text-amber-700 dark:text-amber-300">{`${client?.name ?? ""} has no email — add one in Clients`}</div> : null}
-      <div className="mt-1 text-muted">Google Calendar emails the invites{form.meeting?.withMeet === false ? "" : " with the Meet link"}.</div>
-    </div>
-  );
-}
-
-/** Body card: who gets the task (Admin: "Goes to Priya (TL, Social)", preference, specialists; TL: "Assigned to …"). */
-export function AddTaskSummary({ form, data }: Omit<Props, "patch">) {
-  if (form.type === "MEETING") return <MeetingSummary form={form} data={data} />;
-  const name = (id: string) => (id === data.me.id ? "me" : first(data.people.find((p) => p.id === id)?.name ?? "?"));
-  const muted = "text-muted";
-  let body: React.ReactNode = null;
-  if (data.role === "ADMIN") {
-    if (!form.teamIds.length) {
-      body = (
-        <>
-          <b>Pick a team below.</b>
-          <div className={muted}>The task goes to that team&apos;s Team Leader. Then tap executives to say who you&apos;d prefer; the Team Leader makes the final call.</div>
-        </>
-      );
-    } else {
-      const tls = teamLeadersOf(data, form.teamIds);
-      const teamName = (id: string | null) => data.teams.find((t) => t.id === id)?.name ?? "";
-      const work = form.type === "WORK" ? data.workTypes.find((w) => w.id === form.tagIds[0]) : undefined;
-      const specialists = work ? executivesOf(data, form.teamIds).filter((p) => isSpecialist(p, work.id)) : [];
-      body = (
-        <>
-          <div>
-            Goes to <b>{tls.map((u) => `${first(u.name)} (TL, ${teamName(u.teamId)})`).join(", ") || "— no Team Leader in this team yet"}</b>
-          </div>
-          {form.type === "WORK" ? (
-            <div className="mt-1">
-              {form.preferredAssigneeIds.length ? (
-                <>
-                  Your preference: <b>{form.preferredAssigneeIds.map(name).join(", ")}</b>
-                  <span className={muted}> · the Team Leader decides</span>
-                </>
-              ) : (
-                <span className={muted}>No executive preference · tap names in the PREFER row</span>
-              )}
-            </div>
-          ) : null}
-          {work ? <div className={clsx("mt-1", muted)}>{`✓ ${work.name} specialists: ${specialists.map((p) => first(p.name)).join(", ") || "none yet"}`}</div> : null}
-        </>
-      );
-    }
-  } else if (data.role === "TEAM_LEADER") {
-    body = form.assigneeIds.length ? (
-      <div>
-        Assigned to <b>{form.assigneeIds.map(name).join(", ")}</b>
-      </div>
-    ) : (
-      <div>
-        <b>Your whole team</b>
-        <span className={muted}> · tap names in the EXEC row to pick</span>
-      </div>
-    );
-  }
-  if (!body) return null;
-  return (
-    <div className="glass-card mt-3 px-3 py-2.5 text-[12.5px] leading-snug text-ink" aria-live="polite">
-      {body}
-    </div>
   );
 }

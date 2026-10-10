@@ -3,7 +3,7 @@
  * Run: npm run db:seed   (idempotent — re-running resets demo tasks)
  */
 import { PrismaClient } from "@prisma/client";
-import { addDays, addHours, subDays, subHours } from "date-fns";
+import { addDays, addHours, addMinutes, subDays, subHours } from "date-fns";
 import { readFileSync } from "fs";
 import path from "path";
 
@@ -170,14 +170,20 @@ async function main() {
     title: string; client: number; assignees: string[]; teams: string[]; minutes: number; start: Date; end: Date;
     status?: "ASSIGNED" | "STARTED" | "PAUSED" | "FINISH_REQUESTED" | "COMPLETED"; overdue?: boolean; doubt?: string; review?: string;
     important?: boolean; tags?: number[]; type?: "WORK" | "MEETING"; self?: boolean; createdBy?: string; prefs?: string[];
+    /** Minutes after the scheduled start it was actually started (ADR 0015 red actual pill). */
+    late?: number;
+    /** Pills under review (ADR 0015): one REVIEW request per field. */
+    reviewFields?: ("date" | "time" | "mins")[];
   };
   const specs: Spec[] = [
     { title: "[demo] Repo Instagram carousel", client: 0, assignees: [rishi.id], teams: [teams[0]!.id], minutes: 240, start: at(10), end: at(14), tags: [wt("Graphic design")] },
     { title: "[demo] Robam product shoot edit", client: 1, assignees: [rishi.id, arush.id], teams: [teams[0]!.id, teams[3]!.id], minutes: 330, start: at(10), end: at(16), status: "STARTED", tags: [wt("Graphic design")] },
+    // Started 25 minutes late → its actual-time pill is red (ADR 0015); the one above started on time → green.
+    { title: "[demo] Sunrise ad creatives", client: 3, assignees: [neha.id], teams: [social.id], minutes: 180, start: at(11), end: at(14), status: "STARTED", late: 25, tags: [wt("Content")] },
     { title: "[demo] Pharma bag packaging v3", client: 2, assignees: [rishi.id], teams: [teams[0]!.id], minutes: 180, start: at(15), end: at(18), doubt: "Client sent two conflicting logo files — which one?", tags: [wt("Logo")] },
     { title: "[demo] Sunrise landing page copy", client: 3, assignees: [neha.id, isha.id], teams: [social.id], minutes: 120, start: subHours(at(10), 24), end: subHours(at(12), 24), overdue: true, tags: [wt("Content")] },
     { title: "[demo] Repo monthly report", client: 0, assignees: [rishi.id], teams: [teams[1]!.id], minutes: 60, start: subDays(at(11), 2), end: subDays(at(12), 2), status: "COMPLETED", tags: [wt("Reporting")] },
-    { title: "[demo] Robam reel cut", client: 1, assignees: [arush.id], teams: [teams[3]!.id], minutes: 90, start: at(11, 1), end: at(12, 1), status: "PAUSED", review: "Need 2 more hours", tags: [wt("Graphic design")] },
+    { title: "[demo] Robam reel cut", client: 1, assignees: [arush.id], teams: [teams[3]!.id], minutes: 90, start: at(11, 1), end: at(12, 1), status: "PAUSED", review: "Need 2 more hours", reviewFields: ["date", "time", "mins"], tags: [wt("Graphic design")] },
     { title: "[demo] Weekly client sync", client: 0, assignees: [admin.id, rishi.id], teams: [], minutes: 30, start: addHours(now, 3), end: addHours(now, 3.5), type: "MEETING" },
     { title: "[demo] Admin planning block", client: 0, assignees: [admin.id], teams: [], minutes: 120, start: at(16, 1), end: at(18, 1), important: true, self: true },
     { title: "[demo] Dev portfolio refresh", client: 3, assignees: [dev.id], teams: [teams[0]!.id], tags: [wt("Graphic design")], minutes: 120, start: at(10, 2), end: at(12, 2), self: true, createdBy: dev.id },
@@ -203,7 +209,7 @@ async function main() {
         status,
         statusBeforePause: status === "PAUSED" ? "STARTED" : null,
         pausedAt: status === "PAUSED" ? subHours(now, 1) : null,
-        actualStart: started ? s.start : null,
+        actualStart: started ? addMinutes(s.start, s.late ?? 0) : null,
         actualEnd: status === "COMPLETED" ? s.end : null,
         approvedAt: status === "COMPLETED" ? s.end : null,
         approvedById: status === "COMPLETED" ? admin.id : null,
@@ -212,15 +218,19 @@ async function main() {
         doubtNote: s.doubt,
         reviewRequested: !!s.review,
         reviewNote: s.review,
-        important: !!s.important,
+        reviewFields: s.review ? (s.reviewFields ?? ["mins"]) : [],
+        important: false, // stars are gone from the UI (ADR 0015)
         selfAssigned: !!s.self,
         protected: !!s.self && s.assignees[0] === admin.id,
         finishRequestedAt: status === "FINISH_REQUESTED" ? subHours(now, 2) : null,
         finishRequestedById: status === "FINISH_REQUESTED" ? rishi.id : null,
-        driveFolderId: s.type === "MEETING" ? null : `folder_demo_${s.title.length}`,
-        driveFolderUrl: s.type === "MEETING" ? null : "https://drive.google.com/drive/folders/demo",
+        // Every task has a Drive folder (+ "Meeting notes") and a Meet link until it is deleted (ADR 0015).
+        driveFolderId: `folder_demo_${s.title.length}`,
+        driveFolderUrl: "https://drive.google.com/drive/folders/demo",
+        meetNotesFolderId: `folder_demo_notes_${s.title.length}`,
         meetLink: "https://meet.google.com/abc-defg-hij",
-        meetActive: status !== "COMPLETED",
+        meetSpaceName: "spaces/demo",
+        meetActive: true,
         chatSpaceUrl: s.type === "MEETING" ? null : "https://chat.google.com/room/demo",
         preferredAssigneeIds: s.prefs ?? [],
         assignees: { create: s.assignees.map((userId) => ({ userId })) },
@@ -230,8 +240,16 @@ async function main() {
     });
     if (started) await prisma.taskSession.create({ data: { taskId: t.id, startedAt: s.start, endedAt: status === "STARTED" ? null : s.end } });
     if (s.doubt) await prisma.request.create({ data: { type: "DOUBT", taskId: t.id, raisedById: rishi.id, targetRole: "ADMIN", note: s.doubt } });
-    if (s.review) await prisma.request.create({ data: { type: "TIME_CHANGE", taskId: t.id, raisedById: arush.id, targetRole: "ADMIN", note: s.review } });
+    for (const field of s.review ? (s.reviewFields ?? ["mins"]) : []) {
+      const note = { date: "Can this move to Monday?", time: "Start after lunch?", mins: s.review! }[field];
+      await prisma.request.create({ data: { type: "REVIEW", field, taskId: t.id, raisedById: arush.id, targetRole: "ADMIN", note } });
+    }
     if (status === "FINISH_REQUESTED") await prisma.request.create({ data: { type: "FINISH", taskId: t.id, raisedById: rishi.id, targetRole: "ADMIN", note: "" } });
+    if (status === "COMPLETED") {
+      await prisma.taskMeetingNote.create({
+        data: { taskId: t.id, kind: "SMART_NOTES", conferenceRecord: "conferenceRecords/demo", docId: `doc_demo_${s.title.length}`, docUrl: "https://docs.google.com/document/d/demo/edit", filedAs: "MOVED" },
+      });
+    }
   }
 
   // Attendance for the last 5 days + a pending leave

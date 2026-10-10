@@ -6,7 +6,6 @@ import {
   fmtStartPill,
   guestCount,
   isShortcutDay,
-  meetingLine,
   meetingShortcut,
   pickClient,
   pickStartTime,
@@ -95,7 +94,7 @@ describe("meeting guests", () => {
     expect(validateForm(meeting(), data)).toEqual({ assigneeIds: "Invite someone: pick a team, people or add a guest email" });
     expect(validateForm(meeting({ clientGuests: ["billing@repo.example"] }), data)).toEqual({});
     expect(validateForm(meeting({ teamIds: ["social"] }), data)).toEqual({});
-    expect(validateForm(meeting({ clientId: "", assigneeIds: ["sana"] }), data)).toEqual({ clientId: "Pick a client in the green area" });
+    expect(validateForm(meeting({ clientId: "", assigneeIds: ["sana"] }), data)).toEqual({ clientId: "Pick a client in the rows below" });
   });
   it("voice notes are never uploaded for meetings", () => {
     expect(voiceNotesFor("MEETING", [1, 2])).toEqual([]);
@@ -119,17 +118,5 @@ describe("meeting payload and summary line", () => {
     const p = toTaskInput({ ...emptyForm("WORK", "admin"), title: "t", clientId: "c", tagIds: ["w"], guestEmails: ["a@b.co"] }, TZ);
     expect(p.guestEmails).toEqual([]);
     expect(p.meetingOptions).toBeNull();
-  });
-  it("meetingLine: day, start–end, duration, guests (and the zone when not the company's)", () => {
-    const f = meeting({ scheduledStart: "2026-10-12T16:00", clientGuests: ["billing@repo.example"], teamIds: ["social"] });
-    expect(meetingLine(f, data, null, NOW, TZ)).toBe("📅 Today 4:00pm–4:30pm · 30m · 2 guests");
-    expect(meetingLine({ ...f, scheduledStart: "" }, data, new Date("2026-10-13T04:30:00Z"), NOW, TZ)).toBe("📅 Next free slot: Tom 10:00am–10:30am · 30m · 2 guests");
-    expect(meetingLine({ ...f, scheduledStart: "2026-10-13T16:00", meeting: { ...f.meeting, allDay: true } }, data, null, NOW, TZ)).toBe("📅 Tom · all day · 2 guests");
-    expect(meetingLine({ ...f, meeting: { ...f.meeting, timeZone: "Europe/London" } }, data, null, NOW, TZ)).toBe("📅 Today 4:00pm–4:30pm · 30m · 2 guests · Europe/London");
-    // no client, no team: nothing like "null" / "undefined" sneaks in
-    const bare = meetingLine(meeting({ clientId: "", scheduledStart: "2026-10-12T16:00" }), data, null, NOW, TZ);
-    expect(bare).toBe("📅 Today 4:00pm–4:30pm · 30m · 0 guests");
-    expect(bare).not.toMatch(/null|undefined|NaN/);
-    expect(meetingLine(meeting({ assigneeIds: ["sana"] }), data, null, NOW, TZ)).toBe("📅 Next free slot: finding… · 30m · 1 guest");
   });
 });

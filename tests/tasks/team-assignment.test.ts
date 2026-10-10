@@ -39,11 +39,11 @@ describe("Admin add-task: team first, the Team Leader decides (ADR 0008)", () =>
     const s = await seed();
     session.set(s.admin);
     const noTeam = await create({ clientId: s.client.id, tagIds: [s.work.id] });
-    expect(noTeam).toEqual({ ok: false, error: "Pick a team in the green area" });
+    expect(noTeam).toEqual({ ok: false, error: "Pick a team in the rows below" });
     const noWork = await create({ clientId: s.client.id, teamIds: [s.team.id] });
-    expect(noWork).toEqual({ ok: false, error: "Pick a work type in the green area" });
+    expect(noWork).toEqual({ ok: false, error: "Pick a work type in the rows below" });
     const wrongWork = await create({ clientId: s.client.id, teamIds: [s.team.id], tagIds: [s.otherWork.id] });
-    expect(wrongWork).toEqual({ ok: false, error: "Pick a work type in the green area" });
+    expect(wrongWork).toEqual({ ok: false, error: "Pick a work type in the rows below" });
     const meeting = await create({ type: "MEETING", clientId: s.client.id, teamIds: [s.team.id] });
     expect(meeting.ok).toBe(true);
     expect(await testDb.task.count({ where: { type: "WORK" } })).toBe(0);

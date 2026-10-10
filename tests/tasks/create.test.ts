@@ -55,12 +55,12 @@ describe("createTask", () => {
     expect(log?.actorId).toBe(admin.id);
   });
 
-  it("MEETING type only queues the calendar event", async () => {
+  it("MEETING type queues a Drive folder (for Gemini notes, ADR 0015) and the calendar event — no Chat space", async () => {
     const { admin, tl, client } = await seedBasics();
     session.set(admin);
     const id = await createTaskAs(client.id, [tl.id], { type: "MEETING", title: "Kickoff", allocatedMinutes: 30 });
     const jobs = await testDb.integrationJob.findMany({ where: { taskId: id } });
-    expect(jobs.map((j) => j.kind)).toEqual(["CALENDAR_EVENT"]);
+    expect(jobs.map((j) => j.kind).filter((k) => k !== "MEET_CONFIG").sort()).toEqual(["CALENDAR_EVENT", "DRIVE_FOLDER"]);
     expect((await loadTask(id)).type).toBe("MEETING");
   });
 

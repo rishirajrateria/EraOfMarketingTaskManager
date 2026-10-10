@@ -8,7 +8,10 @@ import { bus } from "@/lib/events";
 import { safeRevalidate } from "@/lib/revalidate";
 import { canView } from "@/server/tasks/queries";
 import { nextStatus } from "@/server/tasks/state";
-import { deactivateMeet, queueTaskCreation, queueTaskPropagation } from "@/google/task-integrations";
+import { queueTaskCreation, queueTaskPropagation } from "@/google/task-integrations";
+import { circleTapAction } from "@/server/tasks/circle";
+import { pauseOps, resumeOps } from "@/server/tasks/pause-core";
+import { fieldForKind, reviewFieldsOf, withField } from "@/server/tasks/review-fields";
 import { proposeSlot } from "@/server/scheduling/slot";
 import { getSettings } from "@/lib/settings";
 import { z } from "zod";
@@ -53,12 +56,8 @@ export async function pauseTask(taskId: string): Promise<ActionResult<undefined>
     const user = await requireUser();
     if (!can.pauseResume(user)) throw new ForbiddenError();
     const t = await loadTask(user, taskId);
-    const status = nextStatus(t.status, "PAUSE");
-    const now = new Date();
-    await prisma.$transaction([
-      prisma.taskSession.updateMany({ where: { taskId: t.id, endedAt: null }, data: { endedAt: now } }),
-      prisma.task.update({ where: { id: t.id }, data: { status, statusBeforePause: t.status, pausedAt: now } }),
-    ]);
+    const { status, ops } = pauseOps(t, new Date());
+    await prisma.$transaction(ops);
     await audit(user.id, "task.pause", "Task", t.id, { status: t.status }, { status });
     await notify({ userIds: (await taskStakeholderIds(t.id, { includeAdmins: false })), kind: "TASK_PAUSED", title: `Paused: ${t.title}`, href: `/dashboard?task=${t.id}`, taskId: t.id });
     done(t.id);
@@ -71,23 +70,8 @@ export async function resumeTask(taskId: string): Promise<ActionResult<undefined
     const user = await requireUser();
     if (!can.pauseResume(user)) throw new ForbiddenError();
     const t = await loadTask(user, taskId);
-    const status = nextStatus(t.status, "RESUME", t.statusBeforePause);
-    const now = new Date();
-    const pausedMin = t.pausedAt ? Math.round((now.getTime() - t.pausedAt.getTime()) / 60000) : 0;
-    const wasRunning = t.statusBeforePause === "STARTED" || t.statusBeforePause === "FINISH_REQUESTED";
-    await prisma.$transaction([
-      prisma.task.update({
-        where: { id: t.id },
-        data: {
-          status,
-          statusBeforePause: null,
-          pausedAt: null,
-          pausedTotalMinutes: { increment: pausedMin },
-          scheduledEnd: t.scheduledEnd ? new Date(t.scheduledEnd.getTime() + pausedMin * 60000) : null,
-        },
-      }),
-      ...(wasRunning ? [prisma.taskSession.create({ data: { taskId: t.id, startedAt: now } })] : []),
-    ]);
+    const { status, pausedMin, ops } = resumeOps(t, new Date());
+    await prisma.$transaction(ops);
     await audit(user.id, "task.resume", "Task", t.id, { status: t.status }, { status, pausedMin });
     await queueTaskPropagation(t.id);
     await notify({ userIds: (await taskStakeholderIds(t.id, { includeAdmins: false })), kind: "TASK_RESUMED", title: `Resumed: ${t.title}`, href: `/dashboard?task=${t.id}`, taskId: t.id });
@@ -96,47 +80,71 @@ export async function resumeTask(taskId: string): Promise<ActionResult<undefined
   });
 }
 
-/** Team Leader taps the circle → FINISH_REQUESTED + Request row for Admin (SPEC §7). Admin may approve directly. */
+/** Team Leader / Executive: done from my side → FINISH_REQUESTED + Request row for Admin (SPEC §7, ADR 0015). */
+async function doRequestFinish(user: SessionUser, taskId: string) {
+  if (!can.requestFinish(user)) throw new ForbiddenError();
+  const t = await loadTask(user, taskId);
+  if (user.role === "EXECUTIVE" && !t.assignees.some((a) => a.userId === user.id)) throw new ForbiddenError("Only the assigned people can mark this done");
+  const status = nextStatus(t.status, "REQUEST_FINISH");
+  const now = new Date();
+  await prisma.$transaction([
+    prisma.task.update({ where: { id: t.id }, data: { status, finishRequestedAt: now, finishRequestedById: user.id, overdue: false } }),
+    prisma.request.create({ data: { type: "FINISH", taskId: t.id, raisedById: user.id, targetRole: "ADMIN", note: "" } }),
+  ]);
+  await audit(user.id, "task.request_finish", "Task", t.id, { status: t.status }, { status });
+  await notify({ userIds: await adminIds(), kind: "FINISH_REQUESTED", title: `Finish requested: ${t.title}`, body: `by ${user.name ?? ""}`, href: `/requests`, taskId: t.id });
+  bus.publish({ type: "requests.changed" });
+  done(t.id);
+}
+
 export async function requestFinish(taskId: string): Promise<ActionResult<undefined>> {
   return wrap(async () => {
-    const user = await requireUser();
-    if (!can.requestFinish(user)) throw new ForbiddenError();
-    const t = await loadTask(user, taskId);
-    const status = nextStatus(t.status, "REQUEST_FINISH");
-    await prisma.$transaction([
-      prisma.task.update({ where: { id: t.id }, data: { status, finishRequestedAt: new Date(), finishRequestedById: user.id } }),
-      prisma.request.create({ data: { type: "FINISH", taskId: t.id, raisedById: user.id, targetRole: "ADMIN", note: "" } }),
-    ]);
-    await audit(user.id, "task.request_finish", "Task", t.id, { status: t.status }, { status });
-    await notify({ userIds: await adminIds(), kind: "FINISH_REQUESTED", title: `Finish requested: ${t.title}`, body: `by ${user.name ?? ""}`, href: `/requests`, taskId: t.id });
-    bus.publish({ type: "requests.changed" });
-    done(t.id);
+    await doRequestFinish(await requireUser(), taskId);
     return undefined;
   });
 }
 
+/** Admin: approve (or complete directly — from ASSIGNED / STARTED too). Meet, Drive and Chat stay until delete (ADR 0015). */
+async function doApproveFinish(user: SessionUser, taskId: string) {
+  if (!can.approveFinish(user)) throw new ForbiddenError();
+  const t = await loadTask(user, taskId);
+  const status = nextStatus(t.status, "APPROVE_FINISH");
+  const now = new Date();
+  await prisma.$transaction([
+    prisma.taskSession.updateMany({ where: { taskId: t.id, endedAt: null }, data: { endedAt: now } }),
+    prisma.task.update({ where: { id: t.id }, data: { status, actualEnd: now, approvedAt: now, approvedById: user.id, overdue: false, doubtRaised: false } }),
+    prisma.request.updateMany({ where: { taskId: t.id, type: "FINISH", status: "OPEN" }, data: { status: "APPROVED", resolvedById: user.id, resolvedAt: now } }),
+  ]);
+  await audit(user.id, "task.approve_finish", "Task", t.id, { status: t.status }, { status });
+  await notify({ userIds: (await taskStakeholderIds(t.id, { includeAdmins: false })), kind: "FINISH_APPROVED", title: `Completed: ${t.title}`, href: `/dashboard?task=${t.id}&completed=1`, taskId: t.id });
+  if (t.recurrenceRule && t.recurrenceRule.trigger === "ON_COMPLETE" && !t.recurrenceRule.stopped) {
+    const { spawnNextOccurrence } = await import("@/server/tasks/recurring");
+    await spawnNextOccurrence(t.id, user.id);
+  }
+  bus.publish({ type: "requests.changed" });
+  done(t.id);
+}
+
 export async function approveFinish(taskId: string): Promise<ActionResult<undefined>> {
   return wrap(async () => {
-    const user = await requireUser();
-    if (!can.approveFinish(user)) throw new ForbiddenError();
-    const t = await loadTask(user, taskId);
-    const status = nextStatus(t.status, "APPROVE_FINISH");
-    const now = new Date();
-    await prisma.$transaction([
-      prisma.taskSession.updateMany({ where: { taskId: t.id, endedAt: null }, data: { endedAt: now } }),
-      prisma.task.update({ where: { id: t.id }, data: { status, actualEnd: now, approvedAt: now, approvedById: user.id, overdue: false, doubtRaised: false } }),
-      prisma.request.updateMany({ where: { taskId: t.id, type: "FINISH", status: "OPEN" }, data: { status: "APPROVED", resolvedById: user.id, resolvedAt: now } }),
-    ]);
-    await audit(user.id, "task.approve_finish", "Task", t.id, { status: t.status }, { status });
-    await deactivateMeet(t.id).catch(() => undefined);
-    await notify({ userIds: (await taskStakeholderIds(t.id, { includeAdmins: false })), kind: "FINISH_APPROVED", title: `Completed: ${t.title}`, href: `/dashboard?task=${t.id}&completed=1`, taskId: t.id });
-    if (t.recurrenceRule && t.recurrenceRule.trigger === "ON_COMPLETE" && !t.recurrenceRule.stopped) {
-      const { spawnNextOccurrence } = await import("@/server/tasks/recurring");
-      await spawnNextOccurrence(t.id, user.id);
-    }
-    bus.publish({ type: "requests.changed" });
-    done(t.id);
+    await doApproveFinish(await requireUser(), taskId);
     return undefined;
+  });
+}
+
+/**
+ * The card's completion circle (ADR 0015, like Google Tasks): Admin completes the task, a Team Leader / Executive
+ * marks their side done (finish request). The dashboard sends this only after the Undo window has passed.
+ */
+export async function completeFromMySide(taskId: string): Promise<ActionResult<{ kind: "complete" | "request_finish" }>> {
+  return wrap(async () => {
+    const user = await requireUser();
+    const t = await loadTask(user, taskId);
+    const action = circleTapAction(user.role, { status: t.status, assigneeIds: t.assignees.map((a) => a.userId) }, user.id);
+    if (action.kind === "none") throw new Error(action.message);
+    if (action.kind === "complete") await doApproveFinish(user, taskId);
+    else await doRequestFinish(user, taskId);
+    return { kind: action.kind };
   });
 }
 
@@ -208,9 +216,10 @@ export async function raiseReviewRequest(taskId: string, rawKind: "REVIEW" | "TI
     if (!can.raiseReview(user)) throw new ForbiddenError();
     const t = await loadTask(user, taskId);
     if (user.role === "EXECUTIVE" && !t.assignees.some((a) => a.userId === user.id)) throw new ForbiddenError("Own tasks only");
+    const field = fieldForKind(kind); // the pill it concerns (ADR 0015)
     await prisma.$transaction([
-      prisma.task.update({ where: { id: t.id }, data: { reviewRequested: true, reviewNote: note } }),
-      prisma.request.create({ data: { type: kind, taskId: t.id, raisedById: user.id, targetRole: "ADMIN", note } }),
+      prisma.task.update({ where: { id: t.id }, data: { reviewRequested: true, reviewNote: note, reviewFields: withField(reviewFieldsOf(t), field, true) } }),
+      prisma.request.create({ data: { type: kind, field, taskId: t.id, raisedById: user.id, targetRole: "ADMIN", note } }),
     ]);
     await audit(user.id, "task.raise_review", "Task", t.id, null, { kind, note });
     await notify({ userIds: await adminIds(), kind: "REVIEW_REQUESTED", title: `${kind === "REVIEW" ? "Review" : "Time change"} requested: ${t.title}`, body: note, href: `/requests`, taskId: t.id });

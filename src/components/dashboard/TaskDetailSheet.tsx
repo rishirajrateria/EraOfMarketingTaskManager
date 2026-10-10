@@ -2,14 +2,14 @@
 import { useRef, useState } from "react";
 import { AlertTriangle, CalendarDays, FolderOpen, MessageSquare, Mic, Paperclip, Trash2, Upload, Video } from "lucide-react";
 import { clsx } from "@/lib/clsx";
-import { dateChip, fmtDate, fmtDateTime, fmtMinutes, fmtTime } from "@/lib/time";
+import { fmtDate, fmtDateTime, fmtMinutes, fmtTime } from "@/lib/time";
 import type { DashboardData, TaskRow } from "@/server/tasks/types";
 import { Sheet } from "@/components/ui/Sheet";
-import { Avatar } from "@/components/ui/Avatar";
 import { btnPrimary, btnSecondary } from "@/components/ui/Field";
 import { deleteAttachment, retryIntegrations, uploadAttachment } from "@/server/tasks/manage";
 import { useTaskAction } from "@/components/dashboard/useTaskAction";
-import { ATTACHMENTS_ANCHOR, fmtSeconds, sanitizeHtml, statusLabel, waveformHeights } from "@/components/dashboard/format";
+import { ATTACHMENTS_ANCHOR, datePill, fmtSeconds, sanitizeHtml, statusLabel, waveformHeights } from "@/components/dashboard/format";
+import { MeetingNotesCard, TaskPeopleCard } from "@/components/dashboard/TaskPeopleCard";
 
 function LinkBtn({ href, label, icon, disabled }: { href: string | null; label: string; icon: React.ReactNode; disabled?: boolean }) {
   const off = disabled || !href;
@@ -103,10 +103,8 @@ export function TaskDetailSheet({
         <div className={clsx("rounded-xl px-3 py-2", `row-${t.colour}`)}>
           <p className={clsx("text-base font-bold", t.colour === "grey" && "line-through")}>{t.title}</p>
           <p className="text-xs text-gray-600">
-            {statusLabel(t)} · {t.client.name} · {t.type === "MEETING" ? "Meeting" : fmtMinutes(t.allocatedMinutes)} · {dateChip(start, new Date(), tz)}
-            {t.important ? " · ★ important" : ""}
+            {statusLabel(t)} · {t.client.name} · {t.type === "MEETING" ? "Meeting" : fmtMinutes(t.allocatedMinutes)} · {datePill(start, tz)}
             {t.recurring ? ` · ↻ ${t.repeatText ?? "recurring"}` : ""}
-            {t.protected ? " · protected" : ""}
           </p>
         </div>
 
@@ -122,37 +120,26 @@ export function TaskDetailSheet({
           </div>
         ) : null}
 
-        {t.type === "MEETING" && t.meetLink && t.meetActive && t.status !== "COMPLETED" ? (
+        {t.type === "MEETING" && t.meetLink && t.meetActive ? (
           <a href={t.meetLink} target="_blank" rel="noopener noreferrer" className={clsx(btnPrimary, "w-full")}>
             <Video size={18} aria-hidden /> Join Google Meet
           </a>
         ) : null}
 
         <div className="grid grid-cols-4 gap-2">
-          <LinkBtn href={t.driveFolderUrl} label="Drive" icon={<FolderOpen size={18} />} disabled={t.type === "MEETING"} />
-          <LinkBtn href={t.meetLink} label="Meet" icon={<Video size={18} />} disabled={!t.meetActive || t.status === "COMPLETED"} />
+          <LinkBtn href={t.driveFolderUrl} label="Drive" icon={<FolderOpen size={18} />} />
+          <LinkBtn href={t.meetLink} label="Meet" icon={<Video size={18} />} disabled={!t.meetActive} />
           <LinkBtn href={t.chatSpaceUrl} label="Chat" icon={<MessageSquare size={18} />} />
           <LinkBtn href={calendarUrl} label="Calendar" icon={<CalendarDays size={18} />} />
         </div>
+
+        <TaskPeopleCard t={t} data={data} />
 
         <section>
           <Row k="Scheduled" v={start ? `${fmtDateTime(start, tz)} – ${fmtTime(end, tz)}` : "Unscheduled"} />
           <Row k="Actual" v={t.actualStart ? `${fmtDateTime(new Date(t.actualStart), tz)} – ${t.actualEnd ? fmtTime(new Date(t.actualEnd), tz) : "running"}` : "Not started"} />
           {t.finishRequestedAt ? <Row k="Finish requested" v={fmtDateTime(new Date(t.finishRequestedAt), tz)} /> : null}
           <Row k="Priority" v={t.priority.toLowerCase()} />
-          <Row
-            k={t.type === "MEETING" ? "People" : "Assignees"}
-            v={
-              <span className="flex flex-wrap justify-end gap-1">
-                {t.assignees.map((a) => (
-                  <span key={a.id} className="glass-chip inline-flex items-center gap-1 rounded-full py-0.5 pl-0.5 pr-2 text-xs">
-                    <Avatar name={a.name} src={a.avatar} size={18} />
-                    {a.name}
-                  </span>
-                ))}
-              </span>
-            }
-          />
           {t.type === "MEETING" ? (
             <>
               <Row
@@ -177,7 +164,6 @@ export function TaskDetailSheet({
               {t.meetingOptions && !t.meetingOptions.withMeet ? <Row k="Google Meet" v="off" /> : null}
             </>
           ) : null}
-          {t.teams.length ? <Row k="Teams" v={t.teams.map((x) => x.name).join(", ")} /> : null}
           {t.tags.length ? (
             <Row
               k="Tags"
@@ -219,6 +205,8 @@ export function TaskDetailSheet({
             <div className="prose prose-sm max-w-none break-words text-sm text-gray-800 [&_a]:text-brand-blue [&_a]:underline" dangerouslySetInnerHTML={{ __html: sanitizeHtml(t.description) }} />
           </section>
         ) : null}
+
+        <MeetingNotesCard t={t} />
 
         <section id={ATTACHMENTS_ANCHOR}>
           <div className="mb-1 flex items-center justify-between">

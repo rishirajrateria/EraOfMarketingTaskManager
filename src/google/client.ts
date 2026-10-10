@@ -17,6 +17,23 @@ export const SA_SCOPES = [
   "https://www.googleapis.com/auth/spreadsheets",
 ];
 
+/**
+ * Google Meet REST API v2 scopes (ADR 0015). Domain-wide delegation must ALSO grant these. They are requested with a
+ * separate token (`getMeetJwt`) so a delegation that doesn't include them yet only breaks the Meet extras (open access,
+ * Gemini notes, filing notes, locking on delete), never Drive / Calendar / Chat.
+ * - meetings.space.created: spaces the app creates + endActiveConference
+ * - meetings.space.settings: patch the config of the organiser's spaces (Calendar-created Meet links)
+ * - meetings.space.readonly: conference records, smart notes and transcripts of the organiser's meetings
+ */
+export const MEET_SCOPES = [
+  "https://www.googleapis.com/auth/meetings.space.created",
+  "https://www.googleapis.com/auth/meetings.space.settings",
+  "https://www.googleapis.com/auth/meetings.space.readonly",
+];
+
+/** Everything the service account's domain-wide delegation must list (Admin console → Security → API controls). */
+export const DWD_SCOPES = [...SA_SCOPES, ...MEET_SCOPES];
+
 export const isMock = () => env.googleMock;
 
 let jwt: JWT | null = null;
@@ -35,6 +52,17 @@ export function getJwt(): JWT {
     subject: env.impersonateUser || undefined,
   });
   return jwt;
+}
+
+let meetJwt: JWT | null = null;
+
+/** Meet API token for the impersonated organiser (the company user whose calendar owns the task events). */
+export function getMeetJwt(): JWT {
+  if (meetJwt) return meetJwt;
+  if (!env.serviceAccountKeyB64) throw new Error("GOOGLE_SERVICE_ACCOUNT_KEY_BASE64 not configured");
+  const key = JSON.parse(Buffer.from(env.serviceAccountKeyB64, "base64").toString("utf8")) as { client_email: string; private_key: string };
+  meetJwt = new google.auth.JWT({ email: key.client_email, key: key.private_key, scopes: MEET_SCOPES, subject: env.impersonateUser || undefined });
+  return meetJwt;
 }
 
 /** JWT impersonating a specific Workspace user (domain-wide delegation) — used for per-user Calendar reads. */

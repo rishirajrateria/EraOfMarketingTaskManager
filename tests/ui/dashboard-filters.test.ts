@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { applyFilters, dayKeys, normaliseFilters, toggleIn, type FilterCtx } from "@/components/dashboard/filters";
-import { assigneeChip, datePillLabel, fmtClock, fmtShortDate, pillHours, pillText, sanitizeHtml, teamCode, waveformHeights } from "@/components/dashboard/format";
-import { DEFAULT_FILTERS, type DashboardFilters, type TaskRow } from "@/server/tasks/types";
+import { datePill, fmtClock, fmtShortDate, pillHours, sanitizeHtml, taskPeople, teamChipLabel, teamCode, waveformHeights } from "@/components/dashboard/format";
+import { dockFilters, dayLabel, hoursText, summaryCaption, summaryGroups } from "@/components/dashboard/summary";
+import { DEFAULT_FILTERS, type DashboardData, type DashboardFilters, type TaskRow } from "@/server/tasks/types";
 
 const TZ = "Asia/Kolkata";
 // 2026-09-10 11:30 IST
@@ -25,6 +26,7 @@ function task(p: Partial<TaskRow> = {}): TaskRow {
     doubtNote: null,
     reviewRequested: false,
     reviewNote: null,
+    reviewFields: [],
     paused: false,
     recurring: false,
     selfAssigned: false,
@@ -43,6 +45,8 @@ function task(p: Partial<TaskRow> = {}): TaskRow {
     driveFolderUrl: null,
     meetLink: null,
     meetActive: false,
+    meetingNotesUrl: null,
+    meetingNotes: [],
     guestEmails: [],
     meetingOptions: null,
     chatSpaceUrl: null,
@@ -64,7 +68,7 @@ const ids = (rows: TaskRow[]) => rows.map((t) => t.id);
 
 describe("dayKeys", () => {
   it("computes today / tomorrow in the company timezone", () => {
-    expect(dayKeys(NOW, TZ)).toEqual({ today: "2026-09-10", tomorrow: "2026-09-11" });
+    expect(dayKeys(NOW, TZ)).toEqual({ today: "2026-09-10", tomorrow: "2026-09-11", day2: "2026-09-12" });
     // 20:30 UTC is already the next day in IST
     expect(dayKeys(new Date("2026-09-10T20:30:00Z"), TZ).today).toBe("2026-09-11");
   });
@@ -218,29 +222,40 @@ describe("helpers", () => {
     expect(normaliseFilters(null)).toEqual(DEFAULT_FILTERS);
     expect(normaliseFilters("nope")).toEqual(DEFAULT_FILTERS);
     const n = normaliseFilters({ colours: ["green", "pink"], icons: ["important", 3], row1: "", row2: "c1", pill: "team:x", date: "2026-13-99x", quick: "asc", completed: "yes", pausedOnly: true });
-    expect(n).toEqual({ ...DEFAULT_FILTERS, colours: ["green"], icons: ["important"], row2: "c1", pill: "team:x", quick: "asc", pausedOnly: true });
+    // "important" (no stars any more) and pausedOnly (now the yellow swatch) are dropped from saved prefs (ADR 0015)
+    expect(n).toEqual({ ...DEFAULT_FILTERS, colours: ["green"], icons: [], row2: "c1", pill: "team:x", quick: "asc", pausedOnly: false });
+    expect(normaliseFilters({ icons: ["paused", "doubt", "review"] }).icons).toEqual(["doubt", "review"]);
     expect(normaliseFilters({ date: "2026-09-10", quick: "sideways" })).toMatchObject({ date: "2026-09-10", quick: null });
   });
 
-  it("assigneeChip: Me / team code / we / first name", () => {
-    expect(assigneeChip({ assignees: [{ id: ME, name: "Rishi R", avatar: null }], teams: [] }, ME)).toBe("Me");
-    expect(assigneeChip({ assignees: [{ id: "u1", name: "Arush K", avatar: null }], teams: [{ id: "t", name: "Graphic", colour: "" }] }, ME)).toBe("GR");
-    expect(assigneeChip({ assignees: [{ id: "u1", name: "A", avatar: null }, { id: "u2", name: "B", avatar: null }], teams: [] }, ME)).toBe("we");
-    expect(assigneeChip({ assignees: [{ id: "u1", name: "A", avatar: null }], teams: [{ id: "t1", name: "Graphic", colour: "" }, { id: "t2", name: "Video", colour: "" }] }, ME)).toBe("we");
-    expect(assigneeChip({ assignees: [{ id: "u1", name: "Arush Kumar", avatar: null }], teams: [] }, ME)).toBe("Arush");
+  it("team chip, date pill and the people of the (i) sheet (ADR 0015)", () => {
+    expect(teamChipLabel([])).toBeNull();
+    expect(teamChipLabel([{ id: "t", name: "Social", colour: "" }])).toBe("Social");
+    expect(teamChipLabel([{ id: "t", name: "Social", colour: "" }, { id: "u", name: "SEO", colour: "" }])).toBe("Social +1");
     expect(teamCode("web site")).toBe("WE");
+    // always the start DATE — never Today / Tom / Yest
+    expect(datePill("2026-10-08T05:30:00Z", "Asia/Kolkata")).toBe("08 Oct");
+    expect(datePill(new Date(), "Asia/Kolkata")).toMatch(/^\d{2} [A-Z][a-z]{2}$/);
+    expect(datePill(null, "Asia/Kolkata")).toBe("Unsched");
+    const people = [
+      { id: "tl", name: "Karan Mehta", role: "TEAM_LEADER", teamId: "t" },
+      { id: "e1", name: "Sana Shah", role: "EXECUTIVE", teamId: "t" },
+      { id: "e2", name: "Arjun Rao", role: "EXECUTIVE", teamId: "t" },
+      { id: "tl2", name: "Other Lead", role: "TEAM_LEADER", teamId: "x" },
+    ];
+    expect(
+      taskPeople({ teams: [{ id: "t", name: "Social", colour: "" }], assignees: [{ id: "e1", name: "Sana Shah", avatar: null }], preferredAssigneeIds: ["e2", "gone"] }, people),
+    ).toEqual({ teams: ["Social"], leaders: ["Karan Mehta"], assigned: ["Sana Shah"], preferred: ["Arjun Rao"] });
   });
 
-  it("cyan pill text: hours with one decimal max, no unit", () => {
+  it("summary hours: one decimal max", () => {
     expect(pillHours(300)).toBe("5");
     expect(pillHours(330)).toBe("5.5");
     expect(pillHours(990)).toBe("16.5");
     expect(pillHours(0)).toBe("0");
-    expect(pillText("Repo", 330)).toBe("Repo- 5.5");
-    expect(pillText("Graphic", 300)).toBe("Graph- 5");
-    expect(pillText("Website", 240)).toBe("Websi- 4");
-    expect(datePillLabel("date:b4leave", "B4Leave")).toBe("B4LEav");
-    expect(datePillLabel("client:x", "Repo")).toBe("Repo");
+    expect(hoursText(708)).toBe("11.8h");
+    expect(hoursText(30)).toBe("30m");
+    expect(hoursText(0)).toBe("0h");
   });
 
   it("fmtClock / fmtShortDate use 24h and d/M/yy in the company timezone", () => {
@@ -265,5 +280,87 @@ describe("helpers", () => {
     expect(a).not.toEqual(waveformHeights("att-2"));
     expect(a).toHaveLength(24);
     expect(a.every((h) => h >= 4 && h <= 22)).toBe(true);
+  });
+});
+
+describe("top summary — OPEN HOURS (ADR 0015)", () => {
+  const teams = [
+    { id: "team1", name: "Graphic", colour: "" },
+    { id: "team2", name: "Social", colour: "" },
+    { id: "team3", name: "SEO", colour: "" },
+  ];
+  const clients = [
+    { id: "c1", name: "Repo" },
+    { id: "c2", name: "Zenith Foods" },
+  ];
+  const people = [
+    { id: "tl1", name: "Rishi Kumar", role: "TEAM_LEADER", teamId: "team1", teamLeaderId: null, specialityIds: [] },
+    { id: "u1", name: "Arush Kumar", role: "EXECUTIVE", teamId: "team1", teamLeaderId: "tl1", specialityIds: [] },
+    { id: "u2", name: "Dev Shah", role: "EXECUTIVE", teamId: "team1", teamLeaderId: "tl1", specialityIds: [] },
+    { id: "u3", name: "Isha Rao", role: "EXECUTIVE", teamId: "team2", teamLeaderId: null, specialityIds: [] },
+  ];
+  const tasks = [
+    task({ allocatedMinutes: 240, teams: [teams[0]!], client: clients[0]!, assignees: [{ id: "u1", name: "Arush Kumar", avatar: null }] }), // today
+    task({ allocatedMinutes: 120, teams: [teams[0]!], client: clients[1]!, assignees: [{ id: "tl1", name: "Rishi Kumar", avatar: null }], scheduledStart: "2026-09-11T05:00:00Z" }), // tomorrow
+    task({ allocatedMinutes: 60, teams: [teams[1]!], client: clients[1]!, assignees: [{ id: "u3", name: "Isha Rao", avatar: null }], scheduledStart: "2026-09-12T05:00:00Z" }), // day+2
+    task({ allocatedMinutes: 600, teams: [teams[1]!], client: clients[0]!, status: "COMPLETED", colour: "grey" }), // completed: never counted
+    task({ allocatedMinutes: 30, type: "MEETING", teams: [teams[1]!], client: clients[0]! }), // meetings: not work hours
+  ];
+  const data = (role: DashboardData["role"], extra: Partial<DashboardData> = {}) =>
+    ({
+      role,
+      tasks,
+      teams,
+      clients,
+      people,
+      row1: role === "ADMIN" ? teams.map((t) => ({ id: t.id, label: t.name })) : role === "TEAM_LEADER" ? [{ id: "u1", label: "Arush" }, { id: "u2", label: "Dev" }] : clients.map((c) => ({ id: c.id, label: c.name })),
+      row2: clients.map((c) => ({ id: c.id, label: c.name })),
+      me: { id: role === "TEAM_LEADER" ? "tl1" : role === "EXECUTIVE" ? "u1" : "admin", role, teamId: role === "ADMIN" ? null : "team1" },
+      tz: TZ,
+      nextLeaveKey: null,
+      ...extra,
+    }) as unknown as DashboardData;
+  const rows = (g: { items: { label: string; minutes: number }[] }) => g.items.map((i) => `${i.label} ${i.minutes / 60}`);
+
+  it("Admin: Teams + Clients only, zero rows hidden, completed and meetings not counted", () => {
+    const g = summaryGroups(data("ADMIN"), f(), NOW);
+    expect(g.map((x) => x.label)).toEqual(["Teams", "Clients"]);
+    expect(rows(g[0]!)).toEqual(["Graphic 6", "Social 1"]); // SEO 0h hidden
+    expect(rows(g[1]!)).toEqual(["Repo 4", "Zenith Foods 3"]);
+  });
+
+  it("follows the dock filters; a picked team lists its Team Leader + executives", () => {
+    const g = summaryGroups(data("ADMIN"), f({ row1: "team1" }), NOW);
+    expect(g[0]!.label).toBe("Graphic · people");
+    expect(rows(g[0]!)).toEqual(["Rishi 2", "Arush 4"]); // Dev has 0h → hidden
+    expect(rows(g[1]!)).toEqual(["Repo 4", "Zenith Foods 2"]);
+    const tom = summaryGroups(data("ADMIN"), f({ quick: "tomorrow" }), NOW);
+    expect(rows(tom[0]!)).toEqual(["Graphic 2"]);
+    // the summary's own selection, colours and icons don't narrow it; a selected 0h row stays visible
+    const sel = summaryGroups(data("ADMIN"), f({ pill: "team:team3", colours: ["green"] }), NOW);
+    expect(rows(sel[0]!)).toEqual(["Graphic 6", "Social 1", "SEO 0"]);
+    expect(dockFilters(f({ quick: "asc", pill: "x", completed: true })).quick).toBeNull();
+  });
+
+  it("Team Leader: People (their executives) + Clients; Executive: Days + Clients", () => {
+    const tl = summaryGroups(data("TEAM_LEADER"), f(), NOW);
+    expect(tl.map((x) => x.label)).toEqual(["People", "Clients"]);
+    expect(rows(tl[0]!)).toEqual(["Arush 4"]);
+    const ex = summaryGroups(data("EXECUTIVE"), f(), NOW);
+    expect(ex.map((x) => x.label)).toEqual(["Days", "Clients"]);
+    expect(rows(ex[0]!)).toEqual(["Today 4", "Tom 2", "Day+2 1"]);
+  });
+
+  it("caption names the dock filters, else 'all tasks'; day chip labels", () => {
+    expect(summaryCaption(data("ADMIN"), f())).toBe("all tasks");
+    expect(summaryCaption(data("ADMIN"), f({ row1: "team2", row2: "c2", quick: "tomorrow" }))).toBe("Social · Zenith Foods · Tomorrow");
+    expect(summaryCaption(data("ADMIN"), f({ date: "2026-10-08" }))).toBe("08 Oct");
+    expect(dayLabel({ date: null, quick: "tomorrow" })).toBe("Tom");
+    expect(dayLabel({ date: null, quick: "asc" })).toBeNull();
+  });
+
+  it("summary rows filter the list: person, client and the Day+2 pill", () => {
+    const list = applyFilters(tasks, f({ pill: "date:day2" }), ctx("EXECUTIVE"));
+    expect(list.map((t) => t.allocatedMinutes)).toEqual([60]);
   });
 });

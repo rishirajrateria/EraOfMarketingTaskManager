@@ -89,16 +89,16 @@ describe("team-first add-task helpers (ADR 0008)", () => {
   it("validateForm with data: prototype messages, in the prototype's order", () => {
     const admin = data("admin");
     const blank = validateForm({ ...emptyForm("WORK", "admin", "ADMIN"), title: "x" }, admin);
-    expect(Object.values(blank)[0]).toBe("Pick a team in the green area");
+    expect(Object.values(blank)[0]).toBe("Pick a team in the rows below");
     const noWork = validateForm({ ...emptyForm("WORK", "admin", "ADMIN"), title: "x", teamIds: ["social"], clientId: "c" }, admin);
-    expect(noWork).toEqual({ tagIds: "Pick a work type in the green area" });
+    expect(noWork).toEqual({ tagIds: "Pick a work type in the rows below" });
     const seo = validateForm({ ...emptyForm("MEETING", "admin", "ADMIN"), title: "x", teamIds: ["seo"], clientId: "c" }, admin);
     // Meetings need no Team Leader (ADR 0012), but someone besides the organiser: an empty team invites nobody.
     expect(seo).toEqual({ assigneeIds: "Invite someone: pick a team, people or add a guest email" });
     expect(validateForm({ ...emptyForm("MEETING", "admin", "ADMIN"), title: "x", clientId: "c", guestEmails: ["a@b.co"] }, admin)).toEqual({});
     const ok = validateForm({ ...emptyForm("WORK", "admin", "ADMIN"), title: "x", teamIds: ["social"], tagIds: ["reels"], clientId: "c" }, admin);
     expect(ok).toEqual({});
-    expect(validateForm({ ...emptyForm("WORK", "admin", "ADMIN"), title: "x", teamIds: ["social"], tagIds: ["reels"] }, admin)).toEqual({ clientId: "Pick a client in the green area" });
+    expect(validateForm({ ...emptyForm("WORK", "admin", "ADMIN"), title: "x", teamIds: ["social"], tagIds: ["reels"] }, admin)).toEqual({ clientId: "Pick a client in the rows below" });
   });
 
   it("toTaskInput carries the preferences and a payload the server schema accepts", () => {

@@ -2,8 +2,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { DashboardData, DashboardFilters, TaskRow } from "@/server/tasks/types";
-import { approveFinish, pauseTask, raiseDoubt, raiseReviewRequest, rejectFinish, requestFinish, requestFixSelfTask, resolveDoubt, restartTask, resumeTask, startTask } from "@/server/tasks/lifecycle";
-import { assignExecutives, deleteTask, retryIntegrations, saveFilters, setTaskProtected } from "@/server/tasks/manage";
+import { completeFromMySide, pauseTask, raiseDoubt, raiseReviewRequest, rejectFinish, requestFixSelfTask, resolveDoubt, restartTask, resumeTask, startTask } from "@/server/tasks/lifecycle";
+import { assignExecutives, deleteTask, retryIntegrations, saveFilters } from "@/server/tasks/manage";
+import { PendingCommits, UNDO_MS, circleTapAction } from "@/server/tasks/circle";
 import { useLiveEvents } from "@/components/shell/useLiveEvents";
 import { AddTaskSheet } from "@/components/tasks/AddTaskSheet";
 import { applyFilters } from "@/components/dashboard/filters";
@@ -15,16 +16,21 @@ import { TaskList } from "@/components/dashboard/TaskList";
 import { BottomBar, type AddMode } from "@/components/dashboard/BottomBar";
 import { TaskActionSheet, NOTE_PROMPTS, type NoteKind, type SimpleAction } from "@/components/dashboard/TaskActionSheet";
 import { TaskDetailSheet } from "@/components/dashboard/TaskDetailSheet";
-import { DeleteTaskSheet, type DeleteOptions } from "@/components/dashboard/DeleteTaskSheet";
+import { DeleteTaskSheet } from "@/components/dashboard/DeleteTaskSheet";
 import { EditTaskSheet } from "@/components/dashboard/EditTaskSheet";
 import { NoteSheet } from "@/components/dashboard/NoteSheet";
-import { DatePickerSheet } from "@/components/dashboard/DatePickerSheet";
 import { AssignExecutiveSheet } from "@/components/dashboard/AssignExecutiveSheet";
+import { PillReviewSheet, type PillReviewChoice } from "@/components/dashboard/PillReviewSheet";
+import { PauseAllSheet } from "@/components/dashboard/PauseAllSheet";
+import { summaryCaption } from "@/components/dashboard/summary";
+import { pauseResumeMany } from "@/server/tasks/bulk";
+import { requestPillReview, resolvePillReview, withdrawPillReview } from "@/server/tasks/review";
+import { REVIEW_FIELD_NAME, type ReviewField } from "@/server/tasks/review-fields";
 
 const SAVE_DEBOUNCE_MS = 800;
 /**
  * Client root of the dashboard (SPEC §5): cyan pill area (with the slim overlay top bar — the app header is hidden
- * on /dashboard), task list, white filter strip, green area, bottom bar + all sheets. Data comes from the RSC page.
+ * on /dashboard), task list, filter strip, glass filter rows, bottom bar + all sheets. Data comes from the RSC page.
  */
 export function Dashboard({
   data,
@@ -53,8 +59,11 @@ export function Dashboard({
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [assignId, setAssignId] = useState<string | null>(null);
   const [note, setNote] = useState<{ kind: NoteKind; taskId: string } | null>(null);
-  const [dateOpen, setDateOpen] = useState(false);
   const [addMode, setAddMode] = useState<AddMode | null>(null);
+  // Review per pill (ADR 0015): the pill menu, then (Team Leader / Executive) the note for the request.
+  const [pill, setPill] = useState<{ taskId: string; field: ReviewField } | null>(null);
+  const [pillNote, setPillNote] = useState<{ taskId: string; field: ReviewField } | null>(null);
+  const [pauseAllOpen, setPauseAllOpen] = useState(false);
 
   const byId = useMemo(() => new Map(data.tasks.map((t) => [t.id, t])), [data.tasks]);
   const tasks = useMemo(() => applyFilters(data.tasks, filters, { role: data.role, meId: data.me.id, tz: data.tz, nextLeaveKey: data.nextLeaveKey }), [data, filters]);
@@ -90,18 +99,63 @@ export function Dashboard({
     }
   }, [initialTaskId]);
 
+  // Completion circle (ADR 0015): a tap is committed after the Undo window; Undo cancels it. Pending taps show ticked.
+  const commits = useMemo(() => new PendingCommits(), []);
+  const inFlight = useRef(new Set<string>());
+  const [pendingDone, setPendingDone] = useState<ReadonlySet<string>>(() => new Set());
+  const setPending = useCallback((id: string, on: boolean) => {
+    setPendingDone((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }, []);
+  // Fresh data: forget ticks that are neither waiting for Undo nor being sent.
+  useEffect(() => {
+    setPendingDone((prev) => {
+      const keep = [...prev].filter((id) => commits.has(id) || inFlight.current.has(id));
+      return keep.length === prev.size ? prev : new Set(keep);
+    });
+  }, [data.tasks, commits]);
+  // Leaving the page sends what is still waiting for Undo.
+  useEffect(() => {
+    const flush = () => commits.flushAll();
+    window.addEventListener("pagehide", flush);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      flush();
+    };
+  }, [commits]);
+
   const onCircle = useCallback(
     (t: TaskRow) => {
-      if (data.role === "EXECUTIVE") return toast("Ask your Team Leader to finish");
-      if (t.status === "STARTED") return void run(requestFinish(t.id), "Finish requested");
-      if (t.status === "FINISH_REQUESTED") {
-        if (data.role === "ADMIN") return void run(approveFinish(t.id), "Task completed");
-        return toast("Waiting for Admin approval");
+      if (commits.cancel(t.id)) {
+        // Tapping a pending tick again is an undo, as in Google Tasks.
+        setPending(t.id, false);
+        return toast("Undone");
       }
-      if (t.paused) return toast("Task is paused by Admin");
-      toast("Long-press the row and choose Start first");
+      const action = circleTapAction(data.role, { status: t.status, assigneeIds: t.assignees.map((a) => a.id) }, data.me.id);
+      if (action.kind === "none") return toast(action.message);
+      setPending(t.id, true);
+      commits.schedule(t.id, () => {
+        inFlight.current.add(t.id);
+        void run(completeFromMySide(t.id), "").then((res) => {
+          inFlight.current.delete(t.id);
+          if (res === null) setPending(t.id, false);
+        });
+      });
+      toast(action.toast, "ok", {
+        ms: UNDO_MS,
+        action: {
+          label: "Undo",
+          onClick: () => {
+            if (commits.cancel(t.id)) setPending(t.id, false);
+          },
+        },
+      });
     },
-    [data.role, run, toast],
+    [commits, data.role, data.me.id, run, setPending, toast],
   );
 
   const onRestart = useCallback(
@@ -119,10 +173,8 @@ export function Dashboard({
       switch (a) {
         case "start":
           return void run(startTask(t.id), "Task started");
-        case "request_finish":
-          return void run(requestFinish(t.id), "Finish requested");
-        case "approve_finish":
-          return void run(approveFinish(t.id), "Task completed");
+        case "done":
+          return onCircle(t);
         case "pause":
           return void run(pauseTask(t.id), "Task paused");
         case "resume":
@@ -131,10 +183,6 @@ export function Dashboard({
           return onRestart(t);
         case "resolve_doubt":
           return void run(resolveDoubt(t.id), "Doubt resolved");
-        case "protect":
-          return void run(setTaskProtected(t.id, true), "Task protected");
-        case "unprotect":
-          return void run(setTaskProtected(t.id, false), "Task unprotected");
         case "retry":
           return onRetry(t);
         case "edit":
@@ -147,7 +195,28 @@ export function Dashboard({
           return setAssignId(t.id);
       }
     },
-    [run, onRestart, onRetry],
+    [run, onRestart, onRetry, onCircle],
+  );
+
+  const onPillPick = useCallback(
+    (choice: PillReviewChoice, t: TaskRow, field: ReviewField) => {
+      const name = REVIEW_FIELD_NAME[field];
+      switch (choice) {
+        case "request":
+          return setPillNote({ taskId: t.id, field });
+        case "withdraw":
+          return void run(withdrawPillReview(t.id, field), `Review of the ${name} withdrawn`);
+        case "resolve":
+          return void run(resolvePillReview(t.id, field), `The ${name} is reviewed`);
+        case "flag":
+          return void run(requestPillReview(t.id, field, ""), `The ${name} is flagged for review`);
+        case "change":
+          return setEditId(t.id);
+        case "actions":
+          return setActionId(t.id);
+      }
+    },
+    [run],
   );
 
   const submitNote = async (text: string) => {
@@ -164,13 +233,15 @@ export function Dashboard({
     await run(call(), NOTE_PROMPTS[kind].success);
   };
 
-  const confirmDelete = async (opts: DeleteOptions) => {
+  const confirmDelete = async () => {
     if (!deleteId) return;
     const id = deleteId;
-    const res = await run(deleteTask(id, opts), "Task deleted");
+    commits.cancel(id);
+    const res = await run(deleteTask(id), "Task and everything with it deleted");
     if (res !== null) {
       setDeleteId(null);
       if (detailId === id) setDetailId(null);
+      if (res.warnings.length) toast(`Some Google items need a manual check: ${res.warnings.join("; ")}`, "err", { ms: 8000 });
     }
   };
 
@@ -192,6 +263,7 @@ export function Dashboard({
         data={data}
         refreshing={busy}
         onRefresh={refresh}
+        pendingDone={pendingDone}
         handlers={{
           onOpen: (t) => setDetailId(t.id),
           onOpenAttachments: (t) => {
@@ -202,9 +274,10 @@ export function Dashboard({
           onCircle,
           onRestart,
           onRetry,
+          onPillMenu: (t, field) => setPill({ taskId: t.id, field }),
         }}
       />
-      <BottomBar data={data} filters={filters} onChange={setFilters} onOpenDate={() => setDateOpen(true)} onAdd={setAddMode} />
+      <BottomBar data={data} filters={filters} onChange={setFilters} onAdd={setAddMode} onPauseAll={() => setPauseAllOpen(true)} />
 
       <TaskDetailSheet
         task={detailTask}
@@ -226,10 +299,40 @@ export function Dashboard({
         onSubmit={submitNote}
         onClose={() => setNote(null)}
       />
+      {data.role === "ADMIN" ? (
+        <PauseAllSheet
+          open={pauseAllOpen}
+          shown={pauseAllOpen ? applyFilters(data.tasks, { ...filters, completed: false }, { role: data.role, meId: data.me.id, tz: data.tz, nextLeaveKey: data.nextLeaveKey }) : []}
+          scope={summaryCaption(data, filters) === "all tasks" ? "all open tasks" : summaryCaption(data, filters)}
+          busy={busy}
+          onClose={() => setPauseAllOpen(false)}
+          onRun={async (action, taskIds, reason) => {
+            const res = await run(pauseResumeMany({ taskIds, action, reason }), "");
+            if (res) {
+              setPauseAllOpen(false);
+              toast(`${action === "PAUSE" ? "Paused" : "Resumed"} ${res.changed} task${res.changed === 1 ? "" : "s"}${res.skipped ? ` · ${res.skipped} skipped` : ""}`);
+            }
+          }}
+        />
+      ) : null}
+      <PillReviewSheet task={pill ? byId.get(pill.taskId) ?? null : null} field={pill?.field ?? null} data={data} onPick={onPillPick} onClose={() => setPill(null)} />
+      <NoteSheet
+        open={!!pillNote && byId.has(pillNote.taskId)}
+        title={pillNote ? `Review the ${REVIEW_FIELD_NAME[pillNote.field]} · ${byId.get(pillNote.taskId)?.title ?? ""}` : ""}
+        placeholder="What should Admin look at? (optional)"
+        required={false}
+        busy={busy}
+        onSubmit={async (text) => {
+          if (!pillNote) return;
+          const { taskId, field } = pillNote;
+          setPillNote(null);
+          await run(requestPillReview(taskId, field, text), `Review of the ${REVIEW_FIELD_NAME[field]} requested`);
+        }}
+        onClose={() => setPillNote(null)}
+      />
       <DeleteTaskSheet task={deleteId ? byId.get(deleteId) ?? null : null} open={!!deleteId} busy={busy} onConfirm={confirmDelete} onClose={() => setDeleteId(null)} />
       <AssignExecutiveSheet task={assignId ? byId.get(assignId) ?? null : null} data={data} open={!!assignId} busy={busy} onClose={() => setAssignId(null)} onAssign={assign} />
       <EditTaskSheet task={editId ? byId.get(editId) ?? null : null} data={data} open={!!editId} onClose={() => setEditId(null)} />
-      <DatePickerSheet open={dateOpen} value={filters.date} tz={data.tz} onChange={(date) => setFilters({ ...filters, date })} onClose={() => setDateOpen(false)} />
       <AddTaskSheet open={addMode !== null} mode={addMode} onClose={() => setAddMode(null)} data={data} />
     </div>
   );

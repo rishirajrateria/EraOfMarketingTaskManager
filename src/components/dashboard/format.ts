@@ -10,16 +10,29 @@ export const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? "";
 /** "Graphic" → "GR" (SPEC §5.2 team chip). */
 export const teamCode = (name: string) => name.replace(/[^a-z]/gi, "").slice(0, 2).toUpperCase();
 
+/** Team chip on the card (ADR 0015): the task's team, "Social +1" for several, null for none. */
+export function teamChipLabel(teams: Pick<TaskRow, "teams">["teams"]): string | null {
+  if (!teams.length) return null;
+  return teams.length === 1 ? teams[0]!.name : `${teams[0]!.name} +${teams.length - 1}`;
+}
+
+/** Date pill (ADR 0015): always the task's start date, "08 Oct" — never Today / Tom / Yest. */
+export const datePill = (d: Date | string | null | undefined, tz: string) => (d ? formatInTimeZone(new Date(d), tz, "dd MMM") : "Unsched");
+
+export type TaskPeople = { teams: string[]; leaders: string[]; assigned: string[]; preferred: string[] };
+
 /**
- * Team/assignee chip (SPEC §5.2): "Me" when I am the only assignee, the team short code when one team,
- * "we" when several teams or several assignees, else the assignee's first name.
+ * Who the task is with, for the (i) details sheet (the card no longer shows people, ADR 0015): its team(s), their Team
+ * Leader(s), the assigned person(s) and Admin's executive preference (ADR 0008).
  */
-export function assigneeChip(t: Pick<TaskRow, "assignees" | "teams">, meId: string): string {
-  if (t.assignees.length === 1 && t.assignees[0]!.id === meId) return "Me";
-  if (t.assignees.length > 1 || t.teams.length > 1) return "we";
-  if (t.teams.length === 1) return teamCode(t.teams[0]!.name);
-  if (t.assignees.length === 1) return firstName(t.assignees[0]!.name);
-  return "—";
+export function taskPeople(t: Pick<TaskRow, "teams" | "assignees" | "preferredAssigneeIds">, people: { id: string; name: string; role: string; teamId: string | null }[]): TaskPeople {
+  const teamIds = new Set(t.teams.map((x) => x.id));
+  return {
+    teams: t.teams.map((x) => x.name),
+    leaders: people.filter((p) => p.role === "TEAM_LEADER" && p.teamId && teamIds.has(p.teamId)).map((p) => p.name),
+    assigned: t.assignees.map((a) => a.name),
+    preferred: t.preferredAssigneeIds.map((id) => people.find((p) => p.id === id)?.name).filter((n): n is string => !!n),
+  };
 }
 
 /** Human status label for the detail sheet. */
@@ -64,29 +77,11 @@ export function waveformHeights(seed: string, bars = 24, max = 22): number[] {
 
 export const fmtSeconds = (s: number | null) => (s == null ? "" : `${Math.round(s)}s`);
 
-/** Minutes → "5", "5.5", "16.5" (one decimal max, no unit) for the cyan pills. */
+/** Minutes → "5", "5.5", "16.5" (one decimal max, no unit); the summary adds "h". */
 export function pillHours(minutes: number): string {
   const h = Math.round((minutes / 60) * 10) / 10;
   return Number.isInteger(h) ? String(h) : h.toFixed(1);
 }
-
-/** Short pill label as in the Canva design ("Grap", "Writi", "Webs"): first 5 characters of the first word, no ellipsis. */
-export function shortPillLabel(label: string, max = 5): string {
-  const word = label.trim().split(/\s+/)[0] ?? "";
-  return word.length > max + 1 ? word.slice(0, max) : word;
-}
-
-/** Cyan pill text "<Label>- <hours>" (the label is shortened; the hours never truncate). */
-export const pillText = (label: string, minutes: number) => `${shortPillLabel(label)}- ${pillHours(minutes)}`;
-
-/** Date-pill labels exactly as in the Canva design. */
-const DATE_PILL_LABELS: Record<string, string> = {
-  "date:today": "today",
-  "date:tomorrow": "tomorr",
-  "date:b4leave": "B4LEav",
-  "date:all": "Alltime",
-};
-export const datePillLabel = (id: string, fallback: string) => DATE_PILL_LABELS[id] ?? fallback;
 
 /** 24h "H:mm" clock (no am/pm, no leading zero — "4:45", "17:00") in the company timezone; "--:--" when unset. */
 export const fmtClock = (d: Date | string | null | undefined, tz: string) => (d ? formatInTimeZone(new Date(d), tz, "H:mm") : "--:--");

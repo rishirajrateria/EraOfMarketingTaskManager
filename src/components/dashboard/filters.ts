@@ -28,7 +28,8 @@ export function hasIcon(t: TaskRow, icon: IconFilter): boolean {
     case "doubt":
       return t.doubtRaised;
     case "review":
-      return t.reviewRequested;
+      // the strip's red dot: any pill under review (ADR 0015)
+      return t.reviewRequested || (t.reviewFields?.length ?? 0) > 0;
     case "important":
       return t.important;
     case "recurring":
@@ -47,9 +48,13 @@ function startKey(t: TaskRow, tz: string): string | null {
 
 export function dayKeys(now: Date, tz: string) {
   const today = dateKey(now, tz);
-  const tomorrow = dateKey(addDays(zonedStartOfDay(now, tz), 1), tz);
-  return { today, tomorrow };
+  const start = zonedStartOfDay(now, tz);
+  const tomorrow = dateKey(addDays(start, 1), tz);
+  const day2 = dateKey(addDays(start, 2), tz);
+  return { today, tomorrow, day2 };
 }
+
+type DayKeys = { today: string; tomorrow: string; day2?: string };
 
 /** Row-1 pill meaning depends on role (SPEC §5.4). */
 function matchesRow1(t: TaskRow, id: string, role: FilterCtx["role"]): boolean {
@@ -63,8 +68,8 @@ function matchesRow2(t: TaskRow, id: string, role: FilterCtx["role"]): boolean {
   return t.client.id === id;
 }
 
-/** Blue-area pill: "team:<id>" | "person:<id>" | "client:<id>" | "date:today|tomorrow|b4leave|all". */
-export function matchesPill(t: TaskRow, pill: string, ctx: FilterCtx, keys: { today: string; tomorrow: string }): boolean {
+/** Summary row: "team:<id>" | "person:<id>" | "client:<id>" | "date:today|tomorrow|day2|b4leave|all". */
+export function matchesPill(t: TaskRow, pill: string, ctx: FilterCtx, keys: DayKeys): boolean {
   const idx = pill.indexOf(":");
   if (idx < 0) return true;
   const kind = pill.slice(0, idx);
@@ -81,6 +86,7 @@ export function matchesPill(t: TaskRow, pill: string, ctx: FilterCtx, keys: { to
       if (value === "all") return true;
       if (value === "today") return k === keys.today;
       if (value === "tomorrow") return k === keys.tomorrow;
+      if (value === "day2") return k === keys.day2;
       if (value === "b4leave") return ctx.nextLeaveKey ? k !== null && k < ctx.nextLeaveKey : true;
       return true;
     }
@@ -89,7 +95,7 @@ export function matchesPill(t: TaskRow, pill: string, ctx: FilterCtx, keys: { to
   }
 }
 
-export function matchesFilters(t: TaskRow, f: DashboardFilters, ctx: FilterCtx, keys: { today: string; tomorrow: string }): boolean {
+export function matchesFilters(t: TaskRow, f: DashboardFilters, ctx: FilterCtx, keys: DayKeys): boolean {
   if (t.status === "COMPLETED" && !f.completed) return false;
   if (f.colours.length && !f.colours.includes(t.colour)) return false;
   if (f.icons.length && !f.icons.some((i) => hasIcon(t, i))) return false;
@@ -124,8 +130,9 @@ export function applyFilters(tasks: TaskRow[], f: DashboardFilters, ctx: FilterC
   return f.quick === "asc" ? sortAscending(out) : out;
 }
 
-const COLOURS = new Set<string>(["white", "green", "yellow", "red", "grey"]);
-const ICONS = new Set<string>(["paused", "doubt", "review", "important", "recurring", "restarted"]);
+const COLOURS = new Set<string>(["white", "green", "yellow", "red", "grey", "purple"]);
+// "paused" (now the yellow swatch) and "important" (stars are gone) are no longer offered: dropped from saved prefs.
+const ICONS = new Set<string>(["doubt", "review", "recurring", "restarted"]);
 const QUICK = new Set<string>(["asc", "tomorrow", "today"]);
 
 /** Coerce the persisted JSON (prisma `User.filterPrefs`) into a well-typed filter set; unknown values are dropped. */
@@ -144,7 +151,7 @@ export function normaliseFilters(raw: unknown): DashboardFilters {
     quick: quick && QUICK.has(quick) ? (quick as DashboardFilters["quick"]) : null,
     completed: r.completed === true,
     recurringOnly: r.recurringOnly === true,
-    pausedOnly: r.pausedOnly === true,
+    pausedOnly: false, // superseded by the yellow (paused) swatch, ADR 0015
   };
 }
 

@@ -1,6 +1,6 @@
 import { addDays, differenceInCalendarDays } from "date-fns";
 import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
-import { DEFAULT_TZ, dateChip, dateKey, fmtTime, zonedDayAt } from "@/lib/time";
+import { DEFAULT_TZ, dateKey, zonedDayAt } from "@/lib/time";
 import type { DashboardData } from "@/server/tasks/types";
 import type { RepeatRule } from "@/server/tasks/repeat-rule";
 import type { MeetingOptions } from "@/server/tasks/schema";
@@ -123,36 +123,6 @@ export function repeatBaseDay(form: Pick<AddTaskForm, "scheduledStart">, now = n
   return /^\d{4}-\d{2}-\d{2}/.test(form.scheduledStart) ? form.scheduledStart.slice(0, 10) : dateKey(now, tz);
 }
 
-/** Prototype `nextSlot()` fallback: next full hour; before 10:00 → 10:00; after 18:00 → tomorrow 10:00 (company tz). */
-export function fallbackNextSlot(now = new Date(), tz = DEFAULT_TZ): Date {
-  const hour = toZonedTime(now, tz).getHours() + 1;
-  if (hour >= 18) return zonedDayAt(addDays(now, 1), 10 * 60, tz);
-  return zonedDayAt(now, Math.max(10, hour) * 60, tz);
-}
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-/** "2026-10-09" → "09 Oct 2026" (prototype `fmtDY`). */
-export const fmtDayLong = (key: string) => `${key.slice(8, 10)} ${MONTHS[Number(key.slice(5, 7)) - 1]} ${key.slice(0, 4)}`;
-
-/** Who the task is for, as the prototype's summary line says it ("Priya", "me, Arjun", "whole team"); null = no team yet. */
-export function forWhom(form: Pick<AddTaskForm, "teamIds" | "assigneeIds">, data: Pick<DashboardData, "people" | "me">): string | null {
-  const first = (id: string) => (id === data.me.id ? "me" : (data.people.find((p) => p.id === id)?.name ?? "?").split(" ")[0]);
-  if (data.me.role === "ADMIN") return form.teamIds.length ? teamLeadersOf(data, form.teamIds).map((p) => first(p.id)).join(", ") || null : null;
-  if (data.me.role === "TEAM_LEADER") return form.assigneeIds.length ? form.assigneeIds.map(first).join(", ") : "whole team";
-  return "me";
-}
-
-/**
- * One-line schedule summary under the body: "📅 09 Oct 2026 at 10:00 · 2h · for Priya · change with the calendar icon
- * below" or "📅 Next free slot: Tom 10:00am · …". `nextSlot` = the slot the server would pick (null while unknown).
- */
-export function scheduleLine(form: Pick<AddTaskForm, "scheduledStart" | "hours">, who: string | null, nextSlot: Date | null, now = new Date(), tz = DEFAULT_TZ): string {
-  const when = form.scheduledStart
-    ? `📅 ${fmtDayLong(form.scheduledStart.slice(0, 10))} at ${form.scheduledStart.slice(11, 16)}`
-    : `📅 Next free slot: ${nextSlot ? `${dateChip(nextSlot, now, tz)} ${fmtTime(nextSlot, tz)}` : "finding…"}`;
-  return `${when} · ${fmtHours(form.hours)}${who ? ` · for ${who}` : ""} · change with the calendar icon below`;
-}
-
 /**
  * Who the current user may assign (SPEC §2).
  * Admin → Team Leaders + self; Team Leader → own Executives + self; Executive → self only.
@@ -219,7 +189,7 @@ export function toTaskInput(form: AddTaskForm, tz = DEFAULT_TZ) {
     allocatedMinutes: hoursToMinutes(form.hours),
     scheduledStart,
     scheduledEnd: null, // the server ends it after the allocated time
-    important: meeting ? false : form.important,
+    important: false, // the ★ Important chip is gone (ADR 0015); the column stays
     priority: form.priority,
     recurrence: !form.recurrence ? null : { ...form.recurrence, trigger: "ON_SCHEDULE" as const },
     guestEmails: meeting ? externalGuests(form) : [],
@@ -238,11 +208,11 @@ export function validateForm(form: AddTaskForm, data?: AddTaskData): AddTaskErro
   const errors: AddTaskErrors = {};
   if (!form.title.trim()) errors.title = "Title is required";
   if (form.type === "MEETING") return validateMeeting(form, errors, data);
-  if (data?.me.role === "ADMIN" && !form.teamIds.length) errors.teamIds = "Pick a team in the green area";
+  if (data?.me.role === "ADMIN" && !form.teamIds.length) errors.teamIds = "Pick a team in the rows below";
   if (data && form.type === "WORK" && !errors.teamIds && !workTypesFor(data.workTypes, workTeamIds(form, data)).some((w) => w.id === form.tagIds[0])) {
-    errors.tagIds = "Pick a work type in the green area";
+    errors.tagIds = "Pick a work type in the rows below";
   }
-  if (!form.clientId) errors.clientId = data ? "Pick a client in the green area" : "Client is required";
+  if (!form.clientId) errors.clientId = data ? "Pick a client in the rows below" : "Client is required";
   const assignees = data ? effectiveAssignees(form, data) : form.assigneeIds;
   if (!assignees.length && !errors.teamIds) {
     errors.assigneeIds = data?.me.role === "ADMIN" ? "That team has no Team Leader yet (Menu → Add teamleader)" : "At least one assignee is required";
@@ -253,7 +223,7 @@ export function validateForm(form: AddTaskForm, data?: AddTaskData): AddTaskErro
 
 /** Meetings (ADR 0012): no team needed, but someone besides the organiser (a team, people or a guest email). */
 function validateMeeting(form: AddTaskForm, errors: AddTaskErrors, data?: AddTaskData): AddTaskErrors {
-  if (!form.clientId) errors.clientId = data ? "Pick a client in the green area" : "Client is required";
+  if (!form.clientId) errors.clientId = data ? "Pick a client in the rows below" : "Client is required";
   const invitees = data ? meetingInvitees(form, data) : form.assigneeIds;
   const others = data ? invitees.filter((id) => id !== data.me.id) : invitees;
   if (!others.length && !externalGuests(form).length) errors.assigneeIds = "Invite someone: pick a team, people or add a guest email";

@@ -13,6 +13,7 @@ import { validateAssignees } from "@/server/tasks/create";
 import { queueTaskPropagation, teardownTask } from "@/google/task-integrations";
 import { retryFailedForTask } from "@/google/queue";
 import * as Drive from "@/google/drive";
+import { ensureTaskFolder } from "@/google/task-folder";
 import type { DashboardFilters } from "@/server/tasks/types";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -81,6 +82,7 @@ export async function updateTask(raw: unknown): Promise<ActionResult<undefined>>
           ...(meetingOptions ? { meetingOptions } : {}),
           reviewRequested: false,
           reviewNote: null,
+          reviewFields: [], // editing clears every pill's review dot (ADR 0015)
           overdue: false,
           ...(input.assigneeIds ? { assignees: { deleteMany: {}, create: input.assigneeIds.map((userId) => ({ userId })) } } : {}),
           ...(input.teamIds ? { teams: { deleteMany: {}, create: input.teamIds.map((teamId) => ({ teamId })) } } : {}),
@@ -164,28 +166,50 @@ export async function setTaskProtected(taskId: string, value: boolean): Promise<
 }
 
 /** Delete confirmation sheet (SPEC §12). Soft delete; Calendar/Meet always removed. */
-export async function deleteTask(
-  taskId: string,
-  opts: { deleteChat: boolean; deleteDrive: boolean; deleteData: boolean },
-): Promise<ActionResult<undefined>> {
+/**
+ * Delete (Admin, ADR 0015 — "Delete everything"): the Calendar event, the Meet link (ended + locked), the Drive folder
+ * (to the Drive trash), the Chat space and the task's data (sessions, requests, voice notes / attachments, filed notes,
+ * description) all go. The row stays only as an invisible tombstone (id, title, client, who deleted it) for the audit
+ * log. Google failures don't block the delete; they come back as `warnings` for the toast.
+ */
+export async function deleteTask(taskId: string): Promise<ActionResult<{ warnings: string[] }>> {
   return wrap(async () => {
     const user = await requireUser();
     if (!can.deleteTask(user)) throw new ForbiddenError();
     const t = await prisma.task.findUnique({ where: { id: taskId } });
-    if (!t) throw new Error("Task not found");
-    await teardownTask(taskId, { chat: opts.deleteChat, drive: opts.deleteDrive }).catch(() => undefined);
+    if (!t || t.deletedAt) throw new Error("Task not found");
+    const teardown = await teardownTask(taskId);
     await prisma.$transaction(async (tx) => {
-      await tx.task.update({ where: { id: taskId }, data: { deletedAt: new Date(), deletedById: user.id, meetActive: false } });
-      if (opts.deleteData) {
-        await tx.taskSession.deleteMany({ where: { taskId } });
-        await tx.request.deleteMany({ where: { taskId } });
-        await tx.taskAttachment.deleteMany({ where: { taskId } });
-      }
+      await tx.taskSession.deleteMany({ where: { taskId } });
+      await tx.request.deleteMany({ where: { taskId } });
+      await tx.taskAttachment.deleteMany({ where: { taskId } });
+      await tx.taskMeetingNote.deleteMany({ where: { taskId } });
+      await tx.task.update({
+        where: { id: taskId },
+        data: {
+          deletedAt: new Date(),
+          deletedById: user.id,
+          description: "",
+          doubtNote: null,
+          reviewNote: null,
+          rejectionNote: null,
+          calendarEventId: null,
+          meetLink: null,
+          meetActive: false,
+          meetSpaceName: null,
+          meetNotesFolderId: null,
+          driveFolderId: null,
+          driveFolderUrl: null,
+          chatSpaceId: null,
+          chatSpaceUrl: null,
+          integrationError: null,
+        },
+      });
     });
-    await audit(user.id, "task.delete", "Task", taskId, t, opts);
+    await audit(user.id, "task.delete", "Task", taskId, t, teardown);
     bus.publish({ type: "task.deleted", taskId });
     safeRevalidate("/dashboard", "/requests");
-    return undefined;
+    return { warnings: teardown.warnings };
   });
 }
 
@@ -228,11 +252,10 @@ export async function ensureTaskDriveFolder(taskId: string): Promise<ActionResul
   return wrap(async () => {
     const user = await requireUser();
     if (!(await canView(user, taskId))) throw new ForbiddenError();
-    const t = await prisma.task.findUniqueOrThrow({ where: { id: taskId }, include: { client: true } });
+    const t = await prisma.task.findUniqueOrThrow({ where: { id: taskId }, select: { driveFolderUrl: true } });
     if (t.driveFolderUrl) return { url: t.driveFolderUrl };
-    const folder = await Drive.ensurePath(["Clients", t.client.name, `${t.title} – ${t.id.slice(-6)}`]);
-    await prisma.task.update({ where: { id: t.id }, data: { driveFolderId: folder.id, driveFolderUrl: folder.url } });
-    await queueTaskPropagation(t.id);
+    const folder = await ensureTaskFolder(taskId);
+    if (folder.created) await queueTaskPropagation(taskId); // shares it with the task's people
     void publishTaskChanged(taskId);
     return { url: folder.url };
   });
@@ -254,9 +277,9 @@ export async function uploadAttachment(form: FormData): Promise<ActionResult<{ i
     if (kind === "VOICE_NOTE" && t.type === "MEETING") throw new Error("Meetings don't take voice notes — put the agenda in the description");
     let folderId = t.driveFolderId;
     if (!folderId) {
-      const folder = await Drive.ensurePath(["Clients", t.client.name, `${t.title} – ${t.id.slice(-6)}`]);
+      const folder = await ensureTaskFolder(t.id);
       folderId = folder.id;
-      await prisma.task.update({ where: { id: t.id }, data: { driveFolderId: folder.id, driveFolderUrl: folder.url } });
+      if (folder.created) await queueTaskPropagation(t.id);
     }
     const data = Buffer.from(await file.arrayBuffer());
     let driveFileId: string | null = null;

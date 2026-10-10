@@ -31,7 +31,6 @@ type Draft = {
   allocatedMinutes: number;
   scheduledStart: string; // datetime-local in company tz
   scheduledEnd: string;
-  important: boolean;
   priority: TaskRow["priority"];
   /** Meetings (ADR 0012): outside guests and the Google Calendar options. */
   guestEmails: string[];
@@ -59,7 +58,6 @@ function draftOf(t: TaskRow, companyTz: string): Draft {
     allocatedMinutes: t.allocatedMinutes,
     scheduledStart: toLocal(t.scheduledStart, tz),
     scheduledEnd: toLocal(t.scheduledEnd, tz),
-    important: t.important,
     priority: t.priority,
     guestEmails: t.guestEmails ?? [],
     meetingOptions: t.meetingOptions ?? defaultMeetingOptions(tz),
@@ -125,7 +123,6 @@ export function EditTaskSheet({
         allocatedMinutes: d.allocatedMinutes,
         scheduledStart: toIso(d.scheduledStart, zone),
         scheduledEnd: toIso(d.scheduledEnd, zone),
-        important: d.important,
         priority: d.priority,
         ...(sameSet(d.assigneeIds, original.assigneeIds)
           ? {}
@@ -335,15 +332,6 @@ export function EditTaskSheet({
               />
             </Field>
           </div>
-          <label className="touch-target flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={d.important}
-              onChange={(e) => set("important", e.target.checked)}
-              className="h-5 w-5"
-            />
-            Important (★)
-          </label>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" className={btnSecondary} onClick={onClose}>
               Cancel

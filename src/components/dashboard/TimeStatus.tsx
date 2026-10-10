@@ -1,15 +1,15 @@
 "use client";
+import { useMemo } from "react";
 import { clsx } from "@/lib/clsx";
 import type { DashboardData, DashboardFilters } from "@/server/tasks/types";
-import { datePillLabel, pillHours, pillText, shortPillLabel } from "@/components/dashboard/format";
-
-/** 5 pills of 32px with 8px gaps — the column scrolls when a group has more. */
-const COLUMN_PX = 5 * 32 + 4 * 8;
+import { hoursText, summaryCaption, summaryGroups } from "@/components/dashboard/summary";
 
 /**
- * Cyan pill area (SPEC §5.1): time-status pills in columns, no headers.
- * Admin: Team | Person | Client · Team Leader: Executive | Date | Client · Executive: Date | Client (right-aligned).
- * Every pill filters the list; tapping the active pill again clears it.
+ * Top summary (prototype `.sumtop` / `.sumsec2` / `.sch`, ADR 0015) — the most compact form: a caption row ("OPEN
+ * HOURS" · the active dock filters or "all tasks"), then ONE line per group: a 54px muted label and one sideways-scrolling
+ * row of content-sized 30px chips "Social 11.8h (8)" in the add-task capacity cell colours.
+ * Admin: Teams (or "<Team>·people") + Clients · Team Leader: People + Clients · Executive: Days + Clients.
+ * The numbers follow the bottom filters; tapping a chip filters the list (tap again to clear).
  */
 export function TimeStatus({
   data,
@@ -22,46 +22,44 @@ export function TimeStatus({
   onChange: (f: DashboardFilters) => void;
   topBar: React.ReactNode;
 }) {
+  const groups = useMemo(() => summaryGroups(data, filters), [data, filters]);
   const select = (id: string) => onChange({ ...filters, pill: filters.pill === id ? null : id });
-  const twoCol = data.pills.length === 2;
   return (
-    <section className="shrink-0 bg-cyan-area px-3 pb-3 pt-[env(safe-area-inset-top)]" aria-label="Time status">
+    <section className="shrink-0 bg-cyan-area px-2.5 pb-2.5 pt-[env(safe-area-inset-top)]" aria-label="Open hours">
       {topBar}
-      <div className="mt-1 flex gap-2">
-        {data.pills.map((g, i) => {
-          const alignEnd = twoCol && i === 1;
-          return (
-            <div
-              key={g.key}
-              role="group"
-              aria-label={g.label}
-              className={clsx("scrollbar-none flex min-w-0 flex-1 flex-col gap-2 overflow-y-auto", alignEnd ? "items-end" : twoCol ? "items-start" : "items-stretch")}
-              style={{ height: COLUMN_PX }}
-            >
-              {g.items.length === 0 ? <span className="px-1 text-[12px] font-semibold text-z1icon">—</span> : null}
+      <div className="mt-1 flex items-baseline justify-between gap-2 px-0.5 pb-1.5 text-[11px] text-z1ink opacity-85">
+        <span className="shrink-0 font-extrabold uppercase tracking-[.08em]">Open hours</span>
+        <span className="min-w-0 truncate">{summaryCaption(data, filters)}</span>
+      </div>
+      <div className="space-y-1.5">
+        {groups.map((g) => (
+          <div key={g.key} role="group" aria-label={g.label} className="flex items-center gap-2">
+            <span className="w-[54px] shrink-0 truncate text-[10px] font-extrabold uppercase tracking-[.07em] text-z1ink opacity-75" title={g.label}>
+              {g.label.replace(" · ", "·")}
+            </span>
+            <div className="scrollbar-none flex min-w-0 flex-1 gap-[5px] overflow-x-auto pr-0.5">
+              {g.items.length === 0 ? <span className="py-1.5 text-[12px] text-z1ink opacity-60">Nothing open</span> : null}
               {g.items.map((it) => {
                 const active = filters.pill === it.id;
+                const count = it.count ?? 0;
                 return (
                   <button
                     key={it.id}
                     type="button"
                     aria-pressed={active}
-                    title={pillText(it.label, it.minutes)}
+                    title={`${it.label}: ${hoursText(it.minutes)} open in ${count} task${count === 1 ? "" : "s"}`}
                     onClick={() => select(it.id)}
-                    className={clsx(
-                      "no-select flex h-8 shrink-0 items-center rounded-[10px] px-2.5 text-left text-[12.5px] font-bold leading-none transition",
-                      twoCol ? "w-auto max-w-full" : "w-full",
-                      active ? "bg-cyan-pill-active" : "bg-cyan-pill",
-                    )}
+                    className={clsx("no-select inline-flex h-[30px] shrink-0 items-center gap-[5px] whitespace-nowrap rounded-[10px] px-[9px] text-[12.5px] tabular-nums transition", active ? "bg-cyan-pill-active" : "bg-cyan-pill")}
                   >
-                    <span className="truncate">{it.id.startsWith("date:") ? datePillLabel(it.id, it.label) : shortPillLabel(it.label)}</span>
-                    <span className="shrink-0 whitespace-pre font-semibold opacity-85">- {pillHours(it.minutes)}</span>
+                    <span className="font-semibold">{it.label}</span>
+                    <b className="font-extrabold">{hoursText(it.minutes)}</b>
+                    <small className="rounded-full bg-white/25 px-[5px] py-px text-[10px] font-bold opacity-75">{count}</small>
                   </button>
                 );
               })}
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
     </section>
   );

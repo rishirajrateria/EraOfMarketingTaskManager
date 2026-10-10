@@ -126,7 +126,7 @@ export function MeetingGuestsSheet({
             </ul>
           ) : (
             <p className="text-xs text-muted">
-              {client ? ((client.emails ?? []).length ? `${client.name}'s email was removed — pick the client again to add it back` : `${client.name} has no email — add one in Clients`) : "Pick a client in the green area to invite them"}
+              {client ? ((client.emails ?? []).length ? `${client.name}'s email was removed — pick the client again to add it back` : `${client.name} has no email — add one in Clients`) : "Pick a client in the rows below to invite them"}
             </p>
           )}
         </section>

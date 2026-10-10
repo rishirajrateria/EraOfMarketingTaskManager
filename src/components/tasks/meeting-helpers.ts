@@ -1,8 +1,8 @@
 import { addDays } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
-import { DEFAULT_TZ, dateChip, dateKey, fmtTime } from "@/lib/time";
+import { DEFAULT_TZ, dateKey } from "@/lib/time";
 import type { DashboardData } from "@/server/tasks/types";
-import { externalGuests, fromDatetimeLocal, meetingInvitees, shortcutStart, type AddTaskForm } from "@/components/tasks/add-task-helpers";
+import { externalGuests, meetingInvitees, shortcutStart, type AddTaskForm } from "@/components/tasks/add-task-helpers";
 
 /** Pure helpers for the meeting parts of the Add-task sheet (ADR 0012). No React, no server access. */
 
@@ -87,30 +87,6 @@ export function pickClient(form: Pick<AddTaskForm, "type" | "clientId">, data: P
 /** People invited besides me + external guests (the badge on the people glyph and the summary line). */
 export function guestCount(form: Pick<AddTaskForm, "teamIds" | "assigneeIds" | "clientGuests" | "guestEmails">, data: Pick<DashboardData, "people" | "me">): number {
   return meetingInvitees(form, data).filter((id) => id !== data.me.id).length + externalGuests(form).length;
-}
-
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-
-/**
- * Meeting summary line: "📅 Today 4:00pm–4:30pm · 30m · 3 guests", "📅 Next free slot: Tom 10:00am–10:30am · …" or
- * "📅 Tom · all day · 2 guests"; a zone other than the company's is named at the end.
- */
-export function meetingLine(form: AddTaskForm, data: Pick<DashboardData, "people" | "me">, nextSlot: Date | null, now = new Date(), companyTz = DEFAULT_TZ): string {
-  const zone = meetingTz(form, companyTz);
-  const guests = plural(guestCount(form, data), "guest");
-  const zoneNote = zone !== companyTz ? ` · ${zone}` : "";
-  if (form.meeting?.allDay) {
-    const key = /^\d{4}-\d{2}-\d{2}/.test(form.scheduledStart) ? form.scheduledStart.slice(0, 10) : dateKey(now, zone);
-    const day = dateChip(new Date(fromDatetimeLocal(`${key}T12:00`, zone) ?? now), now, zone);
-    return `📅 ${day} · all day · ${guests}${zoneNote}`;
-  }
-  const picked = form.scheduledStart ? fromDatetimeLocal(form.scheduledStart, zone) : null;
-  const start = picked ? new Date(picked) : nextSlot;
-  const duration = fmtDuration(form.hours);
-  if (!start) return `📅 Next free slot: finding… · ${duration} · ${guests}`;
-  const end = new Date(start.getTime() + Math.round(form.hours * 60) * 60000);
-  const when = `${dateChip(start, now, zone)} ${fmtTime(start, zone)}–${fmtTime(end, zone)}`;
-  return `📅 ${picked ? "" : "Next free slot: "}${when} · ${duration} · ${guests}${zoneNote}`;
 }
 
 /** Voice notes are never uploaded for meetings (the description is the agenda). */

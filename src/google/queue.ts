@@ -36,9 +36,23 @@ export function registerHandler(kind: IntegrationKind, h: Handler) {
   handlers.set(kind, h);
 }
 
+/**
+ * Runs due jobs. Handlers may queue follow-ups (CALENDAR_EVENT → MEET_CONFIG, ADR 0015), so a few passes are made
+ * while the previous pass did work.
+ */
 export async function processPending(limit = 25): Promise<number> {
   const { registerTaskIntegrationHandlers } = await import("@/google/task-integrations");
   registerTaskIntegrationHandlers();
+  let total = 0;
+  for (let pass = 0; pass < 3; pass++) {
+    const done = await processBatch(limit);
+    total += done;
+    if (!done) break;
+  }
+  return total;
+}
+
+async function processBatch(limit: number): Promise<number> {
   const jobs = await prisma.integrationJob.findMany({
     where: { status: "PENDING", nextAttemptAt: { lte: new Date() } },
     orderBy: { createdAt: "asc" },

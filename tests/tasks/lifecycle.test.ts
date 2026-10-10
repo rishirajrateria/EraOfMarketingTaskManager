@@ -90,7 +90,9 @@ describe("task lifecycle", () => {
     expect(t.status).toBe("COMPLETED");
     expect(t.actualEnd).not.toBeNull();
     expect(t.approvedById).toBe(admin.id);
-    expect(t.meetActive).toBe(false);
+    // ADR 0015: the Meet link (like Drive and Chat) lives until the task is deleted
+    expect(t.meetActive).toBe(true);
+    expect(t.meetLink).not.toBeNull();
     expect(t.sessions.every((s) => s.endedAt !== null)).toBe(true);
     expect(t.requests.find((r) => r.type === "FINISH")!.status).toBe("APPROVED");
     expect(await testDb.notification.count({ where: { taskId, kind: "FINISH_APPROVED", userId: tl.id } })).toBe(1);
@@ -212,40 +214,68 @@ describe("task lifecycle", () => {
     expect(dup.driveFolderId).toBeNull(); // restartCreatesNewWorkspace default → fresh workspace
     expect(orig.status).toBe("COMPLETED");
     const jobs = await testDb.integrationJob.findMany({ where: { taskId: dup.id } });
-    expect(jobs.map((j) => j.kind).sort()).toEqual(["CALENDAR_EVENT", "CHAT_SPACE", "DRIVE_FOLDER"]);
+    expect(jobs.map((j) => j.kind).filter((k) => k !== "MEET_CONFIG").sort()).toEqual(["CALENDAR_EVENT", "CHAT_SPACE", "DRIVE_FOLDER"]);
   });
 
-  it("deleteTask soft-deletes; deleteData removes sessions and requests", async () => {
-    const { admin, tl, client, taskId } = await setup();
+  it("deleteTask removes everything: Google items, sessions, requests, notes; the row is an invisible tombstone", async () => {
+    const { admin, tl, taskId } = await setup();
     const lc = await L();
     const { deleteTask } = await import("@/server/tasks/manage");
+    const { processPending } = await import("@/google/queue");
+    const { trashedMockFiles } = await import("@/google/drive");
+    const { mockMeet } = await import("@/google/meet");
+    await settle(150);
+    await processPending();
+    await processPending(); // MEET_CONFIG is queued by CALENDAR_EVENT
     session.set(tl);
     await lc.startTask(taskId);
     await lc.raiseDoubt(taskId, "hmm");
-    expect((await deleteTask(taskId, { deleteChat: true, deleteDrive: true, deleteData: true })).ok).toBe(false);
+    expect((await deleteTask(taskId)).ok).toBe(false); // Admin only
+
+    const before = await loadTask(taskId);
+    expect(before.driveFolderId).not.toBeNull();
+    expect(before.chatSpaceId).not.toBeNull();
+    expect(before.calendarEventId).not.toBeNull();
+    expect(before.meetSpaceName).not.toBeNull();
+    await testDb.taskMeetingNote.create({ data: { taskId, kind: "SMART_NOTES", conferenceRecord: "conferenceRecords/x", docId: "doc1", docUrl: "https://docs.google.com/document/d/doc1/edit", filedAs: "MOVED" } });
 
     session.set(admin);
-    const keep = await createTaskAs(client.id, [tl.id], { title: "keep data" });
-    session.set(tl);
-    await lc.startTask(keep);
-    session.set(admin);
-
-    expect((await deleteTask(taskId, { deleteChat: true, deleteDrive: true, deleteData: true })).ok).toBe(true);
-    const gone = await loadTask(taskId);
+    const res = await deleteTask(taskId);
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.data.warnings).toEqual([]);
+    const gone = await testDb.task.findUniqueOrThrow({ where: { id: taskId }, include: { sessions: true, requests: true, attachments: true, meetingNotes: true } });
     expect(gone.deletedAt).not.toBeNull();
     expect(gone.deletedById).toBe(admin.id);
     expect(gone.sessions).toHaveLength(0);
     expect(gone.requests).toHaveLength(0);
+    expect(gone.meetingNotes).toHaveLength(0);
+    expect([gone.driveFolderId, gone.chatSpaceId, gone.calendarEventId, gone.meetLink, gone.meetSpaceName]).toEqual([null, null, null, null, null]);
     expect(gone.meetActive).toBe(false);
+    expect(trashedMockFiles).toContain(before.driveFolderId);
+    expect(mockMeet.spaces.get(before.meetSpaceName!)?.accessType).toBe("RESTRICTED");
+    expect(await testDb.integrationJob.count({ where: { taskId, status: "PENDING" } })).toBe(0);
+    const audit = await testDb.auditLog.findFirstOrThrow({ where: { entityId: taskId, action: "task.delete" } });
+    expect(JSON.stringify(audit.after)).toContain("Drive folder");
     // deleted tasks are no longer visible to actions
     session.set(tl);
     expect((await lc.requestFinish(taskId)).ok).toBe(false);
-
     session.set(admin);
-    expect((await deleteTask(keep, { deleteChat: false, deleteDrive: false, deleteData: false })).ok).toBe(true);
-    const kept = await loadTask(keep);
-    expect(kept.deletedAt).not.toBeNull();
-    expect(kept.sessions).toHaveLength(1);
+    expect((await deleteTask(taskId)).ok).toBe(false);
+  });
+
+  it("deleteTask keeps a Drive folder / Chat space still used by a restarted copy", async () => {
+    const { admin, client, tl } = await setup();
+    const { deleteTask } = await import("@/server/tasks/manage");
+    const { trashedMockFiles } = await import("@/google/drive");
+    const shared = { driveFolderId: "folder_shared", driveFolderUrl: "https://drive.google.com/drive/folders/folder_shared", chatSpaceId: "spaces/shared", chatSpaceUrl: "https://chat.google.com/room/shared" };
+    const a = await testDb.task.create({ data: { title: "A", clientId: client.id, createdById: admin.id, status: "COMPLETED", ...shared, assignees: { create: [{ userId: tl.id }] } } });
+    await testDb.task.create({ data: { title: "A", clientId: client.id, createdById: admin.id, parentTaskId: a.id, ...shared, assignees: { create: [{ userId: tl.id }] } } });
+    session.set(admin);
+    const before = trashedMockFiles.length;
+    expect((await deleteTask(a.id)).ok).toBe(true);
+    expect(trashedMockFiles.length).toBe(before);
+    const audit = await testDb.auditLog.findFirstOrThrow({ where: { entityId: a.id, action: "task.delete" } });
+    expect(JSON.stringify(audit.after)).toContain("used by the restarted copy");
   });
 
   it("resolveRequest: HR cannot resolve an ADMIN-targeted request; Admin can", async () => {

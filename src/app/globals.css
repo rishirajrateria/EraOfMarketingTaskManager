@@ -36,6 +36,11 @@
   --color-acc-grey: var(--acc-grey);
   --color-me: var(--me);
   --color-meet: var(--meet);
+  --color-team: var(--team);
+  --color-team-bg: var(--team-bg);
+  --color-ontime: var(--ontime);
+  --color-late: var(--late);
+  --color-doubt: var(--doubt);
 }
 
 :root {
@@ -79,6 +84,8 @@
   --row-yellow: rgba(254, 243, 199, 0.78);
   --row-red: rgba(254, 226, 226, 0.78);
   --row-grey: rgba(226, 232, 240, 0.62);
+  --row-purple: rgba(237, 233, 254, 0.8);
+  --acc-purple: #8b5cf6;
   --acc-green: #10b981;
   --acc-yellow: #f59e0b;
   --acc-red: #ef4444;
@@ -89,6 +96,12 @@
   --primary-ink: #fff;
   --me: #1d4ed8;
   --meet: #7c3aed;
+  /* ADR 0015: team chip, actual-time pill (on time / late), doubt badge */
+  --team: #0f766e;
+  --team-bg: rgba(20, 184, 166, 0.16);
+  --ontime: #047857;
+  --late: #b91c1c;
+  --doubt: #7c3aed;
   --recsum: #0369a1;
   --dim: rgba(2, 12, 24, 0.35);
   /* legacy names kept for older screens */
@@ -138,10 +151,16 @@
     --row-yellow: rgba(245, 158, 11, 0.16);
     --row-red: rgba(239, 68, 68, 0.17);
     --row-grey: rgba(148, 163, 184, 0.09);
+    --row-purple: rgba(139, 92, 246, 0.2);
     --primary: #e8f1f8;
     --primary-ink: #07111c;
     --me: #93c5fd;
     --meet: #c4b5fd;
+    --team: #5eead4;
+    --team-bg: rgba(45, 212, 191, 0.16);
+    --ontime: #6ee7b7;
+    --late: #fca5a5;
+    --doubt: #c4b5fd;
     --recsum: #7dd3fc;
     --dim: rgba(2, 12, 24, 0.55);
     /* older screens use Tailwind greys for text: invert the scale so they stay readable */
@@ -312,10 +331,11 @@ body {
 .row-yellow { background: var(--row-yellow); }
 .row-red { background: var(--row-red); }
 .row-grey { background: var(--row-grey); }
+.row-purple { background: var(--row-purple); }
 .task-card {
   position: relative;
   margin: 0 10px 8px;
-  padding: 12px 12px 10px 16px;
+  padding: 10px 10px 10px 14px;
   border: 1px solid var(--hair);
   border-radius: 16px;
   box-shadow: var(--shadow);
@@ -336,7 +356,24 @@ body {
 .task-card.row-green::before { background: var(--acc-green); }
 .task-card.row-yellow::before { background: var(--acc-yellow); }
 .task-card.row-red::before { background: var(--acc-red); }
-.task-card.row-grey::before { background: var(--acc-grey); }
+.task-card.row-purple::before { background: var(--acc-purple); }
+/* Completed (ADR 0015): no grey fill and no edge — the whole card is faded but readable. */
+.task-card.row-grey { background: var(--row-white); opacity: 0.66; }
+.task-card.row-grey::before { background: transparent; }
+/* Long-press feedback on the completion circle: a ring that fills over the 450 ms hold. */
+.circle-hold { position: relative; }
+.circle-hold::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 9999px;
+  border: 2px solid var(--primary);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 120ms, transform 120ms;
+  pointer-events: none;
+}
+.circle-hold[data-holding="true"]::after { opacity: 0.55; transform: scale(1); transition: opacity 450ms linear, transform 450ms ease-out; }
 
 /* ---------- Sheets, toasts, add-task ---------- */
 .sheet-panel {

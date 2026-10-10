@@ -9,8 +9,8 @@ import type { TaskInput } from "@/server/tasks/schema";
  */
 
 export const MSG = {
-  pickTeam: "Pick a team in the green area",
-  pickWork: "Pick a work type in the green area",
+  pickTeam: "Pick a team in the rows below",
+  pickWork: "Pick a work type in the rows below",
   noLeader: "That team has no Team Leader yet (Menu → Add teamleader)",
   noGuests: "Invite someone: pick a team, people or add a guest email",
   prefOutsideTeam: "Preferred executives must be executives of the chosen team",

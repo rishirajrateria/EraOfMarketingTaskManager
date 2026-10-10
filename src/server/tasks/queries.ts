@@ -5,8 +5,9 @@ import { getSettings } from "@/lib/settings";
 import { rowColour, ACTIVE_STATUSES } from "@/server/tasks/state";
 import { describeRecord } from "@/server/tasks/recurrence";
 import { DEFAULT_TZ } from "@/lib/time";
-import type { DashboardData, PillGroup, TaskRow } from "@/server/tasks/types";
+import type { DashboardData, TaskRow } from "@/server/tasks/types";
 import { clientGuestEmails, readMeetingOptions } from "@/server/tasks/meeting";
+import { reviewFieldsOf } from "@/server/tasks/review-fields";
 
 export const taskInclude = {
   client: { select: { id: true, name: true } },
@@ -15,6 +16,7 @@ export const taskInclude = {
   tags: { include: { workType: { select: { id: true, name: true, colour: true } } }, orderBy: { workType: { name: "asc" } } },
   attachments: { select: { id: true, name: true, kind: true, url: true, driveFileId: true, durationSec: true } },
   children: { select: { id: true }, take: 1, orderBy: { createdAt: "desc" as const } },
+  meetingNotes: { select: { id: true, kind: true, docUrl: true, createdAt: true }, orderBy: { createdAt: "desc" as const } },
   recurrenceRule: {
     select: { id: true, stopped: true, frequency: true, interval: true, byWeekday: true, endDate: true, repeatFreq: true, monthDay: true, nthWeek: true, nthWeekday: true, yearMonth: true, yearDay: true, endAfterCount: true, anchorDate: true },
   },
@@ -29,7 +31,7 @@ export function toRow(t: TaskWithRelations): TaskRow {
     description: t.description,
     type: t.type,
     status: t.status,
-    colour: rowColour({ status: t.status, overdue: t.overdue, doubtRaised: t.doubtRaised, type: t.type }),
+    colour: rowColour({ status: t.status, overdue: t.overdue, doubtRaised: t.doubtRaised, type: t.type, scheduledStart: t.scheduledStart }),
     overdue: t.overdue,
     important: t.important,
     priority: t.priority,
@@ -37,6 +39,7 @@ export function toRow(t: TaskWithRelations): TaskRow {
     doubtNote: t.doubtNote,
     reviewRequested: t.reviewRequested,
     reviewNote: t.reviewNote,
+    reviewFields: reviewFieldsOf(t),
     paused: t.status === "PAUSED",
     recurring: !!t.recurrenceRule && !t.recurrenceRule.stopped,
     repeatText: t.recurrenceRule && !t.recurrenceRule.stopped ? describeRecord(t.recurrenceRule, t.scheduledStart, DEFAULT_TZ) : null,
@@ -56,6 +59,8 @@ export function toRow(t: TaskWithRelations): TaskRow {
     driveFolderUrl: t.driveFolderUrl,
     meetLink: t.meetLink,
     meetActive: t.meetActive,
+    meetingNotesUrl: t.meetNotesFolderId ? `https://drive.google.com/drive/folders/${t.meetNotesFolderId}` : null,
+    meetingNotes: t.meetingNotes.map((n) => ({ id: n.id, kind: n.kind, url: n.docUrl, createdAt: n.createdAt.toISOString() })),
     guestEmails: t.guestEmails,
     meetingOptions: t.type === "MEETING" ? readMeetingOptions(t.meetingOptions) : null,
     chatSpaceUrl: t.chatSpaceUrl,
@@ -118,85 +123,6 @@ export async function canView(user: SessionUser, taskId: string) {
   return !!t;
 }
 
-function sum(rows: TaskRow[]) {
-  return rows.reduce((s, t) => s + (t.type === "WORK" ? t.allocatedMinutes : 0), 0);
-}
-
-/** Time-status pills (SPEC §5.1): sums of allocatedMinutes of non-completed tasks in scope. */
-export async function buildPills(user: SessionUser, tasks: TaskRow[], tz: string, now = new Date()): Promise<PillGroup[]> {
-  const open = tasks.filter((t) => t.status !== "COMPLETED");
-  const { dateKey, zonedStartOfDay } = await import("@/lib/time");
-  const { addDays } = await import("date-fns");
-  const todayKey = dateKey(now, tz);
-  const tomorrowKey = dateKey(addDays(zonedStartOfDay(now, tz), 1), tz);
-  const byDate = async (): Promise<PillGroup> => {
-    let b4Leave = 0;
-    try {
-      const { b4LeaveMinutes } = await import("@/server/inventory/queries");
-      b4Leave = await b4LeaveMinutes(user.id);
-    } catch {
-      b4Leave = 0;
-    }
-    return {
-      key: "date",
-      label: "Date",
-      items: [
-        { id: "date:today", label: "Today", minutes: sum(open.filter((t) => t.scheduledStart && dateKey(new Date(t.scheduledStart), tz) === todayKey)) },
-        { id: "date:tomorrow", label: "Tomorrow", minutes: sum(open.filter((t) => t.scheduledStart && dateKey(new Date(t.scheduledStart), tz) === tomorrowKey)) },
-        { id: "date:b4leave", label: "B4Leave", minutes: b4Leave },
-        { id: "date:all", label: "All time", minutes: sum(open) },
-      ],
-    };
-  };
-  const byClient = (): PillGroup => {
-    const m = new Map<string, { label: string; minutes: number }>();
-    for (const t of open) {
-      const cur = m.get(t.client.id) ?? { label: t.client.name, minutes: 0 };
-      cur.minutes += t.type === "WORK" ? t.allocatedMinutes : 0;
-      m.set(t.client.id, cur);
-    }
-    return { key: "client", label: "Client", items: [...m].map(([id, v]) => ({ id: `client:${id}`, label: v.label, minutes: v.minutes })) };
-  };
-  if (user.role === "ADMIN") {
-    const teams = new Map<string, { label: string; minutes: number }>();
-    const people = new Map<string, { label: string; minutes: number }>();
-    for (const t of open) {
-      for (const team of t.teams) {
-        const cur = teams.get(team.id) ?? { label: team.name, minutes: 0 };
-        cur.minutes += t.type === "WORK" ? t.allocatedMinutes : 0;
-        teams.set(team.id, cur);
-      }
-      for (const a of t.assignees) {
-        const cur = people.get(a.id) ?? { label: a.name.split(" ")[0]!, minutes: 0 };
-        cur.minutes += t.type === "WORK" ? t.allocatedMinutes : 0;
-        people.set(a.id, cur);
-      }
-    }
-    return [
-      { key: "team", label: "Team", items: [...teams].map(([id, v]) => ({ id: `team:${id}`, label: v.label, minutes: v.minutes })) },
-      { key: "person", label: "Person", items: [...people].map(([id, v]) => ({ id: `person:${id}`, label: v.label, minutes: v.minutes })) },
-      byClient(),
-    ];
-  }
-  if (user.role === "TEAM_LEADER") {
-    const people = new Map<string, { label: string; minutes: number }>();
-    for (const t of open) {
-      for (const a of t.assignees) {
-        if (a.id === user.id) continue;
-        const cur = people.get(a.id) ?? { label: a.name.split(" ")[0]!, minutes: 0 };
-        cur.minutes += t.type === "WORK" ? t.allocatedMinutes : 0;
-        people.set(a.id, cur);
-      }
-    }
-    return [
-      { key: "person", label: "Executive", items: [...people].map(([id, v]) => ({ id: `person:${id}`, label: v.label, minutes: v.minutes })) },
-      await byDate(),
-      byClient(),
-    ];
-  }
-  return [await byDate(), byClient()];
-}
-
 export async function dashboardData(user: SessionUser): Promise<DashboardData> {
   if (user.role !== "ADMIN" && user.role !== "TEAM_LEADER" && user.role !== "EXECUTIVE") throw new Error("No task dashboard for this role");
   const settings = await getSettings();
@@ -213,7 +139,6 @@ export async function dashboardData(user: SessionUser): Promise<DashboardData> {
   ]);
   const workTypes = workTypeRows.map(({ teams: wt, ...w }) => ({ ...w, teamIds: wt.map((t) => t.id) }));
   const people = peopleRows.map(({ specialities, ...p }) => ({ ...p, specialityIds: specialities.map((w) => w.id) }));
-  const pills = await buildPills(user, tasks, settings.timezone);
   let nextLeaveKey: string | null = null;
   try {
     const { nextApprovedLeave } = await import("@/server/inventory/queries");
@@ -241,7 +166,6 @@ export async function dashboardData(user: SessionUser): Promise<DashboardData> {
   return {
     role: user.role,
     tasks,
-    pills,
     row1,
     row2,
     workTypes,

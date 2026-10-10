@@ -12,12 +12,15 @@ export function TaskList({
   handlers,
   onRefresh,
   refreshing,
+  pendingDone,
 }: {
   tasks: Row[];
   data: DashboardData;
   handlers: RowHandlers;
   onRefresh: () => void;
   refreshing: boolean;
+  /** Tasks tapped done whose Undo window is still open (shown ticked). */
+  pendingDone?: ReadonlySet<string>;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const startY = useRef<number | null>(null);
@@ -49,7 +52,7 @@ export function TaskList({
       ) : (
         <ul className="pb-3 pt-2.5">
           {tasks.map((t) => (
-            <TaskRow key={t.id} t={t} data={data} h={handlers} />
+            <TaskRow key={t.id} t={t} data={data} h={handlers} pendingDone={pendingDone?.has(t.id)} />
           ))}
         </ul>
       )}

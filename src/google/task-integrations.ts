@@ -1,6 +1,7 @@
 /**
- * Per-task Google automation (SPEC §8): Drive folder, Calendar+Meet, Chat space,
- * propagation of edits, and teardown on delete/complete.
+ * Per-task Google automation (SPEC §8, ADR 0015): Drive folder (+ "Meeting notes"), Calendar + Meet, the Meet space
+ * config (open access + Gemini notes), Chat space, propagation of edits, and teardown on delete. Meet, Drive and Chat
+ * live until the task is deleted — completing a task no longer touches them.
  */
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
@@ -8,8 +9,11 @@ import { enqueue, registerHandler } from "@/google/queue";
 import * as Drive from "@/google/drive";
 import * as Cal from "@/google/calendar";
 import * as Chat from "@/google/chat";
+import * as Meet from "@/google/meet";
+import { ensureTaskFolder } from "@/google/task-folder";
 import { fmtDateTime } from "@/lib/time";
 import { meetingAttendees, readMeetingOptions } from "@/server/tasks/meeting";
+import { workTaskPeople } from "@/server/tasks/task-people";
 
 let registered = false;
 
@@ -18,7 +22,8 @@ async function taskContext(taskId: string) {
     where: { id: taskId },
     include: {
       client: true,
-      assignees: { include: { user: { include: { teamLeader: true } } } },
+      assignees: { include: { user: { include: { teamLeader: { select: { email: true } } } } } },
+      teams: { include: { team: { include: { leader: { select: { email: true } }, members: { select: { email: true, role: true, active: true } } } } } },
       createdBy: { select: { email: true } },
     },
   });
@@ -29,13 +34,20 @@ async function taskContext(taskId: string) {
     return { task, emails: meetingAttendees(internal, task.guestEmails), internal };
   }
   const admins = await prisma.user.findMany({ where: { role: "ADMIN", active: true }, select: { email: true } });
-  const emails = new Set<string>();
-  for (const a of task.assignees) {
-    emails.add(a.user.email);
-    if (a.user.teamLeader?.email) emails.add(a.user.teamLeader.email);
-  }
-  admins.forEach((a) => emails.add(a.email));
-  return { task, emails: Array.from(emails), internal: Array.from(emails) };
+  const people = workTaskPeople({
+    assignees: task.assignees.map((a) => ({ email: a.user.email, teamLeaderEmail: a.user.teamLeader?.email })),
+    teamMembers: task.teams.flatMap((x) => x.team.members),
+    teamLeaderEmails: task.teams.map((x) => x.team.leader?.email),
+    creatorEmail: task.createdBy.email,
+    adminEmails: admins.map((a) => a.email),
+  });
+  return { task, emails: people.calendar, internal: people.internal };
+}
+
+/** After a Meet link appears (event created, or Meet switched on in a meeting's options), configure its space. */
+async function queueMeetConfig(taskId: string, meetLink: string | null) {
+  const code = Meet.meetingCodeFromLink(meetLink);
+  if (code) await enqueue("MEET_CONFIG", `meetcfg:${taskId}:${code}`, {}, { taskId });
 }
 
 const eventSummary = (task: { type: string; title: string }) => `${task.type === "MEETING" ? "Meeting" : "Task"}: ${task.title}`;
@@ -47,12 +59,9 @@ export function registerTaskIntegrationHandlers() {
   registered = true;
 
   registerHandler("DRIVE_FOLDER", async (_p, job) => {
-    const { task, internal: emails } = await taskContext(job.taskId!); // never external guests
-    if (task.driveFolderId) return { id: task.driveFolderId };
-    const folder = await Drive.ensurePath(["Clients", task.client.name, `${task.title} – ${task.id.slice(-6)}`]);
+    const { internal: emails } = await taskContext(job.taskId!); // never external guests
+    const folder = await ensureTaskFolder(job.taskId!);
     await Drive.shareWith(folder.id, emails, "writer");
-    await prisma.task.update({ where: { id: task.id }, data: { driveFolderId: folder.id, driveFolderUrl: folder.url } });
-    await prisma.client.update({ where: { id: task.clientId }, data: { driveFolderId: task.client.driveFolderId ?? (await Drive.ensurePath(["Clients", task.client.name])).id } });
     return folder;
   });
 
@@ -77,7 +86,19 @@ export function registerTaskIntegrationHandlers() {
       where: { id: task.id },
       data: { calendarEventId: ev.eventId, meetLink: ev.meetLink, meetActive: !!ev.meetLink },
     });
+    await queueMeetConfig(task.id, ev.meetLink);
     return ev;
+  });
+
+  // Meet REST API v2 (ADR 0015): anyone with the link joins without knocking; Gemini notes + transcripts ON.
+  // Refusals (no Gemini in the edition, scope not delegated, …) are warnings in the job result, never failures.
+  registerHandler("MEET_CONFIG", async (_p, job) => {
+    const task = await prisma.task.findUnique({ where: { id: job.taskId! }, select: { id: true, meetLink: true, deletedAt: true } });
+    if (!task?.meetLink || task.deletedAt) return { skipped: "no Meet link" };
+    const res = await Meet.configureTaskSpace(task.meetLink);
+    if (res.spaceName) await prisma.task.update({ where: { id: task.id }, data: { meetSpaceName: res.spaceName } });
+    if (res.warnings.length) console.warn(`[meet] task ${task.id}: ${res.warnings.join("; ")}`);
+    return res;
   });
 
   registerHandler("CHAT_SPACE", async (_p, job) => {
@@ -118,7 +139,10 @@ export function registerTaskIntegrationHandlers() {
       meet,
       requestId: `task-${task.id}-meet-${Date.now()}`,
     });
-    if (res) await prisma.task.update({ where: { id: task.id }, data: { meetLink: res.meetLink, meetActive: !!res.meetLink } });
+    if (res) {
+      await prisma.task.update({ where: { id: task.id }, data: { meetLink: res.meetLink, meetActive: !!res.meetLink, ...(res.meetLink ? {} : { meetSpaceName: null }) } });
+      await queueMeetConfig(task.id, res.meetLink);
+    }
     return { updated: true, attendees: emails.length };
   });
 
@@ -137,15 +161,14 @@ export function registerTaskIntegrationHandlers() {
   });
 }
 
-/** Queue the full Work set (Drive → Calendar → Chat) or Meeting subset (Calendar only). */
+/**
+ * Queue the Google set (ADR 0015): every task gets a Drive folder (+ "Meeting notes") and a Calendar event with Meet
+ * (then MEET_CONFIG); work tasks also get a Chat space.
+ */
 export async function queueTaskCreation(taskId: string, type: "WORK" | "MEETING", tx?: Parameters<typeof enqueue>[4]) {
-  if (type === "WORK") {
-    await enqueue("DRIVE_FOLDER", `drive:${taskId}`, {}, { taskId }, tx);
-    await enqueue("CALENDAR_EVENT", `cal:${taskId}`, {}, { taskId }, tx);
-    await enqueue("CHAT_SPACE", `chat:${taskId}`, {}, { taskId }, tx);
-  } else {
-    await enqueue("CALENDAR_EVENT", `cal:${taskId}`, {}, { taskId }, tx);
-  }
+  await enqueue("DRIVE_FOLDER", `drive:${taskId}`, {}, { taskId }, tx);
+  await enqueue("CALENDAR_EVENT", `cal:${taskId}`, {}, { taskId }, tx);
+  if (type === "WORK") await enqueue("CHAT_SPACE", `chat:${taskId}`, {}, { taskId }, tx);
 }
 
 /** Task edits propagate to Calendar, Chat membership and Drive sharing (SPEC §8). */
@@ -156,33 +179,43 @@ export async function queueTaskPropagation(taskId: string, tx?: Parameters<typeo
   await enqueue("CHAT_MEMBERS", `chatmem:${taskId}:${stamp}`, {}, { taskId }, tx);
 }
 
-/** On approve-complete: Meet link deactivated, Chat space kept (SPEC §7). */
-export async function deactivateMeet(taskId: string) {
-  const t = await prisma.task.findUnique({ where: { id: taskId }, select: { calendarEventId: true } });
-  if (t?.calendarEventId) await Cal.endEventAndRemoveMeet(t.calendarEventId).catch(() => undefined);
-  await prisma.task.update({ where: { id: taskId }, data: { meetActive: false } });
-}
+export type TeardownResult = { removed: string[]; kept: string[]; warnings: string[] };
 
-/** Delete-task sheet (SPEC §12). Calendar event is always removed. */
-export async function teardownTask(taskId: string, opts: { chat: boolean; drive: boolean }) {
+/**
+ * Delete-task teardown (ADR 0015 — everything goes): pending Google jobs are cancelled, the Meet space is ended and
+ * locked (Google can't delete a Meet link), the Calendar event deleted, the Drive folder moved to the Drive trash and
+ * the Chat space deleted. A folder / space still used by another live task (a restarted copy that reuses the
+ * workspace) is kept. Each step is independent; failures come back as warnings.
+ */
+export async function teardownTask(taskId: string): Promise<TeardownResult> {
+  const out: TeardownResult = { removed: [], kept: [], warnings: [] };
+  await prisma.integrationJob.updateMany({ where: { taskId, status: "PENDING" }, data: { status: "FAILED", lastError: "Task deleted" } });
   const t = await prisma.task.findUnique({
     where: { id: taskId },
-    select: { calendarEventId: true, chatSpaceId: true, driveFolderId: true },
+    select: { calendarEventId: true, chatSpaceId: true, driveFolderId: true, meetLink: true, meetSpaceName: true },
   });
-  if (!t) return;
-  if (t.calendarEventId) await Cal.deleteEvent(t.calendarEventId).catch(() => undefined);
-  if (opts.chat && t.chatSpaceId) await Chat.deleteSpace(t.chatSpaceId).catch(() => undefined);
-  if (opts.drive && t.driveFolderId) await Drive.deleteFile(t.driveFolderId).catch(() => undefined);
-  await prisma.task.update({
-    where: { id: taskId },
-    data: {
-      calendarEventId: null,
-      meetLink: null,
-      meetActive: false,
-      chatSpaceId: opts.chat ? null : t.chatSpaceId,
-      chatSpaceUrl: opts.chat ? null : undefined,
-      driveFolderId: opts.drive ? null : t.driveFolderId,
-      driveFolderUrl: opts.drive ? null : undefined,
-    },
-  });
+  if (!t) return out;
+  const step = async (label: string, fn: () => Promise<unknown>) => {
+    try {
+      const warnings = await fn();
+      if (Array.isArray(warnings) && warnings.length) out.warnings.push(...(warnings as string[]));
+      else out.removed.push(label);
+    } catch (e) {
+      out.warnings.push(`${label}: ${Meet.googleReason(e)}`);
+    }
+  };
+  const sharedWith = async (field: "driveFolderId" | "chatSpaceId", value: string) =>
+    (await prisma.task.count({ where: { id: { not: taskId }, deletedAt: null, [field]: value } })) > 0;
+
+  if (t.meetSpaceName || t.meetLink) await step("Meet link", () => Meet.lockTaskSpace(t.meetSpaceName ?? t.meetLink!));
+  if (t.calendarEventId) await step("Calendar event", () => Cal.deleteEvent(t.calendarEventId!));
+  if (t.driveFolderId) {
+    if (await sharedWith("driveFolderId", t.driveFolderId)) out.kept.push("Drive folder (used by the restarted copy)");
+    else await step("Drive folder", () => Drive.trashFile(t.driveFolderId!));
+  }
+  if (t.chatSpaceId) {
+    if (await sharedWith("chatSpaceId", t.chatSpaceId)) out.kept.push("Chat space (used by the restarted copy)");
+    else await step("Chat space", () => Chat.deleteSpace(t.chatSpaceId!));
+  }
+  return out;
 }

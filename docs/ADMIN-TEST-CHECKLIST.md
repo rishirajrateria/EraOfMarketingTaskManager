@@ -28,8 +28,8 @@ Sign in as **Admin** from the demo chooser. Everything below is in the order a r
   four cells **TODAY / TOM / WEEK / MONTH**, each "13h left" (bold) and "2h booked" (muted) for everyone in that team
   (Team Leader + executives); pick a second team → the numbers add up; untap all teams → it slides away. Team Leader /
   Executive: the strip shows their own team straight away (none if they have no team).
-- **+** → task: title, description (small mic in the toolbar = dictation). The body has **no date / time inputs**: under the
-  pills it reads "📅 Next free slot: Tom 10:00am · 2h · change with the calendar icon below".
+- **+** → task: title, description (small mic in the toolbar = dictation). The body has **no date / time inputs**, **no
+  ★ Important** chip and no "📅 Next free slot" line or "Goes to …" card (ADR 0015).
   - **How long**: tap ½h … 8h (selected pill is dark in light mode, light in dark mode), − / + steps 15 minutes, never
     below 15 minutes.
   - **Voice note**: tap the big round mic → it turns red and pulses with a live 0:07 timer → tap again → a chip
@@ -40,37 +40,39 @@ Sign in as **Admin** from the demo chooser. Everything below is in the order a r
     incl. "Last day of the month" or "The last Fri", every N), **Ends** Never / After 5 times / Until a date → Done →
     toast "Repeats: …" and the pill shows the summary. Reopen → **Don't repeat** clears it. After Save the detail sheet
     shows "↻ Every 2 weeks on Fri".
-  - **Calendar icon** in the bottom bar → "When should it start?" (date + start time) → **Set** → line reads
-    "📅 12 Oct 2026 at 15:30 · …"; **Next free slot** (or **upnext**) goes back to the auto slot; **Tom** / **today** as before.
-  Green rows (labels on
-  the left): only **TEAM** + **CLIENT** at first and the card says "Pick a team below." Type a title, Save → "Pick a team in the
-  green area". Tap **Social** → **WORK** (Social's work types, first one selected) and **PREFER** appear above TEAM;
-  the card reads "Goes to Neha (TL, Social)" · "No executive preference · tap names in the PREFER row" ·
-  "✓ Content specialists: Isha". Tap **Arjun** in PREFER → "★ Arjun", card "Your preference: Arjun · the Team Leader
-  decides". Tap **SEO** only → "— no Team Leader in this team yet", Save →
-  "That team has no Team Leader yet (Menu → Add teamleader)". Pick Graphic + Logo + a client, leave it on upnext →
-  Save. The row shows an amber **pref: arush** chip next to the client.
-- Switch to **Team Leader** (Rishi) → the "[demo] Festive logo refresh" row shows "pref: arush" → long-press →
-  **Assign executive** ("Admin prefers Arush · you decide") → "me (Rishi)", "★ Arush ✓", "Dev"; Arush is pre-selected →
-  Assign → toast "Assigned to Arush", the chip disappears, Arush gets "New task from Rishi: …" in 🔔.
-  Team Leader **+**: **WORK** (Graphic's work types) · **EXEC** ("me", specialists first with ✓) · **CLIENT**; nothing
-  picked → "Your whole team · tap names in the EXEC row to pick".
-- Executive **+**: **WORK** + **CLIENT** only. Executive dashboard green row 2 lists only their team's work types.
-- Long-press the row → **Start** (green). Tap the circle → finish requested → **📥 Requests** → Approve (grey, Restart button).
-- Long-press → **Pause** (⏸ badge) → Resume. Long-press → **Edit** (clears a red dot). Long-press → **Delete** (3 checkboxes).
-- Switch to **Team Leader** (Demo chip) → long-press → **Raise doubt** (yellow) and **Review request** (red dot); back as
-  Admin → Requests inbox → Unflag / Edit.
-- Bottom green rows filter by team/client; the white strip filters restarted / completed / recurring / paused / colours.
+  - **Calendar icon** in the bottom bar → "When should it start?" (date + start time) → **Set**; **Next free slot** (or
+    **upnext**) goes back to the auto slot (the server picks it on save); **Tom** / **today** as before.
+  Glass tag rows (labels on
+  the left — they stay put while the pills scroll sideways): only **TEAM** + **CLIENT** at first. Type a title, Save →
+  "Pick a team in the rows below" next to Save (it disappears once a team is picked). Tap **Social** → **WORK** (Social's
+  work types, first one selected) and **PREFER** appear above TEAM. Tap **Arjun** in PREFER → "★ Arjun". Tap **SEO**
+  only, Save → "That team has no Team Leader yet (Menu → Add teamleader)". Pick Graphic + Logo + a client, leave it on
+  upnext → Save. The card shows the client chip and a teal **Graphic** team chip — no person, no "pref" chip; (i) lists
+  Team Graphic · Team Leader Rishi · Assigned Rishi · Admin's preference Arush.
+- Switch to **Team Leader** (Rishi) → "[demo] Festive logo refresh" → long-press → **Assign executive** ("Admin prefers
+  Arush · you decide") → "me (Rishi)", "★ Arush ✓", "Dev"; Arush is pre-selected → Assign → toast "Assigned to Arush",
+  (i) now says Assigned Arush; Arush gets "New task from Rishi: …" in 🔔. No names beside titles on the TL dashboard.
+  Team Leader **+**: **WORK** (Graphic's work types) · **EXEC** ("me", specialists first with ✓) · **CLIENT**.
+- Executive **+**: **WORK** + **CLIENT** only. Executive dashboard WORK row lists only their team's work types.
+- Long-press the row → **Start** (green). As Team Leader tap the circle → it ticks, toast "Done from your side · Admin will
+  approve · UNDO"; tap **UNDO** within 5 s → the tick goes away and nothing is sent. Tap again and wait → finish requested
+  → as Admin **📥 Requests** → Approve (faded card, Restart button). As Admin a tap on an open task's circle completes it
+  (with the same Undo).
+- Long-press → **Pause** (yellow card, ⏸ badge) → Resume. Long-press → **Edit** (clears a red dot; no Important box).
+  Long-press → **Delete** (list of what goes + **Delete everything**). No "Mark protected" item anywhere.
+- Switch to **Team Leader** (Demo chip) → long-press → **Raise doubt** (purple card, violet **?** after the title) and
+  **Review request** (red dot on the hours pill); back as Admin → Requests inbox → Unflag / Edit.
+- Bottom rows filter by team/client; the strip filters restarted / completed / recurring / colours (red late to start ·
+  yellow paused · green started · purple "?" doubt) / red dot. The bar has only the Meet icon (meeting) and **+** (task).
 - **Meetings (ADR 0012)** — Meet icon in the bar:
   - [ ] The body has **no ★ Important** and **no voice-note mic** (the toolbar dictation mic stays); ⟳ Recurring,
     👥 Guests and ⚙ Options are there; the description placeholder says it is the
     agenda. **Duration** pills 15m 30m 45m 1h 1½h 2h (30m selected) + − / + in 15 minutes.
-  - [ ] Green rows: **TEAM** (multi-select = invite that team's Team Leader only) · **CLIENT** · **START** (9 am … 8 pm every 30
-    minutes, then **Custom…** opens the time picker). Tap **4 pm** → **upnext** turns off and the line reads
-    "📅 Today 4:00pm–4:30pm · 30m · 3 guests" (tomorrow when 4 pm has passed); **Tom** keeps 4 pm and moves the day.
-  - [ ] Pick **Repo** → its email appears under "Guests:" in the card and the people glyph badge counts it; a client with
-    no email shows "<client> has no email — add one in Clients". Pick **Graphic** → only its Team Leader is invited
-    ("Inviting me, Rishi · Graphic (Team Leader)"); with no client and no team the card shows no "null" text.
+  - [ ] Tag rows (neutral glass, ink-filled when picked): **TEAM** (multi-select = invite that team's Team Leader only) · **CLIENT** · **START** (9 am … 8 pm every 30
+    minutes, then **Custom…** opens the time picker). Scroll START sideways → the "START" label stays. Tap **4 pm** →
+    **upnext** turns off (tomorrow when 4 pm has passed); **Tom** keeps 4 pm and moves the day. No summary card / line.
+  - [ ] Pick **Repo** → the people glyph badge counts its email; pick **Graphic** → only its Team Leader is invited (see
+    👥 Guests).
   - [ ] **👥 Guests** (or the people glyph): "From client" chip (✕ removes), "From teams · Graphic" with
     "Rishi Kumar · Team leader" (✕ un-invites the team), **Your people** (you are "(organiser)"; executives unselected
     until tapped), **Add guests**: type an address + Enter,
@@ -88,9 +90,48 @@ Sign in as **Admin** from the demo chooser. Everything below is in the order a r
   - [ ] With real Google (GOOGLE_MOCK off): the event is on the company calendar with the Meet link, reminders, colour,
     location, visibility and guest permissions; every guest gets the Calendar invite email.
   - [ ] Team Leader: the Meet icon works the same (TEAM row instead of EXEC, header = own team).
-- **Look (glass refresh)**: rows are floating glass cards with a coloured left edge (green ongoing, amber doubt, red
-  overdue, grey done); chips wrap instead of being cut off. Switch the phone / browser to **dark mode** → every screen
+- **Look (glass refresh)**: rows are floating glass cards with a coloured left edge (green started, yellow paused, red
+  late to start; completed cards are faded); chips wrap instead of being cut off. Switch the phone / browser to **dark mode** → every screen
   (dashboard, add task, sheets, menu, admin lists) turns dark glass, selected pills stay readable.
+
+### Task card & Google lifecycle (ADR 0015)
+- [ ] **Card** (compact, ≈120 px): title (2 lines max) + badges and the circle · client + teal **team chip** · date pill
+  "08 Oct" (never Today / Tom — also for tasks added with Tom / upnext) + "4hrs" (meetings "🎥 30m", no Meeting chip) ·
+  icons · "11:00am – 3:00pm" · once started "▶ 11:05am – …". No person, no pref chip, no star. Light + dark at 390 px.
+- [ ] **Top summary**: "OPEN HOURS · all tasks", then one line per group — TEAMS / CLIENTS chips "Graphic 20.5h (6)",
+  swipe sideways for more; tap a
+  chip → list filtered (tap again clears). Bottom (neutral glass, not green): TEAMS row → tap **Graphic** →
+  "GRAPHIC·PEOPLE" chips (Team Leader + executives), header right says "Graphic"; **All** clears. CLIENTS row likewise;
+  bar: 📅 (Which day?), Today, Tomorrow, Oldest · Meet icon · blue +. TL: PEOPLE + CLIENTS rows; Executive: CLIENTS +
+  WORK rows, DAYS (Today / Tom / Day+2) + CLIENTS chips. No sideways page scroll at 390 px.
+- [ ] **⏸ all** (Admin only, left of the strip): filter to a team → ⏸ all → "Open, running N / Already paused M",
+  reason "Office closed" → **Pause all (N)** → toast "Paused N tasks", the cards turn yellow with ⏸, assignees get
+  "Paused: …" with the reason. Open again → **Resume all (M)**. Team Leader / Executive don't see the button.
+- [ ] **Review per pill**: "[demo] Robam reel cut" shows red dots on date, hours and time. As Team Leader hold (or
+  right-click) a pill → "Request review of the start time" → note → Send → dot on that pill; Admin sees it too and
+  📥 Requests shows "Review request · start time". TL: hold again → "Withdraw review". Admin: hold a dotted pill →
+  "Mark the start time reviewed" (dot gone, request resolved) or "Change the start time" (Edit); on a clean pill "Flag
+  the … for review". Holding a pill never opens the card menu or selects text; the strip's red dot filters tasks with
+  any dot.
+- [ ] **Actual pill**: "[demo] Robam product shoot edit" (started on time) → green; "[demo] Sunrise ad creatives"
+  (started 25 min late) → red; a started task past its end → red; finished before the end → green, after → red.
+- [ ] **Row colours**: doubt raised = purple card with a violet "?", started = green, paused = yellow, not started after
+  its start = red, completed = faded, else neutral. The strip's 4th swatch (purple "?") filters doubts.
+- [ ] **Circle**: tap = done from my side with 5 s Undo; hold 450 ms (ring fills) or right-click → action menu; right-click
+  anywhere on the card → same menu; keyboard: Tab to the circle, Enter = tap, Shift+F10 / menu key = menu.
+- [ ] **(i)**: Assigned to (Team, Team Leader, Assigned, Admin's preference), description, voice notes, and "Meeting notes"
+  (Gemini notes links + Open folder). The completed "[demo] Repo monthly report" shows a filed "Gemini notes" link.
+- [ ] **Drive / Meet / Chat** icons work on meetings (Drive) and on completed tasks (Meet stays active).
+- [ ] **Delete** → the sheet lists Calendar event · Google Meet link · Drive folder and all its files · Google Chat space ·
+  Task details → **Delete everything** → toast "Task and everything with it deleted".
+- [ ] With real Google (GOOGLE_MOCK=false, Meet REST API enabled, `meetings.space.created`, `meetings.space.settings`,
+  `meetings.space.readonly` in domain-wide delegation): create a task → Drive has `Clients/<client>/<task title>/Meeting
+  notes`; the Meet link opens for anyone with it without knocking (try from a personal Gmail); in the call "Take notes
+  for me" starts automatically (Workspace edition with Gemini; the organiser is GOOGLE_IMPERSONATE_USER) → within
+  30 min of the call (or ☰ → run `/api/jobs/meeting-notes`) the notes Doc is in "Meeting notes" (moved, or a shortcut).
+  The Chat space has the assignee, the team's Team Leader, every executive of the team and the creator. Delete the task
+  → the event is gone, the Meet link no longer lets anyone in, the folder is in Drive's trash, the Chat space is gone.
+  Integration job results (`IntegrationJob.result` for MEET_CONFIG) list any Meet warnings.
 
 ## 3. Invoicing (☰ → PAYMENT Creator)
 - **+ New invoice** → client (tax badge) → amount + description (for a client abroad a **Currency** field appears,

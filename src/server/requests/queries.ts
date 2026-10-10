@@ -6,6 +6,8 @@ export type RequestItem = {
   type: string;
   status: string;
   note: string;
+  /** REVIEW / TIME_CHANGE: the pill under review — "date" | "time" | "mins" (ADR 0015). */
+  field: string | null;
   createdAt: string;
   raisedBy: { id: string; name: string };
   task: { id: string; title: string; status: string; client: string } | null;
@@ -29,6 +31,7 @@ export async function listRequests(targetRole: Role, opts: { includeResolved?: b
     type: r.type,
     status: r.status,
     note: r.note,
+    field: r.field,
     createdAt: r.createdAt.toISOString(),
     raisedBy: r.raisedBy,
     task: r.task ? { id: r.task.id, title: r.task.title, status: r.task.status, client: r.task.client.name } : null,

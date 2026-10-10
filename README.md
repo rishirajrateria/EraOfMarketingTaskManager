@@ -99,7 +99,7 @@ apply migrations to it once with `DATABASE_URL=<test url> npx prisma migrate dep
 ## Google Cloud setup
 
 1. **Project & APIs** — create a project and enable: Google Drive API, Google Calendar API, Google Chat API,
-   Gmail API, Google Sheets API, People API.
+   Gmail API, Google Sheets API, People API, Google Meet REST API (ADR 0015).
 2. **OAuth consent screen** — type *Internal* (Workspace). Scopes: `openid email profile`,
    `…/auth/calendar`, `…/auth/drive`, `…/auth/chat.spaces`, `…/auth/chat.messages`, `…/auth/gmail.send`,
    `…/auth/spreadsheets` (incremental consent is requested at sign-in).
@@ -115,8 +115,15 @@ apply migrations to it once with `DATABASE_URL=<test url> npx prisma migrate dep
    https://www.googleapis.com/auth/chat.messages,
    https://www.googleapis.com/auth/chat.memberships,
    https://www.googleapis.com/auth/gmail.send,
-   https://www.googleapis.com/auth/spreadsheets
+   https://www.googleapis.com/auth/spreadsheets,
+   https://www.googleapis.com/auth/meetings.space.created,
+   https://www.googleapis.com/auth/meetings.space.settings,
+   https://www.googleapis.com/auth/meetings.space.readonly
    ```
+   The three `meetings.space.*` scopes (ADR 0015) open every task's Meet link to anyone with the link, switch on
+   Gemini "Take notes for me" and file the notes into the task's Drive folder. Without them tasks still work; the job
+   results show a Meet warning. Gemini notes also need a Workspace edition that includes Gemini in Meet, and the
+   impersonated user (`GOOGLE_IMPERSONATE_USER`, the organiser of every task event) must be licensed for it.
 6. **Google Chat app** — in the Chat API configuration page, configure the app (name, avatar), *Enable interactive
    features* off, visibility: your Workspace domain. Spaces are created via `spaces.setup` by the impersonated user.
 7. Set `GOOGLE_IMPERSONATE_USER` to a real Workspace user (e.g. `ops@company.com`) and `GOOGLE_MOCK=false`.

@@ -249,6 +249,8 @@ enum IntegrationKind {
   DRIVE_SHARE
   CHAT_MEMBERS
   CALENDAR_UPDATE
+  /// Meet REST API v2: open access + Gemini notes on the task's Meet space (ADR 0015).
+  MEET_CONFIG
   GMAIL_SEND
   SHEETS_SYNC
 }
@@ -405,52 +407,59 @@ model WorkType {
 
 // ---------- Tasks ----------
 model Task {
-  id                   String           @id @default(cuid())
+  id                   String            @id @default(cuid())
   title                String
-  description          String           @default("") // rich text (HTML)
-  type                 TaskType         @default(WORK)
+  description          String            @default("") // rich text (HTML)
+  type                 TaskType          @default(WORK)
   clientId             String
-  client               Client           @relation(fields: [clientId], references: [id])
+  client               Client            @relation(fields: [clientId], references: [id])
   teams                TaskTeam[]
   assignees            TaskAssignee[]
   /// Admin's suggested executives when the task goes to a Team Leader; the Team Leader decides (ADR 0008).
-  preferredAssigneeIds String[]         @default([])
+  preferredAssigneeIds String[]          @default([])
   createdById          String
-  createdBy            User             @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  createdBy            User              @relation("TaskCreatedBy", fields: [createdById], references: [id])
   assignedById         String?
-  assignedBy           User?            @relation("TaskAssignedBy", fields: [assignedById], references: [id])
-  allocatedMinutes     Int              @default(60)
+  assignedBy           User?             @relation("TaskAssignedBy", fields: [assignedById], references: [id])
+  allocatedMinutes     Int               @default(60)
   scheduledStart       DateTime?
   scheduledEnd         DateTime?
   actualStart          DateTime?
   actualEnd            DateTime?
-  status               TaskStatus       @default(ASSIGNED)
+  status               TaskStatus        @default(ASSIGNED)
   statusBeforePause    TaskStatus?
-  overdue              Boolean          @default(false) // red overlay, set by scheduler
+  overdue              Boolean           @default(false) // red overlay, set by scheduler
   overdueNotifiedAt    DateTime?
-  important            Boolean          @default(false)
+  important            Boolean           @default(false)
   tags                 TaskTag[]
-  priority             Priority         @default(NORMAL)
-  selfAssigned         Boolean          @default(false)
-  protected            Boolean          @default(false) // fixed: cannot be overlapped/shifted (Admin self tasks always)
+  priority             Priority          @default(NORMAL)
+  selfAssigned         Boolean           @default(false)
+  protected            Boolean           @default(false) // fixed: cannot be overlapped/shifted (Admin self tasks always)
   recurrenceRuleId     String?
-  recurrenceRule       RecurrenceRule?  @relation(fields: [recurrenceRuleId], references: [id])
+  recurrenceRule       RecurrenceRule?   @relation(fields: [recurrenceRuleId], references: [id])
   parentTaskId         String?
-  parentTask           Task?            @relation("TaskRestart", fields: [parentTaskId], references: [id])
-  children             Task[]           @relation("TaskRestart")
+  parentTask           Task?             @relation("TaskRestart", fields: [parentTaskId], references: [id])
+  children             Task[]            @relation("TaskRestart")
   driveFolderId        String?
   driveFolderUrl       String?
   meetLink             String?
-  meetActive           Boolean          @default(false)
+  meetActive           Boolean           @default(false)
+  /// Meet REST API v2 space behind `meetLink` ("spaces/abc…"), set once the space is configured (ADR 0015).
+  meetSpaceName        String?
+  /// "Meeting notes" subfolder of the task's Drive folder; Gemini notes / transcripts are filed here (ADR 0015).
+  meetNotesFolderId    String?
   calendarEventId      String?
   chatSpaceId          String?
   chatSpaceUrl         String?
   pausedAt             DateTime?
-  pausedTotalMinutes   Int              @default(0)
-  doubtRaised          Boolean          @default(false)
+  pausedTotalMinutes   Int               @default(0)
+  doubtRaised          Boolean           @default(false)
   doubtNote            String?
-  reviewRequested      Boolean          @default(false)
+  reviewRequested      Boolean           @default(false)
   reviewNote           String?
+  /// Pills under review (ADR 0015): "date" (start date), "time" (start time), "mins" (time allotted). The red dot sits
+  /// on each flagged pill; `reviewRequested` mirrors "any field flagged".
+  reviewFields         String[]          @default([])
   finishRequestedAt    DateTime?
   finishRequestedById  String?
   approvedAt           DateTime?
@@ -461,7 +470,7 @@ model Task {
   integrationError     String? // last failed Google step, shown as row badge
   /// Meetings: external guests (the client's email + typed addresses), lowercased and deduped (ADR 0012).
   /// Internal people are assignees (TaskAssignee) so they see the meeting on their dashboard.
-  guestEmails          String[]         @default([])
+  guestEmails          String[]          @default([])
   /// Meetings: Google Calendar options (reminders, guest permissions, location, busy/free, visibility, colour,
   /// all day, time zone, Meet on/off) — validated by `meetingOptionsSchema` (ADR 0012).
   meetingOptions       Json?
@@ -469,8 +478,9 @@ model Task {
   attachments          TaskAttachment[]
   requests             Request[]
   integrations         IntegrationJob[]
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
+  meetingNotes         TaskMeetingNote[]
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
 
   @@index([clientId])
   @@index([status])
@@ -514,6 +524,28 @@ model TaskSession {
   endedAt   DateTime?
 
   @@index([taskId])
+}
+
+enum MeetingArtifactKind {
+  SMART_NOTES
+  TRANSCRIPT
+}
+
+/// A Gemini notes / transcript Google Doc filed into the task's "Meeting notes" folder (ADR 0015). One row per doc:
+/// the filing job is idempotent on (taskId, docId).
+model TaskMeetingNote {
+  id               String              @id @default(cuid())
+  taskId           String
+  task             Task                @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  kind             MeetingArtifactKind
+  conferenceRecord String
+  docId            String
+  docUrl           String
+  /// MOVED (re-parented into the folder) or SHORTCUT (a Drive shortcut when the doc could not be moved).
+  filedAs          String
+  createdAt        DateTime            @default(now())
+
+  @@unique([taskId, docId])
 }
 
 model TaskAttachment {
@@ -570,6 +602,8 @@ model Request {
   raisedBy       User          @relation("RequestRaisedBy", fields: [raisedById], references: [id])
   targetRole     Role          @default(ADMIN)
   note           String        @default("")
+  /// REVIEW / TIME_CHANGE: which pill is to be reviewed — "date" | "time" | "mins" (ADR 0015).
+  field          String?
   payload        Json?
   status         RequestStatus @default(OPEN)
   resolvedById   String?

@@ -214,7 +214,7 @@ describe("meetings: guests, teams and Google Calendar options (ADR 0012)", () =>
     expect(occ.type).toBe("MEETING");
     expect(occ.guestEmails).toEqual(["a@b.co"]);
     expect(occ.meetingOptions).toMatchObject({ location: "Studio", timeZone: TZ });
-    expect((await testDb.integrationJob.findMany({ where: { taskId: next! } })).map((j) => j.kind)).toEqual(["CALENDAR_EVENT"]);
+    expect((await testDb.integrationJob.findMany({ where: { taskId: next! } })).map((j) => j.kind).sort()).toEqual(["CALENDAR_EVENT", "DRIVE_FOLDER"]);
   });
 
   it("voice notes are refused for meetings", async () => {

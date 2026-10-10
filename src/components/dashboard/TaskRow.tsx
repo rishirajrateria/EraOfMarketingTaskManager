@@ -1,13 +1,14 @@
 "use client";
 import { useState } from "react";
-import { AlertTriangle, CalendarDays, FolderOpen, Info, MessageSquare, Mic, Pause, Repeat, RotateCcw, Star, User, Video } from "lucide-react";
+import { AlertTriangle, CalendarDays, FolderOpen, Info, MessageSquare, Mic, Pause, Repeat, RotateCcw, Video } from "lucide-react";
 import { clsx } from "@/lib/clsx";
 import type { DashboardData, TaskRow as Row } from "@/server/tasks/types";
 import { useLongPress } from "@/components/ui/useLongPress";
 import { useToast } from "@/components/ui/Toast";
 import { ensureTaskDriveFolder } from "@/server/tasks/manage";
-import { assigneeChip, firstName } from "@/components/dashboard/format";
-import { CompletionCircle, IconBtn, RightPills, stop } from "@/components/dashboard/RowParts";
+import { teamChipLabel } from "@/components/dashboard/format";
+import { ActualPill, CompletionCircle, DateHoursPills, IconBtn, TimePill, stop } from "@/components/dashboard/RowParts";
+import type { ReviewField } from "@/server/tasks/review-fields";
 import { formatInTimeZone } from "date-fns-tz";
 
 export type RowHandlers = {
@@ -18,6 +19,8 @@ export type RowHandlers = {
   onCircle: (t: Row) => void;
   onRestart: (t: Row) => void;
   onRetry: (t: Row) => void;
+  /** Hold / right-click on the date, hours or start-time pill → the review menu for that pill (ADR 0015). */
+  onPillMenu: (t: Row, field: ReviewField) => void;
 };
 
 /** Opens a URL in a new tab. (For URLs resolved asynchronously — see openDrive — the tab is opened first so popup blockers allow it.) */
@@ -26,45 +29,24 @@ function openExternal(url: string) {
 }
 
 /** 22px rounded chips that wrap instead of truncating the row (glass refresh). */
-const CHIP_BASE = "glass-chip inline-flex h-[22px] max-w-[150px] shrink-0 items-center rounded-full px-[9px] text-[11.5px] font-medium leading-none";
-const CHIP = `${CHIP_BASE} text-ink`;
-const CHIP_ME = `${CHIP_BASE} font-semibold text-me`;
+const CHIP_SHAPE = "inline-block h-[22px] min-w-0 max-w-[150px] shrink truncate rounded-full px-[9px] text-[11.5px] font-medium leading-[22px]";
+const CHIP = `glass-chip ${CHIP_SHAPE} text-ink`;
+/** The task's team (ADR 0015): a subtle teal chip next to the client, readable in light and dark. */
+const TEAM_CHIP = `${CHIP_SHAPE} border border-hair bg-team-bg text-team`;
 
 /**
- * Team Leader only: assignee first names (lowercase) printed beside the title, or a person
- * silhouette when the TL assigned the task to themselves.
+ * A compact task card (prototype `taskRow`, ADR 0015): title (2 lines) + badges · circle / client + team chips · date
+ * + hours pills / icons · scheduled time / the actual time once started. No people on the card — they are in (i).
+ * Right-click (desktop), long-press (phone) or Shift+F10 / the context-menu key opens the action menu.
  */
-function AssigneeNames({ t, meId }: { t: Row; meId: string }) {
-  const self = t.selfAssigned && t.assignees.some((a) => a.id === meId);
-  return (
-    <span className="ml-1 shrink-0 text-[12px] font-semibold lowercase text-muted" title={t.assignees.map((a) => a.name).join(", ")}>
-      {self ? <User size={14} fill="currentColor" strokeWidth={0} aria-label="Self-assigned" /> : t.assignees.map((a) => firstName(a.name)).join(", ")}
-    </span>
-  );
-}
-
-/**
- * Amber "pref: arjun" chip while an Admin task still sits with its Team Leader(s): every assignee is a Team Leader
- * and Admin suggested executives (ADR 0008).
- */
-function PrefChip({ t, data }: { t: Row; data: DashboardData }) {
-  if (!t.preferredAssigneeIds.length || !t.assignees.length) return null;
-  const role = (id: string) => data.people.find((p) => p.id === id)?.role;
-  if (!t.assignees.every((a) => role(a.id) === "TEAM_LEADER")) return null;
-  const names = t.preferredAssigneeIds.map((id) => firstName(data.people.find((p) => p.id === id)?.name ?? "?").toLowerCase()).join(", ");
-  return (
-    <span className={`${CHIP_BASE} truncate text-[#b45309]`} title="Admin preference — Team Leader decides">
-      pref: {names}
-    </span>
-  );
-}
-
-export function TaskRow({ t, data, h }: { t: Row; data: DashboardData; h: RowHandlers }) {
+export function TaskRow({ t, data, h, pendingDone }: { t: Row; data: DashboardData; h: RowHandlers; pendingDone?: boolean }) {
   const toast = useToast();
   const [driveBusy, setDriveBusy] = useState(false);
   const press = useLongPress(() => h.onLongPress(t), () => h.onOpen(t));
   const grey = t.colour === "grey";
-  const meetDisabled = !t.meetLink || !t.meetActive || t.status === "COMPLETED";
+  // The Meet link lives until the task is deleted (ADR 0015) — completed tasks keep it.
+  const meetDisabled = !t.meetLink || !t.meetActive;
+  const team = teamChipLabel(t.teams);
   const hasVoice = t.attachments.some((a) => a.kind === "VOICE_NOTE");
 
   const openDrive = async () => {
@@ -87,9 +69,18 @@ export function TaskRow({ t, data, h }: { t: Row; data: DashboardData; h: RowHan
     ? `https://calendar.google.com/calendar/u/0/r/day/${formatInTimeZone(new Date(t.scheduledStart), data.tz, "yyyy/M/d")}`
     : "https://calendar.google.com/calendar/u/0/r";
 
+  const open = () => h.onOpen(t);
+  const pillMenu = (field: ReviewField) => h.onPillMenu(t, field);
+
   return (
     <li
       {...press}
+      onKeyDown={(e) => {
+        if (e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey)) {
+          e.preventDefault();
+          h.onLongPress(t);
+        }
+      }}
       className={clsx("no-select task-card", `row-${t.colour}`)}
       data-task-id={t.id}
       aria-label={t.title}
@@ -100,71 +91,94 @@ export function TaskRow({ t, data, h }: { t: Row; data: DashboardData; h: RowHan
         </span>
       ) : null}
 
-      {/* Line 1: the title runs the full width of the row */}
-      <div className="flex items-center gap-1.5">
-        <span className={clsx("min-w-0 truncate text-[15px] font-[650] leading-5 tracking-[-.01em] text-ink", grey && "line-through opacity-70")}>{t.title}</span>
-        {t.important ? <Star size={12} className="shrink-0 fill-[#F59E0B] text-[#F59E0B]" aria-label="Important" /> : null}
-        {t.recurring ? <Repeat size={12} strokeWidth={2.5} className="shrink-0 text-[#2563EB]" aria-label="Recurring" /> : null}
-        {t.paused ? (
-          <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-primary text-primary-ink" aria-label="Paused" title="Paused">
-            <Pause size={9} strokeWidth={3} fill="currentColor" />
+      {/* Row 1: title (2 lines max) + badges · the circle top-right */}
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1 pt-1">
+          <span className={clsx("line-clamp-2 text-[15px] font-[650] leading-5 tracking-[-.01em] text-ink", grey && "line-through")}>
+            {t.title}
+            {t.recurring ? <Repeat size={12} strokeWidth={2.5} className="ml-1.5 inline-block align-[-1px] text-[#2563EB]" aria-label="Recurring" /> : null}
+            {t.paused ? (
+              <span className="ml-1.5 inline-flex h-[16px] w-[16px] items-center justify-center rounded-full bg-primary align-[-2px] text-primary-ink" aria-label="Paused" title="Paused">
+                <Pause size={8} strokeWidth={3} fill="currentColor" />
+              </span>
+            ) : null}
+            {t.doubtRaised ? (
+              <span
+                className="ml-1.5 inline-flex h-[17px] w-[17px] items-center justify-center rounded-full bg-[#8b5cf6] align-[-2px] text-[11px] font-black leading-none text-white"
+                aria-label="Doubt raised"
+                title={t.doubtNote ? `Doubt: ${t.doubtNote}` : "Doubt raised"}
+              >
+                ?
+              </span>
+            ) : null}
+            {t.integrationError ? (
+              <button
+                type="button"
+                title={t.integrationError}
+                aria-label="Integration error"
+                onPointerDown={stop}
+                onPointerUp={stop}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (data.role === "ADMIN") h.onRetry(t);
+                  else toast(t.integrationError!, "err");
+                }}
+                className="ml-1.5 inline-flex h-4 w-4 items-center justify-center align-[-2px] text-amber-600"
+              >
+                <AlertTriangle size={13} />
+              </button>
+            ) : null}
           </span>
-        ) : null}
-        {t.integrationError ? (
-          <button
-            type="button"
-            title={t.integrationError}
-            aria-label="Integration error"
-            onPointerDown={stop}
-            onPointerUp={stop}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (data.role === "ADMIN") h.onRetry(t);
-              else toast(t.integrationError!, "err");
-            }}
-            className="flex h-4 w-4 shrink-0 items-center justify-center text-amber-600"
-          >
-            <AlertTriangle size={13} />
-          </button>
-        ) : null}
-        {data.role === "TEAM_LEADER" ? <AssigneeNames t={t} meId={data.me.id} /> : null}
+        </div>
+        <CompletionCircle t={t} pendingDone={pendingDone} onTap={() => h.onCircle(t)} onMenu={() => h.onLongPress(t)} onRestart={() => h.onRestart(t)} />
       </div>
 
-      {/* Lines 2–3: chips + outline icons on the left; hours / time / date pills and the circle on the right */}
-      <div className="mt-1.5 flex items-center gap-2.5">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className={CHIP}>{t.client.name}</span>
-            <span className={CHIP_ME}>{assigneeChip(t, data.me.id)}</span>
-            <PrefChip t={t} data={data} />
-            {t.type === "MEETING" ? <span className={`${CHIP_BASE} text-meet`}>Meeting</span> : null}
-          </div>
-          <div className="-ml-1 mt-1.5 flex items-center gap-1">
-            <IconBtn label="Task details" onClick={() => h.onOpen(t)}>
-              <Info size={20} strokeWidth={1.75} />
-            </IconBtn>
-            <IconBtn label="Drive folder" onClick={openDrive} disabled={driveBusy || t.type === "MEETING"}>
-              <FolderOpen size={20} strokeWidth={1.75} />
-            </IconBtn>
-            <IconBtn label="Google Meet" onClick={() => t.meetLink && openExternal(t.meetLink)} disabled={meetDisabled}>
-              <Video size={20} strokeWidth={1.75} />
-            </IconBtn>
-            <IconBtn label="Chat space" onClick={() => t.chatSpaceUrl && openExternal(t.chatSpaceUrl)} disabled={!t.chatSpaceUrl}>
-              <MessageSquare size={20} strokeWidth={1.75} />
-            </IconBtn>
-            <IconBtn label="Calendar" onClick={() => openExternal(calendarUrl)}>
-              <CalendarDays size={20} strokeWidth={1.75} />
-            </IconBtn>
-            {hasVoice ? (
-              <IconBtn label="Voice notes" onClick={() => h.onOpenAttachments(t)}>
-                <Mic size={20} strokeWidth={1.75} />
-              </IconBtn>
-            ) : null}
-          </div>
+      {/* Row 2: client + team chips (one line) · date + hours pills */}
+      <div className="mt-1.5 flex min-w-0 items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
+          <span className={CHIP}>{t.client.name}</span>
+          {team ? (
+            <span className={TEAM_CHIP} title={t.teams.map((x) => x.name).join(", ")}>
+              {team}
+            </span>
+          ) : null}
         </div>
-        <RightPills t={t} tz={data.tz} />
-        <CompletionCircle t={t} onTap={() => h.onCircle(t)} onRestart={() => h.onRestart(t)} />
+        <DateHoursPills t={t} tz={data.tz} onPillMenu={pillMenu} onTap={open} />
       </div>
+
+      {/* Row 3: the icons · the scheduled window */}
+      <div className="mt-1 flex min-w-0 items-center justify-between gap-2">
+        <div className="-ml-1.5 flex items-center">
+          <IconBtn label="Task details" onClick={open}>
+            <Info size={19} strokeWidth={1.75} />
+          </IconBtn>
+          <IconBtn label="Drive folder" onClick={openDrive} disabled={driveBusy}>
+            <FolderOpen size={19} strokeWidth={1.75} />
+          </IconBtn>
+          <IconBtn label="Google Meet" onClick={() => t.meetLink && openExternal(t.meetLink)} disabled={meetDisabled}>
+            <Video size={19} strokeWidth={1.75} />
+          </IconBtn>
+          <IconBtn label="Chat space" onClick={() => t.chatSpaceUrl && openExternal(t.chatSpaceUrl)} disabled={!t.chatSpaceUrl}>
+            <MessageSquare size={19} strokeWidth={1.75} />
+          </IconBtn>
+          <IconBtn label="Calendar" onClick={() => openExternal(calendarUrl)}>
+            <CalendarDays size={19} strokeWidth={1.75} />
+          </IconBtn>
+          {hasVoice ? (
+            <IconBtn label="Voice notes" onClick={() => h.onOpenAttachments(t)}>
+              <Mic size={19} strokeWidth={1.75} />
+            </IconBtn>
+          ) : null}
+        </div>
+        <TimePill t={t} tz={data.tz} onPillMenu={pillMenu} onTap={open} />
+      </div>
+
+      {/* Row 4, once started: the actual time, right-aligned */}
+      {t.actualStart || t.actualEnd ? (
+        <div className="mt-1 flex justify-end">
+          <ActualPill t={t} tz={data.tz} />
+        </div>
+      ) : null}
     </li>
   );
 }
