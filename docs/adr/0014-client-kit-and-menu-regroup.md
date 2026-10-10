@@ -1,6 +1,6 @@
 # ADR 0014 — Client kit (Drive folders + credentials sheet) and menu regroup
 
-- Status: Accepted
+- Status: Accepted (sharing revised 2026-10-10)
 - Date: 2026-10-10
 - Extends: ADR 0011 (menu), ADR 0013 (owner's Drive + Share sheet); SPEC §11.1 (client vault)
 
@@ -29,8 +29,8 @@ two rows for the same idea, and the Team section mixed people management with ti
     card numbers, UPI PINs or OTPs; examples can be overwritten; whom to contact).
 - The client folder is shared with the client's email as **Editor** with `sendNotificationEmail: false` (we send our own
   message). Drive refuses that for non-Google addresses, so it then retries with Drive's invitation (with a short note)
-  rather than failing; a failure is a warning, never an error. The kit folder is accepted by the ADR 0013 Share sheet
-  (owner can change roles / link sharing); its subfolders and other client folders are not.
+  rather than failing; a failure is a warning, never an error. Sharing after that uses the kit's own Share sheet
+  (below). The ADR 0013 finance Share actions still accept the kit folder itself, never its parts.
 - Idempotent: "Create kit" again (shown as **Repair**) keeps every stored id that still exists (`fileAlive`), recreates
   only missing folders / the sheet (find-or-create by name, so nothing is duplicated) and re-shares only if needed.
   Audit: `client.kit.create` / `client.kit.repair` with what was created.
@@ -51,9 +51,35 @@ two rows for the same idea, and the Team section mixed people management with ti
   details is shown disabled with a hint to add it on the client. `kitSentAt` / `kitSentVia` recorded, audited
   `client.kit.send`.
 
+### Sharing a kit (revised 2026-10-10, owner request; prototype `driveShare` with `scopes` + `team`)
+- The kit pages' **Share** button opens a Google-Drive-style sheet (`src/components/clients/KitShareSheet.tsx`):
+  - **What to share** pills: *Whole kit* · Brand kit · *Credentials sheet* · Work · Reports — only parts that exist,
+    named from Settings. The Credentials pill shares the credentials **Google Sheet** (what the client opens), not its
+    folder. The title follows: "Share “Client kit › Repo”" / "Share “Repo › Work”". Switching keeps the people being added.
+  - **Your team**: one-tap chips (blue avatar initial, first name, TL / EXEC) for active Team leaders then Executives
+    without *direct* access to this part (someone with whole-kit access is still offered on a sub-part, to give them
+    more there). The email field stays for anyone else; it only adds rows.
+  - **Adding · pick access for each**: one row per person (avatar, name or email local part, role tag + email, own
+    Viewer / Commenter / Editor select defaulting to Viewer, ×), Notify people + message, Cancel / Send. Send creates
+    one Drive permission per person with *their* role (`sendNotificationEmail` = the checkbox, `emailMessage`).
+  - **People with access**: owner (fixed), rows set on this part (role select + Remove access → permissions.update /
+    delete), and for a part also everyone who has it **via the whole kit**, read-only as "Editor · whole kit".
+    General access (Restricted / Anyone with the link + role) and Copy link are per part; when only the whole kit's
+    link is open the part shows "Anyone with the link · whole kit" read-only (change it under Whole kit).
+- Split of direct vs inherited (`splitAccess`, pure): Drive's `permissionDetails[].inherited` when returned; otherwise a
+  row the whole kit grants with the same role counts as inherited (live My Drive lists inherited access on children);
+  the GOOGLE_MOCK store (in memory, as ADR 0013) keeps only direct rows per file, so kit rows are merged in. Changing or
+  removing an inherited row from a part is refused ("change it under Whole kit").
+- Actions `getKitSharing`, `shareKit`, `changeKitShareRole`, `removeKitShareAccess`, `setKitGeneralAccess`
+  (`src/server/clients/kit-share.ts`): Admin only; input is `{ clientId, scope key }` (zod enum) resolved against the
+  client's stored kit ids — no Drive id from the browser; people `[{ email, role }]` (1–25, unique, valid emails, not
+  the owner). Audit on the client: `client.kit.share.add | role | remove | link` with scope, part name and file id.
+- No schema change: permissions live in Drive (and the mock store). Avatars in both share sheets use the
+  `#60a5fa → #2563eb` gradient with white text in light and dark (`ShareParts.tsx`, shared with the ADR 0013 sheet).
+
 ### Screens
 - `/admin/client-kit`: every active client with kit status ("Kit ready · sent 3 Oct by email", "No kit yet",
-  "Kit incomplete · tap Repair"), Create kit, or Share · Open · Email kit · WhatsApp kit, and a "Saved in the app" line.
+  "Kit incomplete · tap Repair"), Create kit, or Share (kit sheet above) · Open · Email kit · WhatsApp kit, and a "Saved in the app" line.
 - `/admin/client-kit/[clientId]`: the folders and sheet with links, the same actions plus Repair, and **Saved in the
   app** — that client's asset drive links and credentials from the encrypted vault (labels / usernames only; reveal and
   grants stay in `/admin/vault`, which is linked). Clients list rows link to the kit.

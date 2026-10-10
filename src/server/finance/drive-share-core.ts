@@ -54,7 +54,7 @@ export async function resolveShareableFolder(rawId: unknown): Promise<Folder> {
   throw new Error(FOREIGN_FOLDER_ERROR);
 }
 
-function toPerson(p: DrivePermission): SharePerson {
+export function toPerson(p: DrivePermission): SharePerson {
   const name = p.type === "domain" ? `Anyone at ${p.domain ?? "your organisation"}` : p.type === "group" ? (p.displayName ?? p.emailAddress) : p.displayName;
   return { id: p.id, email: p.emailAddress, name, role: p.role, isOwner: p.role === "owner", kind: p.type };
 }

@@ -3,6 +3,7 @@ import { getSettings } from "@/lib/settings";
 import { clientDisplayName } from "@/server/finance/file-names";
 import { financeDriveOwner } from "@/server/finance/month-folders";
 import { hasKit, kitFolderNames, kitMessage, kitUrls } from "@/server/clients/kit-paths";
+import { kitShareScopes, scopeOptions, type KitScopeOption } from "@/server/clients/kit-share-scopes";
 
 /** Read models for the Client kit screens (ADR 0014). Plain values only. */
 export type KitRow = {
@@ -20,6 +21,8 @@ export type KitRow = {
   sentVia: string | null;
   sharedWith: string | null;
   vault: { assets: number; credentials: number };
+  /** "What to share" pills for the Share sheet: Whole kit and each part that exists. */
+  shareScopes: KitScopeOption[];
   /** Default email / WhatsApp texts for the send sheet (null until the kit exists). */
   messages: { email: string; whatsapp: string } | null;
 };
@@ -53,6 +56,7 @@ function toRow(c: Sel, vault: Map<string, { assets: number; credentials: number 
     sentVia: c.kitSentVia,
     sharedWith: c.kitSharedWith,
     vault: vault.get(c.id) ?? { assets: 0, credentials: 0 },
+    shareScopes: scopeOptions(kitShareScopes(c, ctx.folders, clientDisplayName(c))),
     messages: base ? { email: kitMessage({ ...base, channel: "EMAIL" }), whatsapp: kitMessage({ ...base, channel: "WHATSAPP" }) } : null,
   };
 }
