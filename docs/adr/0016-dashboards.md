@@ -100,6 +100,8 @@ leave) · Inventory · **Attendance**; Tasks Requests (open work requests) · Ta
   & attendance section are removed from the menu; the routes stay and are reached from the dashboards.
 - Quick actions: New invoice · Add expense · Approvals (`/admin/requests?tab=FIN&fin=APPR`) · New task.
 - `menuCounts()` adds `attendanceMarkedToday`, `presentToday`, `onLeaveToday`, `tasksOpen`, `tasksLate`.
+- Superseded in layout by ADR 0011 "v3 tiles": the dashboards are now the Finance (Money), HR and Tasks (Team) tiles, the
+  sections are Money · Clients · Team · Other, and the quick actions drop New task.
 
 ## Consequences
 - No schema change. The dashboards read existing data only.

@@ -9,10 +9,10 @@ import type { LeaderOption, TeamRow } from "@/server/admin/queries";
 import type { TeamInput } from "@/server/admin/schemas";
 
 /** /admin/teams — "Add Team" (SPEC §11.8; called "Add Designation" in the original spec). */
-export function TeamsManager({ teams, leaders }: { teams: TeamRow[]; leaders: LeaderOption[] }) {
+export function TeamsManager({ teams, leaders, openAdd = false }: { teams: TeamRow[]; leaders: LeaderOption[]; openAdd?: boolean }) {
   const { busy, run } = useAdminAction();
   const [editing, setEditing] = useState<TeamRow | null>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(openAdd); // `?add=1` opens the add form on load
   const close = () => {
     setOpen(false);
     setEditing(null);

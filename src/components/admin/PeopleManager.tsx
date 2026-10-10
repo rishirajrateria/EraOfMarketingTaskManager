@@ -31,6 +31,7 @@ export function PeopleManager({
   workspaceDomain,
   meId,
   editId = null,
+  openAdd = false,
 }: {
   users: PersonRow[];
   teams: TeamOption[];
@@ -41,10 +42,12 @@ export function PeopleManager({
   meId: string;
   /** `?edit=<id>` (the card's "Add number", ADR 0017): open that person's form straight away. */
   editId?: string | null;
+  /** `?add=1` (dashboard "+" speed-dial, ADR 0011 v3): open the invite form for `initialRole` on load. */
+  openAdd?: boolean;
 }) {
   const { busy, run } = useAdminAction();
   const [editing, setEditing] = useState<PersonRow | null>(() => users.find((u) => u.id === editId) ?? null);
-  const [open, setOpen] = useState(() => !!editing);
+  const [open, setOpen] = useState(() => !!editing || openAdd);
   const [filter, setFilter] = useState<Role | null>(null);
   const close = () => {
     setOpen(false);
