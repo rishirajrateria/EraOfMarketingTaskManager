@@ -641,6 +641,9 @@ select.in{padding-right:10px}
 #s-dash .bar{border-top:0!important}
 #s-dash .bar .g .dk{height:32px}
 #s-dash .prow .dk,#s-dash .bar .g .dk{max-width:none;white-space:nowrap;height:32px;font-weight:600}
+.itog.pall{width:auto!important;padding:0 8px;gap:3px;display:inline-flex;align-items:center;border-radius:10px;font-size:11px;font-weight:700}
+.strip .sw{width:30px!important}
+.strip{gap:4px!important}
 </style><div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
@@ -975,6 +978,7 @@ function renderDash(){
   el("button",{class:"comp"+(f.completed?" on":""),onclick:()=>{f.completed=!f.completed;save();renderDash();}},"completed"),
   el("button",{class:"itog"+(f.icons.includes("recurring")?" on":""),title:"Recurring tasks",onclick:()=>{f.icons=tog(f.icons,"recurring");save();renderDash();}},svg(I.repeat,15,2.5)),
   ...[["red","#F8CACA","Not started · start time passed"],["yellow","#F6E7B4","Paused"],["green","#CBEFCB","Started"],["purple","#E4D7FB","Doubt raised (?)"]].map(([k,hex,l])=>el("button",{class:"sw"+(f.colours.includes(k)?" on":""),style:"background:"+hex,title:l,"aria-label":l,onclick:()=>{f.colours=tog(f.colours,k);save();renderDash();}})),
+  r==="ADMIN"?el("button",{class:"itog pall",title:"Pause or resume all tasks shown","aria-label":"Pause all",onclick:pauseAllSheet},svg(I.pause,13,0),el("span",{},"all")):null,
   el("button",{class:"rdbtn"+(f.icons.includes("review")?" on":""),title:"Review requested",onclick:()=>{f.icons=tog(f.icons,"review");save();renderDash();}},el("i")));
  // bottom dock: Team / Client / Day pickers (neutral glass, one row) + Meet and + buttons
  const vis=visibleTasks();
@@ -997,6 +1001,18 @@ function daySheet(){const f=filtersFor();const inp=el("input",{class:"in",type:"
  const set=(q,d)=>{f.quick=q;f.date=d;f.pill=null;save();closeSheet();renderDash();};
  openSheet("Which day?",el("div",{class:"seg",style:"margin:0 0 12px"},el("button",{class:!f.date&&!f.quick?"on":"",onclick:()=>set(null,null)},"Any day"),el("button",{class:f.quick==="today"?"on":"",onclick:()=>set("today",null)},"Today"),el("button",{class:f.quick==="tomorrow"?"on":"",onclick:()=>set("tomorrow",null)},"Tomorrow"),el("button",{class:f.quick==="asc"?"on":"",onclick:()=>set("asc",null)},"Oldest first")),
   field("Or pick a date",inp),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>inp.value?set(null,inp.value):closeSheet()},"Show")));}
+/* Admin: pause (or resume) every open task currently shown by the filters, in one go. */
+function pauseAllSheet(){
+ const f=filtersFor();const shown=applyFilters(visibleTasks(),Object.assign({},f,{completed:false})).filter(t=>t.status!=="COMPLETED");
+ const toPause=shown.filter(t=>!t.paused),toResume=shown.filter(t=>t.paused);
+ const scope=[f.row1?dockName(f.row1):null,f.row2?dockName(f.row2):null,f.date?fmtD(f.date):f.quick==="today"?"today":f.quick==="tomorrow"?"tomorrow":null].filter(Boolean).join(" · ")||"all open tasks";
+ const why=el("textarea",{class:"in",rows:2,placeholder:"Reason (optional) — e.g. Office closed for Diwali"});
+ const run=(list,on)=>{list.forEach(t=>{t.paused=on;t.assignees.forEach(id=>notify(id,(on?"⏸ Paused":"▶ Resumed")+` by Admin: ${t.title}`+(why.value.trim()?` — ${why.value.trim()}`:"")));});save();closeSheet();renderDash();toast((on?"Paused ":"Resumed ")+list.length+" task"+(list.length===1?"":"s"));};
+ openSheet("Pause all",el("p",{class:"pre",style:"margin:0 0 10px"},"Applies to the tasks shown right now: "+scope+". Assignees are notified; each card shows ⏸ and turns yellow."),
+  el("div",{class:"card",style:"margin:0 0 10px"},el("div",{class:"kv"},el("span",{},"Open, running"),el("b",{class:"num"},String(toPause.length))),el("div",{class:"kv"},el("span",{},"Already paused"),el("b",{class:"num"},String(toResume.length)))),
+  field("Reason",why),
+  el("div",{class:"btnrow"},el("button",{class:"btn ghost",disabled:!toResume.length||null,onclick:()=>run(toResume,false)},"Resume all ("+toResume.length+")"),el("button",{class:"btn",style:"background:#d97706;color:#fff",disabled:!toPause.length||null,onclick:()=>run(toPause,true)},"Pause all ("+toPause.length+")")));
+}
 function openDatePicker(){
  const f=filtersFor();const inp=el("input",{class:"in",type:"date",value:f.date||""});
  openSheet("Show one day",field("Date",inp),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{f.date=null;save();closeSheet();renderDash();}},"Clear"),el("button",{class:"btn",onclick:()=>{f.date=inp.value||null;save();closeSheet();renderDash();}},"Apply")));
