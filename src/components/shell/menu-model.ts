@@ -1,11 +1,12 @@
-import { CalendarCheck, Clock, Folder, HardDrive, ListChecks, LogOut, Settings, UserCheck, type LucideIcon } from "lucide-react";
+import { CalendarCheck, Clock, ListChecks, LogOut, Settings, type LucideIcon } from "lucide-react";
 import type { MenuCounts } from "@/server/shell/menu";
 
 /**
  * Admin menu model (ADR 0011 v3 tiles, ADR 0016 dashboards). Pure data so tests can check groups, order, labels,
- * badges and links without rendering. Colour = category: Money green, Clients blue, Team yellow, Other purple.
- * Only what nothing else reaches stays (ADR 0016 addendum): Finance, Requests and Notifications are the bottom nav /
- * dashboards, Clients and every add are the + speed dial (with its eyes), Approvals is Requests › Finance › Approvals.
+ * badges and links without rendering. Colour = category: Team yellow, Other purple (Money green and Clients blue are
+ * kept for tiles that may return). Only what nothing else reaches stays (ADR 0016 addendum, nav v4): Finance,
+ * Requests, Notifications, Attendance and the Drive pages (Folders) are the bottom nav / dashboards, Clients and every
+ * add are the + speed dial (with its eyes), Approvals is Requests › Finance › Approvals. Empty groups disappear.
  */
 export type Tone = "money" | "client" | "team" | "other" | "red";
 export type BadgeTone = "red" | "amber" | "soft";
@@ -35,31 +36,14 @@ export function kitSub(c: MenuCounts | null): string {
 
 export function menuSections(c: MenuCounts | null): MenuSection[] {
   const k = (n: number | undefined) => n ?? 0;
-  return [
-    {
-      title: "Money",
-      tone: "money",
-      // Finance left the menu: the nav's Dashboard tab opens the dashboards (Finance first)
-      items: [
-        { href: "/admin/drive-folders", icon: Folder, label: "Drive folders", sub: "Monthly Drive folders · invoices, bills, GST pack, cancelled" },
-      ],
-    },
-    {
-      title: "Clients",
-      tone: "client",
-      // Clients and Client kit left the menu (ADR 0016 addendum): the + speed dial adds them, and their eyes open the lists
-      items: [
-        { href: "/admin/vault?tab=SHARED_DRIVE_LINK", icon: HardDrive, label: "Shared links", sub: "Shared drive links · folders shared with clients" },
-      ],
-    },
+  const sections: MenuSection[] = [
     {
       title: "Team",
       tone: "team",
       items: [
         { href: "/admin/dashboards?view=HR", icon: CalendarCheck, label: "HR", sub: hrSub(c) },
         { href: "/admin/dashboards?view=TASK", icon: ListChecks, label: "Tasks", sub: taskSub(c), badge: badge(k(c?.tasksLate), "amber") },
-        // the dashboards lost their action row (ADR 0016 addendum): Attendance and Inventory stay one tap away here
-        { href: "/attendance", icon: UserCheck, label: "Attendance", sub: "Mark today · leave · monthly sheet" },
+        // Attendance is a bottom nav tab (nav v4); Inventory stays one tap away here
         { href: "/admin/inventory", icon: Clock, label: "Inventory", sub: "Hours available vs assigned" },
         // Executives, Team leaders, Teams and Work types left the menu: the + speed dial adds them and its eyes list them
       ],
@@ -67,13 +51,14 @@ export function menuSections(c: MenuCounts | null): MenuSection[] {
     {
       title: "Other",
       tone: "other",
-      // Requests and Notifications are bottom nav tabs (with their counts)
+      // Requests and Notifications are bottom nav tabs (with their counts); Drive folders / Shared links are the Folders tab
       items: [
         { href: "/admin/settings", icon: Settings, label: "Settings", sub: "Company, bank, invoice, TDS" },
         { href: "/api/auth/signout", icon: LogOut, label: "Sign out", danger: true },
       ],
     },
   ];
+  return sections.filter((s) => s.items.length);
 }
 
 /** Search box: keep tiles whose label, old subtitle or section name contains the term; drop empty sections. */

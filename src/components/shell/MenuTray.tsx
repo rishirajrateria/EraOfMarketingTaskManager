@@ -8,8 +8,10 @@ import { filterSections, menuSections, softHyphenate, type BadgeTone, type MenuI
 
 /**
  * Admin menu (ADR 0011 v3 tiles): a thumb-first bottom sheet. Search on top, then square icon tiles grouped and
- * coloured by category (Money green, Clients blue, Team yellow, Other purple). The quick-actions row is gone (ADR 0016
- * addendum): the bottom nav and the + cover it. Portalled to <body> so blurred ancestors can never clip the overlay.
+ * coloured by category (Team yellow, Other purple; the Money green / Clients blue tones stay for tiles that may
+ * return). The quick-actions row is gone (ADR 0016 addendum), and so are the Attendance, Drive folders and Shared
+ * links tiles (nav v4): the bottom nav and the + cover them. Portalled to <body> so blurred ancestors can never clip
+ * the overlay.
  */
 const TONE: Record<Tone, string> = {
   money: "bg-[linear-gradient(150deg,#34d399,#059669)] text-white",
