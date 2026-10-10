@@ -594,7 +594,7 @@ select.in{padding-right:10px}
 #s-dash .bar{height:56px;background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-top:1px solid var(--hair)}
 #s-dash .bar .g{flex:1;background:transparent!important;color:var(--ink);padding:0 4px 0 12px;gap:6px}
 #s-dash .bar .w{flex:none;border-left:0;background:transparent;padding:0 10px 0 4px;gap:6px}
-#s-dash .bar .w #addChoose{background:linear-gradient(150deg,#3b82f6,#1d4ed8);color:#fff;border-radius:14px;box-shadow:0 6px 16px -6px rgba(37,99,235,.7)}
+#addChoose{width:52px;height:52px;flex:none;display:grid;place-items:center;border:0;cursor:pointer;background:linear-gradient(150deg,#3b82f6,#1d4ed8);color:#fff;border-radius:14px;box-shadow:0 6px 16px -6px rgba(37,99,235,.7)}
 .dk{flex-shrink:0;height:34px;display:inline-flex;align-items:center;gap:5px;padding:0 10px;border-radius:12px;border:1px solid var(--hair);background:var(--chip);color:var(--ink);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;max-width:118px}
 .dk span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dk i{font-style:normal;opacity:.6;font-size:11px}
@@ -803,7 +803,7 @@ select.in{padding-right:10px}
 .mtile.danger .ml{color:#dc2626}
 @media (max-width:360px){.mgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 /* + speed dial on the dashboard: Task nearest the thumb, Meeting next, then the rest */
-.fabdim{position:absolute;inset:0 0 calc(56px + env(safe-area-inset-bottom,0px)) 0;z-index:28;background:rgba(2,12,24,.42);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end;padding:0 10px 10px}
+.fabdim{position:absolute;inset:0 0 calc(64px + env(safe-area-inset-bottom,0px)) 0;z-index:28;background:rgba(2,12,24,.42);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end;padding:0 10px 10px}
 .fabdim[hidden]{display:none!important}
 .fabstack{display:flex;flex-direction:column-reverse;align-items:flex-end;gap:8px;max-height:100%;overflow-y:auto;padding-top:12px}
 .fabi{display:flex;align-items:center;gap:10px;border:0;background:none;padding:0;cursor:pointer;font:inherit;animation:fabin .18s ease-out both}
@@ -815,8 +815,8 @@ select.in{padding-right:10px}
 .fabi:focus-visible{outline:none}.fabi:focus-visible .ic{outline:2px solid #3b82f6;outline-offset:2px}
 .fabsep{width:44px;height:1px;background:rgba(255,255,255,.35);margin:2px 0}
 @keyframes fabin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-#s-dash .bar .w #addChoose svg{transition:transform .18s}
-.fabon #s-dash .bar .w #addChoose svg{transform:rotate(45deg)}
+#addChoose svg{transition:transform .18s}
+.fabon #addChoose svg{transform:rotate(45deg)}
 /* Drive share: scope picker, team suggestions, per-person access */
 .shseg{display:flex;flex-wrap:wrap;gap:6px}.shseg button{flex:none}
 .shsugg{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.shsugg::-webkit-scrollbar{display:none}
@@ -826,6 +826,30 @@ select.in{padding-right:10px}
 .shav.sm{width:26px;height:26px;font-size:12px}
 .shx{border:0;background:transparent;color:var(--muted);font-size:20px;width:28px;height:28px;cursor:pointer;flex:none}
 .shown{font-size:12px;color:var(--muted);text-align:right;flex:none;max-width:42%}
+/* bottom icon rows (dashboard + add task) */
+.navrow{height:64px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 10px 0 6px;background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-top:1px solid var(--hair)}
+.navrow .nl{flex:1;min-width:0;display:flex;align-items:center;gap:2px;overflow-x:auto;scrollbar-width:none}.navrow .nl::-webkit-scrollbar{display:none}
+#dashNav .nl .nv{flex:1 1 0}
+.nv{position:relative;flex:none;min-width:48px;height:56px;padding:0 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:0;background:none;color:var(--ink);font:inherit;cursor:pointer;border-radius:12px}
+.nv .ic{width:34px;height:30px;display:grid;place-items:center;border-radius:10px;color:var(--ink)}
+.nv .ic.g{width:32px;height:32px;color:#fff}.nv .ic.g.t-team{color:#3b2a00}
+.nv .nlab{font-size:10px;font-weight:600;color:var(--muted);white-space:nowrap;line-height:1}
+.nv .badge{right:auto;left:calc(50% + 6px);top:4px}
+.nv .avatar{width:26px;height:26px;font-size:10.5px;opacity:1;background:linear-gradient(150deg,#60a5fa,#2563eb);color:#fff;box-shadow:none}
+.nv:focus-visible,.nb:focus-visible,#addChoose:focus-visible,.fx:focus-visible{outline:2px solid #3b82f6;outline-offset:2px}
+.nfix{display:flex;gap:6px;flex:none}
+.nb{border:0;cursor:pointer;display:grid;place-items:center;flex:none}
+.nb.ty{width:44px;height:44px;border-radius:14px;background:var(--chip);border:1px solid var(--hair);color:var(--ink);opacity:.75}
+.nb.ty.task{background:linear-gradient(150deg,#3b82f6,#1d4ed8);color:#fff;border:0}
+.nb.ty.meet{background:#fff;border:1px solid rgba(15,23,42,.14)}
+#addNav .nl{-webkit-mask-image:linear-gradient(90deg,#000 82%,transparent);mask-image:linear-gradient(90deg,#000 82%,transparent);padding-right:18px}
+.nfix{padding-left:4px}
+.nb.ty.on{opacity:1;box-shadow:0 0 0 2px var(--bg),0 0 0 4px #3b82f6}
+.nb.x,.fx{width:52px;height:52px;border-radius:16px;background:linear-gradient(150deg,#3b82f6,#1d4ed8);color:#fff;box-shadow:0 6px 16px -6px rgba(37,99,235,.7)}
+.btnrow .fx{order:9;flex:none;border:0;cursor:pointer;display:grid;place-items:center;align-self:center}
+.btnrow:has(.fx){align-items:center}
+#addNav.solo .nl{visibility:hidden}
+#s-dash .topbar .tsep,#s-dash .topbar #dbBtn,#s-dash .topbar #reqBtn,#s-dash .topbar #notifBtn,#s-dash .topbar #meBtn{display:none!important}
 </style>
 <div class="phone" id="phone">
   <!-- role picker -->
@@ -863,10 +887,8 @@ select.in{padding-right:10px}
       <div class="greenarea"><div class="prow" id="prow1"></div><div class="prow" id="prow2"></div></div>
       <div class="bar">
         <div class="g" id="barg"></div>
-        <div class="w">
-          <button class="sq" id="addChoose" aria-label="Add" aria-haspopup="menu" aria-expanded="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
-        </div>
       </div>
+      <div class="navrow" id="dashNav"><div class="nl" id="dashNavL"></div><button class="sq" id="addChoose" aria-label="Add" aria-haspopup="menu" aria-expanded="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
     </div>
       </section>
 
@@ -892,11 +914,11 @@ select.in{padding-right:10px}
     <div class="greenarea" style="flex-shrink:0"><div class="wrow" id="tRowPref"></div><div class="wrow" id="tRowWork"></div><div class="wrow" id="tRow1"></div><div class="wrow" id="tRow2"></div><div class="wrow" id="tRowStart" hidden></div></div>
     <div class="bar" style="flex-shrink:0">
       <div class="g" id="tBarG"></div>
-      <div class="w">
-        <button class="sq" id="tMeet" aria-label="Meeting"><svg width="26" height="26" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h5v5H3z" fill="#00832D"/><path d="M3 11h7v5H5a2 2 0 0 1-2-2z" fill="#0066DA"/><path d="M10 6h5v5h-5z" fill="#2684FC"/><path d="M10 11h5v5h-5z" fill="#00AC47"/><path d="M15 6h.5a1.5 1.5 0 0 1 1.5 1.5V11h-2z" fill="#FFBA00"/><path d="M15 11h2v3.5a1.5 1.5 0 0 1-1.5 1.5H15z" fill="#00AC47"/><path d="M17 10.2 21 7v8l-4-3.2z" fill="#00AC47"/></svg></button>
-        <button class="pill" id="tWorkBtn">Work</button>
-        <button class="sq" id="tClose" aria-label="Close"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-      </div>
+    </div>
+    <div class="navrow" id="addNav">
+      <div class="nfix"><button class="nb ty" id="tWorkBtn" aria-label="Task" title="Task"></button><button class="nb ty meet" id="tMeet" aria-label="Meeting"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h5v5H3z" fill="#00832D"/><path d="M3 11h7v5H5a2 2 0 0 1-2-2z" fill="#0066DA"/><path d="M10 6h5v5h-5z" fill="#2684FC"/><path d="M10 11h5v5h-5z" fill="#00AC47"/><path d="M15 6h.5a1.5 1.5 0 0 1 1.5 1.5V11h-2z" fill="#FFBA00"/><path d="M15 11h2v3.5a1.5 1.5 0 0 1-1.5 1.5H15z" fill="#00AC47"/><path d="M17 10.2 21 7v8l-4-3.2z" fill="#00AC47"/></svg></button></div>
+      <div class="nl" id="addNavL"></div>
+      <button class="nb x" id="tClose" aria-label="Close"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
   </section>
 
@@ -1112,6 +1134,8 @@ function openSheet(title,...content){sheetEl.replaceChildren(el("div",{class:"gr
 function closeSheet(){sheetDim.hidden=true;}
 sheetDim.addEventListener("click",e=>{if(e.target===sheetDim)closeSheet();});
 function actionList(items){return el("div",{class:"al"},items.map(it=>el("button",{class:it.danger?"danger":"",onclick:it.onClick},el("span",{},it.label),it.hint?el("small",{},it.hint):null)));}
+/* Close (×) for sheet forms: same blue square, same bottom-right spot as the + it came from. */
+function cancelX(){return el("button",{class:"fx","aria-label":"Close",title:"Close",onclick:closeSheet},svg('<path d="M18 6 6 18M6 6l12 12"/>',24,2.5));}
 function field(label,input,hint){return el("div",{class:"field"},el("label",{},label),input,hint?el("div",{class:"hint"},hint):null);}
 
 /* ---------- screens ---------- */
@@ -1169,6 +1193,7 @@ function refreshTop(){
  const openReq=S.requests.filter(x=>x.status==="OPEN").length,unread=S.notifs.filter(n=>n.for===m.id&&!n.read).length;
  $("#reqBadge").hidden=!openReq;$("#reqBadge").textContent=openReq;
  $("#notifBadge").hidden=!unread;$("#notifBadge").textContent=unread;
+ if(typeof renderDashNav==="function")renderDashNav();
 }
 function pageTop(){refreshTop();const src=document.querySelector("#s-dash .topbar");const host=$("#pgTop");if(!src||!host)return;
  host.innerHTML=src.outerHTML.replace(/ id="([^"]+)"/g,' data-id="$1"');}
@@ -1214,7 +1239,7 @@ function dockName(id){const [k,v]=id.split(":");if(k==="team")return (S.teams.fi
 function daySheet(){const f=filtersFor();const inp=el("input",{class:"in",type:"date",value:f.date||""});
  const set=(q,d)=>{f.quick=q;f.date=d;f.pill=null;save();closeSheet();renderDash();};
  openSheet("Which day?",el("div",{class:"seg",style:"margin:0 0 12px"},el("button",{class:!f.date&&!f.quick?"on":"",onclick:()=>set(null,null)},"Any day"),el("button",{class:f.quick==="today"?"on":"",onclick:()=>set("today",null)},"Today"),el("button",{class:f.quick==="tomorrow"?"on":"",onclick:()=>set("tomorrow",null)},"Tomorrow"),el("button",{class:f.quick==="asc"?"on":"",onclick:()=>set("asc",null)},"Oldest first")),
-  field("Or pick a date",inp),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>inp.value?set(null,inp.value):closeSheet()},"Show")));}
+  field("Or pick a date",inp),el("div",{class:"btnrow"},cancelX(),el("button",{class:"btn",onclick:()=>inp.value?set(null,inp.value):closeSheet()},"Show")));}
 /* Admin: pause (or resume) every open task currently shown by the filters, in one go. */
 function pauseAllSheet(){
  const f=filtersFor();const shown=applyFilters(visibleTasks(),Object.assign({},f,{completed:false})).filter(t=>t.status!=="COMPLETED");
@@ -1342,11 +1367,11 @@ function assignSheet(t){
  let pick=t.assignees.filter(id=>userById(id)?.role==="EXECUTIVE");if(!pick.length&&t.prefs)pick=[...t.prefs];
  const box=el("div",{class:"seg"});const draw=()=>box.replaceChildren(...[...(tl?[tl]:[]),...ex].map(u=>el("button",{class:pick.includes(u.id)?"on":"",onclick:()=>{pick=tog(pick,u.id);draw();}},((t.prefs||[]).includes(u.id)?"★ ":"")+(u.id===tl?.id?"me ("+first(u.name)+")":first(u.name))+(skilled(u,t.work)?" ✓":""))));draw();
  openSheet("Assign · "+t.title,t.prefs&&t.prefs.length?el("p",{style:"font-size:12px;margin:0 0 10px;color:var(--muted)"},"★ = Admin's preference · ✓ = specialist in "+(S.workTypes.find(w=>w.id===t.work)?.name||"this work")+". You decide."):null,box,
-  el("div",{class:"btnrow",style:"margin-top:14px"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>{if(!pick.length)return toast("Pick at least one person","err");t.assignees=[...pick];pick.filter(id=>id!==me().id).forEach(id=>notify(id,"New task from "+first(me().name)+": "+t.title));save();closeSheet();renderDash();toast("Assigned to "+pick.map(id=>first(userById(id).name)).join(", "));}},"Assign")));
+  el("div",{class:"btnrow",style:"margin-top:14px"},cancelX(),el("button",{class:"btn",onclick:()=>{if(!pick.length)return toast("Pick at least one person","err");t.assignees=[...pick];pick.filter(id=>id!==me().id).forEach(id=>notify(id,"New task from "+first(me().name)+": "+t.title));save();closeSheet();renderDash();toast("Assigned to "+pick.map(id=>first(userById(id).name)).join(", "));}},"Assign")));
 }
 function noteSheet(title,t,apply){
  const ta=el("textarea",{class:"in",placeholder:"Write a short note…"});
- openSheet(title+" · "+t.title,field("Note",ta),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>{if(!ta.value.trim())return toast("A note is required","err");apply(ta.value.trim());save();closeSheet();renderDash();toast("Sent");}},"Send")));
+ openSheet(title+" · "+t.title,field("Note",ta),el("div",{class:"btnrow"},cancelX(),el("button",{class:"btn",onclick:()=>{if(!ta.value.trim())return toast("A note is required","err");apply(ta.value.trim());save();closeSheet();renderDash();toast("Sent");}},"Send")));
 }
 const meetCode=t=>{let h=0;for(const ch of t.id)h=(h*31+ch.charCodeAt(0))>>>0;const a="abcdefghijkmnopqrstuvwxyz";const g=n=>Array.from({length:n},(_,i)=>a[(h>>(i*3))%a.length]).join("");return g(3)+"-"+g(4)+"-"+g(3);};
 function driveInfo(t){const c=clientById(t.client);const base=c.kit?"Client Kit › "+(c.businessName||c.name)+" › Work":"Clients › "+c.name;const notes=(t.notes||[]);
@@ -1380,7 +1405,7 @@ function contactSheet(t,mode){
    el("span",{class:"m"},el("b",{},M.verb+" "+p.who),el("small",{},p.name+" · "+detail)),el("span",{class:"nchev"},"›"));
   const fix=role()==="ADMIN"?el("button",{class:"pill",style:"height:30px",onclick:()=>{closeSheet();p.kind==="client"?clientForm(p.ref):personForm(p.ref.role,p.ref);}},mode==="mail"?"Add email":"Add number"):null;
   return el("div",{class:"crow off"},el("span",{class:"m"},el("b",{},M.verb+" "+p.who),el("small",{},(p.name||"—")+" · "+(mode==="mail"?"no email saved":"no number saved"))),fix);});
- openSheet(M.verb+" · "+t.title,...(rows.length?rows:[el("div",{class:"empty"},"Nobody to contact for this task")]),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel")));
+ openSheet(M.verb+" · "+t.title,...(rows.length?rows:[el("div",{class:"empty"},"Nobody to contact for this task")]),el("div",{class:"btnrow"},cancelX()));
 }
 function openDetail(t,attach){
  const c=clientById(t.client);
@@ -1455,9 +1480,10 @@ function renderAdd(){
  row2.replaceChildren(lbl("Client"),...S.clients.filter(c=>!c.onHold||r==="ADMIN").map(c=>el("button",{class:"gpk"+(AF.client===c.id?" on":""),onclick:()=>{AF.client=AF.client===c.id?"":c.id;renderAdd();}},c.name+(c.onHold?" ⏸":""))));
  const sc=k=>{AF.shortcut=k;if(k==="upnext"){AF.date="";}else{AF.date=dk(new Date(Date.now()+(k==="tomorrow"?DAY:0)));AF.time="10:00";}renderAdd();};
  $("#tBarG").replaceChildren(el("button",{style:"display:flex;align-items:center;height:32px;width:28px;justify-content:center;color:#fff;flex-shrink:0",onclick:scheduleSheet},svg(I.cal,22,2)),
-  el("button",{class:"gpk"+(!AF.date?" on":""),onclick:()=>sc("upnext")},"upnext"),el("button",{class:"gpk"+(AF.date&&AF.shortcut==="tomorrow"?" on":""),onclick:()=>sc("tomorrow")},"Tom"),el("button",{class:"gpk"+(AF.date&&AF.shortcut==="today"?" on":""),onclick:()=>sc("today")},"today"));
- $("#tMeet").className="sq"+(AF.type==="MEETING"?" on":"");
- $("#tWorkBtn").style.boxShadow=AF.type==="WORK"?"0 0 0 1px rgba(0,0,0,.6)":"";
+  el("button",{class:"gpk"+(!AF.date?" on":""),onclick:()=>sc("upnext")},"Up next"),el("button",{class:"gpk"+(AF.date&&AF.shortcut==="today"?" on":""),onclick:()=>sc("today")},"Today"),el("button",{class:"gpk"+(AF.date&&AF.shortcut==="tomorrow"?" on":""),onclick:()=>sc("tomorrow")},"Tomorrow"));
+ $("#tMeet").className="nb ty meet"+(AF.type==="MEETING"?" on":"");$("#tMeet").setAttribute("aria-pressed",String(AF.type==="MEETING"));
+ $("#tWorkBtn").className="nb ty task"+(AF.type==="WORK"?" on":"");$("#tWorkBtn").setAttribute("aria-pressed",String(AF.type==="WORK"));
+ renderAddNav();
  meetingExtras();
 }
 const fmtSecs=s=>Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
@@ -1527,7 +1553,7 @@ function recurPicker(init,base,onDone,onClear,title){
   body.replaceChildren(...[sum,el("div",{class:"lab",style:"font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px"},"Quick pick"),pre,el("div",{style:"font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:4px 0 6px"},"Or set it yourself"),freq,intv,detail,el("div",{style:"font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:12px 0 6px"},"Ends"),ends].filter(Boolean));
  };
  draw();
- openSheet(title||"Repeat",body,el("div",{class:"btnrow",style:"margin-top:14px"},onClear?el("button",{class:"btn ghost",style:"color:#dc2626",onclick:()=>{closeSheet();onClear();}},"Don't repeat"):el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>{r.anchor=r.anchor||dk(base);closeSheet();onDone(r);toast("Repeats: "+recurText(r));}},"Done")));
+ openSheet(title||"Repeat",body,el("div",{class:"btnrow",style:"margin-top:14px"},onClear?el("button",{class:"btn ghost",style:"color:#dc2626",onclick:()=>{closeSheet();onClear();}},"Don't repeat"):cancelX(),el("button",{class:"btn",onclick:()=>{r.anchor=r.anchor||dk(base);closeSheet();onDone(r);toast("Repeats: "+recurText(r));}},"Done")));
 }
 function nextSlot(){const d=new Date();d.setMinutes(0,0,0);d.setHours(d.getHours()+1);if(d.getHours()>=18){d.setDate(d.getDate()+1);d.setHours(10);}return `${dateChip(d.toISOString())} ${fmtT(d.toISOString())}`;}
 function saveTask(){
@@ -1561,7 +1587,7 @@ $("#tTitle").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();saveTask();}};
 // save button lives in the header tiles area? No: the real app saves from the title row ✓ — add a floating save
 const saveBtn=el("button",{class:"btn",style:"flex:none;height:40px;border-radius:999px;padding:0 22px;box-shadow:0 8px 24px rgba(0,0,0,.2);pointer-events:auto",onclick:saveTask},"Save");
 $("#s-add .addbody").append(el("div",{style:"position:sticky;bottom:10px;display:flex;justify-content:flex-end;margin-top:12px;pointer-events:none"},saveBtn));
-$("#dbBtn").onclick=()=>nav("insights");$("#addChoose").onclick=()=>toggleFab();
+$("#dbBtn").onclick=()=>nav("insights");$("#addChoose").onclick=()=>toggleFab();$("#tWorkBtn").replaceChildren(svg('<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4M13 6h8M13 12h8M13 18h8"/>',22,2));
 
 /* ---------- menu ---------- */
 const MI={
@@ -1813,6 +1839,21 @@ function kitPicker(){
   actionList([...list.map(c=>({label:kitWho(c),hint:c.kit?"Kit ready · open it":"Create the kit",onClick:()=>{closeSheet();nav("kit");c.kit?PAGES.kit(c.id):kitCreate(c);}})),
    {label:"+ New client",hint:"Add the client first, then make the kit",onClick:()=>{closeSheet();nav("clients:add");}}]));
 }
+
+/* ---------- bottom icon rows ----------
+   Dashboard: Dashboard · Requests · Notifications · Profile · + (time pills sit on their own row above).
+   Add task: Task / Meeting type · the + menu's other adds as icons · × close. */
+function navBtn(ic,label,fn,badge,cls){return el("button",{class:"nv","aria-label":label+(badge?" ("+badge+")":""),title:label,onclick:fn},el("span",{class:"ic"+(cls?" "+cls:"")},typeof ic==="string"?msvg(ic,20):ic),el("span",{class:"nlab"},label),badge?el("span",{class:"badge"},String(badge)):null);}
+function renderDashNav(){const r=role(),m=me();if(!m)return;
+ const openReq=S.requests.filter(x=>x.status==="OPEN").length,unread=S.notifs.filter(n=>n.for===m.id&&!n.read).length;
+ const av=el("span",{class:"avatar"},m.name.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase());
+ $("#dashNavL").replaceChildren(...[r==="ADMIN"?navBtn("chart","Dashboard",()=>nav("insights")):null,r==="ADMIN"?navBtn("inbox","Requests",()=>nav("requests"),openReq):null,navBtn("bell","Notifications",()=>nav("notifications"),unread),navBtn(av,"Profile",()=>nav("me"))].filter(Boolean));
+}
+function renderAddNav(){
+ const items=fabItems().filter(x=>x.k!=="TASK"&&x.k!=="MEETING");const short={INVOICE:"Invoice",EXPENSE:"Expense",EXECUTIVE:"Exec",WORK:"Work",TEAM:"Team",TEAM_LEADER:"Leader",KIT:"Kit"};
+ $("#addNavL").replaceChildren(...items.map(x=>{const b=navBtn(x.ic,short[x.k],()=>{show("dash");renderDash();x.fn();},0,"g "+x.cls);b.setAttribute("aria-label","New "+x.l.toLowerCase());b.title="New "+x.l.toLowerCase();return b;}));
+ $("#addNav").classList.toggle("solo",!items.length);
+}
 /* ---------- finance helpers ---------- */
 const PAGES={};
 const taxFor=c=>c.country!=="IN"?"EXPORT_LUT":c.stateCode===S.settings.stateCode?"CGST_SGST":"IGST";
@@ -1974,7 +2015,7 @@ function paymentSheet(i){
  const tdsWrap=el("div",{hidden:!i.tdsApplicable||null},field("TDS cut by client %",tds),tdsHint);
  let method="BANK";const seg=el("div",{class:"seg"});const rs=()=>seg.replaceChildren(...["CASH","BANK","UPI"].map(k=>el("button",{class:method===k?"on":"",onclick:()=>{method=k;rs();}},k==="BANK"?"Bank":k==="UPI"?"UPI":"Cash")));rs();
  openSheet("Record payment · "+i.number,field("Amount received (₹)",amt,"Balance "+inr(bal)),c.country!=="IN"?null:el("label",{class:"check"},tdsOn,el("div",{},el("b",{},"Client cut TDS on this payment"),el("small",{},"Enter the % that was deducted"))),tdsWrap,field("Method",seg),field("Date",date),field("Notes",note),
-  el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn blue",onclick:()=>{
+  el("div",{class:"btnrow"},cancelX(),el("button",{class:"btn blue",onclick:()=>{
    const a=Number(amt.value)||0;if(a<=0)return toast("Enter an amount","err");const t=tdsOn.checked?tdsAmt():0;if(t>0)i.tdsApplicable=true;
    S.payments.unshift({id:uid(),invoice:i.id,amount:a,tds:t,method,date:new Date(date.value+"T10:00:00").toISOString(),note:note.value});
    i.paid+=a+t;i.status=balance(i)<=0?"PAID":"PARTIALLY_PAID";
@@ -1987,9 +2028,9 @@ function invoiceActions(i){
  const go=(fn,msg)=>()=>{fn();save();closeSheet();if(msg)toast(msg);openInvoice(i);};
  if(["SENT","PARTIALLY_PAID","OVERDUE"].includes(i.status)){
   items.push({label:"Send reminder",hint:"Email + WhatsApp nudge, manual only",onClick:go(()=>{},"Reminder sent to "+c.name)});
-  items.push({label:"Push forward",hint:"Remind me on another date instead",onClick:()=>{const d=el("input",{class:"in",type:"date",value:dk(new Date(Date.now()+7*DAY))});openSheet("Remind me on",field("Date",d),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:go(()=>{i.remindAt=new Date(d.value+"T09:00:00").toISOString();},"Reminder moved")},"Save")));}});
+  items.push({label:"Push forward",hint:"Remind me on another date instead",onClick:()=>{const d=el("input",{class:"in",type:"date",value:dk(new Date(Date.now()+7*DAY))});openSheet("Remind me on",field("Date",d),el("div",{class:"btnrow"},cancelX(),el("button",{class:"btn",onclick:go(()=>{i.remindAt=new Date(d.value+"T09:00:00").toISOString();},"Reminder moved")},"Save")));}});
   items.push(c.onHold?{label:"Resume work",onClick:go(()=>{c.onHold=false;S.tasks.filter(t=>t.client===c.id).forEach(t=>t.paused=false);},"Work resumed · team notified")}:{label:"Hold work",danger:true,hint:"Pauses every task for "+c.name+" until paid",onClick:go(()=>{c.onHold=true;c.holdSince=new Date().toISOString();c.holdInvoice=i.id;S.tasks.filter(t=>t.client===c.id&&t.status!=="COMPLETED").forEach(t=>{t.paused=true;t.assignees.forEach(id=>notify(id,"Work on hold for "+c.name+" (unpaid invoice "+i.number+")"));});},"Work on hold · tasks paused")});
-  items.push({label:"Credit note",hint:"Partial or full, against this invoice",onClick:()=>{const a=el("input",{class:"in",type:"number",value:balance(i).toFixed(0)}),r=el("input",{class:"in",placeholder:"Reason"});openSheet("Credit note",field("Amount (incl. tax)",a),field("Reason",r),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>{const v=Number(a.value)||0;if(v<=0)return;S.invoices.unshift({id:uid(),number:"CN-"+String(++S.seq).padStart(4,"0"),docType:"CREDIT_NOTE",client:c.id,amount:-v/(1+i.gst/100),gst:i.gst,taxMode:i.taxMode,status:"SENT",plan:"ONE_TIME",desc:(r.value||"Credit")+" against "+i.number,issued:new Date().toISOString(),due:new Date().toISOString(),paid:0,parts:[],creditOf:i.id});i.paid+=v;if(balance(i)<=0)i.status="PAID";save();closeSheet();toast("Credit note issued");openInvoice(i);}},"Issue")));}});
+  items.push({label:"Credit note",hint:"Partial or full, against this invoice",onClick:()=>{const a=el("input",{class:"in",type:"number",value:balance(i).toFixed(0)}),r=el("input",{class:"in",placeholder:"Reason"});openSheet("Credit note",field("Amount (incl. tax)",a),field("Reason",r),el("div",{class:"btnrow"},cancelX(),el("button",{class:"btn",onclick:()=>{const v=Number(a.value)||0;if(v<=0)return;S.invoices.unshift({id:uid(),number:"CN-"+String(++S.seq).padStart(4,"0"),docType:"CREDIT_NOTE",client:c.id,amount:-v/(1+i.gst/100),gst:i.gst,taxMode:i.taxMode,status:"SENT",plan:"ONE_TIME",desc:(r.value||"Credit")+" against "+i.number,issued:new Date().toISOString(),due:new Date().toISOString(),paid:0,parts:[],creditOf:i.id});i.paid+=v;if(balance(i)<=0)i.status="PAID";save();closeSheet();toast("Credit note issued");openInvoice(i);}},"Issue")));}});
  }
  if(i.plan==="PART"&&i.parts.some(p=>p.status==="SCHEDULED")){
   items.push({label:"Issue next part now",onClick:go(()=>{const p=i.parts.find(x=>x.status==="SCHEDULED");p.status="SENT";p.date=new Date().toISOString();},"Part issued · awaiting your approval to send")});
@@ -2164,7 +2205,7 @@ PAGES.me=function(){
  const m=me();const mine=S.tasks.filter(t=>t.assignees.includes(m.id));
  page("Profile",[el("div",{class:"card",style:"margin:12px 12px 10px"},el("div",{style:"font-size:18px;font-weight:800"},m.name),el("div",{style:"font-size:12px;color:var(--muted)"},m.email+" · "+m.role.replace("_"," ").toLowerCase()),el("div",{class:"kv"},el("span",{},"Team"),el("span",{},S.teams.find(t=>t.id===m.teamId)?.name||"—")),el("div",{class:"kv"},el("span",{},"Open tasks"),el("span",{},mine.filter(t=>t.status!=="COMPLETED").length)),el("div",{class:"kv"},el("span",{},"Completed"),el("span",{},mine.filter(t=>t.status==="COMPLETED").length)),el("div",{class:"kv"},el("span",{},"Weekly inventory"),el("span",{},(S.inventory.hours[m.id]||40)+" h"))),
   el("div",{class:"card"},el("h4",{},"Notifications"),el("label",{class:"check",style:"margin:0"},el("input",{type:"checkbox",checked:true}),el("div",{},el("b",{},"Push on this phone"),el("small",{},"Web push via the installed PWA")))),
-  m.role!=="ADMIN"?el("div",{class:"card"},el("h4",{},"Ask for leave"),el("div",{class:"btnrow",style:"margin:0"},el("button",{class:"btn ghost",onclick:()=>{const ta=el("textarea",{class:"in",placeholder:"Dates and reason"});openSheet("Leave request",field("Note",ta),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>{if(!ta.value.trim())return;S.requests.unshift({id:uid(),kind:"LEAVE",task:null,by:m.id,note:ta.value.trim(),status:"OPEN",at:new Date().toISOString()});notify("u1",first(m.name)+" asked for leave");save();closeSheet();toast("Sent to Admin");}},"Send")));}},"Request leave"))):null],
+  m.role!=="ADMIN"?el("div",{class:"card"},el("h4",{},"Ask for leave"),el("div",{class:"btnrow",style:"margin:0"},el("button",{class:"btn ghost",onclick:()=>{const ta=el("textarea",{class:"in",placeholder:"Dates and reason"});openSheet("Leave request",field("Note",ta),el("div",{class:"btnrow"},cancelX(),el("button",{class:"btn",onclick:()=>{if(!ta.value.trim())return;S.requests.unshift({id:uid(),kind:"LEAVE",task:null,by:m.id,note:ta.value.trim(),status:"OPEN",at:new Date().toISOString()});notify("u1",first(m.name)+" asked for leave");save();closeSheet();toast("Sent to Admin");}},"Send")));}},"Request leave"))):null],
   [zoneActions(el("button",{class:"btn ghost",onclick:()=>{S.me=null;save();show("login");}},"Switch role"),el("button",{class:"btn",onclick:()=>nav("dash")},"Dashboard"))]);
 };
 /* ---------- attendance / inventory ---------- */
@@ -2192,7 +2233,7 @@ PAGES.vault=function(tab){if(tab)vaultTab=tab;
  const KL={ASSET_DRIVE_LINK:"Assets drive links",CREDENTIAL:"Credentials",SHARED_DRIVE_LINK:"Shared drive links"};
  const list=S.vault.filter(v=>v.kind===vaultTab);
  page("Client vault",[...(list.length?list.map(v=>el("div",{class:"item",onclick:()=>openSheet(v.label,el("div",{class:"card",style:"margin:0 0 10px"},el("div",{class:"kv"},el("span",{},"Client"),el("span",{},clientById(v.client).name)),el("div",{class:"kv"},el("span",{},"Value"),el("span",{style:"font-family:ui-monospace,monospace"},v.value)),el("div",{class:"kv"},el("span",{},"Expires"),el("span",{style:v.expires&&dayOff(v.expires)<0?"color:#dc2626":""},v.expires?fmtDY(v.expires)+(dayOff(v.expires)<0?" (expired)":""):"never"))),el("p",{class:"pre"},"Encrypted at rest. Reveal is audited and time-boxed by an access grant."),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Close"),el("button",{class:"btn",onclick:()=>{closeSheet();toast("Reveal logged in the audit trail");}},"Reveal")))},el("div",{class:"m"},el("b",{},v.label),el("small",{},clientById(v.client).name+(v.expires?" · expires "+fmtD(v.expires):""))),v.expires&&dayOff(v.expires)<0?el("span",{class:"tag over"},"expired"):v.expires&&dayOff(v.expires)<30?el("span",{class:"tag await"},"expiring"):null)):[el("div",{class:"empty"},"Nothing stored here yet")])],
-  [zoneTabs(Object.entries(KL),vaultTab,k=>{vaultTab=k;PAGES.vault();}),zoneActions(el("button",{class:"btn blue",onclick:()=>{const l=el("input",{class:"in",placeholder:"Label"}),val=el("input",{class:"in",placeholder:vaultTab==="CREDENTIAL"?"user / password":"https://drive.google.com/…"}),cl=el("select",{class:"in"},...S.clients.map(c=>el("option",{value:c.id},c.name))),ex=el("input",{class:"in",type:"date"});openSheet("Add "+KL[vaultTab].toLowerCase(),field("Client",cl),field("Label",l),field("Value",val),vaultTab==="CREDENTIAL"?field("Expires",ex):null,el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>{if(!l.value.trim())return;S.vault.unshift({id:uid(),client:cl.value,kind:vaultTab,label:l.value,value:vaultTab==="CREDENTIAL"?val.value.replace(/\/.*$/," / ••••••••"):val.value,expires:ex.value?new Date(ex.value+"T00:00:00").toISOString():null});save();closeSheet();PAGES.vault();toast("Saved (encrypted)");}},"Save")));}},"+ Add"))]);
+  [zoneTabs(Object.entries(KL),vaultTab,k=>{vaultTab=k;PAGES.vault();}),zoneActions(el("button",{class:"btn blue",onclick:()=>{const l=el("input",{class:"in",placeholder:"Label"}),val=el("input",{class:"in",placeholder:vaultTab==="CREDENTIAL"?"user / password":"https://drive.google.com/…"}),cl=el("select",{class:"in"},...S.clients.map(c=>el("option",{value:c.id},c.name))),ex=el("input",{class:"in",type:"date"});openSheet("Add "+KL[vaultTab].toLowerCase(),field("Client",cl),field("Label",l),field("Value",val),vaultTab==="CREDENTIAL"?field("Expires",ex):null,el("div",{class:"btnrow"},cancelX(),el("button",{class:"btn",onclick:()=>{if(!l.value.trim())return;S.vault.unshift({id:uid(),client:cl.value,kind:vaultTab,label:l.value,value:vaultTab==="CREDENTIAL"?val.value.replace(/\/.*$/," / ••••••••"):val.value,expires:ex.value?new Date(ex.value+"T00:00:00").toISOString():null});save();closeSheet();PAGES.vault();toast("Saved (encrypted)");}},"Save")));}},"+ Add"))]);
 };
 /* ---------- expenses: bills, schedules, reminders, mark paid ---------- */
 const METHODS=[["CASH","Cash"],["UPI","UPI"],["BANK","Bank transfer"],["CARD","Card"],["CHEQUE","Cheque"]];
@@ -2236,13 +2277,13 @@ function gstBlock(e,o,getAmt){
 }
 function billDetailsSheet(e,o){
  const blk=gstBlock(e,o,()=>o.amount);
- openSheet("Bill & GST · "+e.payee,blk.node,el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>{Object.assign(o,blk.read());if(o.vendorGstin)e.vendorGstin=o.vendorGstin;save();closeSheet();PAGES.expenses();toast("Saved");}},"Save")));
+ openSheet("Bill & GST · "+e.payee,blk.node,el("div",{class:"btnrow"},cancelX(),el("button",{class:"btn",onclick:()=>{Object.assign(o,blk.read());if(o.vendorGstin)e.vendorGstin=o.vendorGstin;save();closeSheet();PAGES.expenses();toast("Saved");}},"Save")));
 }
 function sendPackSheet(m,claim){
  const em=el("input",{class:"in",type:"email",placeholder:"finance@yourca.in",value:S.settings.financeEmail||""});
  const files=claim.filter(x=>x.o.file).length;
  openSheet("Send "+mkLabel(m)+" GST pack",el("div",{class:"card",style:"margin:0 0 10px"},el("div",{class:"kv"},el("span",{},"Bills"),el("span",{},files+" attached"+(claim.length>files?" · "+(claim.length-files)+" missing":""))),el("div",{class:"kv"},el("span",{},"GST to claim"),el("b",{},inr(claim.reduce((s,x)=>s+x.o.gst,0)))),el("div",{class:"kv"},el("span",{},"Includes"),el("span",{},"ZIP of bills + summary sheet"))),field("Finance person's email",em,"Saved in Settings for next month"),
-  el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn blue",onclick:()=>{if(!/\S+@\S+\.\S+/.test(em.value))return toast("Enter a valid email","err");S.settings.financeEmail=em.value.trim();save();closeSheet();toast("Prototype: not actually sent. The real app emails the ZIP and summary to "+S.settings.financeEmail);}},"Send")));
+  el("div",{class:"btnrow"},cancelX(),el("button",{class:"btn blue",onclick:()=>{if(!/\S+@\S+\.\S+/.test(em.value))return toast("Enter a valid email","err");S.settings.financeEmail=em.value.trim();save();closeSheet();toast("Prototype: not actually sent. The real app emails the ZIP and summary to "+S.settings.financeEmail);}},"Send")));
 }
 let expTab="DUE";
 PAGES.expenses=function(){
@@ -2292,7 +2333,7 @@ function occSheet(e,o){
  const kv=(k,v)=>el("div",{class:"kv"},el("span",{},k),el("span",{style:"text-align:right"},v));
  const items=[];
  if(o.status==="DUE"){items.push({label:"Mark paid",hint:"Record how and when you paid",onClick:()=>{closeSheet();markPaid(e,o);}});
-  items.push({label:"Move the due date",onClick:()=>{const d=el("input",{class:"in",type:"date",value:dk(new Date(o.due))});openSheet("New due date",field("Due on",d),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>{o.due=new Date(d.value+"T10:00:00").toISOString();o.notified=false;save();closeSheet();PAGES.expenses();toast("Due date moved");}},"Save")));}});
+  items.push({label:"Move the due date",onClick:()=>{const d=el("input",{class:"in",type:"date",value:dk(new Date(o.due))});openSheet("New due date",field("Due on",d),el("div",{class:"btnrow"},cancelX(),el("button",{class:"btn",onclick:()=>{o.due=new Date(d.value+"T10:00:00").toISOString();o.notified=false;save();closeSheet();PAGES.expenses();toast("Due date moved");}},"Save")));}});
   if(e.plan==="RECURRING")items.push({label:"Skip this one",hint:"No payment this time; the next one stays",onClick:()=>{e.occ=e.occ.filter(x=>x!==o);if(!e.occ.some(x=>x.status==="DUE")){const n=nextDate(e.rec,new Date(o.due),e.occ.length);if(n)e.occ.push({id:uid(),amount:e.amount,due:n.toISOString(),status:"DUE",paidAt:null,method:null,ref:"",tds:0,tdsPct:0,notified:false});}save();closeSheet();PAGES.expenses();toast("Skipped");}});
  }else items.push({label:"Undo paid",hint:"Back to To pay",onClick:()=>{Object.assign(o,{status:"DUE",paidAt:null,method:null,ref:"",tds:0,tdsPct:0});save();closeSheet();PAGES.expenses();toast("Marked unpaid");}});
  items.push({label:o.file||o.gst?"Bill & GST details":"Attach bill · add GST",hint:"Upload the vendor's invoice and mark whether you get the GST back",onClick:()=>{closeSheet();billDetailsSheet(e,o);}});
@@ -2312,7 +2353,7 @@ function markPaid(e,o){
  const blk=gstBlock(e,o,()=>Number(amt.value)||0);
  [pct,d].forEach(x=>x.oninput=recalc);amt.oninput=()=>{recalc();blk.refresh();};tamt.oninput=recalc;on.onchange=()=>{wrap.hidden=!on.checked;recalc();};recalc();
  openSheet("Mark paid · "+e.payee,field("Amount paid (₹)",amt,o.label||planText(e)),field("Paid on",d),field("How did you pay?",seg),field("Reference",ref),el("div",{style:"font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:4px 0 8px"},"Bill & GST"),blk.node,warn,el("label",{class:"check"},on,el("div",{},el("b",{},"Deducted TDS on this payment"),el("small",{},"Pick the % · amount auto-fills"))),wrap,
-  el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn green",onclick:()=>{const a=Number(amt.value)||0;if(a<=0)return toast("Enter the amount","err");
+  el("div",{class:"btnrow"},cancelX(),el("button",{class:"btn green",onclick:()=>{const a=Number(amt.value)||0;if(a<=0)return toast("Enter the amount","err");
    const rest=o.amount-a;Object.assign(o,{amount:a,status:"PAID",paidAt:new Date(d.value+"T12:00:00").toISOString(),method,ref:ref.value.trim(),tds:on.checked?Number(tamt.value)||0:0,tdsPct:on.checked?Number(pct.value)||0:0});Object.assign(o,blk.read());if(o.vendorGstin)e.vendorGstin=o.vendorGstin;
    let msg="Marked paid";
    if(rest>0.5){e.occ.splice(e.occ.indexOf(o)+1,0,{id:uid(),amount:rest,due:o.due,status:"DUE",paidAt:null,method:null,ref:"",tds:0,tdsPct:0,notified:false,label:"Balance of "+(o.label||"payment")});msg="Part paid · balance "+inr(rest)+" still due";}
@@ -2406,7 +2447,7 @@ function personForm(r,u){
  const sk=el("div",{class:"seg"});const drawSk=()=>{const wl=workFor([team]);sk.replaceChildren(...(wl.length?wl.map(w=>el("button",{class:skills.includes(w.id)?"on":"",onclick:()=>{skills=tog(skills,w.id);drawSk();}},w.name)):[el("span",{class:"pre"},"This team has no work types yet · Menu → Add Work")]));};drawSk();
  const label=r==="EXECUTIVE"?"executive":"team leader";
  openSheet(u?u.name:"Invite "+label,field("Name",n),field("Google Workspace email",e,u?"Email can't be changed":"Sign-in is invite-only; the domain is restricted"),field("Mobile / WhatsApp",ph,"Used by the Call and WhatsApp buttons on task cards"),field("Team",t,r==="TEAM_LEADER"?"One team leader per team":null),field("Speciality",sk,"Work types they're best at · shown as ✓ when you add a task"),
-  el("div",{class:"btnrow"},u?el("button",{class:"btn ghost",style:"color:#dc2626",onclick:()=>{closeSheet();toast("Deactivated (prototype keeps the user)");}},"Deactivate"):el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),
+  el("div",{class:"btnrow"},u?el("button",{class:"btn ghost",style:"color:#dc2626",onclick:()=>{closeSheet();toast("Deactivated (prototype keeps the user)");}},"Deactivate"):cancelX(),
    el("button",{class:"btn",onclick:()=>{if(!n.value.trim()||!e.value.trim())return toast("Name and email required","err");
     if(r==="TEAM_LEADER"&&S.users.some(x=>x.role==="TEAM_LEADER"&&x.teamId===team&&x!==u))return toast(S.teams.find(x=>x.id===team).name+" already has a team leader","err");
     const phone=ph.value.trim();if(phone&&phone.replace(/[^0-9]/g,"").length<10)return toast("Phone number looks too short","err");
@@ -2428,10 +2469,10 @@ function workForm(w){
  const n=el("input",{class:"in",placeholder:"e.g. Video editing",value:w?w.name:""});let teams=w?[...(w.teams||[])]:[];
  const box=el("div",{class:"seg"});const draw=()=>box.replaceChildren(...S.teams.map(t=>el("button",{class:teams.includes(t.id)?"on":"",onclick:()=>{teams=tog(teams,t.id);draw();}},t.name)));draw();
  openSheet(w?"Edit work type":"Add work type",field("Name",n),field("Teams",box,"Pick one or more teams that do this work"),
-  el("div",{class:"btnrow"},w?el("button",{class:"btn ghost",style:"color:#dc2626",onclick:()=>{S.workTypes=S.workTypes.filter(x=>x!==w);save();closeSheet();PAGES.worktypes();toast("Work type removed");}},"Remove"):el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),
+  el("div",{class:"btnrow"},w?el("button",{class:"btn ghost",style:"color:#dc2626",onclick:()=>{S.workTypes=S.workTypes.filter(x=>x!==w);save();closeSheet();PAGES.worktypes();toast("Work type removed");}},"Remove"):cancelX(),
    el("button",{class:"btn",onclick:()=>{if(!n.value.trim())return toast("Name is required","err");if(!teams.length)return toast("Pick at least one team","err");if(w){w.name=n.value.trim();w.teams=teams;}else S.workTypes.push({id:uid(),name:n.value.trim(),teams});save();closeSheet();PAGES.worktypes();toast(w?"Saved":"Work type added");}},"Save")));
 }
-function teamForm(){const n=el("input",{class:"in",placeholder:"e.g. Video"});openSheet("Add team",field("Name",n),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>{if(!n.value.trim())return toast("Name is required","err");S.teams.push({id:uid(),name:n.value.trim()});save();closeSheet();nav("teams");toast("Team added");}},"Add")));}
+function teamForm(){const n=el("input",{class:"in",placeholder:"e.g. Video"});openSheet("Add team",field("Name",n),el("div",{class:"btnrow"},cancelX(),el("button",{class:"btn",onclick:()=>{if(!n.value.trim())return toast("Name is required","err");S.teams.push({id:uid(),name:n.value.trim()});save();closeSheet();nav("teams");toast("Team added");}},"Add")));}
 PAGES.teams=function(){page("Teams",[...S.teams.map(t=>el("div",{class:"item",style:"cursor:default"},el("div",{class:"m"},el("b",{},t.name),el("small",{},(S.users.filter(u=>u.teamId===t.id).map(u=>first(u.name)).join(", ")||"nobody yet")+" · work: "+(S.workTypes.filter(w=>(w.teams||[]).includes(t.id)).map(w=>w.name).join(", ")||"none"))),el("div",{class:"amt"},S.tasks.filter(x=>x.team===t.id&&x.status!=="COMPLETED").length+" open")))],[zoneActions(el("button",{class:"btn blue",onclick:()=>teamForm()},"+ Add team"))]);};
 
 /* Google-Drive-style share sheet for a month folder (Drive API permissions in the real app). */
@@ -2537,7 +2578,7 @@ function kitSend(c){
  const em=el("input",{type:"checkbox",checked:c.email?true:null,disabled:!c.email||null}),wa=el("input",{type:"checkbox",checked:c.phone?true:null,disabled:!c.phone||null});
  const msg=el("textarea",{class:"in",rows:7},`Hi ${first(c.name)},\n\nHere is your ${S.settings.company} client kit: ${kitUrl(c)}\n\n1. Brand kit — upload your logo, fonts, photos and brand guide.\n2. Credentials — fill the sheet; the “How to fill” tab explains each column.\n3. Work — we'll put everything we make for you here.\n4. Reports — your monthly reports.\n\nThanks!`);
  openSheet("Send the kit to "+first(c.name),el("label",{class:"check"},em,el("div",{},el("b",{},"Email"),el("small",{},c.email||"no email on the client — add one in Clients"))),el("label",{class:"check"},wa,el("div",{},el("b",{},"WhatsApp"),el("small",{},c.phone||"no WhatsApp number on the client"))),field("Message",msg),
-  el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn blue",onclick:()=>{const via=[em.checked?"email":null,wa.checked?"WhatsApp":null].filter(Boolean);if(!via.length)return toast("Pick email or WhatsApp","err");c.kit.sentAt=new Date().toISOString();c.kit.sentVia=via;save();closeSheet();toast("Kit sent by "+via.join(" + "));PAGES.kit(c.id);}},"Send")));
+  el("div",{class:"btnrow"},cancelX(),el("button",{class:"btn blue",onclick:()=>{const via=[em.checked?"email":null,wa.checked?"WhatsApp":null].filter(Boolean);if(!via.length)return toast("Pick email or WhatsApp","err");c.kit.sentAt=new Date().toISOString();c.kit.sentVia=via;save();closeSheet();toast("Kit sent by "+via.join(" + "));PAGES.kit(c.id);}},"Send")));
 }
 PAGES.kit=function(cid){
  const c=cid&&clientById(cid);
