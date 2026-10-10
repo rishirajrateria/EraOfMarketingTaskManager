@@ -1697,7 +1697,13 @@ const tile=(l,v)=>el("div",{class:"tile"},el("small",{},l),el("b",{},v));
 
 /* ---------- wizard: client → amount → plan → review ---------- */
 let W=null;
+/* Re-open a draft in the wizard with everything filled in (only before approval). */
+function editDraft(i,thenApprove){if(i.status!=="AWAITING_APPROVAL")return toast("Only drafts awaiting approval can be edited","err");
+ openWizard({editId:i.id,thenApprove:!!thenApprove,step:1,client:i.client,tds:i.tdsApplicable,amount:String(i.amount),desc:i.desc||"",gst:i.gst,plan:i.plan,anchor:i.anchor||"FIRST",billDay:i.billDay||"1",billTime:i.billTime||"09:00",
+  remindDate:i.remindAt?dk(new Date(i.remindAt)):"",remindTime:i.remindAt?fmtTimeInput(i.remindAt):"09:00",parts:i.parts&&i.parts.length?i.parts.map(p=>({v:Math.round(p.amount/ (total(i)||1)*100),date:dk(new Date(p.date)),desc:p.desc||""})):undefined,
+  due:i.due?dk(new Date(i.due)):dk(new Date(Date.now()+15*DAY)),proforma:i.docType==="PROFORMA"});}
 function openWizard(preset){
+ if(preset)for(const k of Object.keys(preset))if(preset[k]===undefined)delete preset[k];
  W=Object.assign({step:0,client:"",tds:null,amount:"",desc:"",gst:18,plan:"ONE_TIME",anchor:"FIRST",billDay:"1",billTime:"09:00",remindDate:"",remindTime:"09:00",partMode:"PERCENT",parts:[{v:50,date:dk(),desc:"Advance"},{v:50,date:dk(new Date(Date.now()+30*DAY)),desc:"On delivery"}],due:dk(new Date(Date.now()+15*DAY)),proforma:false},preset||{});
  renderWizard();
 }
@@ -1740,14 +1746,15 @@ function renderWizard(){
    el("div",{class:"card",style:"margin:0 0 10px"},el("div",{style:"display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px"},el("span",{class:"tag "+DOCC[W.proforma?"PROFORMA":docFor(c)]},DOCL[W.proforma?"PROFORMA":docFor(c)]),el("span",{class:"tag draft"},TAXL[tax]),el("span",{class:"tag draft"},W.plan==="ONE_TIME"?"One time":W.plan==="RECURRING"?"Recurring · "+(W.anchor==="FIRST"?"1st":W.anchor==="LAST"?"last day":W.billDay+"th")+" · "+W.billTime:"Part payment · "+W.parts.length+" parts")),
     el("div",{class:"kv"},el("span",{},"Client"),el("span",{},c.businessName||c.name)),W.plan!=="RECURRING"&&W.remindDate?el("div",{class:"kv"},el("span",{},"Approval reminder"),el("span",{},fmtDY(W.remindDate+"T10:00:00")+" "+W.remindTime)):null,c.country==="IN"?el("div",{class:"kv"},el("span",{},"TDS"),el("span",{},W.tds?"client deducts TDS":"no TDS")):null,el("div",{class:"kv"},el("span",{},"Number"),el("span",{},"assigned on approval ("+S.settings.fyPrefix+"/"+fyKey()+"/…)")),el("div",{class:"kv"},el("span",{},"Description"),el("span",{style:"text-align:right"},W.desc||"—")),el("div",{class:"kv"},el("span",{},"Taxable"),el("span",{class:"num"},inr(amt))),el("div",{class:"kv"},el("span",{},"Tax"),el("span",{class:"num"},inr(taxAmt))),el("div",{class:"kv"},el("span",{},"Total"),el("b",{class:"num"},inr(amt+taxAmt)))),
    ps.length?el("div",{class:"card",style:"margin:0 0 10px"},el("h4",{},"Parts"),...ps.map(p=>el("div",{class:"kv"},el("span",{},"Part "+p.n+" · "+fmtD(p.date)+(p.desc?" · "+p.desc:"")),el("span",{class:"num"},inr(p.amount))))):null,
-   el("p",{class:"pre",style:"margin:0"},"Saving creates a draft awaiting approval. Approve → confirm sheet → Email + WhatsApp. No auto-send."));
+   el("p",{class:"pre",style:"margin:0"},W.editId?"Saving updates this draft; it stays awaiting approval.":"Saving creates a draft awaiting approval. Approve → confirm sheet → Email + WhatsApp. No auto-send."));
  }
  const canNext=W.step===0?!!W.client:W.step===1?amt>0:W.step===2?(W.plan!=="PART"||W.parts.every(p=>Number(p.v)>0)):true;
- page("New invoice",[steps,body],[zoneActions(el("button",{class:"btn ghost",onclick:()=>{if(W.step===0)PAGES.invoices();else{W.step--;renderWizard();}}},W.step===0?"Cancel":"Back"),el("button",{class:"btn blue",disabled:!canNext||null,onclick:()=>{if(W.step<3){W.step++;renderWizard();}else saveInvoice(c,tax,gst,amt,taxAmt);}},W.step<3?"Next":"Save draft"))]);
+ page(W.editId?"Edit draft":"New invoice",[steps,body],[zoneActions(el("button",{class:"btn ghost",onclick:()=>{if(W.step===0)PAGES.invoices();else{W.step--;renderWizard();}}},W.step===0?"Cancel":"Back"),el("button",{class:"btn blue",disabled:!canNext||null,onclick:()=>{if(W.step<3){W.step++;renderWizard();}else saveInvoice(c,tax,gst,amt,taxAmt);}},W.step<3?"Next":"Save draft"))]);
 }
 function saveInvoice(c,tax,gst,amt,taxAmt){
  const parts=W.plan==="PART"?W.parts.map((p,i)=>({n:i+1,amount:W.partMode==="PERCENT"?(amt+taxAmt)*Number(p.v)/100:Number(p.v)*(1+gst/100),date:new Date(p.date+"T10:00:00").toISOString(),status:"SCHEDULED",desc:p.desc})):[];
  const inv={id:uid(),number:"DRAFT-"+uid().slice(0,4),docType:W.proforma?"PROFORMA":docFor(c),client:c.id,tdsApplicable:!!W.tds,amount:amt,gst,taxMode:tax,status:"AWAITING_APPROVAL",plan:W.plan,anchor:W.anchor,billDay:W.billDay,billTime:W.billTime,remindAt:W.plan!=="RECURRING"&&W.remindDate?new Date(W.remindDate+"T"+W.remindTime+":00").toISOString():null,desc:W.desc,issued:null,due:W.plan==="PART"?parts[0].date:new Date(W.due+"T10:00:00").toISOString(),paid:0,parts};
+ if(W.editId){const old=S.invoices.find(x=>x.id===W.editId);if(old&&old.status==="AWAITING_APPROVAL"){Object.assign(old,inv,{id:old.id,number:old.number,publicToken:old.publicToken});save();toast("Draft updated · still awaiting approval");if(W.thenApprove){openInvoice(old);approveSheet(old);}else openInvoice(old);return;}}
  S.invoices.unshift(inv);notify("u1",inv.remindAt?"Invoice for "+c.name+" will remind you on "+fmtDY(inv.remindAt)+" "+fmtT(inv.remindAt)+" to approve and send":"Invoice draft for "+c.name+" is awaiting your approval");save();toast("Draft saved · awaiting approval");openInvoice(inv);
 }
 /* ---------- invoice detail + actions ---------- */
@@ -1781,7 +1788,7 @@ function approveSheet(i){
   partDesc?field("Part 1 description",partDesc):null,
   el("label",{class:"check"},em,el("div",{},el("b",{},"Email the PDF"),el("small",{},c.email||"no email on the client"))),
   el("label",{class:"check"},wa,el("div",{},el("b",{},"WhatsApp (Twilio)"),el("small",{},c.phone||"no WhatsApp number on the client"))),el("label",{class:"check"},dl,el("div",{},el("b",{},"Download the PDF"),el("small",{},"Save a copy on this phone to send yourself"))),el("p",{class:"pre",style:"margin:0 0 8px"},"Untick both channels to just approve and number it without sending."),
-  el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Not now"),el("button",{class:"btn green",onclick:()=>{
+  el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Not now"),el("button",{class:"btn ghost",onclick:()=>{closeSheet();editDraft(i,true);}},"✎ Edit"),el("button",{class:"btn green",onclick:()=>{
    i.number=i.docType==="PROFORMA"?"Proforma":nextNumber();i.status="SENT";i.issued=new Date().toISOString();i.publicToken=uid()+uid();
    if(em.checked)i.emailAt=i.issued;if(wa.checked){i.waAt=i.issued;i.waStatus="delivered (mock)";}
    if(i.plan==="PART"&&i.parts[0]){i.parts[0].status="SENT";if(partDesc)i.parts[0].desc=partDesc.value;}
@@ -1838,6 +1845,7 @@ function invoiceActions(i){
  if(i.plan==="RECURRING")items.push({label:"Stop recurrence",onClick:go(()=>{i.plan="ONE_TIME";},"Recurrence stopped")});
  if(i.docType==="PROFORMA"&&i.status!=="AWAITING_APPROVAL")items.push({label:"Convert to tax invoice",onClick:go(()=>{i.docType=docFor(c);i.taxMode=taxFor(c);i.gst=i.taxMode==="EXPORT_LUT"?0:18;i.status="AWAITING_APPROVAL";i.number="DRAFT-"+uid().slice(0,4);},"Converted · approve to number and send")});
  items.push({label:"Preview invoice",hint:"Exactly what the client receives (your template)",onClick:()=>{closeSheet();invoicePreview(i);}});items.push({label:"Open public PDF link",hint:"Signed link the client can open without login",onClick:()=>{closeSheet();toast("Opens /api/public/invoice/"+(i.publicToken||"…").slice(0,8)+"…");}});
+ if(i.status==="AWAITING_APPROVAL")items.unshift({label:"Edit draft",hint:"Change client, amount, items, plan or dates before approving",onClick:()=>{closeSheet();editDraft(i);}});
  if(i.status==="AWAITING_APPROVAL")items.push({label:"Delete draft",danger:true,onClick:()=>{S.invoices=S.invoices.filter(x=>x.id!==i.id);save();closeSheet();toast("Draft deleted");PAGES.invoices();}});
  else if(i.docType==="PROFORMA")items.push({label:"Delete proforma",danger:true,hint:"Proformas can't be cancelled and aren't kept in your books",onClick:()=>{S.invoices=S.invoices.filter(x=>x.id!==i.id);save();closeSheet();toast("Proforma deleted");PAGES.invoices();}});
  else if(i.status!=="PAID"&&i.status!=="CANCELLED"&&i.docType!=="CREDIT_NOTE")items.push(i.paid>0?{label:"Cancel invoice",hint:"Has payments recorded · issue a credit note instead",onClick:()=>toast("This invoice has payments. Use Credit note to reverse it.","err")}:{label:"Cancel invoice",danger:true,hint:"Number stays used; next invoice continues the series",onClick:()=>{closeSheet();cancelSheet(i);}});
