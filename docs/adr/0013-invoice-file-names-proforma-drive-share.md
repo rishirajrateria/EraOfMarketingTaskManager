@@ -73,7 +73,8 @@ which they found almost the same.
 
 ### 4. Menu: one "Payments & finance" destination
 - The Money section is Invoices · **Payments & finance** · Expenses · Monthly Drive folders. The row's status line says
-  what needs attention ("2 to approve · 1 overdue · ₹4,22,400 outstanding"; otherwise "Nothing pending · …"); an amber
+  what needs attention ("2 to approve · ₹4,22,400 outstanding", or "2 to approve · 1 overdue · ₹4,22,400 due" when
+  crowded; otherwise "Nothing pending · …"); an amber
   badge counts client invoices overdue (`menuCounts().invoicesOverdue`). Invoices keeps its own row and approval badge.
 - `/admin/payments` is the hub: tiles; **Needs you** (Approve & send → opens the invoice with the approve sheet via
   `?approve=1`; client payments overdue with a one-tap **Remind**; bills overdue or due in 7 days with **Pay** →

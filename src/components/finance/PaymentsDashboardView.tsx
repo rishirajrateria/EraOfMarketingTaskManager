@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, FilePlus, Receipt } from "lucide-react";
 import { BarChip, BarIcon, BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
-import { formatINR } from "@/server/finance/money";
+import { formatINRWhole as formatINR } from "@/server/finance/money";
 import type { PaymentsDashboard } from "@/server/finance/queries";
 import { ClientGroups, OutstandingBars, ReceivedBlock, UpcomingList } from "@/components/finance/PaymentsSections";
 import { METHOD_LABEL, PAYMENT_METHODS, monthLabel, shiftMonthKey, type PaymentMethod } from "@/components/finance/finance-ui";
@@ -15,15 +15,13 @@ type Props = {
   needs: React.ReactNode;
   /** Finance summary (totals, charts, TDS, per month) — server-rendered. */
   summary: React.ReactNode;
-  /** Finance sheet row (CSV / Push to Sheet / Open sheet) for the bottom zone. */
-  sheetRow: React.ReactNode;
 };
 
 /**
  * /admin/payments — the Payments & finance hub (ADR 0013): tiles, Needs you, the finance summary (was the Finance
  * sheet), then the payments lists (overdue / due soon by client, upcoming, outstanding bars, received this month).
  */
-export function PaymentsDashboardView({ data, method, tz, needs, summary, sheetRow }: Props) {
+export function PaymentsDashboardView({ data, method, tz, needs, summary }: Props) {
   const router = useRouter();
   const go = (next: { month?: string; method?: PaymentMethod | null }) => {
     const p = new URLSearchParams();
@@ -42,8 +40,7 @@ export function PaymentsDashboardView({ data, method, tz, needs, summary, sheetR
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="shrink-0 px-4 pb-2 pt-3">
-        <h1 className="text-[17px] font-bold tracking-[-.015em]">Payments &amp; finance</h1>
-        <div className="mt-2 grid grid-cols-2 gap-1.5">
+        <div className="grid grid-cols-2 gap-1.5">
           {tiles.map((x) => (
             <div key={x.label} className="min-w-0 rounded-xl border border-hair bg-glass-strong px-2.5 py-1.5 shadow-[var(--shadow)]">
               <div className="truncate text-[10.5px] font-semibold uppercase tracking-[.04em] text-muted">{x.label}</div>
@@ -76,7 +73,6 @@ export function PaymentsDashboardView({ data, method, tz, needs, summary, sheetR
                 <ZonePill key={m} active={method === m} onClick={() => go({ method: m })}>{METHOD_LABEL[m]}</ZonePill>
               ))}
             </ZoneRow>
-            {sheetRow}
           </>
         }
         left={<span className="text-[11px] text-white/90">Payments &amp; finance</span>}

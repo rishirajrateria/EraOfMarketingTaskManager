@@ -46,7 +46,7 @@ export function DetailHeader({ inv, tz }: { inv: InvoiceDetail; tz: string }) {
           <div className="text-[11px] uppercase opacity-80">Total</div>
           <div className="text-xl font-bold">{formatMoney(inv.total, inv.currency)}</div>
         </div>
-        {inv.docType !== "CREDIT_NOTE" ? (
+        {inv.docType !== "CREDIT_NOTE" && inv.docType !== "PROFORMA" ? (
           <div className="text-right">
             <div className="text-[11px] uppercase opacity-80">Balance</div>
             <div className="text-xl font-bold">{formatMoney(inv.balance, inv.currency)}</div>
@@ -87,7 +87,7 @@ export function AmountsBlock({ inv }: { inv: InvoiceDetail }) {
           <Row k={inv.taxMode === "EXPORT_LUT" ? "GST · 0% under LUT" : "Tax"} v={formatINR(0)} />
         )}
         <Row k="Total" v={formatINR(inv.total)} bold />
-        {inv.docType !== "CREDIT_NOTE" ? (
+        {inv.docType !== "CREDIT_NOTE" && inv.docType !== "PROFORMA" ? (
           <>
             <div className="my-1 border-t border-white/60" />
             <Row k="Received" v={formatINR(inv.received)} />

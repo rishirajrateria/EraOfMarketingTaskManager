@@ -19,6 +19,9 @@ const HOME: Record<Role, string> = {
   CA: "/me",
 };
 
+/** Header titles that differ from the URL segment (ADR 0013: /admin/payments is the Payments & finance hub). */
+const TITLES: Record<string, string> = { payments: "Payments & finance" };
+
 export function AppFrame({
   user,
   unread,
@@ -43,7 +46,8 @@ export function AppFrame({
 
   // Title = last readable path segment; record ids (cuids) fall back to the parent segment ("invoices", "payments").
   const segments = pathname.split("/").filter(Boolean).filter((s) => !/^c[a-z0-9]{20,}$/i.test(s));
-  const title = pathname === "/" ? "Tasks" : (segments.slice(-1)[0] ?? "").replace(/-/g, " ");
+  const last = segments.slice(-1)[0] ?? "";
+  const title = pathname === "/" ? "Tasks" : (TITLES[last] ?? last.replace(/-/g, " "));
   const requestsHref = user.role === "HR" ? "/requests/leave" : "/requests";
   // The dashboard draws its own slim overlay row inside the cyan area (DashboardTopBar) instead of this header.
   const showHeader = pathname !== "/dashboard";

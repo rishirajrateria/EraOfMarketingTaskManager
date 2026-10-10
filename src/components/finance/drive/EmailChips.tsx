@@ -36,9 +36,12 @@ export function EmailChips({ value, onChange, disabled }: { value: string[]; onC
         );
       })}
       <input
-        type="email"
+        // type="text": an email input strips the trailing space, so "space adds a chip" would never fire.
+        type="text"
         inputMode="email"
         autoComplete="email"
+        autoCapitalize="none"
+        spellCheck={false}
         aria-label="Add people by email"
         placeholder={value.length ? "" : "Add people by email"}
         value={draft}

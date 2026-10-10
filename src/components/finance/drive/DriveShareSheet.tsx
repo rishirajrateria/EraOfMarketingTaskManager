@@ -163,7 +163,7 @@ export function DriveShareSheet({ folderId, title, open, onClose }: { folderId: 
 
             <section>
               <h3 className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[.07em] text-muted">General access</h3>
-              <div className="flex items-center gap-2.5 rounded-2xl border border-hair bg-glass px-3 py-2.5">
+              <div className="flex items-start gap-2.5 rounded-2xl border border-hair bg-glass px-3 py-2.5">
                 <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${data.general.access === "anyone" ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300" : "bg-chip text-muted"}`}>
                   {data.general.access === "anyone" ? <Globe size={16} /> : <Lock size={16} />}
                 </span>
@@ -179,12 +179,14 @@ export function DriveShareSheet({ folderId, title, open, onClose }: { folderId: 
                     <option value="anyone">Anyone with the link</option>
                   </select>
                   <small className="block text-[12px] leading-snug text-muted">
-                    {data.general.access === "anyone" ? "Anyone on the internet with the link can open it" : "Only people with access can open with the link"}
+                    {data.general.access === "anyone" ? "Anyone on the internet with the link can open it as" : "Only people with access can open with the link"}
                   </small>
+                  {data.general.access === "anyone" ? (
+                    <div className="mt-1.5">
+                      <RoleSelect label="Role for anyone with the link" value={data.general.role} disabled={pending} onChange={(v) => apply(() => setGeneralAccess(folderId, { access: "anyone", role: v }), "Link access updated")} />
+                    </div>
+                  ) : null}
                 </div>
-                {data.general.access === "anyone" ? (
-                  <RoleSelect label="Role for anyone with the link" value={data.general.role} disabled={pending} onChange={(v) => apply(() => setGeneralAccess(folderId, { access: "anyone", role: v }), "Link access updated")} />
-                ) : null}
               </div>
             </section>
 
@@ -207,8 +209,8 @@ export function ShareFolderButton({ folderId, title, className = "" }: { folderI
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} aria-label={`Share ${title}`} className={`inline-flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-hair bg-chip px-2.5 text-[12px] font-semibold text-ink active:opacity-70 ${className}`}>
-        <Share2 size={14} /> Share
+      <button type="button" onClick={() => setOpen(true)} aria-label={`Share ${title}`} className={`inline-flex h-8 shrink-0 items-center gap-[3px] whitespace-nowrap rounded-full border border-hair bg-chip px-[7px] text-[11px] font-semibold text-ink active:opacity-70 ${className}`}>
+        <Share2 size={13} /> Share
       </button>
       {open ? <DriveShareSheet folderId={folderId} title={title} open onClose={() => setOpen(false)} /> : null}
     </>

@@ -7,6 +7,7 @@ import { cancelInvoice, createCreditNote, holdWork, pushForward } from "@/server
 import type { InvoiceDetail } from "@/server/finance/queries";
 import { addDaysKey } from "@/components/finance/finance-ui";
 import { useAction } from "@/components/finance/useAction";
+import { invoiceFileName } from "@/server/finance/file-names";
 
 /** "Push forward": pick the day Admin wants to be reminded about this document. */
 export function PushForwardSheet({ inv, open, onClose }: { inv: InvoiceDetail; open: boolean; onClose: () => void }) {
@@ -132,6 +133,7 @@ export function CancelInvoiceSheet({ inv, nextNumber, open, onClose }: { inv: In
           {kv("Amount", <b>{formatINR(inv.total)}</b>)}
           {kv(`Number ${inv.number}`, "stays used")}
           {kv("Next invoice", nextNumber)}
+          {kv("Drive file", <span className="break-all text-[12px]">{invoiceFileName({ number: inv.number, docType: inv.docType, client: { name: inv.clientName, businessName: inv.client.businessName } }, { cancelled: true })}</span>)}
         </div>
         <Field label="Reason" hint="Printed on the cancelled copy and kept in the log">
           <textarea rows={3} className={inputCls} placeholder="e.g. Wrong amount, will reissue" value={reason} onChange={(e) => setReason(e.target.value)} />

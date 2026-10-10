@@ -65,7 +65,8 @@ describe("admin menu counts", () => {
     const money = menuSections(r.data).find((s) => s.title === "Money")!;
     const row = money.items.find((i) => i.href === "/admin/payments")!;
     expect(row.label).toBe("Payments & finance");
-    expect(row.sub).toBe("2 to approve · 1 overdue · ₹4,22,400 outstanding");
+    expect(row.sub).toBe("2 to approve · 1 overdue · ₹4,22,400 due");
+    expect(paymentsSub({ ...r.data, invoicesOverdue: 0 })).toBe("2 to approve · ₹4,22,400 outstanding");
     expect(row.badge).toEqual({ n: 1, tone: "amber" });
     expect(money.items.map((i) => i.label)).toEqual(["Invoices", "Payments & finance", "Expenses", "Monthly Drive folders"]);
     expect(paymentsSub({ ...r.data, invoicesToApprove: 0, invoicesOverdue: 0, outstanding: 0, gstToClaimMonth: 0 })).toBe("Nothing pending · totals, TDS, GST");

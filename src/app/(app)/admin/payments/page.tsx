@@ -8,7 +8,7 @@ import { env } from "@/lib/env";
 import { PaymentsDashboardView } from "@/components/finance/PaymentsDashboardView";
 import { NeedsYou } from "@/components/finance/hub/NeedsYou";
 import { FinanceSummary } from "@/components/finance/hub/FinanceSummary";
-import { FinanceSheetRow } from "@/components/finance/FinanceActions";
+import { FinanceSheetActions } from "@/components/finance/FinanceActions";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/components/finance/finance-ui";
 
 export const dynamic = "force-dynamic";
@@ -42,9 +42,8 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
       data={data}
       method={method}
       tz={tz}
-      needs={<NeedsYou awaiting={awaiting} overdue={data.overdue} bills={bills} tz={tz} />}
-      summary={<FinanceSummary summary={summary} tds={tds} pay={pay} previousFy={previousFy} />}
-      sheetRow={<FinanceSheetRow canWrite={user.canWrite} sheetId={env.financeSheetId} />}
+      needs={<NeedsYou key="needs" awaiting={awaiting} overdue={data.overdue} bills={bills} tz={tz} />}
+      summary={<FinanceSummary key="summary" summary={summary} tds={tds} pay={pay} previousFy={previousFy} actions={<FinanceSheetActions canWrite={user.canWrite} sheetId={env.financeSheetId} />} />}
     />
   );
 }

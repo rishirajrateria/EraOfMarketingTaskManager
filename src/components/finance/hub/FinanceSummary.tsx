@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatINR } from "@/server/finance/money";
+import { formatINRWhole as formatINR } from "@/server/finance/money";
 import type { FinanceSummary as Summary } from "@/server/finance/queries";
 import type { TdsSummary } from "@/server/finance/tds";
 import type { PayablesTiles } from "@/server/finance/payables-queries";
@@ -16,31 +16,32 @@ const h2 = "mb-1.5 px-1 text-[11px] font-bold uppercase tracking-[.08em] text-mu
 function Tile({ label, value, cls = "", href }: { label: string; value: string; cls?: string; href?: string }) {
   const body = (
     <>
-      <div className="truncate text-[10.5px] font-semibold uppercase tracking-[.04em] text-muted">{label}</div>
-      <div className={`truncate text-[15px] font-bold tabular-nums ${cls}`}>{value}</div>
+      <div className="truncate text-[11px] font-medium text-muted">{label}</div>
+      <div className={`truncate text-[14px] font-bold tabular-nums tracking-[-.01em] ${cls}`}>{value}</div>
     </>
   );
-  const c = "min-w-0 rounded-xl border border-hair bg-glass-strong px-2.5 py-1.5";
+  const c = "min-w-0 rounded-xl border border-hair bg-glass-strong px-2 py-1.5";
   return href ? <Link href={href} className={c}>{body}</Link> : <div className={c}>{body}</div>;
 }
 
-export function FinanceSummary({ summary, tds, pay, previousFy }: { summary: Summary; tds: TdsSummary; pay: PayablesTiles; previousFy: boolean }) {
+export function FinanceSummary({ summary, tds, pay, previousFy, actions }: { summary: Summary; tds: TdsSummary; pay: PayablesTiles; previousFy: boolean; actions?: React.ReactNode }) {
   const t = summary.totals;
   const red = "text-red-600 dark:text-red-400";
   return (
-    <>
+    <div>
       <section className="mx-4 mb-3">
         <h2 className={h2}>Finance summary · last 12 months</h2>
+        {actions ? <div className="mb-1.5">{actions}</div> : null}
         <div className="grid grid-cols-3 gap-1.5">
           <Tile label="Invoiced" value={formatINR(t.invoiced)} cls="text-brand-blue dark:text-sky-300" />
           <Tile label="Received" value={formatINR(t.received)} cls="text-emerald-600 dark:text-emerald-400" />
           <Tile label="Outstanding" value={formatINR(t.outstanding)} cls="text-amber-600 dark:text-amber-400" />
           <Tile label="Expenses paid" value={formatINR(t.expenses)} cls={red} />
           <Tile label="Net" value={formatINR(t.net)} cls={t.net < 0 ? red : ""} />
-          <Tile label="To pay · 30d" value={formatINR(pay.toPay30)} />
-          <Tile label="Overdue to pay" value={formatINR(pay.overdue)} cls={pay.overdue > 0 ? red : ""} />
-          <Tile label={`GST to claim · ${pay.monthShort}`} value={formatINR(pay.gstToClaim)} cls="text-teal-600 dark:text-teal-300" href={`/admin/expenses?tab=GST&month=${pay.month}`} />
-          <Tile label="Bills attached" value={`${pay.billsAttached} this month`} href={`/admin/expenses?tab=GST&month=${pay.month}`} />
+          <Tile label="To pay · 30 days" value={formatINR(pay.toPay30)} />
+          <Tile label="Bills overdue" value={formatINR(pay.overdue)} cls={pay.overdue > 0 ? red : ""} />
+          <Tile label="GST to claim" value={formatINR(pay.gstToClaim)} cls="text-teal-600 dark:text-teal-300" href={`/admin/expenses?tab=GST&month=${pay.month}`} />
+          <Tile label="Bills attached" value={`${pay.billsAttached} in ${pay.monthShort}`} href={`/admin/expenses?tab=GST&month=${pay.month}`} />
         </div>
       </section>
 
@@ -114,6 +115,6 @@ export function FinanceSummary({ summary, tds, pay, previousFy }: { summary: Sum
           </table>
         </div>
       </section>
-    </>
+    </div>
   );
 }

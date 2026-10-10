@@ -9,12 +9,12 @@ import { ShareFolderButton } from "@/components/finance/drive/DriveShareSheet";
 
 export const dynamic = "force-dynamic";
 
-const btn = "inline-flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-hair bg-chip px-2.5 text-[12px] font-semibold text-ink active:opacity-70";
+const btn = "inline-flex h-8 shrink-0 items-center gap-[3px] whitespace-nowrap rounded-full border border-hair bg-chip px-[7px] text-[11px] font-semibold text-ink active:opacity-70";
 
 function OpenButton({ href, label = "Open in Drive" }: { href: string; label?: string }) {
   return (
     <a href={href} target="_blank" rel="noreferrer" className={btn}>
-      <ExternalLink size={14} /> {label}
+      <ExternalLink size={13} /> {label}
     </a>
   );
 }
@@ -44,8 +44,7 @@ function MonthCard({ r }: { r: MonthFolderRow }) {
   return (
     <section className="glass-card mx-4 mt-2.5 p-2.5">
       <div className="flex items-center gap-1.5">
-        <FolderOpen size={16} className="shrink-0 text-amber-500" />
-        <h2 className="min-w-0 flex-1 truncate text-[14px] font-semibold">{r.label}</h2>
+        <h2 className="min-w-0 flex-1 truncate pl-0.5 text-[14px] font-semibold tracking-[-.01em]">{r.label}</h2>
         {r.urls && r.folderId ? (
           <>
             <ShareFolderButton folderId={r.folderId} title={`Finance › ${r.label}`} />
@@ -89,8 +88,8 @@ export default async function DriveFoldersPage() {
         <div className="flex items-center gap-1.5">
           <FolderOpen size={16} className="shrink-0 text-amber-500" />
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-[14px] font-semibold">Finance folder</h2>
-            <p className="truncate text-[11px] text-muted">All months · share it once for everything</p>
+            <h2 className="truncate text-[14px] font-semibold">Finance</h2>
+            <p className="truncate text-[11px] text-muted">All months</p>
           </div>
           {finance ? (
             <>

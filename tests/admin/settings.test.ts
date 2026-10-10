@@ -138,6 +138,22 @@ describe("company settings actions", () => {
     expect(blank.ok).toBe(false);
   });
 
+  it("ADR 0014: client kit folder names default to Brand kit / Credentials / Work / Reports and are validated", async () => {
+    const { admin } = await seedBasics();
+    session.set(admin);
+    const actions = await load();
+    const { getSettings, invalidateSettingsCache } = await import("@/lib/settings");
+    invalidateSettingsCache();
+    expect((await getSettings()).clientKitFolders).toEqual(["Brand kit", "Credentials", "Work", "Reports"]);
+    expect((await actions.updateSettings({ ...baseInput, clientKitFolders: [" Logos ", "Logins", "Deliverables", "Monthly reports"] })).ok).toBe(true);
+    expect((await getSettings()).clientKitFolders).toEqual(["Logos", "Logins", "Deliverables", "Monthly reports"]);
+    for (const bad of [["A", "B", "C"], ["A", "a", "C", "D"], ["A/B", "C", "D", "E"], ["", "B", "C", "D"]]) {
+      expect((await actions.updateSettings({ ...baseInput, clientKitFolders: bad })).ok).toBe(false);
+    }
+    expect((await actions.updateSettings(baseInput)).ok).toBe(true); // omitted → unchanged
+    expect((await getSettings()).clientKitFolders).toEqual(["Logos", "Logins", "Deliverables", "Monthly reports"]);
+  });
+
   it("uploads, streams and removes the logo", async () => {
     const { admin } = await seedBasics();
     session.set(admin);

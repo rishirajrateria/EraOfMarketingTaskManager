@@ -8,7 +8,7 @@ import { useToast } from "@/components/ui/Toast";
 import { createClientKit, sendClientKit } from "@/server/clients/kit";
 
 /** Client kit buttons (ADR 0014): Create / Repair kit and the Email / WhatsApp send sheet. */
-export const kitBtn = "inline-flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-hair bg-chip px-2.5 text-[12px] font-semibold text-ink active:opacity-70 disabled:opacity-45";
+export const kitBtn = "inline-flex h-8 shrink-0 items-center gap-[3px] whitespace-nowrap rounded-full border border-hair bg-chip px-[7px] text-[11px] font-semibold text-ink active:opacity-70 disabled:opacity-45";
 const primaryBtn = "inline-flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-primary px-3 text-[12px] font-semibold text-primary-ink active:opacity-80 disabled:opacity-45";
 
 export function CreateKitButton({ clientId, repair = false }: { clientId: string; repair?: boolean }) {
@@ -92,10 +92,10 @@ export function SendKitButtons({ contact }: { contact: KitContact }) {
   return (
     <>
       <button type="button" className={kitBtn} onClick={() => setOpen("EMAIL")} title={contact.email ? `Email ${contact.email}` : "No email on file"}>
-        <Mail size={14} /> Email kit
+        <Mail size={13} /> Email kit
       </button>
       <button type="button" className={kitBtn} onClick={() => setOpen("WHATSAPP")} title={contact.whatsapp ? `WhatsApp ${contact.whatsapp}` : "No WhatsApp number on file"}>
-        <MessageCircle size={14} /> WhatsApp kit
+        <MessageCircle size={13} /> WhatsApp kit
       </button>
       {open ? <SendKitSheet contact={contact} channel={open} onClose={() => setOpen(null)} /> : null}
     </>

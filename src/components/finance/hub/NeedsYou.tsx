@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { BellRing, CalendarClock, CircleCheck, FileText, Receipt } from "lucide-react";
-import { formatINR } from "@/server/finance/money";
+import { formatINRWhole as formatINR } from "@/server/finance/money";
 import { sendReminder } from "@/server/finance/invoices";
 import type { AwaitingRow, DashboardClientGroup } from "@/server/finance/queries";
 import type { BillDueRow } from "@/server/finance/hub-queries";

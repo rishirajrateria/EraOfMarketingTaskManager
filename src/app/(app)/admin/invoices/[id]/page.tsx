@@ -38,7 +38,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
           <div role="note" className="mx-4 mb-3 rounded-xl border border-hair bg-violet-100/70 px-3 py-2 text-sm text-violet-950 backdrop-blur-sm dark:bg-violet-500/15 dark:text-violet-100">
             <b className="block">Proforma · for reference only</b>
             <div className="text-xs">
-              It can&apos;t be cancelled and no record is kept: it never counts in sales, outstanding or GST, isn&apos;t filed in the monthly Drive folders and doesn&apos;t use an invoice number. {inv.convertedTo ? "It was converted into a tax invoice." : "Delete it when you no longer need it, or convert it into a tax invoice."}
+              It can&apos;t be cancelled and no record is kept: it never counts in sales, outstanding or GST, isn&apos;t filed in the monthly Drive folders and never takes a tax invoice number (the EOM-PRO number is only a reference). {inv.convertedTo ? "It was converted into a tax invoice." : "Delete it when you no longer need it, or convert it into a tax invoice."}
             </div>
           </div>
         ) : null}

@@ -46,11 +46,11 @@ export default async function ClientKitDetailPage({ params }: { params: Promise<
       zone={<BottomZone left={<Link href="/admin/client-kit" className="truncate text-[11px] text-white/90">‹ All client kits</Link>} right={<BarIcon href={`/admin/vault?clientId=${r.clientId}&tab=CREDENTIAL`} label="Open the vault" tone="white"><KeyRound size={20} /></BarIcon>} />}
       className="pb-4"
     >
-      <div className="scrollbar-none flex items-center gap-1.5 overflow-x-auto px-4 pt-2">
+      <div className="flex flex-wrap items-center gap-1.5 px-4 pt-2">
         {r.ready && r.folderId && r.urls && r.messages ? (
           <>
             <ShareFolderButton folderId={r.folderId} title={`Client kit › ${r.displayName}`} />
-            <a href={r.urls.folder} target="_blank" rel="noreferrer" className={kitBtn}><ExternalLink size={14} /> Open</a>
+            <a href={r.urls.folder} target="_blank" rel="noreferrer" className={kitBtn}><ExternalLink size={13} /> Open</a>
             <SendKitButtons contact={{ clientId: r.clientId, name: r.displayName, email: r.email, whatsapp: r.whatsapp, messages: r.messages }} />
             <CreateKitButton clientId={r.clientId} repair />
           </>

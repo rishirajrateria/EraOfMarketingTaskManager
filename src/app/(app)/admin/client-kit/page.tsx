@@ -36,11 +36,11 @@ function KitCard({ r, tz }: { r: KitRow; tz: string }) {
           <ChevronRight size={18} />
         </Link>
       </div>
-      <div className="scrollbar-none mt-2 flex items-center gap-1.5 overflow-x-auto">
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
         {r.ready && r.folderId && r.urls && r.messages ? (
           <>
             <ShareFolderButton folderId={r.folderId} title={`Client kit › ${r.displayName}`} />
-            <a href={r.urls.folder} target="_blank" rel="noreferrer" className={kitBtn}><ExternalLink size={14} /> Open</a>
+            <a href={r.urls.folder} target="_blank" rel="noreferrer" className={kitBtn}><ExternalLink size={13} /> Open</a>
             <SendKitButtons contact={{ clientId: r.clientId, name: r.displayName, email: r.email, whatsapp: r.whatsapp, messages: r.messages }} />
           </>
         ) : (

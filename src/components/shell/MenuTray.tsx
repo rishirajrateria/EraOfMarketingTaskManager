@@ -45,7 +45,8 @@ export function paymentsSub(c: MenuCounts | null): string {
   const parts = [
     c.invoicesToApprove ? `${c.invoicesToApprove} to approve` : "",
     c.invoicesOverdue ? `${c.invoicesOverdue} overdue` : "",
-    c.outstanding ? `${inr(c.outstanding)} outstanding` : "",
+    // "due" instead of "outstanding" when the line also carries an overdue count, so it fits one row at 390px
+    c.outstanding ? `${inr(c.outstanding)} ${c.invoicesOverdue && c.invoicesToApprove ? "due" : "outstanding"}` : "",
   ].filter(Boolean);
   if (parts.length) return parts.join(" · ");
   return c.gstToClaimMonth ? `Nothing pending · GST to claim ${inr(c.gstToClaimMonth)}` : "Nothing pending · totals, TDS, GST";
