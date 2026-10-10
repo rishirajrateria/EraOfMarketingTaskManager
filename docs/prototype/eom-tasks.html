@@ -600,6 +600,23 @@ select.in{padding-right:10px}
 .dk i{font-style:normal;opacity:.6;font-size:11px}
 .dk.on{background:var(--ink);color:var(--bg);border-color:transparent}
 .dk.on i.x{opacity:.9;font-size:15px;line-height:1;padding-left:2px}
+/* ---- compact card: title + circle / chips + date,hours / icons + time / actual ---- */
+.row{padding:10px 10px 10px 14px!important}
+.rtop{display:flex;align-items:flex-start;gap:8px}
+.rtop .title{flex:1;min-width:0;padding-top:4px}
+.rtop .title b{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.rline{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;min-width:0}
+.rline.end{justify-content:flex-end;margin-top:4px}
+.rline .chips{flex:1;min-width:0;flex-wrap:nowrap!important;overflow:hidden}
+.rline .chips .chip{flex-shrink:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rline .icons{margin:0 0 0 -6px!important;gap:0!important}
+.rline .icons button{width:32px!important;height:32px!important}
+.rp{display:flex;gap:4px;flex-shrink:0}
+.rp .pill,.rline .pill.act{position:relative;height:24px;padding:0 9px;font-size:11.5px;display:inline-flex;align-items:center;white-space:nowrap;font-variant-numeric:tabular-nums;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.rp .pill.b{font-weight:700}
+.pill.rv{box-shadow:inset 0 0 0 1.5px rgba(239,68,68,.75)}
+.rvdot{position:absolute;top:-4px;right:-4px;width:10px;height:10px;border-radius:999px;background:#ef4444;box-shadow:0 0 0 2px var(--bg)}
+.row .circle{flex-shrink:0;width:32px;height:32px}
 </style><div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
@@ -747,7 +764,7 @@ function seed(){
   T({title:"Landing page hero redesign",client:"c2",assignees:["u6"],mins:240,start:at(-1,11),end:at(-1,15),status:"STARTED",actualStart:at(-1,11,20),doubt:true,team:"t2",work:"w2",desc:"Client asked for a darker palette. Doubt: which logo version?"}),
   T({title:"Meta ads — festive campaign setup",client:"c4",assignees:["u3","u4"],mins:120,start:at(-2,10),end:at(-2,12),work:"w3",desc:"Overdue: waiting on creatives."}),
   T({title:"Client kickoff — Nordic Labs",client:"c3",assignees:["u2","u3"],mins:45,start:at(0,16),end:at(0,16,45),type:"MEETING",createdBy:"u1",meet:true}),
-  T({title:"Blog: 10 SEO wins for D2C brands",client:"c3",assignees:["u4"],mins:150,start:at(1,10),end:at(1,12,30),team:"t3",review:true}),
+  T({title:"Blog: 10 SEO wins for D2C brands",client:"c3",assignees:["u4"],mins:150,start:at(1,10),end:at(1,12,30),team:"t3",review:true,reviewFields:["date","time","mins"]}),
   T({title:"Brand guideline PDF v2",client:"c1",assignees:["u6"],mins:300,start:at(1,11),end:at(1,16),team:"t2",work:"w2",paused:true}),
   T({title:"Monthly newsletter copy",client:"c4",assignees:["u3"],mins:90,start:at(2,10),end:at(2,11,30),recurring:true,recurText:"Every month on the last day"}),
   T({title:"Website audit fixes",client:"c2",assignees:["u3"],mins:120,start:at(-3,10),end:at(-3,12),status:"COMPLETED",actualStart:at(-3,10),actualEnd:at(-3,12,10)}),
@@ -902,7 +919,7 @@ function applyFilters(ts,f){
  if(f.row1){const [k,v]=f.row1.split(":");out=out.filter(t=>k==="team"?t.team===v:k==="user"?t.assignees.includes(v):t.client===v);}
  if(f.row2){const [k,v]=f.row2.split(":");out=out.filter(t=>k==="work"?t.work===v:t.client===v);}
  if(f.colours.length)out=out.filter(t=>f.colours.includes(rowColour(t)));
- if(f.icons.length)out=out.filter(t=>f.icons.some(i=>i==="restarted"?t.parent:i==="recurring"?t.recurring:i==="paused"?t.paused:t.review));
+ if(f.icons.length)out=out.filter(t=>f.icons.some(i=>i==="restarted"?t.parent:i==="recurring"?t.recurring:i==="paused"?t.paused:(t.reviewFields?t.reviewFields.length>0:t.review)));
  if(f.quick==="today")out=out.filter(t=>dayOff(t.start)===0);
  if(f.quick==="tomorrow")out=out.filter(t=>dayOff(t.start)===1);
  if(f.date)out=out.filter(t=>dk(new Date(t.start))===f.date);
@@ -959,6 +976,31 @@ function openDatePicker(){
  const f=filtersFor();const inp=el("input",{class:"in",type:"date",value:f.date||""});
  openSheet("Show one day",field("Date",inp),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{f.date=null;save();closeSheet();renderDash();}},"Clear"),el("button",{class:"btn",onclick:()=>{f.date=inp.value||null;save();closeSheet();renderDash();}},"Apply")));
 }
+/* Review flags per pill (date / start time / time allotted). Old single flag counts as "time allotted". */
+const RVF={date:"start date",time:"start time",mins:"time allotted"};
+const rvOf=t=>t.reviewFields||(t.review?["mins"]:[]);
+function rpill(t,field,cls,text){
+ let pt=null,plong=false;const has=rvOf(t).includes(field);
+ return el("span",{class:"pill "+cls+(has?" rv":""),title:has?"Review requested on the "+RVF[field]:"Hold or right-click to request a review of the "+RVF[field],
+  onpointerdown:e=>{e.stopPropagation();plong=false;pt=setTimeout(()=>{plong=true;pillMenu(t,field);},450);},onpointerup:e=>{e.stopPropagation();clearTimeout(pt);},onpointerleave:()=>clearTimeout(pt),onpointercancel:()=>clearTimeout(pt),
+  oncontextmenu:e=>{e.preventDefault();e.stopPropagation();clearTimeout(pt);pillMenu(t,field);},
+  onclick:e=>{if(plong){e.stopPropagation();plong=false;}}},text,has?el("i",{class:"rvdot","aria-label":"Review requested"}):null);
+}
+function pillMenu(t,field){
+ const r=role(),has=rvOf(t).includes(field),name=RVF[field];
+ const setF=on=>{const f=new Set(rvOf(t));on?f.add(field):f.delete(field);t.reviewFields=[...f];t.review=t.reviewFields.length>0;};
+ const items=[];
+ if(r==="ADMIN"){
+  if(has){items.push({label:"Mark the "+name+" reviewed",hint:"Removes the red dot for everyone",onClick:()=>{setF(false);S.requests.filter(q=>q.task===t.id&&q.kind==="REVIEW"&&q.field===field&&q.status==="OPEN").forEach(q=>q.status="DONE");save();closeSheet();renderDash();toast("Reviewed");}});
+   items.push({label:"Change the "+name,onClick:()=>{closeSheet();openAdd(t.type,t);}});}
+  else items.push({label:"Flag the "+name+" for review",hint:"Puts a red dot on it",onClick:()=>{setF(true);save();closeSheet();renderDash();toast("Flagged for review");}});
+ }else{
+  if(has)items.push({label:"Withdraw review of the "+name,onClick:()=>{setF(false);save();closeSheet();renderDash();toast("Review withdrawn");}});
+  else items.push({label:"Request review of the "+name,hint:"Red dot on this pill for you and Admin; lands in Admin requests",onClick:()=>noteSheet("Review the "+name,t,txt=>{setF(true);S.requests.unshift({id:uid(),kind:"REVIEW",field,task:t.id,by:me().id,note:txt,status:"OPEN",at:new Date().toISOString()});})});
+ }
+ items.push({label:"All task actions",onClick:()=>{closeSheet();openActions(t);}});
+ openSheet(t.title+" · "+name,actionList(items));
+}
 function taskRow(t){
  const r=role(),m=me(),c=clientById(t.client),col=rowColour(t),od=col==="red";
  const ib=(label,icon,on,dis)=>el("button",{title:label,"aria-label":label,disabled:dis||null,onclick:e=>{e.stopPropagation();on();}},svg(icon,20));
@@ -978,24 +1020,20 @@ function taskRow(t){
   onpointerup:()=>{clearTimeout(pressT);},onpointerleave:()=>clearTimeout(pressT),onpointercancel:()=>clearTimeout(pressT),
   onclick:()=>{if(!long)openDetail(t);},oncontextmenu:e=>{e.preventDefault();clearTimeout(pressT);openActions(t);}},
   t.parent?el("span",{class:"restartTag",title:"Restarted task"},svg(I.restart,10,3)):null,
-  el("div",{class:"title"},el("b",{},t.title),t.recurring?el("span",{style:"color:#2563eb;flex-shrink:0"},svg(I.repeat,12,2.5)):null,t.paused?el("span",{class:"pauseTag",title:"Paused"},svg(I.pause,9,0)):null,t.doubt?el("span",{class:"doubtTag",title:"Doubt raised"},"?"):null,
-   null),
-  el("div",{class:"body"},
-   el("div",{class:"left"},
-    el("div",{class:"chips"},el("span",{class:"chip"},c.name),S.teams.find(x=>x.id===t.team)?el("span",{class:"chip team"},S.teams.find(x=>x.id===t.team).name):null,t.type==="MEETING"?el("span",{class:"chip meet"},"Meeting"):null),
-    el("div",{class:"icons"},
-     ib("Task details",I.info,()=>openDetail(t)),
-     ib("Drive folder",I.folder,()=>driveInfo(t)),
-     ib("Google Meet",I.video,()=>toast("Joins meet.google.com/"+meetCode(t)+" · anyone with the link can join")),
-     ib("Chat space",I.chat,()=>toast("Opens the task's Google Chat space")),
-     ib("Calendar",I.cal,()=>toast("Opens Google Calendar on "+fmtD(t.start))),
-     t.voice?ib("Voice notes",I.mic,()=>openDetail(t,true)):null)),
-   el("div",{class:"rpills"},
-    el("span",{class:"pill b"},t.type==="MEETING"?"Meet":fmtMin(t.mins),t.review?el("i",{class:"reddot tl",title:"Review requested"}):null),
-    el("span",{class:"pill"+(od?" od":"")},fmtT(t.start)+" – "+fmtT(t.end)),
-    t.actualStart?el("span",{class:"pill "+(actualTone(t)||"dim")},fmtT(t.actualStart)+" – "+(t.actualEnd?fmtT(t.actualEnd):"…")):null,
-    el("span",{class:"pill"},dateChip(t.start),t.doubt&&t.review?el("i",{class:"reddot tr"}):null)),
-   circle));
+  el("div",{class:"rtop"},el("div",{class:"title"},el("b",{},t.title),t.recurring?el("span",{style:"color:#2563eb;flex-shrink:0"},svg(I.repeat,12,2.5)):null,t.paused?el("span",{class:"pauseTag",title:"Paused"},svg(I.pause,9,0)):null,t.doubt?el("span",{class:"doubtTag",title:"Doubt raised"},"?"):null),circle),
+  el("div",{class:"rline"},
+   el("div",{class:"chips"},el("span",{class:"chip"},c.name),S.teams.find(x=>x.id===t.team)?el("span",{class:"chip team"},S.teams.find(x=>x.id===t.team).name):null,t.type==="MEETING"?el("span",{class:"chip meet"},"Meeting"):null),
+   el("div",{class:"rp"},rpill(t,"date","",dateChip(t.start)),rpill(t,"mins","b",t.type==="MEETING"?"Meet · "+fmtMin(t.mins):fmtMin(t.mins)))),
+  el("div",{class:"rline"},
+   el("div",{class:"icons"},
+    ib("Task details",I.info,()=>openDetail(t)),
+    ib("Drive folder",I.folder,()=>driveInfo(t)),
+    ib("Google Meet",I.video,()=>toast("Joins meet.google.com/"+meetCode(t)+" · anyone with the link can join")),
+    ib("Chat space",I.chat,()=>toast("Opens the task's Google Chat space")),
+    ib("Calendar",I.cal,()=>toast("Opens Google Calendar on "+fmtD(t.start))),
+    t.voice?ib("Voice notes",I.mic,()=>openDetail(t,true)):null),
+   el("div",{class:"rp"},rpill(t,"time",od?"od":"",fmtT(t.start)+" – "+fmtT(t.end)))),
+  t.actualStart?el("div",{class:"rline end"},el("span",{class:"pill act "+(actualTone(t)||"dim"),title:"Actual start – finish"},"▶ "+fmtT(t.actualStart)+" – "+(t.actualEnd?fmtT(t.actualEnd):"…"))):null);
  return li;
 }
 /* ---------- lifecycle ---------- */
