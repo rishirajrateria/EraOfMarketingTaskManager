@@ -501,7 +501,7 @@ select.in{padding-right:10px}
 .mq{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 2px;border-radius:16px;border:1px solid var(--hair);background:var(--glass-strong);box-shadow:var(--shadow);font-size:11px;font-weight:600;color:var(--ink);white-space:nowrap;min-width:0}
 .mq span{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff}
 .mempty{padding:28px 8px;text-align:center;color:var(--muted);font-size:13px}
-.t-money{background:linear-gradient(150deg,#10b981,#059669)}.t-client{background:linear-gradient(150deg,#38bdf8,#0284c7)}.t-team{background:linear-gradient(150deg,#a78bfa,#7c3aed)}.t-acct{background:linear-gradient(150deg,#94a3b8,#64748b)}.t-task{background:linear-gradient(150deg,#22d3ee,#0891b2)}.t-red{background:linear-gradient(150deg,#f87171,#dc2626)}
+.t-money{background:linear-gradient(150deg,#10b981,#059669)}.t-client{background:linear-gradient(150deg,#38bdf8,#0284c7)}.t-team{background:linear-gradient(150deg,#a78bfa,#7c3aed)}.t-day{background:linear-gradient(150deg,#fbbf24,#ea580c)}.t-acct{background:linear-gradient(150deg,#94a3b8,#64748b)}.t-task{background:linear-gradient(150deg,#22d3ee,#0891b2)}.t-red{background:linear-gradient(150deg,#f87171,#dc2626)}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .mbadge.amber{color:#fcd34d}}
 :root[data-theme="dark"] .mbadge.amber{color:#fcd34d}
 @media (min-width:540px){.msheet{border-radius:28px 28px 0 0}}
@@ -560,6 +560,10 @@ select.in{padding-right:10px}
 .shav{width:34px;height:34px;flex-shrink:0;border-radius:999px;display:grid;place-items:center;background:var(--primary);color:#fff;font-weight:800;font-size:14px}
 .shav.on{background:#16a34a}
 .shown{font-size:13px;color:var(--muted)}
+.ksheet{border-collapse:collapse;font-size:12px;min-width:640px;width:100%}
+.ksheet th{position:sticky;top:0;background:var(--chip);font-weight:800;text-align:left;padding:8px;white-space:nowrap;border-bottom:1px solid var(--hair)}
+.ksheet td{padding:7px 8px;border-bottom:1px solid var(--hair);white-space:nowrap}
+.ksheet tr.kex td{color:var(--muted);font-style:italic}
 </style><div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
@@ -1202,12 +1206,12 @@ function menuModel(){
    {go:"drive",ic:"folder",l:"Monthly Drive folders",s:"Invoices, bills, GST pack, cancelled"}]},
   {h:"Clients",t:"t-client",items:[
    {go:"clients",ic:"building",l:"Clients",s:S.clients.length+" clients · GST, PAN, TDS"},
-   {go:"vault:ASSET_DRIVE_LINK",ic:"link",l:"Asset drive links",s:"Brand kits and source files"},
-   {go:"vault:CREDENTIAL",ic:"key",l:"Credentials",s:expiring?expiring+" expiring soon":"Logins, encrypted",b:B(expiring,"amber")},
+   {go:"kit",ic:"key",l:"Client kit",s:(()=>{const k=S.clients.filter(c=>c.kit).length;return k+" of "+S.clients.length+" have a kit"+(expiring?" · "+expiring+" expiring":" · Drive, logins");})(),b:B(expiring,"amber")},
    {go:"vault:SHARED_DRIVE_LINK",ic:"drive",l:"Shared drive links",s:"Folders shared with clients"}]},
-  {h:"Team",t:"t-team",items:[
+  {h:"Workday",t:"t-day",items:[
    {go:"attendance",ic:"calcheck",l:"Attendance",s:"Mark present, half day, leave"},
-   {go:"inventory",ic:"clock",l:"Inventory",s:"Hours available vs assigned"},
+   {go:"inventory",ic:"clock",l:"Inventory",s:"Hours available vs assigned"}]},
+  {h:"Team",t:"t-team",items:[
    {go:"people:EXECUTIVE",ic:"users",l:"Executives",s:S.users.filter(u=>u.role==="EXECUTIVE").length+" people · specialities"},
    {go:"people:TEAM_LEADER",ic:"lead",l:"Team leaders",s:"One per team"},
    {go:"teams",ic:"layers",l:"Teams",s:S.teams.map(t=>t.name).join(", ")},
@@ -1651,7 +1655,7 @@ function clientForm(c){
  indiaWrap.hidden=v.country!=="IN";indiaOnly.hidden=v.country!=="IN";syncState();
  page(c?c.name:"Add client",[el("div",{style:"padding:12px"},field("Name",inp("name","Client name")),field("Business name",inp("businessName","Legal name printed on invoices")),field("Email",inp("email","accounts@client.com","email")),field("WhatsApp number",inp("phone","+91 …","tel")),field("Country",country),indiaWrap,hint,indiaOnly,field("Billing address",el("textarea",{class:"in",oninput:e=>{v.address=e.target.value;}},v.address||"")),
   el("p",{class:"pre"},"Tax type is picked automatically: same state as your company ("+(GST_STATES[S.settings.stateCode]||S.settings.stateCode)+") → CGST+SGST, another Indian state → IGST, outside India → export invoice at 0% under LUT."))],
-  [zoneActions(el("button",{class:"btn ghost",onclick:()=>PAGES.clients()},"Cancel"),el("button",{class:"btn blue",onclick:()=>{if(!v.name.trim())return toast("Name is required","err");v.pan=(v.pan||"").toUpperCase().trim();if(v.pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v.pan))return toast("PAN must look like AAACZ1234F","err");v.gstin=(v.gstin||"").toUpperCase().trim();v.tdsPercent=Number(v.tdsPercent)||0;if(v.country!=="IN"){v.stateCode="";v.stateName="";v.pan="";v.tdsPercent=0;v.gstin="";}if(c)Object.assign(c,v);else S.clients.push(Object.assign({id:uid(),onHold:false},v));save();toast(c?"Client saved":"Client added · shows in filters once it has a task");PAGES.clients();}},"Save"))]);
+  [zoneActions(el("button",{class:"btn ghost",onclick:()=>PAGES.clients()},"Cancel"),c?el("button",{class:"btn ghost",onclick:()=>c.kit?PAGES.kit(c.id):kitCreate(c)},c.kit?"Client kit":"Create kit"):null,el("button",{class:"btn blue",onclick:()=>{if(!v.name.trim())return toast("Name is required","err");v.pan=(v.pan||"").toUpperCase().trim();if(v.pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v.pan))return toast("PAN must look like AAACZ1234F","err");v.gstin=(v.gstin||"").toUpperCase().trim();v.tdsPercent=Number(v.tdsPercent)||0;if(v.country!=="IN"){v.stateCode="";v.stateName="";v.pan="";v.tdsPercent=0;v.gstin="";}if(c)Object.assign(c,v);else S.clients.push(Object.assign({id:uid(),onHold:false},v));save();toast(c?"Client saved":"Client added · shows in filters once it has a task");PAGES.clients();}},"Save"))]);
 }
 /* ---------- requests ---------- */
 PAGES.requests=function(){
@@ -1892,6 +1896,7 @@ PAGES.settings=function(){
  const stSel=el("select",{class:"in",onchange:e=>{s.stateCode=e.target.value;s.stateName=GST_STATES[s.stateCode];}},...Object.entries(GST_STATES).map(([k,l])=>el("option",{value:k,selected:s.stateCode===k||null},k+" · "+l)));
  const gstIn=el("input",{class:"in",value:s.gstin,oninput:e=>{s.gstin=e.target.value.toUpperCase();const code=s.gstin.slice(0,2);if(GST_STATES[code]){s.stateCode=code;s.stateName=GST_STATES[code];stSel.value=code;}}});
  page("Settings",[el("div",{style:"padding:12px"},el("div",{style:"font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px"},"Your company (printed on every invoice)"),field("Company / brand name",inp("company")),field("Legal name",inp("legalName"),"As registered under GST"),field("GSTIN",gstIn,"State is read from the first two digits"),field("State",stSel,"Clients in this state get CGST+SGST, other states IGST"),field("PAN",inp("pan")),field("LUT number",inp("lut"),"Printed on export invoices (0% under LUT)"),field("IEC code",inp("iec"),"Import Export Code, printed on export invoices"),field("Billing address",el("textarea",{class:"in",oninput:e=>{s.address=e.target.value;}},s.address||"")),field("Billing email",inp("email","email"),"Invoices are sent from and replied to here"),field("Phone",inp("phone","tel")),field("Website",inp("website"),"Printed in the invoice footer"),field("HSN / SAC code",inp("hsn"),"Printed in the invoice footer"),el("div",{style:"font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:8px 0"},"Pay to (printed on every invoice)"),field("Account name",inp("bankAccountName")),field("Account number",inp("bankAccountNumber")),field("Swift / BIC code",inp("bankSwift")),field("IFSC code",inp("bankIfsc")),field("Bank name",inp("bankName")),field("Bank address",inp("bankAddress")),el("div",{style:"font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:8px 0"},"Logo & signature"),el("div",{style:"display:flex;gap:12px;align-items:center;margin-bottom:12px"},el("img",{src:s.logo,style:"width:48px;height:48px;border-radius:8px"}),el("img",{src:s.signature,style:"height:40px"}),el("label",{class:"pill",style:"margin-left:auto;cursor:pointer"},"Replace…",el("input",{type:"file",accept:"image/*",hidden:true,onchange:e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{if(f.name.toLowerCase().includes("sig"))s.signature=r.result;else s.logo=r.result;save();PAGES.settings();toast("Image updated (file name with \"sig\" replaces the signature)");};r.readAsDataURL(f);}}))),el("div",{style:"font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:8px 0"},"Numbering & payments"),field("Invoice prefix",inp("fyPrefix"),"Numbers: "+s.fyPrefix+"/"+fyKey()+"/0001, reset every 1 April"),field("UPI ID",inp("upi"),"QR printed on invoices"),field("Half day = minutes of inventory",inp("halfDayMinutes","number")),field("Finance person's email",inp("financeEmail","email"),"The monthly GST pack (claimable expense bills) is sent here"),field("TDS threshold per payee (₹ per FY)",inp("tdsThreshold","number"),"You are warned when payments to one payee cross this in a financial year; resets every 1 April"),
+  field("Client kit folders",el("textarea",{class:"in",oninput:e=>{s.kitFolders=e.target.value.split("\n").map(x=>x.trim()).filter(Boolean);}},(s.kitFolders&&s.kitFolders.length?s.kitFolders:["Brand kit","Credentials","Work","Reports"]).join("\n")),"One per line · created inside each client's kit folder"),
   field("Expense categories",el("textarea",{class:"in",oninput:e=>{s.expenseCategories=e.target.value.split("\n").map(x=>x.trim()).filter(Boolean);}},s.expenseCategories.join("\n")),"One per line"),
   el("label",{class:"check"},el("input",{type:"checkbox",checked:s.notifyChat||null,onchange:e=>{s.notifyChat=e.target.checked;}}),el("div",{},el("b",{},"Also post notifications to Google Chat"),el("small",{},"In-app + push are always on"))),
   el("div",{class:"card",style:"margin:0"},el("h4",{},"Integrations"),...[["Google Workspace","service account · domain-wide delegation"],["Twilio WhatsApp","mock in demo"],["Web push","VAPID keys set"],["Google Sheets","push only"]].map(([k,v])=>el("div",{class:"kv"},el("span",{},k),el("span",{},v)))))],
@@ -1986,6 +1991,63 @@ PAGES.drive=function(){
     chip("✅","GST claim",c.itc.length,()=>driveFiles(mkLabel(m)+" · GST claimable",c.itc.map(x=>x.o.file.name),el("div",{class:"btnrow",style:"margin-bottom:8px"},el("button",{class:"btn blue",onclick:()=>{closeSheet();gstMonth=m;expTab="GST";nav("expenses");}},"Open GST pack"+(c.gst?" · "+inr(c.gst):""))))),
     chip("🚫","Cancelled",c.cxl.length,()=>driveFiles(mkLabel(m)+" · Cancelled invoices",c.cxl.map(invFileName)))));})],
   [zoneActions(el("button",{class:"btn ghost",onclick:()=>driveShare("ROOT","Finance",PAGES.drive)},"Share Finance"),el("button",{class:"btn blue",onclick:()=>toast("Opens Drive › Finance")},"Open in Drive"))]);
+};
+/* ---------- Client kit: one shared Drive folder per client (Brand kit, Credentials sheet, Work, Reports) ---------- */
+const KIT_WAYS=["Email & password","Sign in with Google","Sign in with Microsoft","Sign in with Apple","Sign in with Facebook","Phone OTP","Other"];
+const kitNames=()=>S.settings.kitFolders&&S.settings.kitFolders.length?S.settings.kitFolders:["Brand kit","Credentials","Work","Reports"];
+const kitWho=c=>c.businessName||c.name;
+const kitUrl=c=>"https://drive.google.com/drive/folders/kit"+c.id;
+function kitCreate(c){
+ const names=kitNames();const steps=[`Folder “Client Kit › ${kitWho(c)}” in your Drive`,...names.map(n=>`Folder “${n}”`),`Google Sheet “${kitWho(c)} — Credentials” with the How-to-fill guide`,c.email?`Shared with ${c.email} as Editor`:"Not shared yet — add the client's email to share"];
+ const list=el("div",{class:"card",style:"margin:0 0 10px"});openSheet("Creating client kit…",list);
+ steps.forEach((t,ix)=>setTimeout(()=>{list.append(el("div",{class:"kv"},el("span",{},"✓ "+t)));if(ix===steps.length-1){
+  const had=!!c.kit;c.kit=Object.assign(c.kit||{},{createdAt:(c.kit&&c.kit.createdAt)||new Date().toISOString(),folders:names.slice(),sharedWith:c.email||null});save();
+  setTimeout(()=>{closeSheet();toast(had?"Kit checked · missing parts re-created":"Client kit ready");PAGES.kit(c.id);},350);}},180*(ix+1)));
+}
+function kitSheetPreview(c,tab){
+ tab=tab||"SHEET";
+ const cols=["Platform","Login URL","Username / email","Password","Way","2FA code goes to","Notes"];
+ const ex=[["Instagram","instagram.com","@brand","","Sign in with Facebook","Owner's phone","Business account"],["Google Ads","ads.google.com","ads@brand.com","","Sign in with Google","ads@brand.com","Give us Admin access"],["Website (WordPress)","brand.com/wp-admin","agency","••••••••","Email & password","—","Editor role is enough"]];
+ const tbl=tab==="SHEET"?el("div",{style:"overflow-x:auto;margin:0 0 10px;border-radius:12px;box-shadow:inset 0 0 0 1px var(--hair)"},el("table",{class:"ksheet"},el("thead",{},el("tr",{},...cols.map(h=>el("th",{},h)))),el("tbody",{},...ex.map(r=>el("tr",{class:"kex"},...r.map(v=>el("td",{},v||" ")))),el("tr",{},...cols.map((h,ix)=>el("td",{},ix===4?"▾ pick one":" "))))))
+  :el("div",{class:"card",style:"margin:0 0 10px"},...[
+   ["One row per platform","Instagram, Facebook, Google Ads, website, hosting, email — anything we should manage."],
+   ["Way","How you log in. Pick from the list: "+KIT_WAYS.join(", ")+"."],
+   ["Sign in with Google / Microsoft / Apple / Facebook","Write the account email in “Username / email” and leave Password empty — we'll ask you to add us as a user instead."],
+   ["2FA code goes to","Whose phone or email gets the login code, so we know whom to ask."],
+   ["Never add","Bank, card or UPI PINs. We never need them."],
+   ["Questions?",S.settings.company+" · "+S.settings.email+" · +"+S.settings.phone]].map(([k,v])=>el("div",{class:"kv",style:"display:block"},el("b",{style:"display:block"},k),el("small",{class:"pre"},v))));
+ openSheet(kitWho(c)+" — Credentials",el("div",{class:"r1",style:"margin:0 0 10px;padding:0"},el("button",{class:"gp"+(tab==="SHEET"?" on":""),onclick:()=>kitSheetPreview(c,"SHEET")},"Credentials"),el("button",{class:"gp"+(tab==="GUIDE"?" on":""),onclick:()=>kitSheetPreview(c,"GUIDE")},"How to fill")),tbl,
+  el("p",{class:"pre",style:"margin:0 0 10px"},"Way is a dropdown in the real sheet; grey rows are examples."),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>toast("Opens the Google Sheet")},"Open sheet ↗"),el("button",{class:"btn",onclick:closeSheet},"Close")));
+}
+function kitSend(c){
+ const em=el("input",{type:"checkbox",checked:c.email?true:null,disabled:!c.email||null}),wa=el("input",{type:"checkbox",checked:c.phone?true:null,disabled:!c.phone||null});
+ const msg=el("textarea",{class:"in",rows:7},`Hi ${first(c.name)},\n\nHere is your ${S.settings.company} client kit: ${kitUrl(c)}\n\n1. Brand kit — upload your logo, fonts, photos and brand guide.\n2. Credentials — fill the sheet; the “How to fill” tab explains each column.\n3. Work — we'll put everything we make for you here.\n4. Reports — your monthly reports.\n\nThanks!`);
+ openSheet("Send the kit to "+first(c.name),el("label",{class:"check"},em,el("div",{},el("b",{},"Email"),el("small",{},c.email||"no email on the client — add one in Clients"))),el("label",{class:"check"},wa,el("div",{},el("b",{},"WhatsApp"),el("small",{},c.phone||"no WhatsApp number on the client"))),field("Message",msg),
+  el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn blue",onclick:()=>{const via=[em.checked?"email":null,wa.checked?"WhatsApp":null].filter(Boolean);if(!via.length)return toast("Pick email or WhatsApp","err");c.kit.sentAt=new Date().toISOString();c.kit.sentVia=via;save();closeSheet();toast("Kit sent by "+via.join(" + "));PAGES.kit(c.id);}},"Send")));
+}
+PAGES.kit=function(cid){
+ const c=cid&&clientById(cid);
+ if(!c){
+  const n=S.clients.filter(x=>x.kit).length;
+  page("Client kit",[el("p",{class:"pre",style:"padding:12px 12px 4px;margin:0"},"One Google Drive folder per client in your Drive › Client Kit, shared with the client: "+kitNames().join(", ")+". Credentials come as a ready Google Sheet with a guide."),
+   el("div",{class:"tiles"},tile("Kits created",n+" of "+S.clients.length),tile("Sent to client",String(S.clients.filter(x=>x.kit&&x.kit.sentAt).length))),
+   ...S.clients.map(x=>el("div",{class:"item",onclick:()=>x.kit?PAGES.kit(x.id):kitCreate(x)},el("div",{class:"m"},el("b",{},kitWho(x)),el("small",{},x.kit?("Kit ready"+(x.kit.sentAt?" · sent "+fmtD(x.kit.sentAt)+" by "+x.kit.sentVia.join(" + "):" · not sent yet")):"No kit yet")),x.kit?el("span",{class:"tag "+(x.kit.sentAt?"paid":"draft")},x.kit.sentAt?"Sent":"Ready"):el("button",{class:"pill",style:"height:32px",onclick:e=>{e.stopPropagation();kitCreate(x);}},"Create kit")))],
+   [zoneActions(el("button",{class:"btn ghost",onclick:()=>nav("vault:CREDENTIAL")},"Saved logins"),el("button",{class:"btn blue",onclick:()=>nav("clients:add")},"+ Add client"))]);
+  return;
+ }
+ if(!c.kit)return kitCreate(c);
+ const fol=(icon,n,sub,on)=>el("button",{class:"dchip",style:"height:auto;padding:10px 12px;flex-direction:column;align-items:flex-start;gap:2px;text-align:left",onclick:on||(()=>toast("Opens “"+n+"” in Drive"))},el("b",{},icon+" "+n),el("span",{class:"dl",style:"font-size:12px;white-space:normal"},sub));
+ const vi=S.vault.filter(v=>v.client===c.id);const KLx={ASSET_DRIVE_LINK:"Asset link",CREDENTIAL:"Login",SHARED_DRIVE_LINK:"Shared link"};
+ const names=c.kit.folders||kitNames();const ic=["🎨","🔐","🛠️","📊"];
+ page(kitWho(c)+" · kit",[
+  el("div",{class:"card dcard"},el("div",{class:"dhead"},el("h4",{},"📁 "+kitWho(c)),el("button",{class:"pill dbtn",onclick:()=>driveShare("kit"+c.id,"Client Kit › "+kitWho(c),()=>PAGES.kit(c.id))},"👤+ Share"),el("button",{class:"pill dbtn",onclick:()=>toast("Opens the kit in Drive")},"Open ↗")),
+   el("div",{class:"dgrid"},...names.map((n,ix)=>fol(ic[ix]||"📁",n,ix===0?"Client uploads logos, fonts, photos":ix===1?"Sheet: "+kitWho(c)+" — Credentials":ix===2?"We upload the work we make":"Monthly reports for the client",ix===1?()=>kitSheetPreview(c):null))),
+   el("div",{class:"kv",style:"margin-top:10px"},el("span",{},c.kit.sharedWith?"Shared with "+c.kit.sharedWith+" (Editor)":"Not shared with the client yet"),el("button",{class:"pill",style:"height:30px",onclick:()=>{const u=kitUrl(c);try{navigator.clipboard.writeText(u).then(()=>toast("Link copied"),()=>toast(u));}catch(e){toast(u);}}},"Copy link"))),
+  el("div",{class:"card"},el("h4",{},"Send to client"),el("div",{class:"kv"},el("span",{},"Last sent"),el("span",{},c.kit.sentAt?fmtD(c.kit.sentAt)+" · "+c.kit.sentVia.join(" + "):"never")),
+   el("div",{class:"btnrow",style:"margin-top:8px"},el("button",{class:"btn ghost",disabled:!c.email||null,onclick:()=>kitSend(c)},"✉️ Email"),el("button",{class:"btn ghost",disabled:!c.phone||null,onclick:()=>kitSend(c)},"💬 WhatsApp"))),
+  el("div",{class:"sech"},"Saved in the app · encrypted"),
+  ...(vi.length?vi.map(v=>el("div",{class:"item",style:"cursor:default"},el("div",{class:"m"},el("b",{},v.label),el("small",{},KLx[v.kind]+" · "+v.value+(v.expires?" · expires "+fmtD(v.expires):""))))):[el("div",{class:"empty"},"Nothing saved in the app for this client")])],
+  [zoneActions(el("button",{class:"btn ghost",onclick:()=>kitCreate(c)},"Re-check kit"),el("button",{class:"btn blue",onclick:()=>kitSend(c)},"Send kit"))]);
 };
 /* ---------- boot ---------- */
 document.querySelectorAll("[data-login]").forEach(b=>b.onclick=()=>{const r=b.dataset.login;S.me=S.users.find(u=>u.role===r).id;save();if(r==="HR"){show("page");PAGES.attendance();}else{show("dash");renderDash();}});
