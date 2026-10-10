@@ -6,7 +6,7 @@ import { getSettings } from "@/lib/settings";
 import { fmtDate } from "@/lib/time";
 import { EmptyState, Screen, ScreenHeader } from "@/components/admin/AdminUi";
 import { BarIcon, BottomZone } from "@/components/ui/BottomZone";
-import { CreateKitButton, SendKitButtons, kitBtn } from "@/components/clients/KitActions";
+import { CreateKitButton, SendKitButtons } from "@/components/clients/KitActions";
 import { ShareFolderButton } from "@/components/finance/drive/DriveShareSheet";
 
 export const dynamic = "force-dynamic";
@@ -40,7 +40,7 @@ function KitCard({ r, tz }: { r: KitRow; tz: string }) {
         {r.ready && r.folderId && r.urls && r.messages ? (
           <>
             <ShareFolderButton folderId={r.folderId} title={`Client kit › ${r.displayName}`} />
-            <a href={r.urls.folder} target="_blank" rel="noreferrer" className={kitBtn}><ExternalLink size={13} /> Open</a>
+            <a href={r.urls.folder} target="_blank" rel="noreferrer" className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-hair bg-chip text-ink active:opacity-70" aria-label={`Open ${r.displayName} kit in Drive`} title="Open in Drive"><ExternalLink size={14} /></a>
             <SendKitButtons contact={{ clientId: r.clientId, name: r.displayName, email: r.email, whatsapp: r.whatsapp, messages: r.messages }} />
           </>
         ) : (
