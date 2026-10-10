@@ -7,7 +7,7 @@ import { useLongPress } from "@/components/ui/useLongPress";
 import { useToast } from "@/components/ui/Toast";
 import { ensureTaskDriveFolder } from "@/server/tasks/manage";
 import { teamChipLabel } from "@/components/dashboard/format";
-import { ActualPill, CompletionCircle, DateHoursPills, IconBtn, TimePill, stop } from "@/components/dashboard/RowParts";
+import { CompletionCircle, DateHoursPills, IconBtn, TimePill, stop } from "@/components/dashboard/RowParts";
 import type { ReviewField } from "@/server/tasks/review-fields";
 import { WhatsAppIcon } from "@/components/shell/TopIcons";
 import type { ContactMode } from "@/components/dashboard/contacts";
@@ -39,7 +39,7 @@ const TEAM_CHIP = `${CHIP_SHAPE} border border-hair bg-team-bg text-team`;
 
 /**
  * A compact task card (prototype `taskRow`, ADR 0015): title (2 lines) + badges · circle / client + team chips · date
- * + hours pills / icons · scheduled time / the actual time once started. No people on the card — they are in (i).
+ * + hours pills / icons · the scheduled time (tap it for the actual start / finish). No people on the card — they are in (i).
  * Right-click (desktop), long-press (phone) or Shift+F10 / the context-menu key opens the action menu.
  */
 export function TaskRow({ t, data, h, pendingDone }: { t: Row; data: DashboardData; h: RowHandlers; pendingDone?: boolean }) {
@@ -146,45 +146,38 @@ export function TaskRow({ t, data, h, pendingDone }: { t: Row; data: DashboardDa
         <DateHoursPills t={t} tz={data.tz} onPillMenu={pillMenu} onTap={open} />
       </div>
 
-      {/* Row 3: the icons (7 × 30px, 8 × 26px with voice notes) · the scheduled window — fits "10:00am – 12:00pm" at 390px */}
+      {/* Row 3: the icons (7–8, each 20–30px, shrinking to fit) · the scheduled window, which shows the actual time on tap */}
       <div className="mt-1 flex min-w-0 items-center justify-between gap-1">
-        <div className="-ml-1.5 flex items-center">
-          <IconBtn compact={hasVoice} label="Task details" onClick={open}>
+        <div className="-ml-1.5 flex min-w-0 flex-[1_1_auto] items-center">
+          <IconBtn label="Task details" onClick={open}>
             <Info size={19} strokeWidth={1.75} />
           </IconBtn>
-          <IconBtn compact={hasVoice} label="Drive folder" onClick={openDrive} disabled={driveBusy}>
+          <IconBtn label="Drive folder" onClick={openDrive} disabled={driveBusy}>
             <FolderOpen size={19} strokeWidth={1.75} />
           </IconBtn>
-          <IconBtn compact={hasVoice} label="Google Meet" onClick={() => t.meetLink && openExternal(t.meetLink)} disabled={meetDisabled}>
+          <IconBtn label="Google Meet" onClick={() => t.meetLink && openExternal(t.meetLink)} disabled={meetDisabled}>
             <Video size={19} strokeWidth={1.75} />
           </IconBtn>
-          <IconBtn compact={hasVoice} label="Chat space" onClick={() => t.chatSpaceUrl && openExternal(t.chatSpaceUrl)} disabled={!t.chatSpaceUrl}>
+          <IconBtn label="Chat space" onClick={() => t.chatSpaceUrl && openExternal(t.chatSpaceUrl)} disabled={!t.chatSpaceUrl}>
             <MessageSquare size={19} strokeWidth={1.75} />
           </IconBtn>
-          <IconBtn compact={hasVoice} label="Call" onClick={() => h.onContact(t, "call")}>
+          <IconBtn label="Call" onClick={() => h.onContact(t, "call")}>
             <Phone size={18} strokeWidth={1.75} />
           </IconBtn>
-          <IconBtn compact={hasVoice} label="WhatsApp" onClick={() => h.onContact(t, "wa")}>
+          <IconBtn label="WhatsApp" onClick={() => h.onContact(t, "wa")}>
             <WhatsAppIcon size={19} strokeWidth={1.75} />
           </IconBtn>
-          <IconBtn compact={hasVoice} label="Email" onClick={() => h.onContact(t, "mail")}>
+          <IconBtn label="Email" onClick={() => h.onContact(t, "mail")}>
             <Mail size={18} strokeWidth={1.75} />
           </IconBtn>
           {hasVoice ? (
-            <IconBtn compact={hasVoice} label="Voice notes" onClick={() => h.onOpenAttachments(t)}>
+            <IconBtn label="Voice notes" onClick={() => h.onOpenAttachments(t)}>
               <Mic size={19} strokeWidth={1.75} />
             </IconBtn>
           ) : null}
         </div>
-        <TimePill t={t} tz={data.tz} onPillMenu={pillMenu} onTap={open} />
+        <TimePill t={t} tz={data.tz} onPillMenu={pillMenu} />
       </div>
-
-      {/* Row 4, once started: the actual time, right-aligned */}
-      {t.actualStart || t.actualEnd ? (
-        <div className="mt-1 flex justify-end">
-          <ActualPill t={t} tz={data.tz} />
-        </div>
-      ) : null}
     </li>
   );
 }

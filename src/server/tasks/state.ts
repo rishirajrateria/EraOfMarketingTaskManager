@@ -19,7 +19,7 @@ export type ColourInput = {
  * completed → "grey" (rendered as a faded card, not a fill) > doubt raised → purple > PAUSED → yellow > started
  * (STARTED / FINISH_REQUESTED) → green > not started and the scheduled start has passed → red (work tasks; meetings
  * aren't started) > white.
- * A started task that runs past its end stays green — its actual-time pill turns red instead (`actualTone`).
+ * A started task that runs past its end stays green — its time pill turns red instead (`actualTone`).
  */
 export function rowColour(t: ColourInput, now: Date = new Date()): RowColour {
   if (t.status === "COMPLETED") return "grey";
@@ -43,10 +43,10 @@ export type ToneInput = {
 };
 
 /**
- * Colour of the actual-time pill (owner's rules, ADR 0015), compared at minute precision:
+ * Colour of the time pill once started (owner's rules, ADR 0015), compared at minute precision:
  * - finished (finish requested or completed): on / before the scheduled end → green, after it → red;
  * - running: past the scheduled end → red; started after the scheduled start → red; started on time → green;
- * - nothing recorded yet → null (no pill).
+ * - nothing recorded yet → null (the pill keeps its pre-start colour).
  */
 export function actualTone(t: ToneInput, now: Date = new Date()): "green" | "red" | null {
   const doneAt = t.status === "FINISH_REQUESTED" || t.status === "COMPLETED" ? (t.finishRequestedAt ?? t.actualEnd) : null;
