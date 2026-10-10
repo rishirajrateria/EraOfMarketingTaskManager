@@ -739,6 +739,28 @@ select.in{padding-right:10px}
 .dblinks{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 12px}
 .dblinks .pill{height:32px;font-size:12.5px;font-weight:600}
 .t-red{background:linear-gradient(150deg,#f87171,#dc2626)}
+/* notifications feed (distinct from the Requests cards) */
+:root{--n-blue:#2563eb;--n-amber:#d97706}
+.nhint{padding:12px 14px 4px;font-size:12.5px;color:var(--muted);line-height:1.45}
+.linkish{border:0;background:none;color:var(--primary);font:inherit;font-weight:700;padding:0;cursor:pointer;text-decoration:underline}
+.nrow{display:flex;align-items:center;gap:12px;width:calc(100% - 20px);margin:0 10px;padding:11px 10px 11px 12px;border:0;border-bottom:1px solid var(--hair);background:transparent;color:var(--ink);font:inherit;text-align:left;cursor:pointer;position:relative;border-left:3px solid var(--nc);border-radius:10px 0 0 10px}
+.nrow:hover{background:var(--chip)}
+.nrow.read{opacity:.62}
+.nic{flex-shrink:0;width:32px;height:32px;border-radius:999px;display:grid;place-items:center;color:#fff;background:var(--nc)}
+.nt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.nt b{font-size:13.5px;font-weight:600;line-height:1.35}
+.nrow.read .nt b{font-weight:500}
+.nt small{font-size:11.5px;color:var(--muted)}
+.ndot{flex-shrink:0;width:8px;height:8px;border-radius:999px;background:var(--n-blue)}
+.nchev{flex-shrink:0;color:var(--muted);font-size:18px}
+.n-green{--nc:var(--acc-green)}.n-red{--nc:var(--acc-red)}.n-yellow{--nc:var(--acc-yellow)}.n-purple{--nc:var(--acc-purple)}.n-grey{--nc:var(--acc-grey)}.n-blue{--nc:var(--n-blue)}.n-amber{--nc:var(--n-amber)}
+.n-yellow .nic{color:#111}
+@keyframes flash{0%,100%{box-shadow:var(--shadow)}30%,70%{box-shadow:0 0 0 3px var(--n-blue)}}
+.row.flash{animation:flash 1.6s ease-in-out}
+#notifBadge,[data-id=notifBadge]{background:var(--n-blue)!important}
+.ntt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nwhat{font-size:13px;color:var(--ink)}
+.nrow{padding-block:9px!important}
 </style><div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
@@ -882,7 +904,7 @@ function seed(){
   {id:"c3",name:"Nordic Labs",businessName:"Nordic Labs AB",pan:"",email:"ap@nordiclabs.se",phone:"+46 70 123 4567",gstin:"",stateCode:"",stateName:"",country:"SE",address:"Sveavägen 44, 111 34 Stockholm, Sweden",currency:"EUR",tdsPercent:0,onHold:false},
   {id:"c4",name:"Pulse Fitness",businessName:"Pulse Fitness Studio",pan:"AAHCP9876K",email:"owner@pulsefit.in",phone:"+91 98765 44444",gstin:"19AAHCP9876K1Z8",stateCode:"19",stateName:"West Bengal",address:"13A/4 Arrif Road, Ground Floor, Ultadanga, Kolkata 700067",country:"IN",tdsPercent:0,onHold:false},
  ];
- const T=(o)=>Object.assign({id:uid(),type:"WORK",status:"NOT_STARTED",paused:false,important:false,recurring:false,doubt:false,review:false,protected:false,parent:false,voice:false,createdBy:"u1",actualStart:null,actualEnd:null,work:"w1",team:"t1",desc:""},o);
+ const T=(o)=>{const t=Object.assign({id:uid(),type:"WORK",status:"NOT_STARTED",paused:false,important:false,recurring:false,doubt:false,review:false,protected:false,parent:false,voice:false,createdBy:"u1",actualStart:null,actualEnd:null,work:"w1",team:"t1",desc:""},o);t.nLate=new Date(t.start)<new Date();t.nOver=new Date(t.end)<new Date();return t;};
  const tasks=[
   T({title:"Instagram reels calendar — October",client:"c1",assignees:["u3"],mins:180,start:at(0,10),end:at(0,13),status:"STARTED",actualStart:at(0,10,5),important:true,desc:"12 reels for Zenith Foods. Use the new brand kit in Drive."}),
   T({title:"Weekly performance report",client:"c2",assignees:["u4"],mins:60,start:at(0,14),end:at(0,15),recurring:true,work:"w4",recurText:"Every Fri"}),
@@ -935,13 +957,22 @@ function seed(){
   {id:uid(),kind:"TIME_CHANGE",task:tasks[3].id,by:"u3",note:"Creatives came late, can I move this to tomorrow?",status:"OPEN",at:at(0,9,30)},
   {id:uid(),kind:"LEAVE",task:null,by:"u6",note:"Leave on Friday (family function).",status:"OPEN",at:at(-1,18)},
  ];
+ const nt=(i,kind,text,dAgo,h,m,read,forId)=>({id:uid(),kind,task:tasks[i]?.id,text,at:at(dAgo,h,m||0),read:!!read,for:forId||"u1"});
  const notifs=[
-  {id:uid(),text:"Priya requested finish on “Reel edit — Diwali teaser”",at:at(0,15,50),read:false,for:"u1"},
-  {id:uid(),text:"Doubt raised on “Landing page hero redesign”",at:at(-1,12),read:false,for:"u1"},
-  {id:uid(),text:"Invoice EOM/26-27/0009 is overdue (Nordic Labs)",at:at(-9,9),read:true,for:"u1"},
-  {id:uid(),text:"New task assigned: Instagram reels calendar",at:at(-1,9),read:false,for:"u3"},
-  {id:uid(),text:"Admin approved your finish on Website audit fixes",at:at(-3,13),read:true,for:"u3"},
-  {id:uid(),text:"Arjun raised a time change request",at:at(0,9,30),read:false,for:"u2"},
+  nt(10,"FINISHED","Priya finished it from her side · 10 min early",0,15,50),
+  nt(0,"STARTED_LATE","Arjun started it 5 min late",0,10,5),
+  nt(3,"LATE_START","Not started · was due at 10:00am",-2,10,15),
+  nt(2,"OVERDUE","Still not finished · was due to end at 3:00pm",-1,15,5),
+  nt(2,"DOUBT","Sana raised a doubt: client wants a video hero",-1,12),
+  nt(6,"PAUSED","Paused by Admin · waiting for client logo",-1,18,true),
+  nt(9,"COMPLETED","Completed · 20 min early",-1,16,40,true),
+  nt(8,"COMPLETED","Completed · 10 min late",-3,12,10,true),
+  {id:uid(),kind:"LEAVE",text:"Sana's leave on 4 Oct was approved · her tasks moved a day",at:at(-6,11),read:true,for:"u1"},
+  {id:uid(),kind:"MONEY_IN",text:"Bluewave Realty paid ₹47,200 on EOM/26-27/0008",at:at(-4,13),read:true,for:"u1",invoice:"i2"},
+  {id:uid(),kind:"MONEY_DUE",text:"Invoice EOM/26-27/0009 is overdue (Nordic Labs)",at:at(-9,9),read:true,for:"u1",invoice:"i3"},
+  nt(0,"ASSIGNED","Assigned to you by Priya",-1,9,0,false,"u3"),
+  nt(8,"COMPLETED","Admin approved your finish",-3,13,0,true,"u3"),
+  nt(3,"LATE_START","Not started · was due at 10:00am",-2,10,15,false,"u2"),
  ];
  const attendance={};
  for(let i=1;i<=6;i++){const key=dk(new Date(Date.now()-i*DAY));attendance[key]={u2:"P",u3:"P",u4:i===2?"HD":"P",u5:"P",u6:i===4?"L":"P"};}
@@ -996,7 +1027,14 @@ const toastEl=$("#toast");let toastT=null;
 function toast(msg,kind){toastEl.textContent=msg;toastEl.className="toast"+(kind==="err"?" err":"");toastEl.style.pointerEvents="";toastEl.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>toastEl.hidden=true,2200);}
 /* Google-Tasks style toast with Undo (5s). */
 function undoToast(msg,onUndo){toastEl.replaceChildren(el("span",{},msg),el("button",{class:"undo",onclick:()=>{toastEl.hidden=true;onUndo();}},"Undo"));toastEl.className="toast";toastEl.style.pointerEvents="auto";toastEl.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>toastEl.hidden=true,5000);}
-function notify(forId,text){S.notifs.unshift({id:uid(),text,at:new Date().toISOString(),read:false,for:forId});}
+/* Notifications are updates (nothing to decide); Requests are decisions. Each update has a kind (colour follows the task colours) and a link. */
+function notify(forId,text,meta){S.notifs.unshift(Object.assign({id:uid(),text,at:new Date().toISOString(),read:false,for:forId,kind:"INFO"},meta||{}));}
+function notifyTask(t,kind,text,also){const ids=new Set(["u1",...(also||[])]);ids.forEach(id=>notify(id,text,{kind,task:t.id}));}
+/* Watcher: one update when a task misses its start, and one when it runs past its end. */
+function taskTick(){const now=new Date();let ch=false;for(const t of S.tasks){if(t.status==="COMPLETED"||t.paused)continue;
+ if(!t.actualStart&&t.status==="NOT_STARTED"&&new Date(t.start)<now&&!t.nLate){t.nLate=true;ch=true;notifyTask(t,"LATE_START","Not started · was due at "+fmtT(t.start),t.assignees);}
+ if(new Date(t.end)<now&&!t.nOver&&t.status!=="FINISH_REQUESTED"){t.nOver=true;ch=true;notifyTask(t,"OVERDUE","Still not finished · was due to end at "+fmtT(t.end),t.assignees);}}
+ if(ch)save();}
 function audit(){}
 
 /* ---------- sheet ---------- */
@@ -1066,7 +1104,7 @@ function refreshTop(){
 function pageTop(){refreshTop();const src=document.querySelector("#s-dash .topbar");const host=$("#pgTop");if(!src||!host)return;
  host.innerHTML=src.outerHTML.replace(/ id="([^"]+)"/g,' data-id="$1"');}
 function renderDash(){
- const r=role(),m=me(),f=filtersFor();if(r==="ADMIN")expenseTick();
+ const r=role(),m=me(),f=filtersFor();if(r==="ADMIN")expenseTick();taskTick();
  refreshTop();
  // cyan columns
  const groups=pillGroups(),two=groups.length===2;
@@ -1114,7 +1152,7 @@ function pauseAllSheet(){
  const toPause=shown.filter(t=>!t.paused),toResume=shown.filter(t=>t.paused);
  const scope=[f.row1?dockName(f.row1):null,f.row2?dockName(f.row2):null,f.date?fmtD(f.date):f.quick==="today"?"today":f.quick==="tomorrow"?"tomorrow":null].filter(Boolean).join(" · ")||"all open tasks";
  const why=el("textarea",{class:"in",rows:2,placeholder:"Reason (optional) — e.g. Office closed for Diwali"});
- const run=(list,on)=>{list.forEach(t=>{t.paused=on;t.assignees.forEach(id=>notify(id,(on?"⏸ Paused":"▶ Resumed")+` by Admin: ${t.title}`+(why.value.trim()?` — ${why.value.trim()}`:"")));});save();closeSheet();renderDash();toast((on?"Paused ":"Resumed ")+list.length+" task"+(list.length===1?"":"s"));};
+ const run=(list,on)=>{list.forEach(t=>{t.paused=on;t.assignees.forEach(id=>notify(id,(on?"Paused":"Resumed")+" by Admin"+(why.value.trim()?" · "+why.value.trim():""),{kind:on?"PAUSED":"STARTED",task:t.id}));});save();closeSheet();renderDash();toast((on?"Paused ":"Resumed ")+list.length+" task"+(list.length===1?"":"s"));};
  openSheet("Pause all",el("p",{class:"pre",style:"margin:0 0 10px"},"Applies to the tasks shown right now: "+scope+". Assignees are notified; each card shows ⏸ and turns yellow."),
   el("div",{class:"card",style:"margin:0 0 10px"},el("div",{class:"kv"},el("span",{},"Open, running"),el("b",{class:"num"},String(toPause.length))),el("div",{class:"kv"},el("span",{},"Already paused"),el("b",{class:"num"},String(toResume.length)))),
   field("Reason",why),
@@ -1192,7 +1230,7 @@ function onCircle(t){
  if(t.status==="FINISH_REQUESTED"&&r!=="ADMIN")return toast("Done from your side · waiting for Admin");
  const snap=JSON.parse(JSON.stringify(t));const now=new Date().toISOString();
  if(!t.actualStart)t.actualStart=now;t.actualEnd=now;
- if(r==="ADMIN"){t.status="COMPLETED";t.doubt=false;t.review=false;}else{t.status="FINISH_REQUESTED";notify("u1",`${first(me().name)} finished “${t.title}” from their side`);}
+ if(r==="ADMIN"){t.status="COMPLETED";t.doubt=false;t.review=false;t.assignees.forEach(id=>notify(id,"Marked completed by Admin",{kind:"COMPLETED",task:t.id}));}else{t.status="FINISH_REQUESTED";notify("u1",`${first(me().name)} finished it from their side`,{kind:"FINISHED",task:t.id});}
  save();renderDash();
  undoToast(r==="ADMIN"?"Task completed":"Done from your side · sent to Admin",()=>{Object.assign(t,snap);if(!snap.actualStart)t.actualStart=null;if(!snap.actualEnd)t.actualEnd=null;save();renderDash();toast("Undone");});
 }
@@ -1201,7 +1239,7 @@ function openActions(t){
  const r=role(),items=[];
  const done=(fn,msg)=>()=>{fn();save();closeSheet();renderDash();toast(msg);};
  if(t.status!=="COMPLETED"&&!t.paused&&(r==="ADMIN"||t.status!=="FINISH_REQUESTED"))items.unshift({label:r==="ADMIN"?"Complete task":"Complete from my side",hint:r==="ADMIN"?"Same as tapping the circle":"Admin approves to close it",onClick:()=>{closeSheet();onCircle(t);}});
- if(t.status==="NOT_STARTED"&&!t.paused&&r!=="EXECUTIVE")items.push({label:"Start",hint:"Marks the row green and records the start time",onClick:done(()=>{t.status="STARTED";t.actualStart=new Date().toISOString();},"Task started")});
+ if(t.status==="NOT_STARTED"&&!t.paused&&r!=="EXECUTIVE")items.push({label:"Start",hint:"Marks the row green and records the start time",onClick:done(()=>{t.status="STARTED";t.actualStart=new Date().toISOString();const late=Math.round((new Date()-new Date(t.start))/60000);notifyTask(t,late>0?"STARTED_LATE":"STARTED",first(me().name)+" started it"+(late>0?" "+late+" min late":" on time"));},"Task started")});
  if(t.status==="FINISH_REQUESTED"&&r==="ADMIN"){items.push({label:"Approve finish",onClick:done(()=>{t.status="COMPLETED";t.doubt=false;t.review=false;},"Task completed")});items.push({label:"Reject finish",hint:"Sends the task back with a note",onClick:()=>noteSheet("Reject finish",t,txt=>{t.status="STARTED";t.actualEnd=null;t.assignees.forEach(id=>notify(id,`Finish rejected on ${t.title}: ${txt}`));})});}
  if((r==="TEAM_LEADER"||r==="ADMIN")&&t.status!=="COMPLETED")items.push({label:"Assign executive",hint:t.prefs&&t.prefs.length?"Admin prefers "+t.prefs.map(id=>first(userById(id).name)).join(", ")+" · you decide":"Pick who does this task",onClick:()=>{closeSheet();assignSheet(t);}});
  if(r==="ADMIN"){items.push(t.paused?{label:"Resume",onClick:done(()=>{t.paused=false;},"Task resumed")}:{label:"Pause",hint:"Shows ⏸ in the circle; assignees are notified",onClick:done(()=>{t.paused=true;},"Task paused")});}
@@ -1926,13 +1964,40 @@ PAGES.requests=function(){
   ...(fOk("APPR")?T.appr:[]).map(i=>el("div",{class:"item",onclick:()=>approveSheet(i)},el("div",{class:"m"},el("b",{},(clientById(i.client)||{}).name),el("small",{},"Finance · approve & send "+DOCL[i.docType].toLowerCase())),el("div",{class:"amt"},inr(total(i))))),
   ...(fOk("PAY")?T.late:[]).map(i=>el("div",{class:"item",onclick:()=>openInvoice(i)},el("div",{class:"m"},el("b",{},(clientById(i.client)||{}).name),el("small",{},"Finance · "+i.number+" · "+(-dayOff(i.due))+" days late")),el("div",{class:"amt",style:"color:#dc2626"},inr(balance(i))))),
   ...(fOk("EXP")?T.bills:[]).map(x=>el("div",{class:"item",onclick:()=>markPaid(x.e,x.o)},el("div",{class:"m"},el("b",{},x.e.payee),el("small",{},"Finance · "+(isOver(x.o)?"bill overdue":"bill due "+fmtD(x.o.due))+" · mark paid")),el("div",{class:"amt",style:isOver(x.o)?"color:#dc2626":""},inr(x.o.amount))))]:[];
- const card=r=>{const t=r.task?S.tasks.find(x=>x.id===r.task):null;return el("div",{class:"card"},el("div",{style:"display:flex;gap:6px;align-items:center;margin-bottom:4px"},el("span",{class:"tag draft"},KL[r.kind]),el("b",{style:"font-size:13px"},first(userById(r.by).name)),el("span",{style:"margin-left:auto;font-size:11px;color:var(--muted)"},fmtD(r.at))),t?el("div",{style:"font-size:13px;font-weight:600"},t.title):null,el("div",{style:"font-size:13px;margin:4px 0 8px"},r.note),r.status==="OPEN"?el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{r.status="DECLINED";if(t)t.review=false;notify(r.by,"Request declined: "+r.note.slice(0,40));save();PAGES.requests();toast("Declined");}},"Decline"),el("button",{class:"btn green",onclick:()=>{r.status="APPROVED";if(t){t.review=false;if(r.kind==="TIME_CHANGE"){const s=new Date(t.start);s.setDate(s.getDate()+1);const e=new Date(t.end);e.setDate(e.getDate()+1);t.start=s.toISOString();t.end=e.toISOString();}}if(r.kind==="LEAVE"){const u=userById(r.by);S.tasks.filter(x=>x.assignees.includes(u.id)&&!x.protected&&x.status==="NOT_STARTED"&&dayOff(x.start)>=0).forEach(x=>{const s=new Date(x.start);s.setDate(s.getDate()+1);const e=new Date(x.end);e.setDate(e.getDate()+1);x.start=s.toISOString();x.end=e.toISOString();});}notify(r.by,"Request approved: "+r.note.slice(0,40));save();PAGES.requests();toast(r.kind==="LEAVE"?"Leave approved · unprotected tasks shifted a day":"Approved");}},"Approve")):el("span",{class:"tag "+(r.status==="APPROVED"?"paid":"canc")},r.status.toLowerCase()));};
- page("Requests",[...fin,reqTab!=="FIN"?el("div",{style:"padding:12px 12px 0;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em"},"Open · "+open.length):null,...(reqTab==="FIN"?[]:open.map(card)),reqTab==="FIN"?(fin.length?null:el("div",{class:"empty"},"No finance approvals or reminders.")):open.length||fin.length?null:el("div",{class:"empty"},"Inbox zero."),done.length&&reqTab!=="FIN"?el("div",{style:"padding:12px 12px 0;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em"},"Handled"):null,...(reqTab==="FIN"?[]:done.map(card))].filter(Boolean),[role()==="ADMIN"?zoneTabs(tabs,reqTab,k=>{reqTab=k;reqFin="ALL";PAGES.requests();}):null,role()==="ADMIN"&&reqTab==="FIN"?zoneTabs([["ALL","All"],["APPR","Approvals "+T.appr.length],["PAY","Payments "+T.late.length],["EXP","Expenses "+T.bills.length]],reqFin,k=>{reqFin=k;PAGES.requests();}):null,zoneActions(el("button",{class:"btn ghost",onclick:()=>nav("dash")},"Task list"),role()==="ADMIN"?el("button",{class:"btn",onclick:()=>nav("insights:"+(reqTab==="HR"?"HR":reqTab==="WORK"?"TASK":"FIN"))},"Dashboards"):null)]);
+ const card=r=>{const t=r.task?S.tasks.find(x=>x.id===r.task):null;return el("div",{class:"card"},el("div",{style:"display:flex;gap:6px;align-items:center;margin-bottom:4px"},el("span",{class:"tag draft"},KL[r.kind]),el("b",{style:"font-size:13px"},first(userById(r.by).name)),el("span",{style:"margin-left:auto;font-size:11px;color:var(--muted)"},fmtD(r.at))),t?el("div",{style:"font-size:13px;font-weight:600"},t.title):null,el("div",{style:"font-size:13px;margin:4px 0 8px"},r.note),r.status==="OPEN"?el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{r.status="DECLINED";if(t)t.review=false;notify(r.by,"Request declined: "+r.note.slice(0,40));save();PAGES.requests();toast("Declined");}},"Decline"),el("button",{class:"btn green",onclick:()=>{r.status="APPROVED";if(t){t.review=false;if(r.kind==="TIME_CHANGE"){const s=new Date(t.start);s.setDate(s.getDate()+1);const e=new Date(t.end);e.setDate(e.getDate()+1);t.start=s.toISOString();t.end=e.toISOString();}}if(r.kind==="LEAVE"){const u=userById(r.by);S.tasks.filter(x=>x.assignees.includes(u.id)&&!x.protected&&x.status==="NOT_STARTED"&&dayOff(x.start)>=0).forEach(x=>{const s=new Date(x.start);s.setDate(s.getDate()+1);const e=new Date(x.end);e.setDate(e.getDate()+1);x.start=s.toISOString();x.end=e.toISOString();});}if(r.kind==="LEAVE"){notify(r.by,"Your leave was approved",{kind:"LEAVE"});notify("u1",first(userById(r.by).name)+"'s leave was approved · unprotected tasks moved a day",{kind:"LEAVE"});}else notify(r.by,"Request approved: "+r.note.slice(0,40),{kind:"INFO",task:r.task});save();PAGES.requests();toast(r.kind==="LEAVE"?"Leave approved · unprotected tasks shifted a day":"Approved");}},"Approve")):el("span",{class:"tag "+(r.status==="APPROVED"?"paid":"canc")},r.status.toLowerCase()));};
+ page("Requests",[el("div",{class:"nhint"},"Waiting for your decision — approve, decline or act. Updates that need nothing from you are in ",el("button",{class:"linkish",onclick:()=>nav("notifications")},"Notifications.")),...fin,reqTab!=="FIN"?el("div",{style:"padding:12px 12px 0;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em"},"Open · "+open.length):null,...(reqTab==="FIN"?[]:open.map(card)),reqTab==="FIN"?(fin.length?null:el("div",{class:"empty"},"No finance approvals or reminders.")):open.length||fin.length?null:el("div",{class:"empty"},"Inbox zero."),done.length&&reqTab!=="FIN"?el("div",{style:"padding:12px 12px 0;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em"},"Handled"):null,...(reqTab==="FIN"?[]:done.map(card))].filter(Boolean),[role()==="ADMIN"?zoneTabs(tabs,reqTab,k=>{reqTab=k;reqFin="ALL";PAGES.requests();}):null,role()==="ADMIN"&&reqTab==="FIN"?zoneTabs([["ALL","All"],["APPR","Approvals "+T.appr.length],["PAY","Payments "+T.late.length],["EXP","Expenses "+T.bills.length]],reqFin,k=>{reqFin=k;PAGES.requests();}):null,zoneActions(el("button",{class:"btn ghost",onclick:()=>nav("dash")},"Task list"),role()==="ADMIN"?el("button",{class:"btn",onclick:()=>nav("insights:"+(reqTab==="HR"?"HR":reqTab==="WORK"?"TASK":"FIN"))},"Dashboards"):null)]);
 };
+/* Notifications = a feed of what happened (no buttons, nothing to decide). Colour = the task colour it is about.
+   Requests (inbox icon) = things waiting for your decision. */
+const NK={STARTED:["green","Started","play"],STARTED_LATE:["red","Started late","play"],LATE_START:["red","Not started","clock"],OVERDUE:["red","Past end time","clock"],
+ FINISHED:["green","Done from their side","check"],COMPLETED:["grey","Completed","check"],PAUSED:["yellow","Paused","pause"],DOUBT:["purple","Doubt","q"],
+ ASSIGNED:["blue","Assigned","plus"],LEAVE:["amber","Leave","cal"],MONEY_IN:["green","Payment in","rupee"],MONEY_DUE:["red","Money due","rupee"],MONEY_SOON:["amber","Bill due soon","rupee"],INFO:["blue","Update","bell"]};
+const NI={play:'<path d="M8 5v14l11-7z"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',check:'<path d="m5 12 5 5L20 7"/>',pause:'<path d="M8 5v14M16 5v14"/>',q:'<path d="M9.1 9a3 3 0 1 1 5.8 1c0 2-3 2-3 4"/><path d="M12 18h.01"/>',plus:'<path d="M12 5v14M5 12h14"/>',cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/>',rupee:'<path d="M6 4h12M6 9h12M14 20 6 12h3a5 5 0 0 0 0-8"/>',bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/>'};
+let notifTab="ALL";
+function openNotif(n){n.read=true;save();
+ const t=n.task&&S.tasks.find(x=>x.id===n.task);
+ if(t){show("dash");renderDash();setTimeout(()=>{const li=[...document.querySelectorAll("#rows .row")].find(x=>x.getAttribute("aria-label")===t.title);if(li){li.scrollIntoView({block:"center"});li.classList.add("flash");setTimeout(()=>li.classList.remove("flash"),1600);}openDetail(t);},60);return;}
+ const inv=n.invoice&&S.invoices.find(x=>x.id===n.invoice);if(inv){show("page");openInvoice(inv);return;}
+ if(n.go){nav(n.go);return;}
+ if(n.kind==="LEAVE"&&role()==="ADMIN"){reqTab="HR";nav("requests");return;}
+ PAGES.notifications();}
 PAGES.notifications=function(){
- const m=me();const mine=S.notifs.filter(n=>n.for===m.id);
- page("Notifications",mine.length?mine.map(n=>el("div",{class:"item",style:n.read?"opacity:.6":"",onclick:()=>{n.read=true;save();PAGES.notifications();}},el("div",{class:"m"},el("b",{style:"white-space:normal;font-weight:"+(n.read?"500":"700")},n.text),el("small",{},fmtDY(n.at)+" "+fmtT(n.at))),n.read?null:el("i",{class:"reddot",style:"position:static"}))):[el("div",{class:"empty"},"No notifications")],
-  [zoneActions(el("button",{class:"btn ghost",onclick:()=>{mine.forEach(n=>n.read=true);save();PAGES.notifications();}},"Mark all read"),el("button",{class:"btn",onclick:()=>nav("dash")},"Dashboard"))]);
+ const m=me();const all=S.notifs.filter(n=>n.for===m.id);
+ const grp=n=>["LEAVE"].includes(n.kind)?"PEOPLE":n.kind.startsWith("MONEY")?"MONEY":"TASKS";
+ const mine=all.filter(n=>notifTab==="ALL"||grp(n)===notifTab||(notifTab==="UNREAD"&&!n.read));
+ const day=iso=>{const o=dayOff(iso);return o===0?"Today":o===-1?"Yesterday":fmtD(iso);};
+ const rows=[];let last="";
+ for(const n of mine){const d=day(n.at);if(d!==last){rows.push(el("div",{class:"sech"},d));last=d;}
+  const [c,label,ic]=NK[n.kind]||NK.INFO;const t=n.task&&S.tasks.find(x=>x.id===n.task);
+  const sub=[label,t?(clientById(t.client)||{}).name:null,t?(S.teams.find(x=>x.id===t.team)||{}).name:null,fmtT(n.at)].filter(Boolean).join(" · ");
+  rows.push(el("button",{class:"nrow n-"+c+(n.read?" read":""),onclick:()=>openNotif(n)},
+   el("span",{class:"nic",html:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">'+NI[ic]+'</svg>'}),
+   el("span",{class:"nt"},t?el("b",{class:"ntt"},t.title):null,t?el("span",{class:"nwhat"},n.text):el("b",{},n.text),el("small",{},sub)),n.read?null:el("i",{class:"ndot","aria-label":"unread"}),(t||n.invoice||n.go)?el("span",{class:"nchev"},"›"):null));}
+ const unread=all.filter(n=>!n.read).length;
+ page("Notifications",[el("div",{class:"nhint"},"Updates on tasks, people and money. Things that need your decision are in ",el("button",{class:"linkish",onclick:()=>nav("requests")},"Requests.")),
+  ...(rows.length?rows:[el("div",{class:"empty"},"No updates here.")])],
+  [zoneTabs([["ALL","All"],["UNREAD","Unread"+(unread?" · "+unread:"")],["TASKS","Tasks"],["PEOPLE","People"],["MONEY","Money"]],notifTab,k=>{notifTab=k;PAGES.notifications();}),
+   zoneActions(el("button",{class:"btn ghost",onclick:()=>{all.forEach(n=>n.read=true);save();PAGES.notifications();}},"Mark all read"),el("button",{class:"btn",onclick:()=>nav("dash")},"Task list"))]);
 };
 PAGES.me=function(){
  const m=me();const mine=S.tasks.filter(t=>t.assignees.includes(m.id));
@@ -1980,7 +2045,7 @@ function expenseTick(){
  for(const e of S.expenses){
   if(e.plan==="RECURRING"&&e.rec&&!e.occ.some(o=>o.status==="DUE")){let last=e.occ[e.occ.length-1];
    while(last&&last.status==="PAID"&&new Date(last.due)<=new Date(Date.now()+DAY*(e.remind||0))){const n=nextDate(e.rec,new Date(last.due),e.occ.length);if(!n)break;const o={id:uid(),amount:e.amount,due:n.toISOString(),status:"DUE",paidAt:null,method:null,ref:"",tds:0,tdsPct:0,notified:false};e.occ.push(o);last=o;changed=true;}}
-  for(const o of e.occ){if(o.status==="DUE"&&!o.notified&&dayOff(o.due)<=(e.remind||0)){o.notified=true;changed=true;notify("u1",(isOver(o)?"Overdue: ":"Payment "+dueWords(o)+": ")+e.payee+" "+inr(o.amount)+(o.label?" ("+o.label+")":"")+" · "+e.cat);}}
+  for(const o of e.occ){if(o.status==="DUE"&&!o.notified&&dayOff(o.due)<=(e.remind||0)){o.notified=true;changed=true;/* bills to pay are decisions: they live in Requests › Finance › Expenses, not in Notifications */0;}}
  }
  if(changed)save();
 }
@@ -2092,7 +2157,7 @@ function markPaid(e,o){
    if(rest>0.5){e.occ.splice(e.occ.indexOf(o)+1,0,{id:uid(),amount:rest,due:o.due,status:"DUE",paidAt:null,method:null,ref:"",tds:0,tdsPct:0,notified:false,label:"Balance of "+(o.label||"payment")});msg="Part paid · balance "+inr(rest)+" still due";}
    if(e.plan==="RECURRING"&&!e.occ.some(x=>x.status==="DUE")){const n=nextDate(e.rec,new Date(o.due),e.occ.length);if(n){e.occ.push({id:uid(),amount:e.amount,due:n.toISOString(),status:"DUE",paidAt:null,method:null,ref:"",tds:0,tdsPct:0,notified:false});msg+=" · next "+inr(e.amount)+" on "+fmtD(n.toISOString());}}
    const nx=e.occ.find(x=>x.status==="DUE");if(e.plan==="PART"&&nx)msg+=" · next: "+(nx.label||"part")+" "+inr(nx.amount)+" on "+fmtD(nx.due);else if(e.plan==="PART")msg+=" · all parts paid";
-   const tot=payeeFyTotal(e.payee);if(e.kind!=="SALARY"&&tot>=thr&&!o.tds)notify("u1","TDS threshold crossed for "+e.payee+": "+inr(tot)+" paid this FY (threshold "+inr(thr)+"). Deduct TDS on payments to this payee.");
+   const tot=payeeFyTotal(e.payee);if(e.kind!=="SALARY"&&tot>=thr&&!o.tds)notify("u1","TDS threshold crossed for "+e.payee+": "+inr(tot)+" paid this FY (threshold "+inr(thr)+"). Deduct TDS on payments to this payee.",{kind:"MONEY_DUE",go:"expenses"});
    save();closeSheet();PAGES.expenses();toast(msg);}},"Mark paid")));
 }
 function billEditor(e){
