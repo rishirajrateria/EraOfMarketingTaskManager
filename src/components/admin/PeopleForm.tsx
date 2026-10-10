@@ -45,7 +45,6 @@ export function PeopleForm({
   workspaceDomains,
   busy,
   onSubmit,
-  onCancel,
 }: {
   user: PersonRow | null;
   defaultRole: Role;
@@ -55,7 +54,6 @@ export function PeopleForm({
   workspaceDomains: string[];
   busy: boolean;
   onSubmit: (values: PeopleFormValues) => void;
-  onCancel: () => void;
 }) {
   const [v, setV] = useState<PeopleFormValues>(() => initial(user, defaultRole));
   const [hours, setHours] = useState(minutesToHours(user?.dailyCapacityMinutes));
@@ -146,7 +144,7 @@ export function PeopleForm({
       <Field label="Working days">
         <WeekdayPicker value={v.workingDays ?? []} onChange={(workingDays) => patch({ workingDays })} />
       </Field>
-      <FormFooter busy={busy} onCancel={onCancel} submitLabel={user ? "Save" : "Add & invite"} />
+      <FormFooter busy={busy} submitLabel={user ? "Save" : "Add & invite"} />
     </form>
   );
 }

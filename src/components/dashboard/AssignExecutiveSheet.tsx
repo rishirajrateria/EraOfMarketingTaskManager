@@ -54,7 +54,7 @@ export function AssignExecutiveSheet({
   const toggle = (id: string) => setPick((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
 
   return (
-    <Sheet open={open} onClose={onClose} title={`Assign · ${t.title}`} hideClose>
+    <Sheet open={open} onClose={onClose} title={`Assign · ${t.title}`}>
       <div className="space-y-3 px-4 py-4">
         <p className="text-xs text-gray-500">
           {t.preferredAssigneeIds.length ? `★ = Admin's preference · ✓ = specialist in ${work}. You decide.` : `Pick who does this task · ✓ = specialist in ${work}.`}
@@ -67,7 +67,7 @@ export function AssignExecutiveSheet({
           ))}
           {people.length ? null : <p className="text-xs text-gray-400">Nobody in this team yet · Menu → Add executive</p>}
         </div>
-        <SheetButtons onClose={onClose} className="pt-2">
+        <SheetButtons className="pt-2">
           <button
             type="button"
             className={btnPrimary}

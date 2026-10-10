@@ -15,6 +15,7 @@ import { DashboardTopBar, type TopBarUser } from "@/components/dashboard/Dashboa
 import { TaskList } from "@/components/dashboard/TaskList";
 import { BottomBar, type AddMode } from "@/components/dashboard/BottomBar";
 import { useFabRunner } from "@/components/dashboard/useFabRunner";
+import { addTaskStore } from "@/components/shell/add-task-store";
 import { TaskActionSheet, NOTE_PROMPTS, type NoteKind, type SimpleAction } from "@/components/dashboard/TaskActionSheet";
 import { TaskDetailSheet } from "@/components/dashboard/TaskDetailSheet";
 import { DeleteTaskSheet } from "@/components/dashboard/DeleteTaskSheet";
@@ -42,16 +43,12 @@ export function Dashboard({
   initialTaskId,
   showCompleted,
   user,
-  unread,
-  openRequests,
 }: {
   data: DashboardData;
   filters: DashboardFilters;
   initialTaskId: string | null;
   showCompleted: boolean;
   user: TopBarUser;
-  unread: number;
-  openRequests: number;
 }) {
   const router = useRouter();
   const { run, busy, refresh, toast } = useTaskAction();
@@ -64,8 +61,10 @@ export function Dashboard({
   const [assignId, setAssignId] = useState<string | null>(null);
   const [note, setNote] = useState<{ kind: NoteKind; taskId: string } | null>(null);
   const [addMode, setAddMode] = useState<AddMode | null>(null);
-  // The "+" speed dial and the add-task icon strip: Task / Meeting → add sheet, Admin shortcuts → their screens.
-  const fab = useFabRunner(setAddMode);
+  // The add-task icon strip: Task / Meeting → add sheet, Admin shortcuts → their screens. The bottom nav's + (GlobalNav,
+  // in the shell) reaches the add sheet through addTaskStore while the dashboard is mounted.
+  const runFab = useFabRunner(setAddMode);
+  useEffect(() => addTaskStore.register(setAddMode), []);
   // Review per pill (ADR 0015): the pill menu, then (Team Leader / Executive) the note for the request.
   const [pill, setPill] = useState<{ taskId: string; field: ReviewField } | null>(null);
   const [pillNote, setPillNote] = useState<{ taskId: string; field: ReviewField } | null>(null);
@@ -279,8 +278,8 @@ export function Dashboard({
   const noteTask = note ? byId.get(note.taskId) ?? null : null;
 
   return (
-    <div className="flex h-[100dvh] flex-col">
-      <TimeStatus data={data} filters={filters} onChange={setFilters} topBar={<DashboardTopBar user={user} unread={unread} openRequests={openRequests} />} />
+    <div className="flex h-[calc(100dvh-var(--gnav-h,0px))] flex-col">
+      <TimeStatus data={data} filters={filters} onChange={setFilters} topBar={<DashboardTopBar user={user} />} />
       <TaskList
         tasks={tasks}
         data={data}
@@ -301,7 +300,7 @@ export function Dashboard({
           onContact: (t, mode) => setContact({ taskId: t.id, mode }),
         }}
       />
-      <BottomBar data={data} filters={filters} onChange={setFilters} onPick={fab.run} onPauseAll={() => setPauseAllOpen(true)} user={user} unread={unread} openRequests={openRequests} />
+      <BottomBar data={data} filters={filters} onChange={setFilters} onPauseAll={() => setPauseAllOpen(true)} />
 
       <TaskDetailSheet
         task={detailTask}
@@ -358,8 +357,7 @@ export function Dashboard({
       <DeleteTaskSheet task={deleteId ? byId.get(deleteId) ?? null : null} open={!!deleteId} busy={busy} onConfirm={confirmDelete} onClose={() => setDeleteId(null)} />
       <AssignExecutiveSheet task={assignId ? byId.get(assignId) ?? null : null} data={data} open={!!assignId} busy={busy} onClose={() => setAssignId(null)} onAssign={assign} />
       <EditTaskSheet task={editId ? byId.get(editId) ?? null : null} data={data} open={!!editId} onClose={() => setEditId(null)} />
-      <AddTaskSheet open={addMode !== null} mode={addMode} onClose={() => setAddMode(null)} data={data} onPick={fab.run} />
-      {fab.sheet}
+      <AddTaskSheet open={addMode !== null} mode={addMode} onClose={() => setAddMode(null)} data={data} onPick={runFab} />
     </div>
   );
 }

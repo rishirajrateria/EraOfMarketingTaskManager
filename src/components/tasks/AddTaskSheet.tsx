@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { JSX } from "react";
 import { Sheet } from "@/components/ui/Sheet";
+import { cornerStore } from "@/components/shell/corner-store";
 import { useToast } from "@/components/ui/Toast";
 import type { DashboardData } from "@/server/tasks/types";
 import { describeRule } from "@/server/tasks/repeat-rule";
@@ -56,8 +57,14 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data, on
   const mode = openProp ? modeProp : urlMode;
   const close = useCallback(() => {
     setUrlOpen(false);
+    // Opened by `?add=` (e.g. the bottom nav's + on another screen): drop it so a reload doesn't reopen the sheet.
+    if (urlMode) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("add");
+      window.history.replaceState(null, "", url.pathname + url.search);
+    }
     onClose();
-  }, [onClose]);
+  }, [onClose, urlMode]);
 
   const [chosen, setChosen] = useState<TaskMode | null>(null);
   const [form, setForm] = useState<AddTaskForm>(() => emptyForm("WORK", data.me.id, data.role));
@@ -216,7 +223,8 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data, on
 
   return (
     <>
-      <Sheet open={open} onClose={subSheetOpen ? () => undefined : close} full>
+      {/* `cover`: the add-task screen hides the bottom nav and brings its own row, whose × closes an open sheet first. */}
+      <Sheet open={open} onClose={subSheetOpen ? () => undefined : close} full cover>
         <div className="flex h-full min-h-full flex-col" style={{ background: "var(--aurora), var(--bg)" }}>
           <AddTaskHeader loads={loads} teamName={headerName} />
           <AddTaskBody
@@ -255,7 +263,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data, on
                 onPick(it);
               })
             }
-            onClose={close}
+            onClose={() => cornerStore.closeTop() || close()}
           />
         </div>
       </Sheet>

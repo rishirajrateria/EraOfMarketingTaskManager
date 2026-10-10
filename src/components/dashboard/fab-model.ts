@@ -1,19 +1,21 @@
 import { FileText, KeyRound, Layers, ListTodo, Receipt, Tag, UserRound, UserRoundCheck, type LucideIcon } from "lucide-react";
 import type { DashboardData } from "@/server/tasks/types";
+import { FROM_ADD_PARAM, FROM_ADD_VALUE, LIST_FLOWS, listFlowHref, type ListFlowKey } from "@/components/shell/list-flow";
 
 /**
- * Dashboard "+" speed dial and the add-task icon strip (ADR 0016 addendum, prototype `fabItems` / `renderAddNav`).
- * Pure data so tests can check order, role filtering and links without rendering. The speed dial grows upward: the
- * first item sits nearest the thumb.
+ * The "+" speed dial (bottom nav of every screen) and the add-task icon strip (ADR 0016 addendum, prototype
+ * `fabItems` / `renderAddNav`). Pure data so tests can check order, role filtering and links without rendering. The
+ * speed dial grows upward: the first item sits nearest the thumb.
  */
 export type FabTone = "task" | "meet" | "money" | "team" | "client";
-export type FabAction =
-  | { kind: "add"; mode: "WORK" | "MEETING" }
-  | { kind: "href"; href: string }
-  /** Client kit: pick the client first (KitPickerSheet). */
-  | { kind: "kit" };
-/** `icon: null` = the Google Meet glyph. `main` = the two big items (50px). `short` = label in the add-task strip. */
-export type FabItem = { key: string; label: string; short: string; tone: FabTone; icon: LucideIcon | null; main?: boolean; action: FabAction };
+export type FabAction = { kind: "add"; mode: "WORK" | "MEETING" } | { kind: "href"; href: string };
+/** The eye left of a list item's label: its list page with the add form minimised (`label` = aria-label). */
+export type FabView = { href: string; label: string };
+/**
+ * `icon: null` = the Google Meet glyph. `main` = the two big items (50px). `short` = label in the add-task strip.
+ * `view` = the eye (list items only); `action` of a list item = the same page with the add form expanded.
+ */
+export type FabItem = { key: string; label: string; short: string; tone: FabTone; icon: LucideIcon | null; main?: boolean; action: FabAction; view?: FabView };
 /** `main` = Task + Meeting for everyone; `more` = Admin's create shortcuts, shown above a thin separator. */
 export type FabMenu = { main: FabItem[]; more: FabItem[] };
 
@@ -22,19 +24,23 @@ const MAIN: FabItem[] = [
   { key: "MEETING", label: "Meeting", short: "Meeting", tone: "meet", icon: null, main: true, action: { kind: "add", mode: "MEETING" } },
 ];
 
-/** `from=add`: closing the opened form (blue ×) or finishing it comes back to the dashboard (useFromAdd). */
-export const FROM_ADD_PARAM = "from";
-export const FROM_ADD_VALUE = "add";
+const fromAdd = `${FROM_ADD_PARAM}=${FROM_ADD_VALUE}`;
 
-/** Same routes as the Admin menu's quick actions and the admin screens' `?add=1` deep links, plus `from=add`. */
+/** A list page + its add form: the item opens it expanded (`?add=1`), the eye minimised (`?add=min`). */
+function listItem(key: ListFlowKey, label: string, short: string, tone: FabTone, icon: LucideIcon): FabItem {
+  const flow = LIST_FLOWS[key];
+  return { key, label, short, tone, icon, action: { kind: "href", href: listFlowHref(flow.base, "open") }, view: { href: listFlowHref(flow.base, "min"), label: flow.view } };
+}
+
+/** Invoice / Expense open their create screens (`from=add`: the × returns to the dashboard); the rest are list flows. */
 const ADMIN_MORE: FabItem[] = [
-  { key: "INVOICE", label: "Invoice", short: "Invoice", tone: "money", icon: FileText, action: { kind: "href", href: "/admin/invoices?new=1&from=add" } },
-  { key: "EXPENSE", label: "Expense", short: "Expense", tone: "money", icon: Receipt, action: { kind: "href", href: "/admin/expenses/new?from=add" } },
-  { key: "EXECUTIVE", label: "Executive", short: "Exec", tone: "team", icon: UserRound, action: { kind: "href", href: "/admin/people?role=EXECUTIVE&add=1&from=add" } },
-  { key: "WORK_TYPE", label: "Work type", short: "Work", tone: "team", icon: Tag, action: { kind: "href", href: "/admin/work-types?add=1&from=add" } },
-  { key: "TEAM", label: "Team", short: "Team", tone: "team", icon: Layers, action: { kind: "href", href: "/admin/teams?add=1&from=add" } },
-  { key: "TEAM_LEADER", label: "Team leader", short: "Leader", tone: "team", icon: UserRoundCheck, action: { kind: "href", href: "/admin/people?role=TEAM_LEADER&add=1&from=add" } },
-  { key: "KIT", label: "Client kit", short: "Kit", tone: "client", icon: KeyRound, action: { kind: "kit" } },
+  { key: "INVOICE", label: "Invoice", short: "Invoice", tone: "money", icon: FileText, action: { kind: "href", href: `/admin/invoices?new=1&${fromAdd}` } },
+  { key: "EXPENSE", label: "Expense", short: "Expense", tone: "money", icon: Receipt, action: { kind: "href", href: `/admin/expenses/new?${fromAdd}` } },
+  listItem("EXECUTIVE", "Executive", "Exec", "team", UserRound),
+  listItem("WORK_TYPE", "Work type", "Work", "team", Tag),
+  listItem("TEAM", "Team", "Team", "team", Layers),
+  listItem("TEAM_LEADER", "Team leader", "Leader", "team", UserRoundCheck),
+  listItem("KIT", "Client kit", "Kit", "client", KeyRound),
 ];
 
 /** Team Leaders and Executives get Task + Meeting only; Admin also gets the create shortcuts. */
@@ -58,7 +64,7 @@ export const FAB_TONE: Record<FabTone, string> = {
 
 export type KitPickerClient = { id: string; name: string; ready: boolean; partial: boolean };
 
-export const NEW_CLIENT_HREF = "/admin/clients?add=1&from=add";
+export const NEW_CLIENT_HREF = `/admin/clients?add=1&${fromAdd}`;
 /** The client's kit page: Create kit when there is none, Repair when partial, share / send when ready. */
 export const kitHref = (clientId: string) => `/admin/client-kit/${encodeURIComponent(clientId)}`;
 
@@ -70,20 +76,4 @@ export function kitHint(c: KitPickerClient): string {
 /** Clients without a (complete) kit first; otherwise keep the incoming (name) order. */
 export function sortKitClients<T extends { ready: boolean }>(list: readonly T[]): T[] {
   return [...list.filter((c) => !c.ready), ...list.filter((c) => c.ready)];
-}
-
-// ---------- Dashboard bottom nav row ----------
-
-export type DashNavKey = "DASHBOARD" | "REQUESTS" | "NOTIFICATIONS" | "PROFILE";
-export type DashNavItem = { key: DashNavKey; label: string; href: string };
-
-/** Prototype `renderDashNav`: Admin gets Dashboard · Requests · Notifications · Profile; everyone else the last two. */
-export function dashNavItems(role: DashboardData["role"]): DashNavItem[] {
-  const all: DashNavItem[] = [
-    { key: "DASHBOARD", label: "Dashboard", href: "/admin/dashboards" },
-    { key: "REQUESTS", label: "Requests", href: "/admin/requests" },
-    { key: "NOTIFICATIONS", label: "Notifications", href: "/notifications" },
-    { key: "PROFILE", label: "Profile", href: "/me" },
-  ];
-  return role === "ADMIN" ? all : all.filter((i) => i.key === "NOTIFICATIONS" || i.key === "PROFILE");
 }

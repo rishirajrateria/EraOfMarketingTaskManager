@@ -25,15 +25,13 @@ type Props = {
   companyStateCode: string | null;
   defaults: { gstPercent: number; paymentTerms: string };
   onClose: () => void;
-  /** The blue × (defaults to `onClose`); opened from the dashboard "+" it returns there. */
-  onCancel?: () => void;
   /** "Edit draft": opens at the Amount step pre-filled; "Save changes" calls `updateDraftInvoice`, then `onSaved`. */
   edit?: WizardEdit | null;
   onSaved?: (res: UpdateDraftResult) => void;
 };
 
 /** "+ New invoice" / "Edit draft": four thumb-reach steps inside a full-screen Sheet; saves as AWAITING_APPROVAL (never sends). */
-export function InvoiceWizard({ clients, companyStateCode, defaults, onClose, onCancel, edit = null, onSaved }: Props) {
+export function InvoiceWizard({ clients, companyStateCode, defaults, onClose, edit = null, onSaved }: Props) {
   const router = useRouter();
   const toast = useToast();
   const [pending, start] = useTransition();
@@ -125,7 +123,7 @@ export function InvoiceWizard({ clients, companyStateCode, defaults, onClose, on
     ) : null;
 
   return (
-    <div className="flex h-full min-h-[100dvh] flex-col">
+    <div className="flex h-full min-h-full flex-col">
       <div className="sticky top-0 z-10 flex items-center gap-2 bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 px-4 py-3 text-white backdrop-blur-xl">
         <div className="flex-1">
           <div className="text-[11px] uppercase opacity-80">{edit ? `Step ${step} of 4 · ${TITLES[step - 1]}` : `New invoice · step ${step} of 4`}</div>
@@ -150,8 +148,8 @@ export function InvoiceWizard({ clients, companyStateCode, defaults, onClose, on
         }
         rows={rows}
         actions={
-          // Step 1: [Next ———] [×]; later: [Back] [Next ———] [×] — the "+ → ×" convention (ADR 0016 addendum).
-          <SheetButtons onClose={onCancel ?? onClose}>
+          // Step 1: [Next ———]; later: [Back] [Next ———] — the bottom nav's corner × closes the wizard (ADR 0016 addendum).
+          <SheetButtons>
             {step > 1 ? (
               <button type="button" onClick={() => setStep((s) => s - 1)} className={btnSecondary}>
                 <ChevronLeft size={16} aria-hidden /> Back

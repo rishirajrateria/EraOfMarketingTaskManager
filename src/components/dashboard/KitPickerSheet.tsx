@@ -2,17 +2,18 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sheet } from "@/components/ui/Sheet";
-import { SheetButtons } from "@/components/ui/CloseX";
 import { kitPickerClients } from "@/server/shell/kit-picker";
 import { NEW_CLIENT_HREF, kitHint, kitHref, sortKitClients, type KitPickerClient } from "@/components/dashboard/fab-model";
 
 const ROW = "touch-target flex w-full flex-col items-start gap-[3px] rounded-[14px] border border-hair bg-glass px-3.5 py-3 text-left backdrop-blur-[22px]";
 
 /**
- * "+" → Client kit (prototype `kitPicker`): pick the client — clients without a kit first — and land on that client's
+ * "New client kit" (prototype `kitPicker`): pick the client — clients without a kit first — and land on that client's
  * kit page (Create kit / Repair / share and send, ADR 0014). "+ New client" opens the add-client form instead.
+ * The add form of the client-kit list in the "+" list flow (KitFlowZone): `onClose` = the corner ×, `onDismiss` =
+ * Escape / tap outside (minimise), also run before leaving for a client.
  */
-export function KitPickerSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function KitPickerSheet({ open, onClose, onDismiss = onClose }: { open: boolean; onClose: () => void; onDismiss?: () => void }) {
   const router = useRouter();
   const [clients, setClients] = useState<KitPickerClient[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -21,25 +22,28 @@ export function KitPickerSheet({ open, onClose }: { open: boolean; onClose: () =
     if (!open) return;
     let live = true;
     setError(null);
-    void kitPickerClients().then((r) => {
-      if (!live) return;
-      if (r.ok) setClients(sortKitClients(r.data));
-      else setError(r.error);
-    });
+    kitPickerClients()
+      .then((r) => {
+        if (!live) return;
+        if (r.ok) setClients(sortKitClients(r.data));
+        else setError(r.error);
+      })
+      // leaving the page (corner ×, a tab) aborts the request; only report it while the picker is still up
+      .catch(() => live && setError("Couldn't load the clients. Try again."));
     return () => {
       live = false;
     };
   }, [open]);
 
   const go = (href: string) => {
-    onClose();
+    onDismiss();
     router.push(href);
   };
 
   return (
-    <Sheet open={open} onClose={onClose} title="New client kit" hideClose>
+    <Sheet open={open} onClose={onDismiss} onCornerClose={onClose} title="New client kit">
       <p className="px-4 pb-2 text-[13px] leading-snug text-muted">Pick the client. The kit makes their Drive folders and a credentials sheet.</p>
-      <ul className="flex flex-col gap-2 px-4 pb-3">
+      <ul className="flex flex-col gap-2 px-4 pb-4">
         {error ? <li className="py-3 text-[13px] text-red-600 dark:text-red-400">{error}</li> : null}
         {!clients && !error ? <li className="py-3 text-[13px] text-muted">Loading clients…</li> : null}
         {clients?.map((c) => (
@@ -57,7 +61,6 @@ export function KitPickerSheet({ open, onClose }: { open: boolean; onClose: () =
           </button>
         </li>
       </ul>
-      <SheetButtons onClose={onClose} className="px-4 pb-4" />
     </Sheet>
   );
 }

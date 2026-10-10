@@ -106,6 +106,9 @@
   --doubt: #7c3aed;
   --recsum: #0369a1;
   --dim: rgba(2, 12, 24, 0.35);
+  /* bottom nav (ADR 0016 addendum): the open tab */
+  --nav-on: #2563eb;
+  --nav-on-bg: rgba(37, 99, 235, 0.14);
   /* ADR 0016 dashboards: income / expense series (validated pair, light), recessive chart grid */
   --s-inc: #2a78d6;
   --s-exp: #eb6834;
@@ -169,6 +172,8 @@
     --doubt: #c4b5fd;
     --recsum: #7dd3fc;
     --dim: rgba(2, 12, 24, 0.55);
+    --nav-on: #60a5fa;
+    --nav-on-bg: rgba(96, 165, 250, 0.18);
     --s-inc: #3987e5;
     --s-exp: #d95926;
     --grid: rgba(255, 255, 255, 0.12);
@@ -330,6 +335,19 @@ body {
   border-radius: 22px 22px 0 0;
   overflow: hidden;
   box-shadow: 0 -10px 30px -18px rgba(15, 40, 70, 0.4);
+}
+/* Bottom nav on every signed-in screen (ADR 0016 addendum, prototype `#gNav` / `.hasnav`): the frame reserves its
+   height (safe-area aware) and the pages' sticky bottom zones sit on top of it instead of behind it. Portalled sheets
+   are outside the frame, so they keep bottom 0 + the safe-area padding (they cover the nav). */
+.has-gnav {
+  --gnav-h: calc(64px + env(safe-area-inset-bottom));
+  --gnav-safe: 0px;
+  padding-bottom: var(--gnav-h);
+}
+.zone-sticky {
+  position: sticky;
+  bottom: var(--gnav-h, 0px);
+  padding-bottom: var(--gnav-safe, env(safe-area-inset-bottom));
 }
 .strip-glass {
   background: var(--glass);

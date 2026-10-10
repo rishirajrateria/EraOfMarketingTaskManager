@@ -8,6 +8,7 @@ import { EmptyState, Screen, ScreenHeader } from "@/components/admin/AdminUi";
 import { BarIcon, BottomZone } from "@/components/ui/BottomZone";
 import { CreateKitButton, SendKitButtons } from "@/components/clients/KitActions";
 import { KitShareButton } from "@/components/clients/KitShareSheet";
+import { KitFlowZone } from "@/components/clients/KitFlowZone";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +57,10 @@ function KitCard({ r, tz }: { r: KitRow; tz: string }) {
   );
 }
 
-/** Client kit (ADR 0014): every client's Drive kit — create, share, send — plus what is saved in the app's vault. ADMIN only. */
+/**
+ * Client kit (ADR 0014): every client's Drive kit — create, share, send — plus what is saved in the app's vault. ADMIN only.
+ * From the "+" speed dial (`?add=1|min&from=add`) its add form is the "New client kit" picker (KitFlowZone).
+ */
 export default async function ClientKitPage() {
   await requireAdminPage();
   const [{ rows, owner, folders }, settings] = await Promise.all([listKitRows(), getSettings()]);
@@ -64,7 +68,7 @@ export default async function ClientKitPage() {
   return (
     <Screen
       header={<ScreenHeader title="Client kit" subtitle={`${ready} of ${rows.length} clients have a kit · ${owner ? `${owner}'s Drive` : "Google Drive"} › Client Kit`} />}
-      zone={<BottomZone left={<span className="truncate text-[11px] text-white/90">{folders.join(" · ")}</span>} right={<BarIcon href="/admin/clients" label="Clients" tone="white"><Building2 size={20} /></BarIcon>} />}
+      zone={<KitFlowZone zone={<BottomZone left={<span className="truncate text-[11px] text-white/90">{folders.join(" · ")}</span>} right={<BarIcon href="/admin/clients" label="Clients" tone="white"><Building2 size={20} /></BarIcon>} />} />}
       className="pb-4"
     >
       <p className="px-4 pt-2 text-[11.5px] leading-snug text-muted">

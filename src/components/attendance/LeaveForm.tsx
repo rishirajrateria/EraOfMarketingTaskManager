@@ -7,7 +7,7 @@ import { SheetButtons } from "@/components/ui/CloseX";
 import { useToast } from "@/components/ui/Toast";
 
 /** Request-leave form; rendered inside a Sheet opened from the bottom bar on /leave. */
-export function LeaveForm({ defaultDate, onDone, onCancel }: { defaultDate: string; onDone?: () => void; onCancel?: () => void }) {
+export function LeaveForm({ defaultDate, onDone, inSheet = false }: { defaultDate: string; onDone?: () => void; /** in a Sheet: the primary fills the row (the corner × closes) */ inSheet?: boolean }) {
   const router = useRouter();
   const toast = useToast();
   const [pending, start] = useTransition();
@@ -40,8 +40,8 @@ export function LeaveForm({ defaultDate, onDone, onCancel }: { defaultDate: stri
       <Field label="Reason">
         <textarea className={inputCls} rows={2} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Optional" />
       </Field>
-      {onCancel ? (
-        <SheetButtons onClose={onCancel} disabled={pending}>
+      {inSheet ? (
+        <SheetButtons>
           <button type="submit" className={btnPrimary} disabled={pending}>
             Send to HR
           </button>

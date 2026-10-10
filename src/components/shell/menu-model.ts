@@ -1,6 +1,6 @@
 import {
-  BarChart3, Bell, Building2, CalendarCheck, FileText, Folder, FolderKey, HardDrive, Inbox, Layers, ListChecks, LogOut,
-  Receipt, Settings, Tag, UserRoundCheck, Users, type LucideIcon,
+  BarChart3, Bell, Building2, CalendarCheck, Clock, FileText, Folder, FolderKey, HardDrive, Inbox, Layers, ListChecks, LogOut,
+  Receipt, Settings, Tag, UserCheck, UserRoundCheck, Users, type LucideIcon,
 } from "lucide-react";
 import type { MenuCounts } from "@/server/shell/menu";
 import { inrShort } from "@/components/dashboards/format";
@@ -72,6 +72,9 @@ export function menuSections(c: MenuCounts | null): MenuSection[] {
       items: [
         { href: "/admin/dashboards?view=HR", icon: CalendarCheck, label: "HR", sub: hrSub(c) },
         { href: "/admin/dashboards?view=TASK", icon: ListChecks, label: "Tasks", sub: taskSub(c), badge: badge(k(c?.tasksLate), "amber") },
+        // the dashboards lost their action row (ADR 0016 addendum): Attendance and Inventory stay one tap away here
+        { href: "/attendance", icon: UserCheck, label: "Attendance", sub: "Mark today · leave · monthly sheet" },
+        { href: "/admin/inventory", icon: Clock, label: "Inventory", sub: "Hours available vs assigned" },
         { href: "/admin/people?role=EXECUTIVE", icon: Users, label: "Executives", sub: `${k(c?.executives)} people · specialities` },
         { href: "/admin/people?role=TEAM_LEADER", icon: UserRoundCheck, label: "Team leaders", sub: "One per team" },
         { href: "/admin/teams", icon: Layers, label: "Teams", sub: c?.teams.length ? c.teams.join(", ") : "Add your first team" },

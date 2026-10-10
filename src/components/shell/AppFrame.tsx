@@ -5,6 +5,7 @@ import { ChevronLeft } from "lucide-react";
 import { MenuTray } from "@/components/shell/MenuTray";
 import { menuStore, useMenuOpen } from "@/components/shell/menu-store";
 import { TopBar } from "@/components/shell/TopBar";
+import { GlobalNav } from "@/components/shell/GlobalNav";
 
 export type FrameUser = { id: string; name: string; role: Role; image: string | null; email?: string | null };
 
@@ -22,7 +23,9 @@ const TITLES: Record<string, string> = { payments: "Payments & finance", dashboa
 /**
  * App shell. Every page except the task dashboard (which draws the bar inside its cyan summary) gets, at the very top,
  * the shared top bar in a cyan band with rounded bottom corners, and right under it the page's own row: back arrow +
- * title (ADR 0016, prototype `pageTop` / `.pgtop`). The ☰ lives in the top bar only.
+ * title (ADR 0016, prototype `pageTop` / `.pgtop`). The ☰ lives in the top bar only. Every page, the task dashboard
+ * included, ends with the fixed bottom nav row (GlobalNav, ADR 0016 addendum); `.has-gnav` reserves its height so
+ * nothing scrolls under it and the pages' sticky bottom zones sit on top of it.
  */
 export function AppFrame({
   user,
@@ -47,11 +50,11 @@ export function AppFrame({
   const back = () => (window.history.length > 1 ? router.back() : router.push(HOME[user.role]));
 
   return (
-    <div className="phone-frame">
+    <div className="phone-frame has-gnav">
       {showHeader ? (
         <header className="sticky top-0 z-30 shrink-0">
           <div className="bg-cyan-area relative z-[1] rounded-b-[18px] px-3 pb-1.5 pt-[env(safe-area-inset-top)]">
-            <TopBar user={user} unread={unread} openRequests={openRequests} />
+            <TopBar user={user} />
           </div>
           <div className="-mt-[18px] flex h-[64px] items-center gap-1 border-b border-hair bg-glass px-2 pt-[18px] text-ink backdrop-blur-[22px] backdrop-saturate-[1.8]">
             <button type="button" onClick={back} className="flex h-10 w-9 shrink-0 items-center justify-center rounded-xl hover:bg-chip" aria-label="Back">
@@ -62,6 +65,7 @@ export function AppFrame({
         </header>
       ) : null}
       <div className="flex flex-1 flex-col">{children}</div>
+      <GlobalNav user={user} unread={unread} openRequests={openRequests} />
       {user.role === "ADMIN" ? <MenuTray open={menuOpen} onClose={() => menuStore.close()} user={{ name: user.name }} /> : null}
     </div>
   );

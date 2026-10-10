@@ -42,7 +42,7 @@ export function MarkAttendanceSheet({ target, onClose }: { target: MarkTarget | 
     });
 
   return (
-    <Sheet open onClose={onClose} title={`${target.userName} · ${target.date}`} hideClose>
+    <Sheet open onClose={onClose} title={`${target.userName} · ${target.date}`}>
       <div className="space-y-3 px-4 py-4">
         <div className="flex flex-wrap gap-2">
           {STATUS_ORDER.map((s) => (
@@ -67,7 +67,7 @@ export function MarkAttendanceSheet({ target, onClose }: { target: MarkTarget | 
         <Field label="Note">
           <input className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional" />
         </Field>
-        <SheetButtons onClose={onClose} disabled={pending} className="pt-2">
+        <SheetButtons className="pt-2">
           <button className={btnPrimary} onClick={submit} disabled={pending}>
             Save
           </button>

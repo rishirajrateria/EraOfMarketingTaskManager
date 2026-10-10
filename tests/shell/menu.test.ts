@@ -82,7 +82,9 @@ describe("admin menu counts", () => {
     expect(hrSub({ ...r.data, attendanceMarkedToday: false })).toBe("Attendance, inventory, leave");
     expect(taskSub({ ...r.data, tasksLate: 0 })).toBe("3 open");
     const hrefs = sections.flatMap((s) => s.items.map((i) => i.href));
-    for (const gone of ["/admin/invoices", "/admin/payments", "/admin/expenses", "/attendance", "/admin/inventory", "/admin/finance"]) expect(hrefs).not.toContain(gone);
+    for (const gone of ["/admin/invoices", "/admin/payments", "/admin/expenses", "/admin/finance"]) expect(hrefs).not.toContain(gone);
+    // the dashboards lost their action row (ADR 0016 addendum): Attendance and Inventory are tiles again
+    for (const back of ["/attendance", "/admin/inventory"]) expect(hrefs).toContain(back);
   });
 
   it("v3 tiles: four colour groups in order — Money, Clients, Team, Other", () => {
@@ -106,6 +108,8 @@ describe("admin menu counts", () => {
       [
         ["HR", "/admin/dashboards?view=HR"],
         ["Tasks", "/admin/dashboards?view=TASK"],
+        ["Attendance", "/attendance"],
+        ["Inventory", "/admin/inventory"],
         ["Executives", "/admin/people?role=EXECUTIVE"],
         ["Team leaders", "/admin/people?role=TEAM_LEADER"],
         ["Teams", "/admin/teams"],
@@ -148,9 +152,10 @@ describe("admin menu counts", () => {
     const all = menuSections(null);
     expect(filterSections(all, "  ")).toBe(all);
     expect(labels(filterSections(all, "kit"))).toEqual(["Client kit"]);
-    // "GST pack" lives only in the Drive folders subtitle, "attendance" only in HR's
+    // "GST pack" lives only in the Drive folders subtitle; "attendance" in HR's subtitle and the Attendance tile
     expect(labels(filterSections(all, "gst pack"))).toEqual(["Drive folders"]);
-    expect(labels(filterSections(all, "ATTENDANCE"))).toEqual(["HR"]);
+    expect(labels(filterSections(all, "ATTENDANCE"))).toEqual(["HR", "Attendance"]);
+    expect(labels(filterSections(all, "hours available"))).toEqual(["Inventory"]);
     // the section name matches every tile in it
     const money = filterSections(all, "money");
     expect(money.map((s) => s.title)).toEqual(["Money"]);

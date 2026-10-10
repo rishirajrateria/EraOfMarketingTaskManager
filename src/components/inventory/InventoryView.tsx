@@ -123,7 +123,7 @@ export function InventoryPanel({
           <InventoryTable inv={inv} />
         </>
       )}
-      <Sheet open={rangeSheet} onClose={() => setRangeSheet(false)} title="Custom range" hideClose>
+      <Sheet open={rangeSheet} onClose={() => setRangeSheet(false)} title="Custom range">
         <form
           className="space-y-3 px-4 py-4"
           onSubmit={(e) => {
@@ -140,7 +140,7 @@ export function InventoryPanel({
               <input type="date" className={inputCls} value={cTo} min={cFrom} onChange={(e) => setCTo(e.target.value)} aria-label="To" />
             </Field>
           </div>
-          <SheetButtons onClose={() => setRangeSheet(false)}>
+          <SheetButtons>
             <button type="submit" className={btnPrimary}>
               Go
             </button>

@@ -78,7 +78,7 @@ export function BottomZone({
   actions,
   className,
 }: {
-  /** a form's button row (`SheetButtons`: `[Back] [Next ———] [×]`) in place of the green / glass bar */
+  /** a form's button row (`SheetButtons`: `[Back] [Next ———]`; the bottom nav's corner × closes) in place of the green / glass bar */
   actions?: React.ReactNode;
   /** optional white strip above the green area (like the dashboard filter strip) */
   strip?: React.ReactNode;
@@ -93,7 +93,7 @@ export function BottomZone({
   className?: string;
 }) {
   return (
-    <div className={clsx("zone-top sticky bottom-0 z-20 shrink-0 pb-[env(safe-area-inset-bottom)]", className)}>
+    <div className={clsx("zone-top zone-sticky z-20 shrink-0", className)}>
       {strip ? <div className="strip-glass flex h-11 items-center gap-1.5 px-3">{strip}</div> : null}
       {rows ? <div className="bg-green-area">{rows}</div> : null}
       {actions ? (

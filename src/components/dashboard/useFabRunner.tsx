@@ -1,24 +1,25 @@
 "use client";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { KitPickerSheet } from "@/components/dashboard/KitPickerSheet";
 import type { FabItem } from "@/components/dashboard/fab-model";
 
+/** Which part of a speed-dial row was tapped: the item itself, or the eye left of its label (list items). */
+export type FabTarget = "open" | "view";
+
 /**
- * What choosing a "+" item does, shared by the dashboard speed dial and the add-task icon strip: Task / Meeting open
- * the add-task sheet, the Admin shortcuts open their screens, Client kit opens the "New client kit" picker (`sheet`).
+ * What choosing a "+" item does, shared by the bottom-nav speed dial and the add-task icon strip: Task / Meeting call
+ * `onAdd` (the add-task sheet), every other item opens its screen — a list item's eye opens its list page with the
+ * add form minimised, the item itself with the form expanded (ADR 0016 addendum).
  */
 export function useFabRunner(onAdd: (mode: "WORK" | "MEETING") => void) {
   const router = useRouter();
-  const [kitOpen, setKitOpen] = useState(false);
-  const run = useCallback(
-    (it: FabItem) => {
+  return useCallback(
+    (it: FabItem, target: FabTarget = "open") => {
+      if (target === "view" && it.view) return router.push(it.view.href);
       const a = it.action;
       if (a.kind === "add") onAdd(a.mode);
-      else if (a.kind === "href") router.push(a.href);
-      else setKitOpen(true);
+      else router.push(a.href);
     },
     [onAdd, router],
   );
-  return { run, sheet: <KitPickerSheet open={kitOpen} onClose={() => setKitOpen(false)} /> };
 }

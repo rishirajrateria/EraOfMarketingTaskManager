@@ -4,7 +4,7 @@ import { BarChip, BottomZone } from "@/components/ui/BottomZone";
 import { Sheet } from "@/components/ui/Sheet";
 import { Field, btnDanger, btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
 import { SheetButtons } from "@/components/ui/CloseX";
-import { useFromAdd } from "@/components/dashboard/useFromAdd";
+import { useClosablePage } from "@/components/shell/useClosablePage";
 import { SegButton } from "@/components/ui/Controls";
 import { ScreenHeader } from "@/components/admin/AdminUi";
 import { useAction } from "@/components/finance/useAction";
@@ -35,8 +35,9 @@ const SALARY_RULE = (first: string): RepeatRule => ({ freq: "MONTHLY", interval:
 /** Add / edit a bill (prototype `billEditor`): a page, not a sheet. The schedule freezes once a payment is recorded. */
 export function BillEditor({ bill, categories: initialCats, staff, payees, today }: Props) {
   const { pending, run, router, toast } = useAction();
-  const back = useFromAdd();
   const isNew = !bill;
+  // New expense is a closable page: the corner × goes back (to the dashboard when the "+" opened it).
+  useClosablePage("/admin/expenses", isNew);
   const hasPaid = !!bill?.occurrences.some((o) => o.status === "PAID");
   const nextDue = bill?.occurrences.find((o) => o.status === "DUE");
   const [categories, setCategories] = useState(initialCats);
@@ -186,10 +187,10 @@ export function BillEditor({ bill, categories: initialCats, staff, payees, today
         <datalist id="payees">{payees.map((p) => <option key={p} value={p} />)}</datalist>
       </div>
       {isNew ? (
-        // New expense: [Save ———] [×]; the × goes back to the dashboard when the "+" opened it (`from=add`).
+        // New expense: [Save ————]; the bottom nav's corner × closes the page.
         <BottomZone
           actions={
-            <SheetButtons onClose={() => back.done(() => router.push("/admin/expenses"))}>
+            <SheetButtons>
               <button type="button" className={btnPrimary} disabled={pending} onClick={save}>{pending ? "Saving…" : "Save"}</button>
             </SheetButtons>
           }

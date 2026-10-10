@@ -47,7 +47,7 @@ export function RepeatSheet({ open, onClose, value, base, onDone, onClear, title
   const toggleDay = (d: number) => set({ days: r.days.includes(d) ? (r.days.length > 1 ? r.days.filter((x) => x !== d) : r.days) : [...new Set([...r.days, d])] });
 
   return (
-    <Sheet open={open} onClose={onClose} title={title} hideClose>
+    <Sheet open={open} onClose={onClose} title={title}>
       <div className="px-4 pb-5 pt-1 text-ink">
         <div className="recsum mb-3 mt-1" aria-live="polite">
           ⟳ {describeRule(r)}
@@ -163,7 +163,7 @@ export function RepeatSheet({ open, onClose, value, base, onDone, onClear, title
         ) : null}
         {r.ends === "UNTIL" ? <input type="date" aria-label="Repeat until" className={clsx(inputCls, "mt-2")} value={r.until} min={base} onChange={(e) => set({ until: e.target.value })} /> : null}
 
-        <SheetButtons onClose={onClose} className="mt-4">
+        <SheetButtons className="mt-4">
           {onClear ? (
             <button
               type="button"

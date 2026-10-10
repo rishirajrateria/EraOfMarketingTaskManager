@@ -333,7 +333,7 @@ export function EditTaskSheet({
               />
             </Field>
           </div>
-          <SheetButtons onClose={onClose} className="pt-2">
+          <SheetButtons className="pt-2">
             <button
               type="submit"
               className={btnPrimary}

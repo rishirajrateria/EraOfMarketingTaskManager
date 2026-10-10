@@ -67,7 +67,7 @@ export function NotificationFeed({ groups, unread, filter, links }: { groups: { 
     });
 
   const zone = (
-    <section className="zone-top bar-glass sticky bottom-0 z-20 shrink-0 border-t border-hair pb-[env(safe-area-inset-bottom)] pt-1" aria-label="Notifications">
+    <section className="zone-top bar-glass zone-sticky z-20 shrink-0 border-t border-hair pt-1" aria-label="Notifications">
       <FilterRow
         dense
         all={false}

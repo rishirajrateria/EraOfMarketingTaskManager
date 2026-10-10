@@ -32,7 +32,7 @@ export function RepeatPicker({ init, baseKey, title, onDone, onClose }: { init: 
   ];
   const unit = UNIT[r.freq];
   return (
-    <Sheet open onClose={onClose} title={title ?? "Repeat"} hideClose>
+    <Sheet open onClose={onClose} title={title ?? "Repeat"}>
       <div className="px-4 py-3">
         <div className="glass-card px-3 py-2 text-sm font-semibold">⟳ {describeRule(r)}</div>
         <GroupLabel className="mt-3">Quick pick</GroupLabel>
@@ -105,7 +105,7 @@ export function RepeatPicker({ init, baseKey, title, onDone, onClose }: { init: 
           </div>
         ) : null}
         {r.endsType === "UNTIL" ? <input type="date" className={`${inputCls} mt-2`} value={r.endsUntil ?? ""} onChange={(e) => up({ endsUntil: e.target.value || null })} /> : null}
-        <SheetButtons onClose={onClose} className="mt-4">
+        <SheetButtons className="mt-4">
           <button type="button" className={btnPrimary} disabled={r.endsType === "UNTIL" && !r.endsUntil} onClick={() => onDone({ ...r, anchorDate: baseKey })}>Done</button>
         </SheetButtons>
       </div>

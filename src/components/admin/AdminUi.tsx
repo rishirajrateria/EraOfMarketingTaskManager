@@ -195,12 +195,12 @@ export function ColourInput({ value, onChange }: { value: string; onChange: (v: 
 }
 
 /**
- * Sticky footer of the form Sheets: `[extra] [Save ————] [×]` — the blue × closes (the "+ → ×" convention, ADR 0016
- * addendum). Open these sheets with `hideClose` so the title row has no second ✕.
+ * Sticky footer of the form Sheets: `[extra] [Save ————]`. Closing is the bottom row's corner × (one close control,
+ * ADR 0016 addendum), so the form draws no × of its own.
  */
-export function FormFooter({ busy, onCancel, submitLabel = "Save", extra }: { busy: boolean; onCancel: () => void; submitLabel?: string; extra?: React.ReactNode }) {
+export function FormFooter({ busy, submitLabel = "Save", extra }: { busy: boolean; submitLabel?: string; extra?: React.ReactNode }) {
   return (
-    <SheetButtons onClose={onCancel} disabled={busy} className="sticky bottom-0 -mx-4 px-4 py-3 backdrop-blur-xl">
+    <SheetButtons className="sticky bottom-0 -mx-4 px-4 py-3 backdrop-blur-xl">
       {extra}
       <button type="submit" className={btnPrimary} disabled={busy}>
         {busy ? "Saving…" : submitLabel}

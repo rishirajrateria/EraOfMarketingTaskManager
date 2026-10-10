@@ -1,5 +1,4 @@
 "use client";
-import { useFromAdd } from "@/components/dashboard/useFromAdd";
 import { useState } from "react";
 import type { Role } from "@prisma/client";
 import { Sheet } from "@/components/ui/Sheet";
@@ -8,6 +7,9 @@ import { btnDanger, btnSecondary } from "@/components/ui/Field";
 import { BarChip, BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
 import { EmptyState, ListRow, Screen, ScreenHeader, SectionLabel, StatusPill, useAdminAction } from "@/components/admin/AdminUi";
 import { PeopleForm, type PeopleFormValues } from "@/components/admin/PeopleForm";
+import { PeekZone } from "@/components/shell/PeekBar";
+import { useAddForm } from "@/components/shell/useAddForm";
+import { LIST_FLOWS } from "@/components/shell/list-flow";
 import { createUser, deactivateUser, reactivateUser, updateUser } from "@/server/admin/actions";
 import type { LeaderOption, PersonRow, TeamOption, WorkTypeOption } from "@/server/admin/queries";
 
@@ -21,8 +23,14 @@ const GROUPS: { role: Role; label: string }[] = [
 ];
 
 const TITLE: Partial<Record<Role, string>> = { EXECUTIVE: "Add Executive", TEAM_LEADER: "Add Team Leader", HR: "Add HR" };
+/** The "+" list flow's minimised bar (ADR 0016 addendum). */
+const PEEK: Partial<Record<Role, string>> = { EXECUTIVE: LIST_FLOWS.EXECUTIVE.peek, TEAM_LEADER: LIST_FLOWS.TEAM_LEADER.peek };
 
-/** /admin/people — SPEC §4 and §11.7. */
+/**
+ * /admin/people — SPEC §4 and §11.7. `?add=1` opens the invite form for `initialRole`; from the "+" speed dial
+ * (`&from=add`, or `?add=min` from its eye) it is the list flow: the form minimises to a bar above the bottom nav
+ * (useAddForm). Editing a person is its own sheet and always just closes back to the list.
+ */
 export function PeopleManager({
   users,
   teams,
@@ -43,49 +51,53 @@ export function PeopleManager({
   meId: string;
   /** `?edit=<id>` (the card's "Add number", ADR 0017): open that person's form straight away. */
   editId?: string | null;
-  /** `?add=1` (dashboard "+" speed-dial, ADR 0011 v3): open the invite form for `initialRole` on load. */
+  /** `?add=1`: open the invite form for `initialRole` on load. */
   openAdd?: boolean;
 }) {
   const { busy, run } = useAdminAction();
+  const add = useAddForm(openAdd);
+  const [formKey, setFormKey] = useState(0); // a blank invite form after each save
   const [editing, setEditing] = useState<PersonRow | null>(() => users.find((u) => u.id === editId) ?? null);
-  const [open, setOpen] = useState(() => !!editing || openAdd);
   const [filter, setFilter] = useState<Role | null>(null);
-  const back = useFromAdd(); // opened from the dashboard "+": closing or saving returns there
-  const close = () => {
-    setOpen(false);
-    setEditing(null);
-    back.done();
-  };
+  const closeEdit = () => setEditing(null);
+  const title = TITLE[initialRole] ?? "Add person";
 
-  const submit = async (values: PeopleFormValues) => {
-    const res = editing ? await run(updateUser({ ...values, id: editing.id }), "Saved") : await run(createUser(values), "Added and invited");
-    if (res) close();
+  const invite = async (values: PeopleFormValues) => {
+    if (!(await run(createUser(values), "Added and invited"))) return;
+    setFormKey((k) => k + 1);
+    add.saved();
+  };
+  const save = async (values: PeopleFormValues) => {
+    if (editing && (await run(updateUser({ ...values, id: editing.id }), "Saved"))) closeEdit();
   };
   const toggleActive = async (u: PersonRow) => {
-    const res = await run(u.active ? deactivateUser(u.id) : reactivateUser(u.id), u.active ? "Deactivated" : "Reactivated");
-    if (res) close();
+    if (await run(u.active ? deactivateUser(u.id) : reactivateUser(u.id), u.active ? "Deactivated" : "Reactivated")) closeEdit();
   };
 
   const ordered = [...GROUPS].sort((a, b) => (a.role === initialRole ? -1 : b.role === initialRole ? 1 : 0));
   const present = ordered.filter((g) => users.some((u) => u.role === g.role));
+  const formProps = { defaultRole: initialRole, teams, leaders, workTypes, workspaceDomains, busy };
 
-  const zone = (
+  const rolePills = (
+    <ZoneRow label="Role">
+      <ZonePill active={filter === null} onClick={() => setFilter(null)}>
+        All
+      </ZonePill>
+      {present.map((g) => (
+        <ZonePill key={g.role} active={filter === g.role} onClick={() => setFilter(filter === g.role ? null : g.role)}>
+          {g.role === "CA" ? "CA (parked)" : g.label}
+        </ZonePill>
+      ))}
+    </ZoneRow>
+  );
+  const zone = add.inFlow ? (
+    <PeekZone label={PEEK[initialRole] ?? "Add person"} onExpand={add.show} rows={rolePills} />
+  ) : (
     <BottomZone
       menu
-      rows={
-        <ZoneRow label="Role">
-          <ZonePill active={filter === null} onClick={() => setFilter(null)}>
-            All
-          </ZonePill>
-          {present.map((g) => (
-            <ZonePill key={g.role} active={filter === g.role} onClick={() => setFilter(filter === g.role ? null : g.role)}>
-              {g.role === "CA" ? "CA (parked)" : g.label}
-            </ZonePill>
-          ))}
-        </ZoneRow>
-      }
+      rows={rolePills}
       right={
-        <BarChip label={TITLE[initialRole] ?? "Add person"} onClick={() => setOpen(true)}>
+        <BarChip label={title} onClick={add.show}>
           + Add
         </BarChip>
       }
@@ -121,32 +133,21 @@ export function PeopleManager({
                   </span>
                 }
                 inactive={!u.active}
-                onClick={() => {
-                  setEditing(u);
-                  setOpen(true);
-                }}
+                onClick={() => setEditing(u)}
               />
             ))}
           </section>
         );
       })}
 
-      <Sheet open={open} onClose={close} title={editing ? "Edit person" : (TITLE[initialRole] ?? "Add person")} hideClose>
-        {open ? (
+      <Sheet open={add.open || add.minimised} minimised={add.minimised} onClose={add.dismiss} onCornerClose={add.cancel} title={title}>
+        <PeopleForm key={`new-${formKey}`} user={null} {...formProps} onSubmit={invite} />
+      </Sheet>
+      <Sheet open={!!editing} onClose={closeEdit} title="Edit person">
+        {editing ? (
           <>
-            <PeopleForm
-              key={editing?.id ?? "new"}
-              user={editing}
-              defaultRole={initialRole}
-              teams={teams}
-              leaders={leaders}
-              workTypes={workTypes}
-              workspaceDomains={workspaceDomains}
-              busy={busy}
-              onSubmit={submit}
-              onCancel={close}
-            />
-            {editing && editing.id !== meId ? (
+            <PeopleForm key={editing.id} user={editing} {...formProps} onSubmit={save} />
+            {editing.id !== meId ? (
               <div className="px-4 pb-6 pt-2">
                 <button type="button" className={editing.active ? btnDanger : btnSecondary} disabled={busy} onClick={() => toggleActive(editing)}>
                   {editing.active ? "Deactivate user" : "Reactivate user"}
@@ -162,7 +163,6 @@ export function PeopleManager({
     </Screen>
   );
 }
-
 
 /** "✓ Reels" chips under an executive / team leader (ADR 0008). */
 function SpecialityChips({ names }: { names: string[] }) {

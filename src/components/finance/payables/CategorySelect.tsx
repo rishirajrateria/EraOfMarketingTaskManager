@@ -34,12 +34,12 @@ export function CategorySelect({ value, categories, onChange, onCategories }: { 
       </select>
       <button type="button" className="glass-chip h-10 shrink-0 rounded-full px-3 text-xs font-medium" onClick={() => setAdding(true)}>+ New</button>
       {adding ? (
-        <Sheet open onClose={() => setAdding(false)} title="New category" hideClose>
+        <Sheet open onClose={() => setAdding(false)} title="New category">
           <div className="space-y-3 px-4 py-4">
             <Field label="Name" hint="Added to the list in Settings">
               <input className={inputCls} placeholder="e.g. Equipment" value={name} autoFocus onChange={(e) => setName(e.target.value)} />
             </Field>
-            <SheetButtons onClose={() => setAdding(false)}>
+            <SheetButtons>
               <button type="button" className={btnPrimary} disabled={pending} onClick={add}>Add</button>
             </SheetButtons>
           </div>

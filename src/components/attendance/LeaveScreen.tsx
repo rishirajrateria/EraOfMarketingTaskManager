@@ -27,8 +27,8 @@ export function LeaveScreen({ leaves, defaultDate, isAdmin }: { leaves: LeaveSum
       <div className="pb-3">
         <LeaveList leaves={leaves} />
       </div>
-      <Sheet open={open} onClose={() => setOpen(false)} title="Request leave" hideClose>
-        {open ? <LeaveForm defaultDate={defaultDate} onDone={() => setOpen(false)} onCancel={() => setOpen(false)} /> : null}
+      <Sheet open={open} onClose={() => setOpen(false)} title="Request leave">
+        {open ? <LeaveForm defaultDate={defaultDate} onDone={() => setOpen(false)} inSheet /> : null}
       </Sheet>
     </Screen>
   );

@@ -19,7 +19,7 @@ type Props = { rows: InvoiceRow[]; tab: InvoiceTab; clients: ClientOpt[]; compan
 export function InvoiceListView({ rows, tab, clients, companyStateCode, defaultGst, defaultTerms, canWrite, tz, openNew = false, holdClientIds }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(openNew);
-  // Opened from the dashboard "+" (`from=add`): the × goes back to the dashboard.
+  // Opened from the "+" (`from=add`): the corner × (the wizard sheet's close) goes back to the dashboard.
   const back = useFromAdd();
   const cancelNew = () => {
     setOpen(false);
@@ -95,7 +95,7 @@ export function InvoiceListView({ rows, tab, clients, companyStateCode, defaultG
         }
       />
       <Sheet open={open} onClose={cancelNew} full>
-        {open ? <InvoiceWizard clients={clients} companyStateCode={companyStateCode} defaults={{ gstPercent: defaultGst, paymentTerms: defaultTerms }} onClose={() => setOpen(false)} onCancel={cancelNew} /> : null}
+        {open ? <InvoiceWizard clients={clients} companyStateCode={companyStateCode} defaults={{ gstPercent: defaultGst, paymentTerms: defaultTerms }} onClose={() => setOpen(false)} /> : null}
       </Sheet>
     </div>
   );

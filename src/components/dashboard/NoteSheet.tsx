@@ -30,7 +30,7 @@ export function NoteSheet({
   }, [open]);
   const disabled = busy || (required && text.trim().length === 0);
   return (
-    <Sheet open={open} onClose={onClose} title={title} hideClose>
+    <Sheet open={open} onClose={onClose} title={title}>
       <form
         className="space-y-3 px-4 pb-6 pt-3"
         onSubmit={(e) => {
@@ -39,7 +39,7 @@ export function NoteSheet({
         }}
       >
         <textarea autoFocus rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder} className={inputCls} maxLength={2000} />
-        <SheetButtons onClose={onClose}>
+        <SheetButtons>
           <button type="submit" className={btnPrimary} disabled={disabled}>
             {submitLabel}
           </button>

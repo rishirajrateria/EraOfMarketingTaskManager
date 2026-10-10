@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { NEW_CLIENT_HREF, dashNavItems, fabMenu, fabOrder, kitHint, kitHref, sortKitClients } from "@/components/dashboard/fab-model";
+import { NEW_CLIENT_HREF, fabMenu, fabOrder, kitHint, kitHref, sortKitClients } from "@/components/dashboard/fab-model";
 
-/** Dashboard "+" speed dial (ADR 0016 addendum): order bottom → top, role filtering, links. */
+/** Bottom-nav "+" speed dial (ADR 0016 addendum): order bottom → top, role filtering, links, the list items' eyes. */
 const keys = (role: Parameters<typeof fabMenu>[0]) => fabOrder(fabMenu(role)).map((i) => i.key);
 
 describe("fab menu model", () => {
@@ -27,7 +27,7 @@ describe("fab menu model", () => {
     expect(fabMenu("ADMIN").more.every((i) => !i.main)).toBe(true);
   });
 
-  it("links Admin shortcuts to the existing create screens, Client kit to the picker", () => {
+  it("links Admin shortcuts to their screens; list items open their list with the add form expanded", () => {
     const links = Object.fromEntries(fabMenu("ADMIN").more.map((i) => [i.key, i.action.kind === "href" ? i.action.href : i.action.kind]));
     expect(links).toEqual({
       INVOICE: "/admin/invoices?new=1&from=add",
@@ -36,8 +36,32 @@ describe("fab menu model", () => {
       WORK_TYPE: "/admin/work-types?add=1&from=add",
       TEAM: "/admin/teams?add=1&from=add",
       TEAM_LEADER: "/admin/people?role=TEAM_LEADER&add=1&from=add",
-      KIT: "kit",
+      KIT: "/admin/client-kit?add=1&from=add",
     });
+  });
+
+  it("gives the five list items an eye: the same list with the add form minimised, and a View … label", () => {
+    const eyes = Object.fromEntries(fabOrder(fabMenu("ADMIN")).filter((i) => i.view).map((i) => [i.key, i.view]));
+    expect(eyes).toEqual({
+      EXECUTIVE: { href: "/admin/people?role=EXECUTIVE&add=min&from=add", label: "View executives" },
+      WORK_TYPE: { href: "/admin/work-types?add=min&from=add", label: "View work types" },
+      TEAM: { href: "/admin/teams?add=min&from=add", label: "View teams" },
+      TEAM_LEADER: { href: "/admin/people?role=TEAM_LEADER&add=min&from=add", label: "View team leaders" },
+      KIT: { href: "/admin/client-kit?add=min&from=add", label: "View client kits" },
+    });
+  });
+
+  it("has no eye on Task, Meeting, Invoice or Expense, nor for Team Leaders and Executives", () => {
+    const plain = fabOrder(fabMenu("ADMIN")).filter((i) => !i.view).map((i) => i.key);
+    expect(plain).toEqual(["TASK", "MEETING", "INVOICE", "EXPENSE"]);
+    for (const role of ["TEAM_LEADER", "EXECUTIVE"] as const) expect(fabOrder(fabMenu(role)).some((i) => i.view)).toBe(false);
+  });
+
+  it("eye and item of a list item point at the same page", () => {
+    for (const it of fabMenu("ADMIN").more.filter((i) => i.view)) {
+      const open = it.action.kind === "href" ? it.action.href : "";
+      expect(it.view!.href.replace("add=min", "add=1")).toBe(open);
+    }
   });
 
   it("gives the add-task strip its short labels (prototype renderAddNav)", () => {
@@ -47,21 +71,6 @@ describe("fab menu model", () => {
   it("colours by category: money green, team yellow, client blue", () => {
     const tone = Object.fromEntries(fabOrder(fabMenu("ADMIN")).map((i) => [i.key, i.tone]));
     expect(tone).toMatchObject({ TASK: "task", MEETING: "meet", INVOICE: "money", EXPENSE: "money", EXECUTIVE: "team", WORK_TYPE: "team", TEAM: "team", TEAM_LEADER: "team", KIT: "client" });
-  });
-});
-
-describe("dashboard nav row", () => {
-  it("Admin: Dashboard · Requests · Notifications · Profile with their links", () => {
-    expect(dashNavItems("ADMIN").map((i) => [i.label, i.href])).toEqual([
-      ["Dashboard", "/admin/dashboards"],
-      ["Requests", "/admin/requests"],
-      ["Notifications", "/notifications"],
-      ["Profile", "/me"],
-    ]);
-  });
-
-  it("Team Leaders and Executives: Notifications and Profile only", () => {
-    for (const role of ["TEAM_LEADER", "EXECUTIVE"] as const) expect(dashNavItems(role).map((i) => i.key)).toEqual(["NOTIFICATIONS", "PROFILE"]);
   });
 });
 

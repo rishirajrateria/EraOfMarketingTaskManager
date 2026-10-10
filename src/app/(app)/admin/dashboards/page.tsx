@@ -6,7 +6,6 @@ import { dashRange } from "@/server/dashboards/period";
 import { financeDashboard } from "@/server/dashboards/finance";
 import { hrDashboard } from "@/server/dashboards/hr";
 import { taskDashboard } from "@/server/dashboards/tasks";
-import { financeNeeds } from "@/server/requests/inbox";
 import { DashboardsScreen } from "@/components/dashboards/DashboardsScreen";
 import { FinanceBody } from "@/components/dashboards/FinanceBody";
 import { HrBody } from "@/components/dashboards/HrBody";
@@ -26,7 +25,7 @@ export default async function DashboardsPage({ searchParams }: { searchParams: P
   const now = new Date();
   const tz = (await getSettings()).timezone;
   const range = dashRange(p.period, now, tz);
-  const [teams, clients, body, requests] = await Promise.all([
+  const [teams, clients, body] = await Promise.all([
     prisma.team.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.client.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     p.view === "FIN"
@@ -34,12 +33,9 @@ export default async function DashboardsPage({ searchParams }: { searchParams: P
       : p.view === "HR"
         ? hrDashboard(p, now).then((d) => <HrBody data={d} />)
         : taskDashboard(p, now).then((d) => <TaskBody data={d} />),
-    p.view === "FIN"
-      ? financeNeeds(now).then((x) => x.length)
-      : prisma.request.count({ where: { status: "OPEN", ...(p.view === "HR" ? { type: { in: ["LEAVE", "APPROVED_CHANGE"] } } : { targetRole: "ADMIN", type: { notIn: ["LEAVE", "APPROVED_CHANGE"] } }) } }),
   ]);
   return (
-    <DashboardsScreen params={raw} teams={teams} clients={clients} caption={`${range.label} · ${range.detail}`} requests={requests}>
+    <DashboardsScreen params={raw} teams={teams} clients={clients} caption={`${range.label} · ${range.detail}`}>
       {body}
     </DashboardsScreen>
   );

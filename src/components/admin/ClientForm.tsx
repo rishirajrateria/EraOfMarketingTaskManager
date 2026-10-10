@@ -31,7 +31,7 @@ const COUNTRY_CURRENCY: Record<string, string> = { IN: "INR", US: "USD", GB: "GB
 type Values = ClientInput & { tdsPercent?: number | string | null };
 
 /** Add / edit client (SPEC §11.1 + ADR 0005/0006): business name + PAN for the invoice, country, GST state (locked to the GSTIN), phone, WhatsApp, TDS %. */
-export function ClientForm({ client, busy, companyStateCode, onSubmit, onCancel, onToggle }: { client: ClientRow | null; busy: boolean; companyStateCode: string | null; onSubmit: (v: ClientInput) => void; onCancel: () => void; onToggle?: () => void }) {
+export function ClientForm({ client, busy, companyStateCode, onSubmit, onToggle }: { client: ClientRow | null; busy: boolean; companyStateCode: string | null; onSubmit: (v: ClientInput) => void; onToggle?: () => void }) {
   const [v, setV] = useState<Values>({
     name: client?.name ?? "",
     businessName: client?.businessName ?? "",
@@ -164,7 +164,6 @@ export function ClientForm({ client, busy, companyStateCode, onSubmit, onCancel,
       ) : null}
       <FormFooter
         busy={busy}
-        onCancel={onCancel}
         extra={
           onToggle ? (
             <button type="button" className={btnSecondary} disabled={busy} onClick={onToggle}>{client?.active ? "Deactivate" : "Activate"}</button>

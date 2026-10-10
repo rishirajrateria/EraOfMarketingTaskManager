@@ -2,56 +2,79 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { clsx } from "@/lib/clsx";
+import { useCornerClose } from "@/components/shell/corner-store";
 
 /**
- * Bottom sheet / full-screen sheet used for action menus and forms (glass refresh: 26px top radius, grab handle,
+ * Bottom sheet / full-height sheet used for action menus and forms (glass refresh: 26px top radius, grab handle,
  * 18px title, 20px side padding = 4px here + the children's own 16px).
  * Portalled to <body>: `.phone-frame` and the glass cards use backdrop-filter, which would otherwise make the
  * fixed overlay size itself to that ancestor instead of the viewport (same reason as MenuTray).
+ *
+ * One close control (ADR 0016 addendum, prototype `.hasnav .dim` / `cornerMode`): the sheet and its dim stop above
+ * the 64px bottom row (+ safe area) so the row's corner button stays visible — it turns into × while the sheet is open
+ * and closes it (`onCornerClose`, default `onClose`). Sheets draw no ✕ of their own. Escape and a tap outside still
+ * run `onClose`. Only the add-task screen (`cover`) covers the row: it brings its own row with the ×.
  */
 export function Sheet({
   open,
   onClose,
+  onCornerClose,
   children,
   full,
+  cover = false,
   title,
-  hideClose,
+  minimised = false,
 }: {
   open: boolean;
+  /** Escape / tap outside (and the corner × unless `onCornerClose` says otherwise). */
   onClose: () => void;
+  /** What the corner × does when it differs from `onClose` (the "+" list flow: × leaves, tap outside minimises). */
+  onCornerClose?: () => void;
   children: React.ReactNode;
   full?: boolean;
+  /** Covers the bottom row too (the add-task screen, which has its own row and ×). */
+  cover?: boolean;
   title?: string;
-  /** The sheet ends with the blue × (`SheetButtons`), so the title row drops its own ✕. Escape / backdrop still close. */
-  hideClose?: boolean;
+  /**
+   * Kept mounted but hidden (the "+" flow's add form minimised to the bar above the bottom nav, ADR 0016 addendum):
+   * what was typed survives until the bar expands it again.
+   */
+  minimised?: boolean;
 }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  const shown = open && !minimised;
+  useCornerClose(onCornerClose ?? onClose, shown);
   useEffect(() => {
-    if (!open) return;
+    if (!shown) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [shown, onClose]);
   if (!open || !mounted) return null;
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(2,12,24,.35)] backdrop-blur-[2px]" onClick={onClose} role="dialog" aria-modal>
+    <div
+      hidden={minimised}
+      className={clsx(
+        "fixed inset-x-0 top-0 z-50 flex items-end justify-center bg-[rgba(2,12,24,.35)] backdrop-blur-[2px]",
+        // inside a sheet the page's sticky zones need no room for the nav (`.zone-sticky`)
+        cover ? "bottom-0" : "bottom-[calc(64px+env(safe-area-inset-bottom))] [--gnav-h:0px] [--gnav-safe:0px]",
+      )}
+      onClick={onClose}
+      role="dialog"
+      aria-modal
+    >
       <div
         onClick={(e) => e.stopPropagation()}
         className={clsx(
           "sheet-up sheet-panel w-full max-w-[480px] overflow-y-auto text-ink",
-          full ? "h-[100dvh]" : "max-h-[88dvh] rounded-t-[26px] px-1 pb-[env(safe-area-inset-bottom)]",
+          full ? (cover ? "h-[100dvh]" : "h-full") : "max-h-[min(88dvh,calc(100%-12px))] rounded-t-[26px] px-1 pb-3.5",
         )}
       >
         {full ? null : <div className="mx-auto mb-3 mt-2.5 h-[5px] w-10 rounded-full bg-muted opacity-35" aria-hidden />}
         {title ? (
-          <div className={clsx("flex items-center justify-between gap-2 px-4", full ? "sticky top-0 z-10 border-b border-hair bg-sheet pb-3 pt-3 backdrop-blur-md" : "-mt-1 pb-2")}>
+          <div className={clsx("flex items-center gap-2 px-4", full ? "sticky top-0 z-10 border-b border-hair bg-sheet pb-3 pt-3 backdrop-blur-md" : "-mt-1 pb-2")}>
             <h2 className="text-[18px] font-bold tracking-[-.015em]">{title}</h2>
-            {hideClose ? null : (
-              <button className="touch-target -mr-2 text-muted" onClick={onClose} aria-label="Close">
-                ✕
-              </button>
-            )}
           </div>
         ) : null}
         {children}

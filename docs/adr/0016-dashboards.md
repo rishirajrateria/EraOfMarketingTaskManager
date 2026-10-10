@@ -128,6 +128,7 @@ Reference: prototype `fabItems`, `openFab`, `.fabdim`, `.fabi`, `kitPicker`.
   buttons (ADR 0014) do the rest — no second create path.
 
 ### Bottom nav rows and the "+ → ×" convention (prototype `#dashNav`, `renderAddNav`, `cancelX`)
+(The nav row is on every screen and the + itself is the × now — see the next section.)
 - Dashboard bottom: the time pills (📅 · Today · Tomorrow · Oldest) get their own full-width row; below it a 64px glass
   nav row: Dashboard (`/admin/dashboards`) · Requests (`/admin/requests`, red count) · Notifications (`/notifications`,
   count) · Profile (`/me`, blue-gradient initials) sharing the width, then the 52px blue + (speed dial; its backdrop
@@ -137,7 +138,7 @@ Reference: prototype `fabItems`, `openFab`, `.fabdim`, `.fabi`, `kitPicker`.
   type toggles (selected = 2px blue ring, `aria-pressed`; they replace the old Meet / Work buttons), Admin only a
   scrolling strip of the speed dial's other items (Invoice · Expense · Exec · Work · Team · Leader · Kit, right-edge
   fade) — tapping one closes the sheet and runs the item (`useFabRunner`) — and the 52px blue × in the + 's exact spot.
-- Sheet forms: one shared `CloseX` / `SheetButtons` (`src/components/ui/CloseX.tsx`): a plain "Cancel" that only closes
+- Sheet forms (superseded below by the one corner close control): one shared `CloseX` / `SheetButtons` (`src/components/ui/CloseX.tsx`): a plain "Cancel" that only closes
   becomes the 52px blue rounded-16 × placed last, the primary action filling the rest (`[Save ————] [×]`); such sheets
   pass `hideClose` so the title row has no second ✕. Applied to `FormFooter` (people, teams, work types, clients), the
   kit picker, Which day?, note / assign / edit-task sheets, leave, attendance, inventory range, requests note, the
@@ -150,3 +151,52 @@ Reference: prototype `fabItems`, `openFab`, `.fabdim`, `.fabi`, `kitPicker`.
   screens behave as before. New invoice wizard: `[Next ———][×]` on step 1, `[Back][Next ———][×]` after (the header ✕
   is gone; a saved invoice still opens its detail page); new expense: `[Save ———][×]` (editing keeps Delete · Save);
   `BottomZone actions` renders such a button row in place of the green / glass bar.
+
+### Bottom nav on every screen, one close control, the "+" list flow (2026-10-10, later the same day)
+Reference: prototype `#gNav`, `.hasnav`, `navActive`, `renderDashNav`, `afterShow`, `.fabeye`, `openListFlow`,
+`renderPeek`, `.peekbtn`, `cornerMode` / `syncCorner` / `cornerTap`, `pageX`, `.hasnav .dim`, `.dview`. Supersedes the
+parts of the two sections above that put the nav row on the dashboard only, kept the full top bar elsewhere and drew
+a separate × in every form.
+- **Bottom nav everywhere.** `GlobalNav` (`src/components/shell/GlobalNav.tsx`) is rendered once by `AppFrame` for
+  every signed-in screen, the task dashboard included: fixed 64px glass + safe-area inset, centred like
+  `.phone-frame`. `.has-gnav` on the frame sets `--gnav-h` (64px + inset) and pads the frame by it; every sticky
+  bottom zone (`BottomZone`, notifications, requests, dashboards) uses `.zone-sticky` (`bottom: var(--gnav-h)`) so it
+  sits on the nav, never behind it; the dashboard is `100dvh − --gnav-h` tall. Not on login, and covered by the
+  add-task screen (its own row). The top bar of every page is now ☰ (Admin) + Gmail · Drive · WhatsApp only.
+- **Tabs toggle** (`nav-model.ts`, tested): Admin Dashboard (`/admin/dashboards`) · Requests (`/admin/requests`, red
+  count) · Notifications (count) · Profile; HR keeps the Requests tab its top bar had (`/requests/leave`); Team
+  Leaders, Executives (and parked CA) Notifications · Profile. The tab whose path (or sub-path) is open is highlighted
+  (`--nav-on` blue icon + label on a `--nav-on-bg` square, ring on the avatar, `aria-current="page"`); tapping it
+  again goes home (`/dashboard`; HR `/attendance`), tapping another opens that one. Plain links, so history works.
+- **The + on every page.** Same speed dial; Task / Meeting open the dashboard's add-task sheet in place when the
+  dashboard is mounted (`add-task-store`), elsewhere `/dashboard?add=WORK|MEETING` (the sheet drops `?add` on close).
+  HR / CA have no +.
+- **Eye = view** (`fab-model` `view`, `list-flow.ts`, tested): Executive, Work type, Team, Team leader and Client kit
+  get a 38px glass eye left of the label (`View executives` / `View work types` / `View teams` / `View team leaders`
+  / `View client kits`; ← / → move between eye and item, ↑ / ↓ keep the column). Eye → the list page with the add
+  form minimised (`?add=min&from=add`): a 46px bar just above the nav — blue + square, "Add executive" / "Add work
+  type" / "Add team" / "Add team leader" / "New client kit", chevron — that expands it; the page's own "+ Add" is
+  hidden while in the flow (People keeps its role pills). The item itself → the same page expanded (`?add=1&from=add`)
+  instead of over the dashboard. In the flow (`useAddForm`): Escape / tap outside minimise (the draft is kept: the
+  sheet stays mounted, `hidden`), the corner × returns to `/dashboard`, a save returns to the list minimised with a
+  blank form. Expand / minimise are `history.replaceState(null, …)` (synced with `useSearchParams`, no round trip);
+  after a save `router.replace` (it supersedes the admin action's `router.refresh`, which would restore the old URL).
+  A plain `?add=1` (menu deep links) keeps its old meaning. Client kit's add form is the "New client kit" picker.
+- **One close control** (`corner-store.ts`, tested): the bottom-right button is the only ×. Every open `Sheet`
+  registers its close (`onCornerClose`, default `onClose`), and so do closable form pages (`useClosablePage`: the new
+  expense editor — back, or `/dashboard` when `from=add`); while anything is registered the + shows × (rotated 45°,
+  `aria-label="Close"`) and a tap closes the most recent one, else it opens the speed dial. Sheets and their dim stop
+  above the 64px row (+ inset) so the corner stays visible; full-height sheets (new invoice wizard, edit draft,
+  approve, edit task) too. Only the add-task screen (`Sheet cover`) covers the row; its own row's × closes an open
+  sheet first (`cornerStore.closeTop()`), then the screen, and its sheets also stop above that row. HR / CA get the ×
+  only while something is open. Tapping a tab while a sheet is open leaves the page, sheet and all.
+- Forms no longer draw a ×: `SheetButtons` is just the action row (`[Save ————]`, `[Back][Next ————]`), `FormFooter`
+  `[extra][Save ————]`, the kit picker has no button row, sheets have no title ✕ (`hideClose` is gone). Escape and a
+  tap outside still close (minimise in the list flow). Destructive confirmations keep Keep / Delete.
+- **Dashboards** (`/admin/dashboards`): the action row ([Requests][+ Invoice][+ Expense] / [Requests][Inventory]
+  [Attendance] / [Requests][Task list][+ Task]) is gone — the nav and its + cover it; the menu's Team group gains
+  Attendance (`/attendance`, user-check) and Inventory (`/admin/inventory`, clock) right after Tasks. The pill rows
+  read top → bottom Show (Finance) · Teams · Clients · When · View — View lowest, nearest the thumb.
+- **Requests** (`/admin/requests`): same rule — a screen's primary pill row sits lowest, just above the nav. The
+  Finance sub-row (All · Approvals · Payments · Expenses) sits above the inbox tabs (All · Finance · Work · HR, with
+  counts), and the Task list / Dashboards buttons are gone (the nav covers both).

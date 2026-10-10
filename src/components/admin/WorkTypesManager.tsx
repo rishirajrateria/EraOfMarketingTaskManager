@@ -1,11 +1,13 @@
 "use client";
-import { useFromAdd } from "@/components/dashboard/useFromAdd";
 import { useState } from "react";
 import { Sheet } from "@/components/ui/Sheet";
 import { Field, inputCls, btnDanger, btnSecondary } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
 import { BarChip, BottomZone } from "@/components/ui/BottomZone";
 import { EditPill, EmptyState, FormFooter, ListRow, PillPicker, Screen, ScreenHeader, SectionLabel, useAdminAction } from "@/components/admin/AdminUi";
+import { PeekZone } from "@/components/shell/PeekBar";
+import { useAddForm } from "@/components/shell/useAddForm";
+import { LIST_FLOWS } from "@/components/shell/list-flow";
 import { createWorkType, removeWorkType, setWorkTypeActive, updateWorkType } from "@/server/admin/actions";
 import type { TeamOption, WorkTypeRow } from "@/server/admin/queries";
 
@@ -14,39 +16,35 @@ type Values = { name: string; teamIds: string[] };
 /**
  * /admin/work-types — "Add Work" (SPEC §11.8, ADR 0008). Each work type belongs to one or more teams; in Add task,
  * picking a team shows only its work types. Listed grouped by team (a work type in several teams appears under each).
+ * `?add=1` opens the add form; from the "+" speed dial (`&from=add`, or `?add=min` from its eye) it is the list flow
+ * (useAddForm, ADR 0016 addendum).
  */
 export function WorkTypesManager({ workTypes, teams, openAdd = false }: { workTypes: WorkTypeRow[]; teams: TeamOption[]; openAdd?: boolean }) {
   const { busy, run } = useAdminAction();
+  const add = useAddForm(openAdd);
+  const [formKey, setFormKey] = useState(0); // a blank add form after each save
   const [editing, setEditing] = useState<WorkTypeRow | null>(null);
-  const [open, setOpen] = useState(openAdd); // `?add=1` opens the add form on load
-  const back = useFromAdd(); // opened from the dashboard "+": closing or saving returns there
-  const close = () => {
-    setOpen(false);
-    setEditing(null);
-    back.done();
-  };
+  const closeEdit = () => setEditing(null);
 
-  const submit = async (values: Values) => {
-    const payload = { ...values, colour: editing?.colour ?? "#f59e0b" };
-    const res = editing ? await run(updateWorkType({ ...payload, id: editing.id }), "Saved") : await run(createWorkType(payload), "Work type added");
-    if (res) close();
+  const create = async (values: Values) => {
+    if (!(await run(createWorkType({ ...values, colour: "#f59e0b" }), "Work type added"))) return;
+    setFormKey((k) => k + 1);
+    add.saved();
+  };
+  const save = async (values: Values) => {
+    if (editing && (await run(updateWorkType({ ...values, colour: editing.colour, id: editing.id }), "Saved"))) closeEdit();
   };
   const remove = async (w: WorkTypeRow) => {
-    const res = await run(removeWorkType(w.id), "Work type removed");
-    if (res) close();
+    if (await run(removeWorkType(w.id), "Work type removed")) closeEdit();
   };
   const restore = async (w: WorkTypeRow) => {
-    const res = await run(setWorkTypeActive(w.id, true), "Work type restored");
-    if (res) close();
+    if (await run(setWorkTypeActive(w.id, true), "Work type restored")) closeEdit();
   };
 
   const active = workTypes.filter((w) => w.active);
   const removed = workTypes.filter((w) => !w.active);
   const orphan = active.filter((w) => !w.teamIds.length);
-  const edit = (w: WorkTypeRow) => {
-    setEditing(w);
-    setOpen(true);
-  };
+  const edit = (w: WorkTypeRow) => setEditing(w);
   const row = (w: WorkTypeRow, key: string) => (
     <ListRow
       key={key}
@@ -58,11 +56,13 @@ export function WorkTypesManager({ workTypes, teams, openAdd = false }: { workTy
     />
   );
 
-  const zone = (
+  const zone = add.inFlow ? (
+    <PeekZone label={LIST_FLOWS.WORK_TYPE.peek} onExpand={add.show} />
+  ) : (
     <BottomZone
       menu
       right={
-        <BarChip label="Add work type" onClick={() => setOpen(true)}>
+        <BarChip label="Add work type" onClick={add.show}>
           + Add work
         </BarChip>
       }
@@ -96,16 +96,18 @@ export function WorkTypesManager({ workTypes, teams, openAdd = false }: { workTy
           {removed.map((w) => row(w, `off:${w.id}`))}
         </section>
       ) : null}
-      <Sheet open={open} onClose={close} title={editing ? "Edit work type" : "Add work type"} hideClose>
-        {open ? (
+      <Sheet open={add.open || add.minimised} minimised={add.minimised} onClose={add.dismiss} onCornerClose={add.cancel} title="Add work type">
+        <WorkTypeForm key={`new-${formKey}`} workType={null} teams={teams} busy={busy} onSubmit={create} />
+      </Sheet>
+      <Sheet open={!!editing} onClose={closeEdit} title="Edit work type">
+        {editing ? (
           <WorkTypeForm
-            key={editing?.id ?? "new"}
+            key={editing.id}
             workType={editing}
             teams={teams}
             busy={busy}
-            onSubmit={submit}
-            onCancel={close}
-            onRemove={editing ? () => (editing.active ? remove(editing) : restore(editing)) : undefined}
+            onSubmit={save}
+            onRemove={() => (editing.active ? remove(editing) : restore(editing))}
           />
         ) : null}
       </Sheet>
@@ -118,14 +120,12 @@ function WorkTypeForm({
   teams,
   busy,
   onSubmit,
-  onCancel,
   onRemove,
 }: {
   workType: WorkTypeRow | null;
   teams: TeamOption[];
   busy: boolean;
   onSubmit: (v: Values) => void;
-  onCancel: () => void;
   onRemove?: () => void;
 }) {
   const toast = useToast();
@@ -148,7 +148,6 @@ function WorkTypeForm({
       </Field>
       <FormFooter
         busy={busy}
-        onCancel={onCancel}
         extra={
           onRemove ? (
             <button type="button" className={workType?.active ? btnDanger : btnSecondary} disabled={busy} onClick={onRemove}>

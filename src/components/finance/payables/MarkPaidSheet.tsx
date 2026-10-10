@@ -54,7 +54,7 @@ export function MarkPaidSheet({ item, today, onClose }: { item: Item; today: str
   };
 
   return (
-    <Sheet open onClose={onClose} title={`Mark paid · ${bill.payee}`} hideClose>
+    <Sheet open onClose={onClose} title={`Mark paid · ${bill.payee}`}>
       <div className="space-y-3 px-4 py-4">
         <Field label="Amount paid (₹)" hint={occ.label || planText(bill)}>
           <input className={inputCls} type="number" min="0" step="0.01" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
@@ -96,7 +96,7 @@ export function MarkPaidSheet({ item, today, onClose }: { item: Item; today: str
             <p className="text-[11px] text-muted">You pay {inr(a - tds)} · TDS {inr(tds)} goes to the government in the payee&apos;s name</p>
           </>
         ) : null}
-        <SheetButtons onClose={onClose} className="pt-1">
+        <SheetButtons className="pt-1">
           <button type="button" className={btnPrimary} disabled={pending} onClick={submit}>{pending ? "Saving…" : "Mark paid"}</button>
         </SheetButtons>
       </div>

@@ -7,12 +7,8 @@ import { Sheet } from "@/components/ui/Sheet";
 import { SheetButtons } from "@/components/ui/CloseX";
 import { btnPrimary, inputCls } from "@/components/ui/Field";
 import { FilterStrip } from "@/components/dashboard/FilterStrip";
-import { AddSpeedDial } from "@/components/dashboard/AddSpeedDial";
-import { DashNavItems, NavRow } from "@/components/dashboard/NavRow";
 import { dayLabel } from "@/components/dashboard/summary";
 import { DockPill, FilterRow } from "@/components/ui/FilterRow";
-import type { FabItem } from "@/components/dashboard/fab-model";
-import type { TopBarUser } from "@/components/shell/TopBar";
 
 export type AddMode = "WORK" | "MEETING" | "CHOOSE";
 
@@ -45,7 +41,7 @@ function DaySheet({ open, filters, onPick, onClose }: { open: boolean; filters: 
     if (open) setDraft(filters.date ?? "");
   }, [open, filters.date]);
   return (
-    <Sheet open={open} onClose={onClose} title="Which day?" hideClose>
+    <Sheet open={open} onClose={onClose} title="Which day?">
       <div className="space-y-3 px-5 pb-6 pt-2">
         <div className="flex flex-wrap gap-2">
           <Opt on={!filters.date && !filters.quick} onClick={() => onPick(null, null)}>
@@ -65,7 +61,7 @@ function DaySheet({ open, filters, onPick, onClose }: { open: boolean; filters: 
           Or pick a date
           <input type="date" value={draft} onChange={(e) => setDraft(e.target.value)} className={clsx(inputCls, "mt-1 font-normal normal-case tracking-normal")} />
         </label>
-        <SheetButtons onClose={onClose}>
+        <SheetButtons>
           <button type="button" className={btnPrimary} onClick={() => (draft ? onPick(null, draft) : onClose())}>
             Show
           </button>
@@ -78,36 +74,27 @@ function DaySheet({ open, filters, onPick, onClose }: { open: boolean; filters: 
 /**
  * Bottom zone (prototype `prow` / `.plab` / `#dashNav`, ADR 0015 + ADR 0016 addendum): the status strip, then neutral
  * glass one-tap rows — TEAMS (TL: PEOPLE, Exec: CLIENTS) and CLIENTS (Exec: WORK) — then the time pills on their own
- * row (📅 Which day? · Today · Tomorrow · Oldest), and last the 64px nav row: Dashboard · Requests · Notifications ·
- * Profile (non-Admin: the last two) and the 52px blue + that opens the add speed dial (AddSpeedDial).
+ * row (📅 Which day? · Today · Tomorrow · Oldest). The 64px nav row with the blue + below it is the shell's bottom nav
+ * (GlobalNav), shared by every screen; the dashboard's height already leaves room for it.
  */
 export function BottomBar({
   data,
   filters,
   onChange,
-  onPick,
   onPauseAll,
-  user,
-  unread,
-  openRequests,
 }: {
   data: DashboardData;
   filters: DashboardFilters;
   onChange: (f: DashboardFilters) => void;
-  /** A speed-dial item was chosen (useFabRunner). */
-  onPick: (it: FabItem) => void;
   /** Admin only: the strip's "⏸ all". */
   onPauseAll?: () => void;
-  user: TopBarUser;
-  unread: number;
-  openRequests: number;
 }) {
   const [dayOpen, setDayOpen] = useState(false);
   const names = dockNames(data.role);
   const setRow = (key: "row1" | "row2") => (id: string | null) => onChange({ ...filters, [key]: id, pill: null });
   const quick = (q: NonNullable<DashboardFilters["quick"]>) => onChange({ ...filters, quick: filters.quick === q ? null : q, date: null, pill: null });
   return (
-    <section className="shrink-0 pb-[env(safe-area-inset-bottom)]" aria-label="Filters">
+    <section className="shrink-0" aria-label="Filters">
       <FilterStrip filters={filters} onChange={onChange} onPauseAll={data.role === "ADMIN" ? onPauseAll : undefined} />
       <div className="bar-glass border-t border-hair pt-1">
         <FilterRow label={names.row1[1]} items={data.row1} value={filters.row1} onChange={setRow("row1")} />
@@ -128,9 +115,6 @@ export function BottomBar({
           </DockPill>
         </div>
       </div>
-      <NavRow label="Dashboard" right={<AddSpeedDial role={data.role} onPick={onPick} />}>
-        <DashNavItems user={user} role={data.role} unread={unread} openRequests={openRequests} />
-      </NavRow>
       <DaySheet
         open={dayOpen}
         filters={filters}

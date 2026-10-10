@@ -97,8 +97,8 @@ export function ClientsManager({ clients, openAdd = false, editId = null, compan
           </BarChip>
         }
       />
-      <Sheet open={open} onClose={close} title={editing ? "Edit client" : "Add client"} hideClose>
-        {open ? <ClientForm key={editing?.id ?? "new"} client={editing} busy={busy} companyStateCode={companyStateCode} onSubmit={submit} onCancel={close} onToggle={editing ? () => toggle(editing) : undefined} /> : null}
+      <Sheet open={open} onClose={close} title={editing ? "Edit client" : "Add client"}>
+        {open ? <ClientForm key={editing?.id ?? "new"} client={editing} busy={busy} companyStateCode={companyStateCode} onSubmit={submit} onToggle={editing ? () => toggle(editing) : undefined} /> : null}
       </Sheet>
     </div>
   );

@@ -8,7 +8,7 @@ import { FINANCE_GROUPS, FINANCE_GROUP_LABEL, groupOfKind, inboxCounts, type Fin
 import { approveFinish, rejectFinish, resolveDoubt } from "@/server/tasks/lifecycle";
 import { setTaskProtected } from "@/server/tasks/manage";
 import { resolveRequest } from "@/server/requests/actions";
-import { dashHref, viewForTab, type RequestTab } from "@/server/dashboards/params";
+import type { RequestTab } from "@/server/dashboards/params";
 import { useToast } from "@/components/ui/Toast";
 import { Sheet } from "@/components/ui/Sheet";
 import { btnPrimary, inputCls } from "@/components/ui/Field";
@@ -21,8 +21,9 @@ import { clsx } from "@/lib/clsx";
 /**
  * Admin's one requests inbox (ADR 0016, prototype `PAGES.requests`): tabs All · Finance · Work · HR in the bottom zone
  * (?tab=), finance items from the hub's "Needs you" (approve sheet, overdue invoice, Mark paid), work requests (finish,
- * doubt, review incl. per-pill review, time change, fix) and HR (leave). Bottom actions: Task list · Dashboards (the
- * dashboard view that matches the tab).
+ * doubt, review incl. per-pill review, time change, fix) and HR (leave). The primary pill row sits lowest, nearest the
+ * thumb (just above the bottom nav): Finance's sub-row above the inbox tabs. The old Task list · Dashboards buttons are
+ * gone — the bottom nav covers both (ADR 0016 addendum).
  */
 const small = "inline-flex h-9 items-center justify-center rounded-xl px-3 text-[13px] font-semibold";
 const pri = `${small} bg-primary text-primary-ink disabled:opacity-45`;
@@ -122,7 +123,17 @@ export function RequestsInbox({ inbox, tab, fin, showAll, tz }: { inbox: Request
 
   const label = (t: string, n: number) => (n ? `${t} · ${n}` : t);
   const zone = (
-    <section className="zone-top bar-glass sticky bottom-0 z-20 shrink-0 border-t border-hair pb-[env(safe-area-inset-bottom)] pt-1" aria-label="Requests">
+    <section className="zone-top bar-glass zone-sticky z-20 shrink-0 border-t border-hair pb-1.5 pt-1" aria-label="Requests">
+      {shownTab === "FIN" ? (
+        <FilterRow
+          dense
+          label="Finance"
+          value={shown.fin}
+          onChange={(f) => pick("FIN", f as FinanceGroup | null)}
+          items={FINANCE_GROUPS.map((g) => ({ id: g, label: label(FINANCE_GROUP_LABEL[g], counts[g]) }))}
+        />
+      ) : null}
+      {/* the inbox tabs sit lowest, nearest the thumb */}
       <FilterRow
         dense
         all={false}
@@ -136,26 +147,6 @@ export function RequestsInbox({ inbox, tab, fin, showAll, tz }: { inbox: Request
           { id: "HR", label: label("HR", counts.HR) },
         ]}
       />
-      {shownTab === "FIN" ? (
-        <FilterRow
-          dense
-          label="Finance"
-          value={shown.fin}
-          onChange={(f) => pick("FIN", f as FinanceGroup | null)}
-          items={FINANCE_GROUPS.map((g) => ({ id: g, label: label(FINANCE_GROUP_LABEL[g], counts[g]) }))}
-        />
-      ) : null}
-      <div className="grid h-[60px] grid-cols-2 items-center gap-2 px-3">
-        <Link href="/dashboard" className="glass-chip flex h-11 items-center justify-center rounded-[14px] border border-hair text-[14px] font-semibold text-ink">
-          Task list
-        </Link>
-        <Link
-          href={dashHref({ view: viewForTab(shownTab), fin: "ALL", team: null, client: null, period: "MONTH" })}
-          className="flex h-11 items-center justify-center rounded-[14px] bg-gradient-to-br from-[#3b82f6] to-[#1d4ed8] text-[14px] font-semibold text-white shadow-[0_6px_16px_-6px_rgba(37,99,235,.7)]"
-        >
-          Dashboards
-        </Link>
-      </div>
     </section>
   );
 
@@ -201,10 +192,10 @@ export function RequestsInbox({ inbox, tab, fin, showAll, tz }: { inbox: Request
           </div>
         ) : null}
       </div>
-      <Sheet open={!!note} onClose={() => setNote(null)} title={note?.action === "reject" ? "Reject finish" : "Resolve doubt"} hideClose>
+      <Sheet open={!!note} onClose={() => setNote(null)} title={note?.action === "reject" ? "Reject finish" : "Resolve doubt"}>
         <div className="space-y-3 p-4">
           <textarea className={inputCls} rows={3} placeholder="Note to the team" value={text} onChange={(e) => setText(e.target.value)} />
-          <SheetButtons onClose={() => setNote(null)}>
+          <SheetButtons>
             <button
               type="button"
               disabled={pending}
