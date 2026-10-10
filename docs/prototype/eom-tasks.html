@@ -816,7 +816,7 @@ select.in{padding-right:10px}
 .fabsep{width:44px;height:1px;background:rgba(255,255,255,.35);margin:2px 0}
 @keyframes fabin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 #addChoose svg{transition:transform .18s}
-.fabon #addChoose svg{transform:rotate(45deg)}
+#addChoose.isx svg{transform:rotate(45deg)}
 /* Drive share: scope picker, team suggestions, per-person access */
 .shseg{display:flex;flex-wrap:wrap;gap:6px}.shseg button{flex:none}
 .shsugg{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.shsugg::-webkit-scrollbar{display:none}
@@ -846,6 +846,7 @@ select.in{padding-right:10px}
 .nfix{padding-left:4px}
 .nb.ty.on{opacity:1;box-shadow:0 0 0 2px var(--bg),0 0 0 4px #3b82f6}
 .nb.x,.fx{width:52px;height:52px;border-radius:16px;background:linear-gradient(150deg,#3b82f6,#1d4ed8);color:#fff;box-shadow:0 6px 16px -6px rgba(37,99,235,.7)}
+.xmark{display:none!important}
 .btnrow .fx,.r2 .fx{order:9;flex:none;border:0;cursor:pointer;display:grid;place-items:center;align-self:center}
 .btnrow:has(.fx){align-items:center}
 #addNav.solo .nl{visibility:hidden}
@@ -871,6 +872,9 @@ select.in{padding-right:10px}
 .pplus{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(150deg,#3b82f6,#1d4ed8);color:#fff}
 .pchev{color:var(--muted);display:grid;place-items:center}
 @media (prefers-reduced-motion:reduce){.fabrow,.fabi{animation:none}}
+/* sheets stop above the bottom row so its corner button (+ → ×) stays reachable */
+.hasnav .dim,.addmode .dim{bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+.hasnav .dim .sheet,.addmode .dim .sheet{padding-bottom:14px}
 </style>
 <div class="phone" id="phone">
   <!-- role picker -->
@@ -1152,13 +1156,15 @@ function audit(){}
 
 /* ---------- sheet ---------- */
 const sheetDim=$("#sheetDim"),sheetEl=$("#sheet");
-function openSheet(title,...content){sheetEl.replaceChildren(el("div",{class:"grab"}),...[title?el("h3",{},title):null,...content.flat()].filter(Boolean));sheetDim.hidden=false;}
-function closeSheet(){sheetDim.hidden=true;if(typeof renderPeek==="function")renderPeek();}
+function openSheet(title,...content){sheetEl.replaceChildren(el("div",{class:"grab"}),...[title?el("h3",{},title):null,...content.flat()].filter(Boolean));sheetDim.hidden=false;if(typeof syncCorner==="function")syncCorner();}
+function closeSheet(){sheetDim.hidden=true;if(typeof renderPeek==="function")renderPeek();if(typeof syncCorner==="function")syncCorner();}
 sheetDim.addEventListener("click",e=>{if(e.target===sheetDim)closeSheet();});
 function actionList(items){return el("div",{class:"al"},items.map(it=>el("button",{class:it.danger?"danger":"",onclick:it.onClick},el("span",{},it.label),it.hint?el("small",{},it.hint):null)));}
 /* Close (×) for sheet forms: same blue square, same bottom-right spot as the + it came from. */
-function pageX(fn){const b=cancelX();b.onclick=fn||(()=>goBack());return b;}
-function cancelX(){return el("button",{class:"fx","aria-label":"Close",title:"Close",onclick:()=>{if(typeof PEEK!=="undefined"&&PEEK){PEEK=null;closeSheet();nav("dash");}else closeSheet();}},svg('<path d="M18 6 6 18M6 6l12 12"/>',24,2.5));}
+/* The corner button is the only close control: forms just leave a marker. On a page the corner × runs fn
+   (default: Back); an open sheet makes the corner × close the sheet. */
+function pageX(fn){const m=el("span",{class:"xmark",hidden:true});m._x=fn||(()=>goBack());return m;}
+function cancelX(){return el("span",{class:"xmark",hidden:true});}
 function field(label,input,hint){return el("div",{class:"field"},el("label",{},label),input,hint?el("div",{class:"hint"},hint):null);}
 
 /* ---------- screens ---------- */
@@ -1597,7 +1603,7 @@ function saveTask(){
  else{S.tasks.unshift(Object.assign({id:uid(),status:"NOT_STARTED",paused:false,doubt:false,review:false,parent:false,createdBy:m.id,actualStart:null,actualEnd:null},base));assignees.filter(id=>id!==m.id).forEach(id=>notify(id,`New ${AF.type==="MEETING"?"meeting":"task"} from ${first(m.name)}: ${AF.title}`+(r==="ADMIN"&&AF.prefs.length?` · prefers ${AF.prefs.map(x=>first(userById(x).name)).join(", ")} — assign it from the task`:"")));toast(AF.type==="MEETING"?"Meeting scheduled · "+(meetingGuests().internal.length+meetingGuests().external.length)+" invites sent by Google Calendar":"Task added · Drive folder + Chat space queued");}
  save();show("dash");renderDash();
 }
-$("#tClose").onclick=()=>{show("dash");renderDash();};
+$("#tClose").onclick=()=>{if(!sheetDim.hidden){closeSheet();return;}show("dash");renderDash();};
 $("#tMeet").onclick=()=>{if(AF.type!=="MEETING"&&AF.hours>2)AF.hours=0.5;AF.type="MEETING";renderAdd();};
 $("#tWorkBtn").onclick=()=>{AF.type="WORK";renderAdd();};
 $("#tImportant").onclick=()=>{AF.important=!AF.important;renderAdd();};
@@ -1610,7 +1616,7 @@ $("#tTitle").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();saveTask();}};
 // save button lives in the header tiles area? No: the real app saves from the title row ✓ — add a floating save
 const saveBtn=el("button",{class:"btn",style:"flex:none;height:40px;border-radius:999px;padding:0 22px;box-shadow:0 8px 24px rgba(0,0,0,.2);pointer-events:auto",onclick:saveTask},"Save");
 $("#s-add .addbody").append(el("div",{style:"position:sticky;bottom:10px;display:flex;justify-content:flex-end;margin-top:12px;pointer-events:none"},saveBtn));
-$("#dbBtn").onclick=()=>nav("insights");$("#addChoose").onclick=()=>toggleFab();$("#tWorkBtn").replaceChildren(svg('<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4M13 6h8M13 12h8M13 18h8"/>',22,2));
+$("#dbBtn").onclick=()=>nav("insights");$("#addChoose").onclick=()=>cornerTap();$("#tWorkBtn").replaceChildren(svg('<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4M13 6h8M13 12h8M13 18h8"/>',22,2));
 
 /* ---------- menu ---------- */
 const MI={
@@ -1626,6 +1632,7 @@ const MI={
  calcheck:'<path d="M8 2v4M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M9 16l2 2 4-4"/>',
  clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
  eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+ usercheck:'<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="m16 11 2 2 4-4"/>',
  user:'<circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/>',
  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
  lead:'<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/><path d="m12 5 .9 1.8 2 .3-1.45 1.4.35 2L12 9.55 10.2 10.5l.35-2L9.1 7.1l2-.3Z" fill="currentColor" stroke="none"/>',
@@ -1663,6 +1670,8 @@ function menuModel(){
   {h:"Team",t:"t-team",items:[
    {go:"insights:HR",ic:"calcheck",l:"HR",s:(()=>{const t=S.attendance[dk()]||{};const st=S.users.filter(u=>["TEAM_LEADER","EXECUTIVE"].includes(u.role));const p=st.filter(u=>t[u.id]==="P"||t[u.id]==="HD").length,l=st.filter(u=>t[u.id]==="L").length;return Object.keys(t).length?p+" present · "+l+" on leave today":"Attendance, inventory, leave";})()},
    {go:"insights:TASK",ic:"task",l:"Tasks",s:(()=>{const o=S.tasks.filter(t=>t.status!=="COMPLETED");const late=o.filter(t=>rowColour(t)==="red").length;return o.length+" open"+(late?" · "+late+" late to start":"");})(),b:B(S.tasks.filter(t=>t.status!=="COMPLETED"&&rowColour(t)==="red").length,"amber")},
+   {go:"attendance",ic:"usercheck",l:"Attendance",s:"Mark today · leave · monthly sheet"},
+   {go:"inventory",ic:"clock",l:"Inventory",s:"Hours available vs assigned"},
    {go:"people:EXECUTIVE",ic:"users",l:"Executives",s:S.users.filter(u=>u.role==="EXECUTIVE").length+" people · specialities"},
    {go:"people:TEAM_LEADER",ic:"lead",l:"Team leaders",s:"One per team"},
    {go:"teams",ic:"layers",l:"Teams",s:S.teams.map(t=>t.name).join(", ")},
@@ -1702,7 +1711,7 @@ function nav(go){
  const fn=PAGES[page];if(!fn)return toast("Not in the prototype");
  show("page");fn(arg);
 }
-function page(title,body,zone){$("#pgTitle").textContent=title;$("#pgBody").replaceChildren(...body.flat().filter(Boolean));$("#pgZone").replaceChildren(...(zone||[]).filter(Boolean));$("#pgZone").hidden=!zone||!zone.length;if(typeof renderDashNav==="function")renderDashNav();if(typeof renderPeek==="function")renderPeek();}
+function page(title,body,zone){$("#pgTitle").textContent=title;$("#pgBody").replaceChildren(...body.flat().filter(Boolean));$("#pgZone").replaceChildren(...(zone||[]).filter(Boolean));{const mk=$("#pgZone").querySelector(".xmark");PAGEX=mk?mk._x:null;}$("#pgZone").hidden=!zone||!zone.length;if(typeof renderDashNav==="function")renderDashNav();if(typeof syncCorner==="function")syncCorner();if(typeof renderPeek==="function")renderPeek();}
 function zoneTabs(items,active,on){return el("div",{class:"r1"},...items.map(([k,l])=>el("button",{class:"gp"+(active===k?" on":""),style:"height:30px;font-size:12px;background:"+(active===k?"#111":"var(--chip)")+";color:"+(active===k?"#fff":"var(--ink)"),onclick:()=>on(k)},l)));}
 function zoneActions(...btns){return el("div",{class:"r2"},...btns);}
 
@@ -1852,10 +1861,20 @@ function openFab(){
   const main=el("button",{class:"fabi"+(x.main?" main":""),role:"menuitem","data-add":x.k,"aria-label":"Add "+x.l.toLowerCase(),onclick:()=>{closeFab();x.fn();}},el("b",{},x.l),ic);
   nodes.push(el("div",{class:"fabrow",style:"animation-delay:"+(i*18)+"ms"},x.view?el("button",{class:"fabeye",role:"menuitem","data-view":x.k,"aria-label":"View "+(x.k==="KIT"?"client kits":x.l.toLowerCase()+"s"),title:"View existing",onclick:()=>{closeFab();x.view();}},msvg("eye",18)):null,main));
  });
- $("#fabStack").replaceChildren(...nodes);$("#fab").hidden=false;document.body.classList.add("fabon");$("#addChoose").setAttribute("aria-expanded","true");
+ $("#fabStack").replaceChildren(...nodes);$("#fab").hidden=false;document.body.classList.add("fabon");syncCorner();
  $("#fabStack [data-add=TASK]").focus();
 }
-function closeFab(){if($("#fab").hidden)return;$("#fab").hidden=true;document.body.classList.remove("fabon");$("#addChoose").setAttribute("aria-expanded","false");}
+function closeFab(){if($("#fab").hidden)return;$("#fab").hidden=true;document.body.classList.remove("fabon");syncCorner();}
+/* One corner button: + when nothing is open; × that closes whatever is open (speed dial, sheet, form page). */
+let PAGEX=null;
+function cornerMode(){if(!$("#fab").hidden)return "fab";if(!sheetDim.hidden)return "sheet";if(!$("#s-page").hidden&&PAGEX)return "page";return null;}
+function syncCorner(){const b=$("#addChoose");if(!b)return;const m=cornerMode();b.classList.toggle("isx",!!m);b.setAttribute("aria-label",m?"Close":"Add");b.title=m?"Close":"Add";b.setAttribute("aria-expanded",String(m==="fab"));}
+function cornerTap(){const m=cornerMode();
+ if(m==="fab")closeFab();
+ else if(m==="sheet"){if(PEEK){PEEK=null;closeSheet();nav("dash");}else closeSheet();}
+ else if(m==="page"){const f=PAGEX;PAGEX=null;f();}
+ else openFab();
+ syncCorner();}
 function toggleFab(){$("#fab").hidden?openFab():closeFab();}
 $("#fab").onclick=e=>{if(e.target===$("#fab")||e.target===$("#fabStack"))closeFab();};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#fab").hidden){closeFab();$("#addChoose").focus();}});
@@ -1865,8 +1884,7 @@ function kitPicker(){
  const list=[...S.clients].sort((a,b)=>(!!a.kit)-(!!b.kit));
  openSheet("New client kit",el("p",{class:"pre",style:"margin:0 0 8px"},"Pick the client. The kit makes their Drive folders and a credentials sheet."),
   actionList([...list.map(c=>({label:kitWho(c),hint:c.kit?"Kit ready · open it":"Create the kit",onClick:()=>{closeSheet();nav("kit");c.kit?PAGES.kit(c.id):kitCreate(c);}})),
-   {label:"+ New client",hint:"Add the client first, then make the kit",onClick:()=>{closeSheet();nav("clients:add");}}]),
-  el("div",{class:"btnrow",style:"justify-content:flex-end"},cancelX()));
+   {label:"+ New client",hint:"Add the client first, then make the kit",onClick:()=>{closeSheet();nav("clients:add");}}]));
 }
 
 /* ---------- bottom icon rows ----------
@@ -1879,9 +1897,9 @@ function renderPeek(){const pk=$("#peek");if(!pk)return;const on=!!PEEK&&!$("#s-
  pk.replaceChildren(el("button",{class:"peekbtn","aria-label":PEEK.label+" (expand)",onclick:()=>{pk.hidden=true;PEEK.open();}},el("span",{class:"pplus"},msvg("plus",18,2.5)),el("b",{},PEEK.label),el("span",{class:"pchev"},svg('<path d="m6 15 6-6 6 6"/>',20,2.25))));}
 const NAVKEYS=["insights","requests","notifications","me"];
 function navActive(){if($("#s-page").hidden)return null;const t=typeof HIST!=="undefined"&&HIST[HIST.length-1];return t&&NAVKEYS.includes(t.key)?t.key:null;}
-function afterShow(name){const g=$("#gNav");if(!g)return;const on=(name==="dash"||name==="page")&&!!me();g.hidden=!on;$("#phone").classList.toggle("hasnav",on);if(on)renderDashNav();if(name!=="page"){const pk=$("#peek");if(pk)pk.hidden=true;}closeFab&&!$("#fab").hidden&&closeFab();}
+function afterShow(name){const g=$("#gNav");if(!g)return;if(name!=="page")PAGEX=null;$("#phone").classList.toggle("addmode",name==="add");const on=(name==="dash"||name==="page")&&!!me();g.hidden=!on;$("#phone").classList.toggle("hasnav",on);if(on)renderDashNav();if(name!=="page"){const pk=$("#peek");if(pk)pk.hidden=true;}closeFab&&!$("#fab").hidden&&closeFab();syncCorner();}
 function renderDashNav(){const r=role(),m=me();if(!m||!$("#dashNavL"))return;const act=navActive();
- const tog=k=>()=>{closeFab();if(navActive()===k)nav("dash");else nav(k);};
+ const tog=k=>()=>{closeFab();if(!sheetDim.hidden){PEEK=null;closeSheet();}if(navActive()===k)nav("dash");else nav(k);};
  const openReq=S.requests.filter(x=>x.status==="OPEN").length,unread=S.notifs.filter(n=>n.for===m.id&&!n.read).length;
  const av=el("span",{class:"avatar"},m.name.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase());
  const nb=(k,ic,l,b)=>{const x=navBtn(ic,l,tog(k),b);if(act===k){x.classList.add("on");x.setAttribute("aria-current","page");}return x;};
@@ -2724,13 +2742,9 @@ function taskBody(){const R=periodRange(DB.period);const ts=S.tasks.filter(t=>(!
   el("div",{class:"card"},el("h4",{},"Open hours by team"),byTeam.length?barList(byTeam,hrs):el("div",{class:"pre"},"No open tasks")),
   el("div",{class:"card"},el("h4",{},"Open hours by client"),byClient.length?barList(byClient,hrs,"var(--s2)"):el("div",{class:"pre"},"No open tasks"))];}
 PAGES.insights=function(arg){if(arg)DB.view=arg;
- const reqN=S.requests.filter(q=>q.status==="OPEN").length+S.invoices.filter(i=>i.status==="AWAITING_APPROVAL").length;
  const body=DB.view==="FIN"?finBody():DB.view==="HR"?hrBody():taskBody();
  const row=(label,items,key)=>el("div",{class:"wrow drow"},el("span",{class:"plab"},label),el("button",{class:"dk"+(DB[key]===null?" on":""),onclick:()=>{DB[key]=null;PAGES.insights();}},"All"),...items.map(([id,l])=>el("button",{class:"dk"+(DB[key]===id?" on":""),onclick:()=>{DB[key]=DB[key]===id?null:id;PAGES.insights();}},l)));
  const pills=(items,cur,on)=>items.map(([k,l])=>el("button",{class:"dk"+(cur===k?" on":""),onclick:()=>on(k)},l));
- const actions=DB.view==="FIN"?[el("button",{class:"btn ghost",onclick:()=>{reqTab="FIN";nav("requests");}},"Requests",reqN?el("span",{class:"nb"},String(reqN)):null),el("button",{class:"btn ghost",onclick:()=>openWizard()},"+ Invoice"),el("button",{class:"btn blue",onclick:()=>(nav("expenses"),billEditor())},"+ Expense")]
-  :DB.view==="HR"?[el("button",{class:"btn ghost",onclick:()=>{reqTab="HR";nav("requests");}},"Requests"),el("button",{class:"btn ghost",onclick:()=>nav("inventory")},"Inventory"),el("button",{class:"btn blue",onclick:()=>nav("attendance")},"Attendance")]
-  :[el("button",{class:"btn ghost",onclick:()=>{reqTab="WORK";nav("requests");}},"Requests"),el("button",{class:"btn ghost",onclick:()=>nav("dash")},"Task list"),el("button",{class:"btn blue",onclick:()=>openAdd("WORK")},"+ Task")];
  page({FIN:"Finance dashboard",HR:"HR dashboard",TASK:"Task dashboard"}[DB.view],[el("div",{class:"dbcap"},el("span",{},PERIODS.find(p=>p[0]===DB.period)[1]),el("span",{},[DB.team?(S.teams.find(x=>x.id===DB.team)||{}).name:null,DB.client?(clientById(DB.client)||{}).name:null].filter(Boolean).join(" · ")||"everyone")),...body],
   [el("div",{class:"dbz"},
     el("div",{class:"wrow drow"},el("span",{class:"plab"},"View"),...pills([["FIN","Finance"],["HR","HR"],["TASK","Tasks"]],DB.view,k=>{DB.view=k;PAGES.insights();})),
@@ -2738,7 +2752,7 @@ PAGES.insights=function(arg){if(arg)DB.view=arg;
     DB.view!=="FIN"?row("Teams",S.teams.map(x=>[x.id,x.name]),"team"):null,
     DB.view!=="HR"?row("Clients",S.clients.map(c=>[c.id,c.name]),"client"):null,
     el("div",{class:"wrow drow"},el("span",{class:"plab"},"When"),...pills(PERIODS,DB.period,k=>{DB.period=k;PAGES.insights();}))),
-   (()=>{const z=zoneActions(...actions);z.classList.add("dbact");return z;})()]);
+]);
 };
 /* ---------- back stack: Back returns to the previous screen, not always the dashboard ---------- */
 const HIST=[];let replaying=false;
