@@ -670,6 +670,60 @@ select.in{padding-right:10px}
 #s-add .bar .g{background:transparent!important;color:var(--ink);padding:0 4px 0 12px}
 #s-add .bar .g>button:first-child{color:var(--ink)!important}
 #s-add .bar .w{background:transparent;border-left:0}
+/* ---- dashboards ---- */
+:root{--s1:#2a78d6;--s2:#eb6834}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--s1:#3987e5;--s2:#d95926}}
+:root[data-theme="dark"]{--s1:#3987e5;--s2:#d95926}
+.dbcap{display:flex;justify-content:space-between;gap:8px;padding:12px 14px 0;font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.dbcap span:last-child{font-weight:600;text-transform:none;letter-spacing:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile .tsub{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+.bl{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.blr{display:flex;flex-direction:column;gap:4px}
+.blk{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.blk span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.blk b{font-variant-numeric:tabular-nums;flex-shrink:0}
+.blt{height:8px;border-radius:999px;background:var(--chip);overflow:hidden}
+.blt i{display:block;height:100%;border-radius:0 4px 4px 0}
+.blr small,.hrr small{font-size:11px;color:var(--muted)}
+.vchart{position:relative}
+.vhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.vhead h4{margin:0}
+.vleg{display:flex;gap:12px;font-size:12px;color:var(--muted)}
+.vleg span{display:inline-flex;align-items:center;gap:5px}
+.sw1,.sw2{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--s1)}.sw2{background:var(--s2)}
+.vplot{display:flex;gap:8px;margin-top:12px;height:150px}
+.vgrid{display:flex;flex-direction:column;justify-content:space-between;font-size:10px;color:var(--muted);text-align:right;padding-bottom:18px;font-variant-numeric:tabular-nums;flex-shrink:0}
+.vcols{flex:1;display:flex;gap:6px;align-items:stretch;border-bottom:1px solid var(--hair);background:linear-gradient(var(--hair),var(--hair)) 0 50%/100% 1px no-repeat}
+.vcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;min-width:0}
+.vcol:hover{background:var(--chip);border-radius:8px}
+.vbars{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center;gap:2px}
+.vb{display:block;width:38%;max-width:14px;border-radius:4px 4px 0 0;min-height:2px}
+.vb.s1{background:var(--s1)}.vb.s2{background:var(--s2)}
+.vcol small{font-size:10px;color:var(--muted);height:14px}
+.vtip{position:absolute;left:64px;top:44px;background:var(--sheet);border:1px solid var(--hair);border-radius:10px;padding:8px 10px;font-size:12px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:3px;z-index:2}
+.vtip div{display:flex;align-items:center;gap:6px}.vtip .muted{color:var(--muted)}
+.hrr{display:flex;flex-direction:column;gap:5px;padding:10px 0;border-bottom:1px solid var(--hair);cursor:pointer}
+.hrr:last-child{border-bottom:0}
+.hrh{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px}
+.pill.st{height:22px;font-size:11px;padding:0 8px}
+.pill.st.ok{color:#16a34a}.pill.st.warn{color:#b45309}.pill.st.bad{color:#dc2626}.pill.st.muted{color:var(--muted)}
+.stk{display:flex;gap:2px;height:14px;border-radius:999px;overflow:hidden;margin-top:8px}
+.sk{display:block;min-width:4px}
+.sk.green,.skd.green{background:var(--acc-green)}.sk.red,.skd.red{background:var(--acc-red)}.sk.yellow,.skd.yellow{background:var(--acc-yellow)}.sk.purple,.skd.purple{background:var(--acc-purple)}.sk.white,.skd.white{background:var(--acc-grey)}
+.skd{display:inline-block;width:10px;height:10px;border-radius:3px}
+.dbz{display:flex;flex-direction:column;width:100%;border-bottom:1px solid var(--hair);margin:-4px 0 6px}
+.drow{height:36px!important;padding:0 12px!important;gap:6px!important}
+#pgZone .drow .dk{height:28px;max-width:none;white-space:nowrap;padding:0 10px;font-size:12px}
+#pgZone .drow .plab{width:46px;font-size:10px}
+.dbz{margin:-6px 0 6px!important;width:100%!important}
+#pgZone .drow{padding:0 2px!important}
+.dbact .btn{white-space:nowrap;font-size:14px;padding:0 10px;height:44px}
+.dbact .btn .nb{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;margin-left:6px;border-radius:999px;background:#ef4444;color:#fff;font-size:11px;font-weight:800}
+.dbtiles{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
+.dbtiles .tile{padding:10px!important;min-height:0!important}
+.dbtiles .tile small{font-size:10px;letter-spacing:.05em}
+.dbtiles .tile b{font-size:16px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.dbtiles .tile .tsub{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style><div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
@@ -689,7 +743,7 @@ select.in{padding-right:10px}
   <section class="screen" id="s-dash" hidden>
     <div class="cyan">
       <div class="topbar">
-        <div style="display:flex;align-items:center;gap:8px"><button class="ico" id="menuBtn" aria-label="Menu"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><button class="demo" id="demoChip">Demo · switch</button></div>
+        <div style="display:flex;align-items:center;gap:8px"><button class="ico" id="menuBtn" aria-label="Menu"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><button class="ico" id="dbBtn" aria-label="Dashboards" title="Dashboards"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15v2M11 11v6M15 7v10M19 12v5"/></svg></button><button class="demo" id="demoChip">Demo · switch</button></div>
         <div class="r">
           <button class="ico" id="reqBtn" aria-label="Requests"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/></svg><span class="badge" id="reqBadge" hidden>0</span></button>
           <button class="ico" id="notifBtn" aria-label="Notifications"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="badge" id="notifBadge" hidden>0</span></button>
@@ -983,7 +1037,7 @@ function applyFilters(ts,f){
 function renderDash(){
  const r=role(),m=me(),f=filtersFor();if(r==="ADMIN")expenseTick();
  $("#meAv").textContent=m.name.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();
- $("#menuBtn").style.visibility=r==="ADMIN"?"visible":"hidden";
+ $("#menuBtn").style.visibility=r==="ADMIN"?"visible":"hidden";$("#dbBtn").hidden=r!=="ADMIN";
  $("#reqBtn").hidden=r!=="ADMIN";
  const openReq=S.requests.filter(x=>x.status==="OPEN").length,unread=S.notifs.filter(n=>n.for===m.id&&!n.read).length;
  $("#reqBadge").hidden=!openReq;$("#reqBadge").textContent=openReq;
@@ -1329,7 +1383,7 @@ $("#tTitle").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();saveTask();}};
 // save button lives in the header tiles area? No: the real app saves from the title row ✓ — add a floating save
 const saveBtn=el("button",{class:"btn",style:"flex:none;height:40px;border-radius:999px;padding:0 22px;box-shadow:0 8px 24px rgba(0,0,0,.2);pointer-events:auto",onclick:saveTask},"Save");
 $("#s-add .addbody").append(el("div",{style:"position:sticky;bottom:10px;display:flex;justify-content:flex-end;margin-top:12px;pointer-events:none"},saveBtn));
-$("#addMeet").onclick=()=>openAdd("MEETING");$("#addChoose").onclick=()=>openAdd("CHOOSE");
+$("#dbBtn").onclick=()=>nav("insights");$("#addMeet").onclick=()=>openAdd("MEETING");$("#addChoose").onclick=()=>openAdd("CHOOSE");
 
 /* ---------- menu ---------- */
 const MI={
@@ -1371,6 +1425,7 @@ function menuModel(){
  const B=(n,c)=>n?{n,c}:null;
  return [
   {h:"Money",t:"t-money",items:[
+   {go:"insights:FIN",ic:"chart",l:"Dashboards",s:"Finance · HR · Tasks"},
    {go:"invoices",ic:"invoice",l:"Invoices",s:toApprove?toApprove+" waiting for your approval":"Create, approve and send",b:B(toApprove,"red")},
    {go:"payments",ic:"wallet",l:"Payments & finance",s:[toApprove?toApprove+" to approve":null,outstanding?inr(outstanding)+" outstanding":null].filter(Boolean).join(" · ")||"Approvals, reminders, totals, TDS, GST",b:B(payTodo().late.length,"red")},
    {go:"expenses",ic:"receipt",l:"Expenses",s:overdueBills?overdueBills+" overdue · "+dueSoon+" due this week":dueSoon?dueSoon+" due this week":"Bills, GST credit, TDS",b:overdueBills?{n:overdueBills,c:"red"}:B(dueSoon,"amber")},
@@ -1834,11 +1889,21 @@ function clientForm(c){
   [zoneActions(el("button",{class:"btn ghost",onclick:()=>PAGES.clients()},"Cancel"),c?el("button",{class:"btn ghost",onclick:()=>c.kit?PAGES.kit(c.id):kitCreate(c)},c.kit?"Client kit":"Create kit"):null,el("button",{class:"btn blue",onclick:()=>{if(!v.name.trim())return toast("Name is required","err");v.pan=(v.pan||"").toUpperCase().trim();if(v.pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v.pan))return toast("PAN must look like AAACZ1234F","err");v.gstin=(v.gstin||"").toUpperCase().trim();v.tdsPercent=Number(v.tdsPercent)||0;if(v.country!=="IN"){v.stateCode="";v.stateName="";v.pan="";v.tdsPercent=0;v.gstin="";}if(c)Object.assign(c,v);else S.clients.push(Object.assign({id:uid(),onHold:false},v));save();toast(c?"Client saved":"Client added · shows in filters once it has a task");PAGES.clients();}},"Save"))]);
 }
 /* ---------- requests ---------- */
+let reqTab="ALL";
+/* One requests inbox for everything: Finance (approvals, overdue clients, bills), Work (review / time change), HR (leave). */
 PAGES.requests=function(){
  const KL={REVIEW:"Review",TIME_CHANGE:"Time change",LEAVE:"Leave",FIX_SELF:"Fix self task"};
- const open=S.requests.filter(r=>r.status==="OPEN"),done=S.requests.filter(r=>r.status!=="OPEN");
+ const area=r=>r.kind==="LEAVE"?"HR":"WORK";
+ const T=role()==="ADMIN"?payTodo():{appr:[],late:[],bills:[]};const finN=T.appr.length+T.late.length+T.bills.filter(x=>isOver(x.o)).length;
+ const tabs=[["ALL","All"],["FIN","Finance"+(finN?" · "+finN:"")],["WORK","Work · "+S.requests.filter(r=>r.status==="OPEN"&&area(r)==="WORK").length],["HR","HR · "+S.requests.filter(r=>r.status==="OPEN"&&area(r)==="HR").length]];
+ const sel=r=>reqTab==="ALL"||area(r)===reqTab;
+ const open=S.requests.filter(r=>r.status==="OPEN"&&sel(r)),done=S.requests.filter(r=>r.status!=="OPEN"&&sel(r));
+ const fin=(reqTab==="ALL"||reqTab==="FIN")&&role()==="ADMIN"?[
+  ...T.appr.map(i=>el("div",{class:"item",onclick:()=>approveSheet(i)},el("div",{class:"m"},el("b",{},(clientById(i.client)||{}).name),el("small",{},"Finance · approve & send "+DOCL[i.docType].toLowerCase())),el("div",{class:"amt"},inr(total(i))))),
+  ...T.late.map(i=>el("div",{class:"item",onclick:()=>openInvoice(i)},el("div",{class:"m"},el("b",{},(clientById(i.client)||{}).name),el("small",{},"Finance · "+i.number+" · "+(-dayOff(i.due))+" days late")),el("div",{class:"amt",style:"color:#dc2626"},inr(balance(i))))),
+  ...T.bills.filter(x=>isOver(x.o)).map(x=>el("div",{class:"item",onclick:()=>markPaid(x.e,x.o)},el("div",{class:"m"},el("b",{},x.e.payee),el("small",{},"Finance · bill overdue · mark paid")),el("div",{class:"amt",style:"color:#dc2626"},inr(x.o.amount))))]:[];
  const card=r=>{const t=r.task?S.tasks.find(x=>x.id===r.task):null;return el("div",{class:"card"},el("div",{style:"display:flex;gap:6px;align-items:center;margin-bottom:4px"},el("span",{class:"tag draft"},KL[r.kind]),el("b",{style:"font-size:13px"},first(userById(r.by).name)),el("span",{style:"margin-left:auto;font-size:11px;color:var(--muted)"},fmtD(r.at))),t?el("div",{style:"font-size:13px;font-weight:600"},t.title):null,el("div",{style:"font-size:13px;margin:4px 0 8px"},r.note),r.status==="OPEN"?el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{r.status="DECLINED";if(t)t.review=false;notify(r.by,"Request declined: "+r.note.slice(0,40));save();PAGES.requests();toast("Declined");}},"Decline"),el("button",{class:"btn green",onclick:()=>{r.status="APPROVED";if(t){t.review=false;if(r.kind==="TIME_CHANGE"){const s=new Date(t.start);s.setDate(s.getDate()+1);const e=new Date(t.end);e.setDate(e.getDate()+1);t.start=s.toISOString();t.end=e.toISOString();}}if(r.kind==="LEAVE"){const u=userById(r.by);S.tasks.filter(x=>x.assignees.includes(u.id)&&!x.protected&&x.status==="NOT_STARTED"&&dayOff(x.start)>=0).forEach(x=>{const s=new Date(x.start);s.setDate(s.getDate()+1);const e=new Date(x.end);e.setDate(e.getDate()+1);x.start=s.toISOString();x.end=e.toISOString();});}notify(r.by,"Request approved: "+r.note.slice(0,40));save();PAGES.requests();toast(r.kind==="LEAVE"?"Leave approved · unprotected tasks shifted a day":"Approved");}},"Approve")):el("span",{class:"tag "+(r.status==="APPROVED"?"paid":"canc")},r.status.toLowerCase()));};
- page("Requests",[el("div",{style:"padding:12px 12px 0;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em"},"Open · "+open.length),...open.map(card),open.length?null:el("div",{class:"empty"},"Inbox zero."),done.length?el("div",{style:"padding:12px 12px 0;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em"},"Handled"):null,...done.map(card)].filter(Boolean),[zoneActions(el("button",{class:"btn ghost",onclick:()=>nav("dash")},"Dashboard"))]);
+ page("Requests",[...fin,reqTab!=="FIN"?el("div",{style:"padding:12px 12px 0;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em"},"Open · "+open.length):null,...(reqTab==="FIN"?[]:open.map(card)),reqTab==="FIN"?(fin.length?null:el("div",{class:"empty"},"No finance approvals or reminders.")):open.length||fin.length?null:el("div",{class:"empty"},"Inbox zero."),done.length&&reqTab!=="FIN"?el("div",{style:"padding:12px 12px 0;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em"},"Handled"):null,...(reqTab==="FIN"?[]:done.map(card))].filter(Boolean),[role()==="ADMIN"?zoneTabs(tabs,reqTab,k=>{reqTab=k;PAGES.requests();}):null,zoneActions(el("button",{class:"btn ghost",onclick:()=>nav("dash")},"Task list"),role()==="ADMIN"?el("button",{class:"btn",onclick:()=>nav("insights:"+(reqTab==="HR"?"HR":reqTab==="WORK"?"TASK":"FIN"))},"Dashboards"):null)]);
 };
 PAGES.notifications=function(){
  const m=me();const mine=S.notifs.filter(n=>n.for===m.id);
@@ -2224,6 +2289,102 @@ PAGES.kit=function(cid){
   el("div",{class:"sech"},"Saved in the app · encrypted"),
   ...(vi.length?vi.map(v=>el("div",{class:"item",style:"cursor:default"},el("div",{class:"m"},el("b",{},v.label),el("small",{},KLx[v.kind]+" · "+v.value+(v.expires?" · expires "+fmtD(v.expires):""))))):[el("div",{class:"empty"},"Nothing saved in the app for this client")])],
   [zoneActions(el("button",{class:"btn ghost",onclick:()=>kitCreate(c)},"Re-check kit"),el("button",{class:"btn blue",onclick:()=>kitSend(c)},"Send kit"))]);
+};
+/* ---------- Dashboards: Finance / HR / Tasks, same glass pill rows as the task view ---------- */
+const DB={view:"FIN",fin:"ALL",client:null,team:null,period:"MONTH"};
+const PERIODS=[["MONTH","This month"],["LAST","Last month"],["QUARTER","3 months"],["FY","This FY"]];
+function periodRange(p){const n=new Date(),y=n.getFullYear(),m=n.getMonth();
+ if(p==="LAST")return [new Date(y,m-1,1),new Date(y,m,1)];
+ if(p==="QUARTER")return [new Date(y,m-2,1),new Date(y,m+1,1)];
+ if(p==="FY")return [fyStart(n),new Date(y,m+1,1)];
+ return [new Date(y,m,1),new Date(y,m+1,1)];}
+const inR=(iso,[a,b])=>{if(!iso)return false;const d=new Date(iso);return d>=a&&d<b;};
+const hrs=m=>{const h=m/60;return (Number.isInteger(h)?h:h.toFixed(1))+"h";};
+/* Horizontal bar list: one series, one colour, value as text (never the bar colour). */
+function barList(rows,fmt,color){const max=Math.max(1,...rows.map(r=>r.v));
+ return el("div",{class:"bl"},...rows.map(r=>el("div",{class:"blr",title:r.k+": "+fmt(r.v)+(r.sub?" · "+r.sub:""),onclick:r.on||null,style:r.on?"cursor:pointer":""},
+  el("div",{class:"blk"},el("span",{},r.k),el("b",{},fmt(r.v))),el("div",{class:"blt"},el("i",{style:"width:"+Math.max(2,Math.round(r.v/max*100))+"%;background:"+(color||"var(--s1)")})),r.sub?el("small",{},r.sub):null)));}
+/* Grouped monthly bars: income vs expense (two series, legend + hover tooltip). */
+function incomeExpenseChart(months){const max=Math.max(1,...months.flatMap(x=>[x.inc,x.exp]));const tip=el("div",{class:"vtip",hidden:true});
+ const col=x=>el("div",{class:"vcol",onmouseenter:e=>{tip.hidden=false;tip.replaceChildren(el("b",{},x.label),el("div",{},el("i",{class:"sw1"}),"Income "+inr(x.inc)),el("div",{},el("i",{class:"sw2"}),"Expense "+inr(x.exp)),el("div",{class:"muted"},"Net "+inr(x.inc-x.exp)));},onmouseleave:()=>tip.hidden=true,onclick:()=>{tip.hidden=!tip.hidden;}},
+  el("div",{class:"vbars"},el("i",{class:"vb s1",style:"height:"+(x.inc/max*100)+"%"}),el("i",{class:"vb s2",style:"height:"+(x.exp/max*100)+"%"})),el("small",{},x.short));
+ return el("div",{class:"card vchart"},el("div",{class:"vhead"},el("h4",{},"Income vs expense"),el("div",{class:"vleg"},el("span",{},el("i",{class:"sw1"}),"Income"),el("span",{},el("i",{class:"sw2"}),"Expense"))),
+  el("div",{class:"vplot"},el("div",{class:"vgrid"},el("span",{},inr(max)),el("span",{},inr(max/2)),el("span",{},"0")),el("div",{class:"vcols"},...months.map(col))),tip);}
+function finData(){const R=periodRange(DB.period);const cOk=id=>!DB.client||id===DB.client;
+ const invs=S.invoices.filter(i=>i.docType!=="PROFORMA"&&i.docType!=="CREDIT_NOTE"&&!["AWAITING_APPROVAL","CANCELLED"].includes(i.status)&&cOk(i.client));
+ const pays=S.payments.filter(p=>{const i=S.invoices.find(x=>x.id===p.invoice);return i&&cOk(i.client);});
+ const occ=allOcc().filter(x=>!DB.client);
+ const months=[];const n=new Date();for(let k=5;k>=0;k--){const a=new Date(n.getFullYear(),n.getMonth()-k,1),b=new Date(n.getFullYear(),n.getMonth()-k+1,1);
+  months.push({label:a.toLocaleDateString("en-IN",{month:"long",year:"numeric"}),short:a.toLocaleDateString("en-IN",{month:"short"}),inc:pays.filter(p=>inR(p.date,[a,b])).reduce((s,p)=>s+p.amount,0),exp:allOcc().filter(x=>x.o.status==="PAID"&&inR(x.o.paidAt,[a,b])).reduce((s,x)=>s+x.o.amount,0)});}
+ return {R,invs,pays,occ,months,
+  billed:invs.filter(i=>inR(i.issued,R)).reduce((s,i)=>s+total(i),0),
+  received:pays.filter(p=>inR(p.date,R)).reduce((s,p)=>s+p.amount,0),
+  tds:pays.filter(p=>inR(p.date,R)).reduce((s,p)=>s+(p.tds||0),0),
+  outstanding:invs.reduce((s,i)=>s+(["PAID"].includes(i.status)?0:balance(i)),0),
+  overdue:invs.filter(i=>i.status!=="PAID"&&dayOff(i.due)<0).reduce((s,i)=>s+balance(i),0),
+  spent:occ.filter(x=>x.o.status==="PAID"&&inR(x.o.paidAt,R)).reduce((s,x)=>s+x.o.amount,0),
+  due:occ.filter(x=>x.o.status==="DUE").reduce((s,x)=>s+x.o.amount,0),
+  billsOver:occ.filter(x=>isOver(x.o)).reduce((s,x)=>s+x.o.amount,0),
+  gst:occ.filter(x=>x.o.status==="PAID"&&x.o.itc&&inR(x.o.paidAt,R)).reduce((s,x)=>s+(x.o.gst||0),0)};}
+function finBody(){const d=finData();const t=(l,v,s)=>el("div",{class:"tile"},el("small",{},l),el("b",{},v),s?el("span",{class:"tsub"},s):null);
+ const byClient=S.clients.map(c=>({k:c.name,v:d.pays.filter(p=>inR(p.date,d.R)&&S.invoices.find(x=>x.id===p.invoice)?.client===c.id).reduce((s,p)=>s+p.amount,0),on:()=>{DB.client=DB.client===c.id?null:c.id;PAGES.insights();}})).filter(r=>r.v>0).sort((a,b)=>b.v-a.v);
+ const owed=S.clients.map(c=>({k:c.name,v:d.invs.filter(i=>i.client===c.id&&i.status!=="PAID").reduce((s,i)=>s+balance(i),0),sub:d.invs.filter(i=>i.client===c.id&&i.status!=="PAID"&&dayOff(i.due)<0).length?"overdue":""})).filter(r=>r.v>0).sort((a,b)=>b.v-a.v);
+ const byCat={};d.occ.filter(x=>x.o.status==="PAID"&&inR(x.o.paidAt,d.R)).forEach(x=>{byCat[x.e.cat||"Other"]=(byCat[x.e.cat||"Other"]||0)+x.o.amount;});
+ const cats=Object.entries(byCat).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
+ const upcoming=d.occ.filter(x=>x.o.status==="DUE").sort((a,b)=>new Date(a.o.due)-new Date(b.o.due)).slice(0,5);
+ if(DB.fin==="INC")return [el("div",{class:"tiles dbtiles"},t("Received",inr(d.received)),t("Invoiced",inr(d.billed)),t("TDS cut",inr(d.tds),"credit at year end"),t("Outstanding",inr(d.outstanding)),t("Overdue",inr(d.overdue)),t("To approve",String(S.invoices.filter(i=>i.status==="AWAITING_APPROVAL"&&(!DB.client||i.client===DB.client)).length),"invoices")),
+  el("div",{class:"card"},el("h4",{},"Received by client"),byClient.length?barList(byClient,inr):el("div",{class:"pre"},"Nothing received in this period")),
+  el("div",{class:"card"},el("h4",{},"Still owed"),owed.length?barList(owed,inr,"var(--s2)"):el("div",{class:"pre"},"Nobody owes you 🎉"))];
+ if(DB.fin==="EXP")return [el("div",{class:"tiles dbtiles"},t("Spent",inr(d.spent)),t("To pay",inr(d.due)),t("Overdue bills",inr(d.billsOver)),t("GST to claim",inr(d.gst)),t("TDS deducted",inr(d.occ.filter(x=>x.o.status==="PAID"&&inR(x.o.paidAt,d.R)).reduce((s,x)=>s+(x.o.tds||0),0))),t("Bills paid",String(d.occ.filter(x=>x.o.status==="PAID"&&inR(x.o.paidAt,d.R)).length),"this period")),
+  el("div",{class:"card"},el("h4",{},"Spent by category"),cats.length?barList(cats,inr,"var(--s2)"):el("div",{class:"pre"},"No expenses paid in this period")),
+  el("div",{class:"card"},el("h4",{},"Next bills"),...(upcoming.length?upcoming.map(x=>el("div",{class:"kv",style:"cursor:pointer",onclick:()=>markPaid(x.e,x.o)},el("span",{},x.e.payee+" · "+(isOver(x.o)?"overdue":"due "+fmtD(x.o.due))),el("b",{class:"num",style:isOver(x.o)?"color:#dc2626":""},inr(x.o.amount)))):[el("div",{class:"pre"},"Nothing due")]))];
+ return [el("div",{class:"tiles dbtiles"},t("Received",inr(d.received)),t("Spent",inr(d.spent)),t("Net",inr(d.received-d.spent)),t("Outstanding",inr(d.outstanding),d.overdue?inr(d.overdue)+" overdue":""),t("To pay",inr(d.due)),t("GST to claim",inr(d.gst))),
+  DB.client?null:incomeExpenseChart(d.months),
+  el("div",{class:"card"},el("h4",{},"Top clients · received"),byClient.length?barList(byClient.slice(0,5),inr):el("div",{class:"pre"},"Nothing received in this period"))];}
+function hrBody(){const staff=S.users.filter(u=>["TEAM_LEADER","EXECUTIVE"].includes(u.role)&&(!DB.team||u.teamId===DB.team));
+ const today=S.attendance[dk()]||{};const R=periodRange(DB.period);const days=Math.max(1,Math.round((Math.min(R[1],new Date(Date.now()+30*DAY))-R[0])/DAY));
+ const weeks=Math.max(1,days/7);
+ const rows=staff.map(u=>{const cap=(S.inventory.hours[u.id]||40)*weeks;const used=S.tasks.filter(t=>t.assignees.includes(u.id)&&inR(t.start,R)).reduce((s,t)=>s+t.mins/60,0);
+  const absent=Object.entries(S.attendance).filter(([k])=>inR(k+"T10:00:00",R)).filter(([,v])=>v[u.id]==="L"||v[u.id]==="A").length;
+  return {u,cap,used,free:Math.max(0,cap-used),pct:Math.min(100,Math.round(used/cap*100)),absent,st:today[u.id]||"—"};});
+ const present=rows.filter(r=>r.st==="P"||r.st==="HD").length,onLeave=rows.filter(r=>r.st==="L").length;
+ const capT=rows.reduce((s,r)=>s+r.cap,0),usedT=rows.reduce((s,r)=>s+r.used,0);
+ const t=(l,v,s)=>el("div",{class:"tile"},el("small",{},l),el("b",{},v),s?el("span",{class:"tsub"},s):null);
+ const ST={P:["Present","ok"],HD:["Half day","warn"],L:["On leave","bad"],A:["Absent","bad"],"—":["Not marked","muted"]};
+ return [el("div",{class:"tiles dbtiles"},t("Present",present+" / "+rows.length,"today"),t("On leave",String(onLeave),"today"),t("Free to assign",Math.round(Math.max(0,capT-usedT))+"h",Math.round(usedT)+" of "+Math.round(capT)+"h booked")),
+  el("div",{class:"card"},el("h4",{},"Team inventory · booked of capacity"),...rows.map(r=>el("div",{class:"hrr",onclick:()=>nav("inventory")},
+   el("div",{class:"hrh"},el("b",{},r.u.name),el("span",{class:"pill st "+ST[r.st][1]},ST[r.st][0])),
+   el("div",{class:"blt"},el("i",{style:"width:"+Math.max(2,r.pct)+"%;background:"+(r.pct>90?"#dc2626":r.pct>70?"#f59e0b":"var(--s1)")})),
+   el("small",{},(S.teams.find(x=>x.id===r.u.teamId)?.name||"")+" · "+r.used.toFixed(1)+" of "+Math.round(r.cap)+"h booked · "+r.free.toFixed(0)+"h free"+(r.absent?" · "+r.absent+" day(s) off":""))))) ];}
+function taskBody(){const R=periodRange(DB.period);const ts=S.tasks.filter(t=>(!DB.team||t.team===DB.team)&&(!DB.client||t.client===DB.client));
+ const open=ts.filter(t=>t.status!=="COMPLETED");const doneR=ts.filter(t=>t.status==="COMPLETED"&&inR(t.actualEnd||t.end,R));
+ const onTime=doneR.filter(t=>t.actualEnd&&new Date(t.actualEnd)<=new Date(t.end)).length;
+ const cnt=c=>open.filter(t=>rowColour(t)===c).length;
+ const t=(l,v,s)=>el("div",{class:"tile"},el("small",{},l),el("b",{},v),s?el("span",{class:"tsub"},s):null);
+ const seg=[["Started","green",cnt("green")],["Late to start","red",cnt("red")],["Paused","yellow",cnt("yellow")],["Doubt","purple",cnt("purple")],["Not started","white",cnt("white")]];
+ const tot=Math.max(1,seg.reduce((s,x)=>s+x[2],0));
+ const byTeam=S.teams.map(x=>({k:x.name,v:open.filter(t=>t.team===x.id).reduce((s,t)=>s+t.mins,0),sub:open.filter(t=>t.team===x.id).length+" open",on:()=>{DB.team=DB.team===x.id?null:x.id;PAGES.insights();}})).filter(r=>r.v>0).sort((a,b)=>b.v-a.v);
+ const byClient=S.clients.map(c=>({k:c.name,v:open.filter(t=>t.client===c.id).reduce((s,t)=>s+t.mins,0),sub:open.filter(t=>t.client===c.id).length+" open",on:()=>{DB.client=DB.client===c.id?null:c.id;PAGES.insights();}})).filter(r=>r.v>0).sort((a,b)=>b.v-a.v);
+ return [el("div",{class:"tiles dbtiles"},t("Open tasks",String(open.length),hrs(open.reduce((s,x)=>s+x.mins,0))+" booked"),t("Late to start",String(cnt("red"))),t("Paused",String(cnt("yellow"))),t("Doubts",String(cnt("purple"))),t("Completed",String(doneR.length),PERIODS.find(p=>p[0]===DB.period)[1]),t("On time",doneR.length?Math.round(onTime/doneR.length*100)+"%":"—","of completed")),
+  el("div",{class:"card"},el("h4",{},"Open tasks by state"),el("div",{class:"stk"},...seg.filter(x=>x[2]).map(([l,c,n])=>el("i",{class:"sk "+c,style:"flex:"+n,title:l+": "+n}))),el("div",{class:"vleg",style:"flex-wrap:wrap;margin-top:8px"},...seg.map(([l,c,n])=>el("span",{},el("i",{class:"skd "+c}),l+" "+n)))),
+  el("div",{class:"card"},el("h4",{},"Open hours by team"),byTeam.length?barList(byTeam,hrs):el("div",{class:"pre"},"No open tasks")),
+  el("div",{class:"card"},el("h4",{},"Open hours by client"),byClient.length?barList(byClient,hrs,"var(--s2)"):el("div",{class:"pre"},"No open tasks"))];}
+PAGES.insights=function(arg){if(arg)DB.view=arg;
+ const reqN=S.requests.filter(q=>q.status==="OPEN").length+S.invoices.filter(i=>i.status==="AWAITING_APPROVAL").length;
+ const body=DB.view==="FIN"?finBody():DB.view==="HR"?hrBody():taskBody();
+ const row=(label,items,key)=>el("div",{class:"wrow drow"},el("span",{class:"plab"},label),el("button",{class:"dk"+(DB[key]===null?" on":""),onclick:()=>{DB[key]=null;PAGES.insights();}},"All"),...items.map(([id,l])=>el("button",{class:"dk"+(DB[key]===id?" on":""),onclick:()=>{DB[key]=DB[key]===id?null:id;PAGES.insights();}},l)));
+ const pills=(items,cur,on)=>items.map(([k,l])=>el("button",{class:"dk"+(cur===k?" on":""),onclick:()=>on(k)},l));
+ const actions=DB.view==="FIN"?[el("button",{class:"btn ghost",onclick:()=>{reqTab="FIN";nav("requests");}},"Requests",reqN?el("span",{class:"nb"},String(reqN)):null),el("button",{class:"btn ghost",onclick:()=>openWizard()},"+ Invoice"),el("button",{class:"btn blue",onclick:()=>(nav("expenses"),billEditor())},"+ Expense")]
+  :DB.view==="HR"?[el("button",{class:"btn ghost",onclick:()=>{reqTab="HR";nav("requests");}},"Requests"),el("button",{class:"btn ghost",onclick:()=>nav("inventory")},"Inventory"),el("button",{class:"btn blue",onclick:()=>nav("attendance")},"Attendance")]
+  :[el("button",{class:"btn ghost",onclick:()=>{reqTab="WORK";nav("requests");}},"Requests"),el("button",{class:"btn ghost",onclick:()=>nav("dash")},"Task list"),el("button",{class:"btn blue",onclick:()=>openAdd("WORK")},"+ Task")];
+ page({FIN:"Finance dashboard",HR:"HR dashboard",TASK:"Task dashboard"}[DB.view],[el("div",{class:"dbcap"},el("span",{},PERIODS.find(p=>p[0]===DB.period)[1]),el("span",{},[DB.team?(S.teams.find(x=>x.id===DB.team)||{}).name:null,DB.client?(clientById(DB.client)||{}).name:null].filter(Boolean).join(" · ")||"everyone")),...body],
+  [el("div",{class:"dbz"},
+    el("div",{class:"wrow drow"},el("span",{class:"plab"},"View"),...pills([["FIN","Finance"],["HR","HR"],["TASK","Tasks"]],DB.view,k=>{DB.view=k;PAGES.insights();})),
+    DB.view==="FIN"?el("div",{class:"wrow drow"},el("span",{class:"plab"},"Show"),...pills([["ALL","Overview"],["INC","Income"],["EXP","Expense"]],DB.fin,k=>{DB.fin=k;PAGES.insights();})):null,
+    DB.view!=="FIN"?row("Teams",S.teams.map(x=>[x.id,x.name]),"team"):null,
+    DB.view!=="HR"?row("Clients",S.clients.map(c=>[c.id,c.name]),"client"):null,
+    el("div",{class:"wrow drow"},el("span",{class:"plab"},"When"),...pills(PERIODS,DB.period,k=>{DB.period=k;PAGES.insights();}))),
+   (()=>{const z=zoneActions(...actions);z.classList.add("dbact");return z;})()]);
 };
 /* ---------- boot ---------- */
 document.querySelectorAll("[data-login]").forEach(b=>b.onclick=()=>{const r=b.dataset.login;S.me=S.users.find(u=>u.role===r).id;save();if(r==="HR"){show("page");PAGES.attendance();}else{show("dash");renderDash();}});
