@@ -805,7 +805,7 @@ select.in{padding-right:10px}
 /* + speed dial on the dashboard: Task nearest the thumb, Meeting next, then the rest */
 .fabdim{position:absolute;inset:0 0 calc(64px + env(safe-area-inset-bottom,0px)) 0;z-index:28;background:rgba(2,12,24,.42);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end;padding:0 10px 10px}
 .fabdim[hidden]{display:none!important}
-.fabstack{display:flex;flex-direction:column-reverse;align-items:flex-end;gap:8px;max-height:100%;overflow-y:auto;padding-top:12px}
+.fabstack{padding-right:4px;padding-left:4px;display:flex;flex-direction:column-reverse;align-items:flex-end;gap:8px;max-height:100%;overflow-y:auto;padding-top:12px}
 .fabi{display:flex;align-items:center;gap:10px;border:0;background:none;padding:0;cursor:pointer;font:inherit;animation:fabin .18s ease-out both}
 .fabi b{font-size:13px;font-weight:600;color:var(--ink);background:var(--glass-strong);border:1px solid var(--hair);box-shadow:var(--shadow);padding:7px 12px;border-radius:12px;white-space:nowrap}
 .fabi .ic{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 6px 16px -8px rgba(0,0,0,.5);flex:none}
@@ -846,9 +846,10 @@ select.in{padding-right:10px}
 .nfix{padding-left:4px}
 .nb.ty.on{opacity:1;box-shadow:0 0 0 2px var(--bg),0 0 0 4px #3b82f6}
 .nb.x,.fx{width:52px;height:52px;border-radius:16px;background:linear-gradient(150deg,#3b82f6,#1d4ed8);color:#fff;box-shadow:0 6px 16px -6px rgba(37,99,235,.7)}
-.btnrow .fx{order:9;flex:none;border:0;cursor:pointer;display:grid;place-items:center;align-self:center}
+.btnrow .fx,.r2 .fx{order:9;flex:none;border:0;cursor:pointer;display:grid;place-items:center;align-self:center}
 .btnrow:has(.fx){align-items:center}
 #addNav.solo .nl{visibility:hidden}
+.r2:has(.fx){align-items:center}
 #s-dash .topbar .tsep,#s-dash .topbar #dbBtn,#s-dash .topbar #reqBtn,#s-dash .topbar #notifBtn,#s-dash .topbar #meBtn{display:none!important}
 </style>
 <div class="phone" id="phone">
@@ -1135,6 +1136,7 @@ function closeSheet(){sheetDim.hidden=true;}
 sheetDim.addEventListener("click",e=>{if(e.target===sheetDim)closeSheet();});
 function actionList(items){return el("div",{class:"al"},items.map(it=>el("button",{class:it.danger?"danger":"",onclick:it.onClick},el("span",{},it.label),it.hint?el("small",{},it.hint):null)));}
 /* Close (×) for sheet forms: same blue square, same bottom-right spot as the + it came from. */
+function pageX(fn){const b=cancelX();b.onclick=fn||(()=>goBack());return b;}
 function cancelX(){return el("button",{class:"fx","aria-label":"Close",title:"Close",onclick:closeSheet},svg('<path d="M18 6 6 18M6 6l12 12"/>',24,2.5));}
 function field(label,input,hint){return el("div",{class:"field"},el("label",{},label),input,hint?el("div",{class:"hint"},hint):null);}
 
@@ -1808,12 +1810,12 @@ function fabItems(){
  const it=(k,l,cls,ic,fn,main)=>({k,l,cls,ic,fn,main});
  const out=[it("TASK","Task","t-task","task",()=>openAdd("CHOOSE"),1),it("MEETING","Meeting","meet",null,()=>openAdd("MEETING"),1)];
  if(role()==="ADMIN")out.push(
-  it("INVOICE","Invoice","t-money","invoice",()=>{nav("invoices");openWizard();}),
-  it("EXPENSE","Expense","t-money","receipt",()=>{nav("expenses");billEditor();}),
-  it("EXECUTIVE","Executive","t-team","user",()=>{nav("people:EXECUTIVE");personForm("EXECUTIVE");}),
-  it("WORK","Work type","t-team","tag",()=>{nav("worktypes");workForm();}),
-  it("TEAM","Team","t-team","layers",()=>{nav("teams");teamForm();}),
-  it("TEAM_LEADER","Team leader","t-team","lead",()=>{nav("people:TEAM_LEADER");personForm("TEAM_LEADER");}),
+  it("INVOICE","Invoice","t-money","invoice",()=>{show("page");openWizard();}),
+  it("EXPENSE","Expense","t-money","receipt",()=>{show("page");billEditor();}),
+  it("EXECUTIVE","Executive","t-team","user",()=>personForm("EXECUTIVE")),
+  it("WORK","Work type","t-team","tag",()=>workForm()),
+  it("TEAM","Team","t-team","layers",()=>teamForm()),
+  it("TEAM_LEADER","Team leader","t-team","lead",()=>personForm("TEAM_LEADER")),
   it("KIT","Client kit","t-client","key",()=>kitPicker()));
  return out;
 }
@@ -1837,7 +1839,8 @@ function kitPicker(){
  const list=[...S.clients].sort((a,b)=>(!!a.kit)-(!!b.kit));
  openSheet("New client kit",el("p",{class:"pre",style:"margin:0 0 8px"},"Pick the client. The kit makes their Drive folders and a credentials sheet."),
   actionList([...list.map(c=>({label:kitWho(c),hint:c.kit?"Kit ready · open it":"Create the kit",onClick:()=>{closeSheet();nav("kit");c.kit?PAGES.kit(c.id):kitCreate(c);}})),
-   {label:"+ New client",hint:"Add the client first, then make the kit",onClick:()=>{closeSheet();nav("clients:add");}}]));
+   {label:"+ New client",hint:"Add the client first, then make the kit",onClick:()=>{closeSheet();nav("clients:add");}}]),
+  el("div",{class:"btnrow",style:"justify-content:flex-end"},cancelX()));
 }
 
 /* ---------- bottom icon rows ----------
@@ -1943,7 +1946,7 @@ function renderWizard(){
    el("p",{class:"pre",style:"margin:0"},W.editId?"Saving updates this draft; it stays awaiting approval.":"Saving creates a draft awaiting approval. Approve → confirm sheet → Email + WhatsApp. No auto-send."));
  }
  const canNext=W.step===0?!!W.client:W.step===1?amt>0:W.step===2?(W.plan!=="PART"||W.parts.every(p=>Number(p.v)>0)):true;
- page(W.editId?"Edit draft":"New invoice",[steps,body],[zoneActions(el("button",{class:"btn ghost",onclick:()=>{if(W.step===0)PAGES.invoices();else{W.step--;renderWizard();}}},W.step===0?"Cancel":"Back"),el("button",{class:"btn blue",disabled:!canNext||null,onclick:()=>{if(W.step<3){W.step++;renderWizard();}else saveInvoice(c,tax,gst,amt,taxAmt);}},W.step<3?"Next":"Save draft"))]);
+ page(W.editId?"Edit draft":"New invoice",[steps,body],[zoneActions(W.step>0?el("button",{class:"btn ghost",onclick:()=>{W.step--;renderWizard();}},"Back"):null,pageX(),el("button",{class:"btn blue",disabled:!canNext||null,onclick:()=>{if(W.step<3){W.step++;renderWizard();}else saveInvoice(c,tax,gst,amt,taxAmt);}},W.step<3?"Next":"Save draft"))]);
 }
 function saveInvoice(c,tax,gst,amt,taxAmt){
  const parts=W.plan==="PART"?W.parts.map((p,i)=>({n:i+1,amount:W.partMode==="PERCENT"?(amt+taxAmt)*Number(p.v)/100:Number(p.v)*(1+gst/100),date:new Date(p.date+"T10:00:00").toISOString(),status:"SCHEDULED",desc:p.desc})):[];
@@ -2149,7 +2152,7 @@ function clientForm(c){
  indiaWrap.hidden=v.country!=="IN";indiaOnly.hidden=v.country!=="IN";syncState();
  page(c?c.name:"Add client",[el("div",{style:"padding:12px"},field("Name",inp("name","Client name")),field("Business name",inp("businessName","Legal name printed on invoices")),field("Email",inp("email","accounts@client.com","email")),field("WhatsApp number",inp("phone","+91 …","tel")),field("Country",country),indiaWrap,hint,indiaOnly,field("Billing address",el("textarea",{class:"in",oninput:e=>{v.address=e.target.value;}},v.address||"")),
   el("p",{class:"pre"},"Tax type is picked automatically: same state as your company ("+(GST_STATES[S.settings.stateCode]||S.settings.stateCode)+") → CGST+SGST, another Indian state → IGST, outside India → export invoice at 0% under LUT."))],
-  [zoneActions(el("button",{class:"btn ghost",onclick:()=>PAGES.clients()},"Cancel"),c?el("button",{class:"btn ghost",onclick:()=>c.kit?PAGES.kit(c.id):kitCreate(c)},c.kit?"Client kit":"Create kit"):null,el("button",{class:"btn blue",onclick:()=>{if(!v.name.trim())return toast("Name is required","err");v.pan=(v.pan||"").toUpperCase().trim();if(v.pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v.pan))return toast("PAN must look like AAACZ1234F","err");v.gstin=(v.gstin||"").toUpperCase().trim();v.tdsPercent=Number(v.tdsPercent)||0;if(v.country!=="IN"){v.stateCode="";v.stateName="";v.pan="";v.tdsPercent=0;v.gstin="";}if(c)Object.assign(c,v);else S.clients.push(Object.assign({id:uid(),onHold:false},v));save();toast(c?"Client saved":"Client added · shows in filters once it has a task");PAGES.clients();}},"Save"))]);
+  [zoneActions(pageX(),c?el("button",{class:"btn ghost",onclick:()=>c.kit?PAGES.kit(c.id):kitCreate(c)},c.kit?"Client kit":"Create kit"):null,el("button",{class:"btn blue",onclick:()=>{if(!v.name.trim())return toast("Name is required","err");v.pan=(v.pan||"").toUpperCase().trim();if(v.pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v.pan))return toast("PAN must look like AAACZ1234F","err");v.gstin=(v.gstin||"").toUpperCase().trim();v.tdsPercent=Number(v.tdsPercent)||0;if(v.country!=="IN"){v.stateCode="";v.stateName="";v.pan="";v.tdsPercent=0;v.gstin="";}if(c)Object.assign(c,v);else S.clients.push(Object.assign({id:uid(),onHold:false},v));save();toast(c?"Client saved":"Client added · shows in filters once it has a task");PAGES.clients();}},"Save"))]);
 }
 /* ---------- requests ---------- */
 let reqTab="ALL",reqFin="ALL";
@@ -2375,7 +2378,7 @@ function billEditor(e){
   const payee=v.kind==="SALARY"?el("select",{class:"in",onchange:ev=>{v.userId=ev.target.value;v.payee=userById(v.userId).name;}},el("option",{value:""},"Pick a team member"),...staff.map(u=>el("option",{value:u.id,selected:v.userId===u.id||null},u.name+" · "+u.role.replace("_"," ").toLowerCase())))
    :el("input",{class:"in",placeholder:"Who are you paying? (vendor / freelancer)",value:v.payee,list:"payees",oninput:ev=>{v.payee=ev.target.value;}});
   const cats=el("div",{style:"display:flex;gap:6px"},el("select",{class:"in",style:"flex:1",onchange:ev=>{v.cat=ev.target.value;}},...S.settings.expenseCategories.map(c=>el("option",{value:c,selected:c===v.cat||null},c))),
-   el("button",{class:"pill",style:"height:40px",onclick:()=>{const n=el("input",{class:"in",placeholder:"e.g. Equipment"});openSheet("New category",field("Name",n,"Added to the list in Settings"),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{closeSheet();}},"Cancel"),el("button",{class:"btn",onclick:()=>{const t=n.value.trim();if(!t)return;if(!S.settings.expenseCategories.some(c=>c.toLowerCase()===t.toLowerCase()))S.settings.expenseCategories.splice(-1,0,t);v.cat=S.settings.expenseCategories.find(c=>c.toLowerCase()===t.toLowerCase());save();closeSheet();draw();toast("Category added");}},"Add")));}},"+ New"));
+   el("button",{class:"pill",style:"height:40px",onclick:()=>{const n=el("input",{class:"in",placeholder:"e.g. Equipment"});openSheet("New category",field("Name",n,"Added to the list in Settings"),el("div",{class:"btnrow"},cancelX(),el("button",{class:"btn",onclick:()=>{const t=n.value.trim();if(!t)return;if(!S.settings.expenseCategories.some(c=>c.toLowerCase()===t.toLowerCase()))S.settings.expenseCategories.splice(-1,0,t);v.cat=S.settings.expenseCategories.find(c=>c.toLowerCase()===t.toLowerCase());save();closeSheet();draw();toast("Category added");}},"Add")));}},"+ New"));
   let sched;
   if(hasPaid)sched=el("p",{class:"pre"},"Schedule: "+planText(e)+" · payments already recorded, so the schedule can't change. Edit the amount for future payments below.");
   else if(v.plan==="ONE_TIME")sched=el("div",{},field("Due on",el("input",{class:"in",type:"date",value:first,onchange:ev=>{first=ev.target.value;}})),el("label",{class:"check"},el("input",{type:"checkbox",checked:already||null,onchange:ev=>{already=ev.target.checked;draw();}}),el("div",{},el("b",{},"Already paid"),el("small",{},"Record it as paid right away"))),already?field("Paid by",seg(METHODS,pmethod,k=>{pmethod=k;})):null);
@@ -2411,7 +2414,7 @@ function billEditor(e){
   v.occ=occ;if(isNew)S.expenses.unshift(v);else Object.assign(e,v);
   expenseTick();save();toast(isNew?"Expense added":"Saved");expTab=occ.every(o=>o.status==="PAID")?"PAID":"DUE";PAGES.expenses();
  };
- page(isNew?"Add expense":"Edit · "+e.payee,[box],[zoneActions(isNew?el("button",{class:"btn ghost",onclick:()=>PAGES.expenses()},"Cancel"):el("button",{class:"btn ghost",style:"color:#dc2626",onclick:()=>{openSheet("Delete this bill?",el("p",{class:"pre",style:"margin:0 0 10px"},"Removes "+e.payee+" and all its payments from the books."),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Keep"),el("button",{class:"btn red",onclick:()=>{S.expenses=S.expenses.filter(x=>x!==e);save();closeSheet();PAGES.expenses();toast("Deleted");}},"Delete")));}},"Delete"),el("button",{class:"btn blue",onclick:saveBill},"Save"))]);
+ page(isNew?"Add expense":"Edit · "+e.payee,[box],[zoneActions(isNew?pageX():el("button",{class:"btn ghost",style:"color:#dc2626",onclick:()=>{openSheet("Delete this bill?",el("p",{class:"pre",style:"margin:0 0 10px"},"Removes "+e.payee+" and all its payments from the books."),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Keep"),el("button",{class:"btn red",onclick:()=>{S.expenses=S.expenses.filter(x=>x!==e);save();closeSheet();PAGES.expenses();toast("Deleted");}},"Delete")));}},"Delete"),el("button",{class:"btn blue",onclick:saveBill},"Save"))]);
 }
 PAGES.finance=function(){payTab="SUM";PAGES.payments();};
 function financeSummary(){
