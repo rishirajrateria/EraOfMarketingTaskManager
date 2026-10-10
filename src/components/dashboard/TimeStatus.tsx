@@ -2,12 +2,13 @@
 import { useMemo } from "react";
 import { clsx } from "@/lib/clsx";
 import type { DashboardData, DashboardFilters } from "@/server/tasks/types";
-import { hoursText, summaryCaption, summaryGroups } from "@/components/dashboard/summary";
+import { hoursText, summaryGroups } from "@/components/dashboard/summary";
 
 /**
- * Top summary (prototype `.sumtop` / `.sumsec2` / `.sch`, ADR 0015) — the most compact form: a caption row ("OPEN
- * HOURS" · the active dock filters or "all tasks"), then ONE line per group: a 54px muted label and one sideways-scrolling
- * row of content-sized 30px chips "Social 11.8h (8)" in the add-task capacity cell colours.
+ * Top summary (prototype `.sumsec2` / `.sch`, ADR 0015) — the most compact form: under the top bar ONE line per group:
+ * a 54px muted label and one sideways-scrolling row of content-sized 30px chips "Social 11.8h (8)" in the add-task
+ * capacity cell colours. The old "OPEN HOURS · <filters>" caption is gone (ADR 0016 addendum); the active filters show
+ * on the minimised filter tray instead.
  * Admin: Teams (or "<Team>·people") + Clients · Team Leader: People + Clients · Executive: Days + Clients.
  * The numbers follow the bottom filters; tapping a chip filters the list (tap again to clear).
  */
@@ -27,11 +28,7 @@ export function TimeStatus({
   return (
     <section className="shrink-0 bg-cyan-area px-2.5 pb-2.5 pt-[env(safe-area-inset-top)]" aria-label="Open hours">
       {topBar}
-      <div className="mt-1 flex items-baseline justify-between gap-2 px-0.5 pb-1.5 text-[11px] text-z1ink opacity-85">
-        <span className="shrink-0 font-extrabold uppercase tracking-[.08em]">Open hours</span>
-        <span className="min-w-0 truncate">{summaryCaption(data, filters)}</span>
-      </div>
-      <div className="space-y-1.5">
+      <div className="mt-1.5 space-y-1.5">
         {groups.map((g) => (
           <div key={g.key} role="group" aria-label={g.label} className="flex items-center gap-2">
             <span className="w-[54px] shrink-0 truncate text-[10px] font-extrabold uppercase tracking-[.07em] text-z1ink opacity-75" title={g.label}>

@@ -34,6 +34,15 @@ describe("corner close store", () => {
     expect(calls).toBe(2);
   });
 
+  it("closeAll closes everything, newest first (Home tapped on the home screen)", () => {
+    const closed: string[] = [];
+    const offs = ["page", "sheet", "sub-sheet"].map((n) => cornerStore.push(() => closed.push(n)));
+    cornerStore.closeAll();
+    expect(closed).toEqual(["sub-sheet", "sheet", "page"]);
+    offs.forEach((off) => off());
+    expect(cornerStore.hasOpen()).toBe(false);
+  });
+
   it("removing an older entry keeps the newer one on top", () => {
     const closed: string[] = [];
     const offA = cornerStore.push(() => closed.push("a"));

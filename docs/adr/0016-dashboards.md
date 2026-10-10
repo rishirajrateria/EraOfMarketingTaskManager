@@ -200,3 +200,41 @@ a separate × in every form.
 - **Requests** (`/admin/requests`): same rule — a screen's primary pill row sits lowest, just above the nav. The
   Finance sub-row (All · Approvals · Payments · Expenses) sits above the inbox tabs (All · Finance · Work · HR, with
   counts), and the Task list / Dashboards buttons are gone (the nav covers both).
+
+### Nav v3: the + in the middle, Home on the right, Profile on top (2026-10-10, evening)
+Reference: prototype `dashNavR`, "nav v3", `.fabrow{display:grid`, `#addNav{display:grid`. Replaces the tab order and
+the Profile tab above.
+- Bottom nav order: Admin **Dashboard · Requests | + | Notifications · Home**; Team Leaders / Executives (and parked
+  CA) **Notifications | + | Home**; HR **Requests · Notifications | × slot | Home**. `NavRow` is a 3-column grid
+  (`minmax(0,1fr) 52px minmax(0,1fr)`, 4px gutters) so the corner button is exactly centred between two equal groups;
+  tabs share their group's width (labels 10px, −0.02em, so "Notifications" fits at 360px).
+- **Home** (house) → the task list (`/dashboard`; HR `/attendance`), highlighted with `aria-current` there. It never
+  toggles; tapped on the home screen it closes whatever is open there (`cornerStore.closeAll()`); from any other page
+  it navigates, which drops that page's sheets.
+- **Profile** leaves the nav and returns to the top bar: after Gmail · Drive · WhatsApp and a small separator, the
+  blue-gradient initials (`a[data-profile]`), a toggle like the tabs — `/me`, tapped again → home; white ring and
+  `aria-current` while open. Dashboard / Requests / Notifications stay out of the top bar.
+- Speed dial: each row is a grid (`calc(50% + 25px) 1fr`) over the full-width dim, so every icon square is centred on
+  the + (44px squares get a 3px right margin), labels to the LEFT, the eyes to the RIGHT (← item, → eye). A tap on the
+  empty space beside a row closes the dial.
+- Add-task row: the same grid — Task / Meeting toggles left, the × centred in the +'s spot, (Admin) the scrolling,
+  fading icon strip right.
+- Non-admins' filter strip renders nothing in Admin's "⏸ all" slot (already the case in the app; checked in the
+  browser run).
+
+### Filter tray minimise, no "Open hours" caption, slimmer menu (2026-10-10, evening)
+Reference: prototype `traytog`, `#dashTray.min`, `pageSig`, `menuModel`.
+- **Filter tray** (`FilterTray`): the dashboard's strip + Teams / Clients rows + time row get a small glass tab
+  (chevron-down, ~40×22px) centred on their top edge. Tapping it collapses the tray to a slim 40px bar showing only the
+  tab — chevron-up + "Filters · Social · Today" (`summaryCaption`, or "Filters · all tasks"); tapping it again
+  expands. `aria-expanded` / `aria-controls`; remembered per user in this browser (`localStorage`
+  `eom:dash-tray-min:<userId>`, falls back to expanded). The task list gains the space.
+- The "OPEN HOURS · <filters>" caption above the summary chip rows is gone (the chip rows stay); the active filters
+  show on the minimised tray instead.
+- **Menu**: the tiles the + speed dial covers (add + eye) leave — Client kit, Executives, Team leaders, Teams, Work
+  types (their pages and `?add=1` stay). Quick actions: Approvals only, spanning the row as icon + label. Long single
+  words get a soft hyphen in the middle (`softHyphenate`, ≥10 letters: "Notifi-cations", "Atten-dance") so tiles wrap
+  instead of clipping.
+- The list flow's bar is tied to the exact list page: it lives in that page's URL (`?add=…&from=add`), so opening one
+  client's kit from the client-kit list (or any other page) shows that page's own buttons, no bar, and the corner ×
+  there closes a sheet rather than leaving for `/dashboard`.

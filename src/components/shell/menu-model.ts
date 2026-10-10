@@ -1,6 +1,6 @@
 import {
-  BarChart3, Bell, Building2, CalendarCheck, Clock, FileText, Folder, FolderKey, HardDrive, Inbox, Layers, ListChecks, LogOut,
-  Receipt, Settings, Tag, UserCheck, UserRoundCheck, Users, type LucideIcon,
+  BarChart3, Bell, Building2, CalendarCheck, Clock, Folder, HardDrive, Inbox, ListChecks, LogOut, Settings, UserCheck,
+  type LucideIcon,
 } from "lucide-react";
 import type { MenuCounts } from "@/server/shell/menu";
 import { inrShort } from "@/components/dashboards/format";
@@ -61,8 +61,7 @@ export function menuSections(c: MenuCounts | null): MenuSection[] {
       tone: "client",
       items: [
         { href: "/admin/clients", icon: Building2, label: "Clients", sub: `${k(c?.clients)} clients · GST, PAN, TDS` },
-        // amber = active clients still without a Drive kit
-        { href: "/admin/client-kit", icon: FolderKey, label: "Client kit", sub: kitSub(c), badge: badge(k(c?.clients) - k(c?.clientsWithKit), "amber") },
+        // Client kit left the menu (ADR 0016 addendum): the + speed dial adds one, and its eye opens the list
         { href: "/admin/vault?tab=SHARED_DRIVE_LINK", icon: HardDrive, label: "Shared links", sub: "Shared drive links · folders shared with clients" },
       ],
     },
@@ -75,10 +74,7 @@ export function menuSections(c: MenuCounts | null): MenuSection[] {
         // the dashboards lost their action row (ADR 0016 addendum): Attendance and Inventory stay one tap away here
         { href: "/attendance", icon: UserCheck, label: "Attendance", sub: "Mark today · leave · monthly sheet" },
         { href: "/admin/inventory", icon: Clock, label: "Inventory", sub: "Hours available vs assigned" },
-        { href: "/admin/people?role=EXECUTIVE", icon: Users, label: "Executives", sub: `${k(c?.executives)} people · specialities` },
-        { href: "/admin/people?role=TEAM_LEADER", icon: UserRoundCheck, label: "Team leaders", sub: "One per team" },
-        { href: "/admin/teams", icon: Layers, label: "Teams", sub: c?.teams.length ? c.teams.join(", ") : "Add your first team" },
-        { href: "/admin/work-types", icon: Tag, label: "Work types", sub: `${k(c?.workTypes)} types across teams` },
+        // Executives, Team leaders, Teams and Work types left the menu: the + speed dial adds them and its eyes list them
       ],
     },
     {
@@ -103,9 +99,12 @@ export function filterSections(sections: MenuSection[], q: string): MenuSection[
     .filter((s) => s.items.length);
 }
 
-/** Quick actions pinned at the bottom (owner: three, no "New task" / "Add" here — the dashboard "+" speed-dial adds things). */
-export const QUICK_ACTIONS: QuickAction[] = [
-  { href: "/admin/invoices?new=1", icon: FileText, label: "New invoice", tone: "money" },
-  { href: "/admin/expenses/new", icon: Receipt, label: "Add expense", tone: "money" },
-  { href: "/admin/requests?tab=FIN&fin=APPR", icon: Inbox, label: "Approvals", tone: "red" },
-];
+/**
+ * Quick actions pinned at the bottom. New invoice / Add expense left with the "+" speed dial taking over every add
+ * (ADR 0016 addendum); Approvals stays — alone it spans the row as icon + label.
+ */
+export const QUICK_ACTIONS: QuickAction[] = [{ href: "/admin/requests?tab=FIN&fin=APPR", icon: Inbox, label: "Approvals", tone: "red" }];
+
+/** Long single words get a soft hyphen in the middle so a narrow tile wraps them as "Notifi-cations" / "Atten-dance". */
+export const SOFT_HYPHEN = "­";
+export const softHyphenate = (label: string) => label.replace(/\S{10,}/g, (w) => `${w.slice(0, Math.floor(w.length / 2))}${SOFT_HYPHEN}${w.slice(Math.floor(w.length / 2))}`);

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { resetDb, seedBasics, testDb } from "../helpers/db";
 import { mockSession } from "../helpers/mock-session";
-import { filterSections, menuSections, QUICK_ACTIONS } from "@/components/shell/menu-model";
+import { filterSections, menuSections, QUICK_ACTIONS, SOFT_HYPHEN, softHyphenate } from "@/components/shell/menu-model";
 import type { MenuCounts } from "@/server/shell/menu";
 
 /** ADR 0011 (v3 tiles): the Admin menu shows live counts as tile badges; only Admin can read them. */
@@ -102,7 +102,6 @@ describe("admin menu counts", () => {
       ],
       [
         ["Clients", "/admin/clients"],
-        ["Client kit", "/admin/client-kit"],
         ["Shared links", "/admin/vault?tab=SHARED_DRIVE_LINK"],
       ],
       [
@@ -110,10 +109,6 @@ describe("admin menu counts", () => {
         ["Tasks", "/admin/dashboards?view=TASK"],
         ["Attendance", "/attendance"],
         ["Inventory", "/admin/inventory"],
-        ["Executives", "/admin/people?role=EXECUTIVE"],
-        ["Team leaders", "/admin/people?role=TEAM_LEADER"],
-        ["Teams", "/admin/teams"],
-        ["Work types", "/admin/work-types"],
       ],
       [
         ["Requests", "/admin/requests"],
@@ -127,9 +122,20 @@ describe("admin menu counts", () => {
     expect(items.filter((i) => i.danger).map((i) => i.label)).toEqual(["Sign out"]);
     expect(items.filter((i) => !i.danger && !i.sub)).toEqual([]);
     expect(items.find((i) => i.label === "Drive folders")!.sub).toMatch(/^Monthly Drive folders/);
+    // what the + speed dial adds (and its eyes list) left the menu; the pages and their ?add=1 stay
+    for (const gone of ["/admin/client-kit", "/admin/people?role=EXECUTIVE", "/admin/people?role=TEAM_LEADER", "/admin/teams", "/admin/work-types"]) {
+      expect(items.map((i) => i.href)).not.toContain(gone);
+    }
   });
 
-  it("v3 tiles: badges — red for money and requests, amber for client kit and late tasks, soft for unread", () => {
+  it("long tile labels get a soft hyphen in the middle so they wrap instead of clipping", () => {
+    expect(softHyphenate("Notifications")).toBe(`Notifi${SOFT_HYPHEN}cations`);
+    expect(softHyphenate("Attendance")).toBe(`Atten${SOFT_HYPHEN}dance`);
+    expect(softHyphenate("Drive folders")).toBe("Drive folders");
+    expect(softHyphenate("Inventory")).toBe("Inventory");
+  });
+
+  it("v3 tiles: badges — red for money and requests, amber for late tasks, soft for unread", () => {
     const c: MenuCounts = {
       invoicesToApprove: 2, outstanding: 0, invoicesOverdue: 0, billsOverdue: 1, billsDueWeek: 0, gstToClaimMonth: 0, clients: 5, clientsWithKit: 3,
       credentials: 0, executives: 4, teams: ["Graphic"], workTypes: 3, requestsOpen: 6, unread: 7, company: "EOM", attendanceMarkedToday: false,
@@ -138,7 +144,6 @@ describe("admin menu counts", () => {
     const badges = Object.fromEntries(menuSections(c).flatMap((s) => s.items).filter((i) => i.badge).map((i) => [i.label, i.badge]));
     expect(badges).toEqual({
       Finance: { n: 3, tone: "red" },
-      "Client kit": { n: 2, tone: "amber" },
       Tasks: { n: 4, tone: "amber" },
       Requests: { n: 6, tone: "red" },
       Notifications: { n: 7, tone: "soft" },
@@ -151,7 +156,7 @@ describe("admin menu counts", () => {
   it("v3 tiles: search filters tiles by label, old subtitle and section", () => {
     const all = menuSections(null);
     expect(filterSections(all, "  ")).toBe(all);
-    expect(labels(filterSections(all, "kit"))).toEqual(["Client kit"]);
+    expect(labels(filterSections(all, "kit"))).toEqual([]);
     // "GST pack" lives only in the Drive folders subtitle; "attendance" in HR's subtitle and the Attendance tile
     expect(labels(filterSections(all, "gst pack"))).toEqual(["Drive folders"]);
     expect(labels(filterSections(all, "ATTENDANCE"))).toEqual(["HR", "Attendance"]);
@@ -163,15 +168,11 @@ describe("admin menu counts", () => {
     expect(filterSections(all, "zzz")).toEqual([]);
   });
 
-  it("quick actions: New invoice, Add expense, Approvals (no New task / Add)", () => {
-    expect(QUICK_ACTIONS.map((a) => [a.label, a.href, a.tone])).toEqual([
-      ["New invoice", "/admin/invoices?new=1", "money"],
-      ["Add expense", "/admin/expenses/new", "money"],
-      ["Approvals", "/admin/requests?tab=FIN&fin=APPR", "red"],
-    ]);
+  it("quick actions: Approvals only (the + speed dial adds invoices, expenses and the rest)", () => {
+    expect(QUICK_ACTIONS.map((a) => [a.label, a.href, a.tone])).toEqual([["Approvals", "/admin/requests?tab=FIN&fin=APPR", "red"]]);
   });
 
-  it("ADR 0014: Clients has one Client kit tile with the kit status as its title", async () => {
+  it("ADR 0014: the kit status line (the Client kit tile left the menu; the summary stays for reuse)", async () => {
     const { kitSub } = await import("@/components/shell/menu-model");
     const sections = menuSections(null);
     const hrefs = sections.flatMap((s) => s.items.map((i) => i.href));
@@ -187,8 +188,7 @@ describe("admin menu counts", () => {
     expect(r.ok && r.data.clientsWithKit).toBe(1);
     if (!r.ok) return;
     expect(kitSub(r.data)).toBe("1 of 2 clients have a kit · 1 saved login");
-    const kit = menuSections(r.data).find((s) => s.title === "Clients")!.items[1];
-    expect(kit).toMatchObject({ label: "Client kit", sub: "1 of 2 clients have a kit · 1 saved login", badge: { n: 1, tone: "amber" } });
+    expect(menuSections(r.data).find((s) => s.title === "Clients")!.items.map((i) => i.label)).toEqual(["Clients", "Shared links"]);
   });
 
   it("ADR 0016: Requests opens the one inbox; top-bar shortcuts", async () => {
@@ -206,6 +206,6 @@ describe("admin menu counts", () => {
   it("lists every admin destination once", () => {
     const hrefs = menuSections(null).flatMap((s) => s.items.map((i) => i.href));
     expect(new Set(hrefs).size).toBe(hrefs.length);
-    expect(hrefs).toEqual(expect.arrayContaining(["/admin/dashboards?view=FIN", "/admin/drive-folders", "/admin/work-types", "/admin/teams", "/admin/settings", "/admin/requests"]));
+    expect(hrefs).toEqual(expect.arrayContaining(["/admin/dashboards?view=FIN", "/admin/drive-folders", "/admin/clients", "/attendance", "/admin/inventory", "/admin/settings", "/admin/requests"]));
   });
 });

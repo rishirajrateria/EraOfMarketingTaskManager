@@ -35,6 +35,10 @@ export const cornerStore = {
     top.close();
     return true;
   },
+  /** Closes everything open, newest first (Home tapped on the home screen). */
+  closeAll(): void {
+    [...stack].reverse().forEach((e) => e.close());
+  },
   hasOpen: () => stack.length > 0,
   subscribe(l: () => void) {
     listeners.add(l);

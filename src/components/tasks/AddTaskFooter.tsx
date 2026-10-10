@@ -64,8 +64,9 @@ function TypeToggle({ on, label, onClick, className, children }: { on: boolean; 
 
 /**
  * Bottom of the add-task screen (prototype `#tBarG` + `#addNav`, ADR 0016 addendum): the time pills on their own row
- * (📅 When should it start? · Up next · Today · Tomorrow), then the 64px nav row — Task / Meeting type toggles, (Admin)
- * the speed dial's other adds as a scrolling icon strip, and the 52px blue × in the dashboard +'s exact spot.
+ * (📅 When should it start? · Up next · Today · Tomorrow), then the 64px row (nav v3 grid): Task / Meeting type toggles
+ * on the left, the 52px blue × centred in the bottom nav +'s exact spot (it closes an open sheet first, then the
+ * screen), and (Admin) the speed dial's other adds as a scrolling, fading icon strip on the right.
  */
 export function AddTaskBottomBar({
   form,
@@ -109,21 +110,30 @@ export function AddTaskBottomBar({
           Tomorrow
         </TagPill>
       </div>
-      <NavRow label="Add" right={<CloseX onClick={onClose} />}>
-        <div className="flex shrink-0 gap-1.5 pl-1">
-          <TypeToggle on={type === "WORK"} label="Task" onClick={() => onType("WORK")} className="bg-[linear-gradient(150deg,#3b82f6,#1d4ed8)] text-white">
-            <ListTodo size={22} strokeWidth={2.25} aria-hidden />
-          </TypeToggle>
-          <TypeToggle on={type === "MEETING"} label="Meeting" onClick={() => onType("MEETING")} className="border border-[rgba(15,23,42,.14)] bg-white">
-            <MeetIcon size={22} />
-          </TypeToggle>
-        </div>
-        <div className="scrollbar-none flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto pr-[18px] [mask-image:linear-gradient(90deg,#000_82%,transparent)]">
-          {more.map((it) => (
-            <NavAddButton key={it.key} it={it} onPick={(x) => onPick?.(x)} />
-          ))}
-        </div>
-      </NavRow>
+      <NavRow
+        label="Add"
+        className="h-16"
+        left={
+          <div className="flex shrink-0 gap-1.5 pl-1">
+            <TypeToggle on={type === "WORK"} label="Task" onClick={() => onType("WORK")} className="bg-[linear-gradient(150deg,#3b82f6,#1d4ed8)] text-white">
+              <ListTodo size={22} strokeWidth={2.25} aria-hidden />
+            </TypeToggle>
+            <TypeToggle on={type === "MEETING"} label="Meeting" onClick={() => onType("MEETING")} className="border border-[rgba(15,23,42,.14)] bg-white">
+              <MeetIcon size={22} />
+            </TypeToggle>
+          </div>
+        }
+        center={<CloseX onClick={onClose} />}
+        right={
+          more.length ? (
+            <div className="scrollbar-none flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto pr-[18px] [mask-image:linear-gradient(90deg,#000_82%,transparent)]">
+              {more.map((it) => (
+                <NavAddButton key={it.key} it={it} onPick={(x) => onPick?.(x)} />
+              ))}
+            </div>
+          ) : null
+        }
+      />
     </div>
   );
 }

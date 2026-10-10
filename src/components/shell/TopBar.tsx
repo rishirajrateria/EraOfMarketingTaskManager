@@ -7,10 +7,10 @@ import { TopIcons } from "@/components/shell/TopIcons";
 export type TopBarUser = { id: string; name: string; image: string | null; email?: string | null; role: Role };
 
 /**
- * The one top bar of every screen (ADR 0016 + addendum, prototype `refreshTop` / `.topbar`): ☰ (Admin) | Gmail ·
- * Drive · WhatsApp. Dashboard · Requests · Notifications · Profile live in the bottom nav row of every screen
- * (GlobalNav), so the top bar no longer repeats them. The task dashboard draws it inside its cyan summary; other
- * pages in a cyan band above their title row.
+ * The one top bar of every screen (ADR 0016 + addendum nav v3, prototype `refreshTop` / `.topbar`): ☰ (Admin) | Gmail
+ * · Drive · WhatsApp | Profile (avatar toggle, TopIcons). Dashboard · Requests · Notifications · Home live in the
+ * bottom nav row of every screen (GlobalNav). The task dashboard draws it inside its cyan summary; other pages in a
+ * cyan band above their title row.
  */
 export function TopBar({ user }: { user: TopBarUser }) {
   return (
@@ -22,7 +22,7 @@ export function TopBar({ user }: { user: TopBarUser }) {
       ) : (
         <span />
       )}
-      <TopIcons email={user.email} />
+      <TopIcons user={user} />
     </div>
   );
 }

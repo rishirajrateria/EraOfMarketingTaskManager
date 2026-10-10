@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Search, Settings, X } from "lucide-react";
 import { menuCounts, type MenuCounts } from "@/server/shell/menu";
-import { filterSections, menuSections, QUICK_ACTIONS, type BadgeTone, type MenuItem, type Tone } from "@/components/shell/menu-model";
+import { filterSections, menuSections, QUICK_ACTIONS, softHyphenate, type BadgeTone, type MenuItem, type Tone } from "@/components/shell/menu-model";
 
 /**
  * Admin menu (ADR 0011 v3 tiles): a thumb-first bottom sheet. Search on top, then square icon tiles grouped and
@@ -24,8 +24,6 @@ const DOT: Record<Tone, string> = { money: "bg-[#10b981]", client: "bg-[#3b82f6]
 const BADGE: Record<BadgeTone, string> = { red: "bg-[#ef4444] text-white", amber: "bg-[#ea580c] text-white", soft: "bg-[#2563eb] text-white" };
 const FOCUS = "outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]";
 
-/** Long single words ("Notifications") get a soft hyphen so a narrow tile breaks them as "Notifi-cations". */
-const breakable = (label: string) => label.replace(/\S{12,}/g, (w) => `${w.slice(0, Math.floor(w.length / 2))}­${w.slice(Math.floor(w.length / 2))}`);
 
 function Tile({ it, tone, onClose }: { it: MenuItem; tone: Tone; onClose: () => void }) {
   const Icon = it.icon;
@@ -44,7 +42,7 @@ function Tile({ it, tone, onClose }: { it: MenuItem; tone: Tone; onClose: () => 
         aria-hidden
         className={`line-clamp-2 min-h-[2.4em] max-w-full text-center text-[12px] font-semibold leading-[1.2] tracking-[-.01em] hyphens-auto [overflow-wrap:anywhere] ${it.danger ? "text-[#dc2626] dark:text-[#f87171]" : ""}`}
       >
-        {breakable(it.label)}
+        {softHyphenate(it.label)}
       </span>
       {it.badge ? (
         <span
@@ -127,15 +125,17 @@ export function MenuTray({ open, onClose, user }: { open: boolean; onClose: () =
             </section>
           ))}
         </div>
-        <div className="grid shrink-0 grid-cols-3 gap-2 border-t border-hair bg-glass px-4 pb-[calc(14px+env(safe-area-inset-bottom))] pt-3">
+        {/* one action spans the row as icon + label; several share it as stacked tiles */}
+        <div className="grid shrink-0 grid-cols-[repeat(auto-fit,minmax(0,1fr))] gap-2 border-t border-hair bg-glass px-4 pb-[calc(14px+env(safe-area-inset-bottom))] pt-3">
           {QUICK_ACTIONS.map((a) => {
             const Icon = a.icon;
+            const solo = QUICK_ACTIONS.length === 1;
             return (
               <Link
                 key={a.href}
                 href={a.href}
                 onClick={onClose}
-                className={`flex min-w-0 flex-col items-center gap-1.5 whitespace-nowrap rounded-2xl border border-hair bg-glass-strong px-0.5 py-2.5 text-[11px] font-semibold shadow-[var(--shadow)] ${FOCUS}`}
+                className={`flex min-w-0 items-center whitespace-nowrap rounded-2xl border border-hair bg-glass-strong px-0.5 font-semibold shadow-[var(--shadow)] ${solo ? "flex-row justify-center gap-2.5 py-2 text-[13px]" : "flex-col gap-1.5 py-2.5 text-[11px]"} ${FOCUS}`}
               >
                 <span className={`flex h-[38px] w-[38px] items-center justify-center rounded-xl ${TONE[a.tone]}`}>
                   <Icon size={20} />

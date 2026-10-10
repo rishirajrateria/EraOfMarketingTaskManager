@@ -7,7 +7,8 @@ import { Sheet } from "@/components/ui/Sheet";
 import { SheetButtons } from "@/components/ui/CloseX";
 import { btnPrimary, inputCls } from "@/components/ui/Field";
 import { FilterStrip } from "@/components/dashboard/FilterStrip";
-import { dayLabel } from "@/components/dashboard/summary";
+import { dayLabel, summaryCaption } from "@/components/dashboard/summary";
+import { FilterTray } from "@/components/dashboard/FilterTray";
 import { DockPill, FilterRow } from "@/components/ui/FilterRow";
 
 export type AddMode = "WORK" | "MEETING" | "CHOOSE";
@@ -74,8 +75,9 @@ function DaySheet({ open, filters, onPick, onClose }: { open: boolean; filters: 
 /**
  * Bottom zone (prototype `prow` / `.plab` / `#dashNav`, ADR 0015 + ADR 0016 addendum): the status strip, then neutral
  * glass one-tap rows — TEAMS (TL: PEOPLE, Exec: CLIENTS) and CLIENTS (Exec: WORK) — then the time pills on their own
- * row (📅 Which day? · Today · Tomorrow · Oldest). The 64px nav row with the blue + below it is the shell's bottom nav
- * (GlobalNav), shared by every screen; the dashboard's height already leaves room for it.
+ * row (📅 Which day? · Today · Tomorrow · Oldest) — all in the minimisable FilterTray (its tab collapses it to
+ * "Filters · <active filters>"). The 64px nav row with the + below it is the shell's bottom nav (GlobalNav), shared by
+ * every screen; the dashboard's height already leaves room for it.
  */
 export function BottomBar({
   data,
@@ -93,8 +95,8 @@ export function BottomBar({
   const names = dockNames(data.role);
   const setRow = (key: "row1" | "row2") => (id: string | null) => onChange({ ...filters, [key]: id, pill: null });
   const quick = (q: NonNullable<DashboardFilters["quick"]>) => onChange({ ...filters, quick: filters.quick === q ? null : q, date: null, pill: null });
-  return (
-    <section className="shrink-0" aria-label="Filters">
+  const tray = (
+    <FilterTray userId={data.me.id} label={`Filters · ${summaryCaption(data, filters)}`}>
       <FilterStrip filters={filters} onChange={onChange} onPauseAll={data.role === "ADMIN" ? onPauseAll : undefined} />
       <div className="bar-glass border-t border-hair pt-1">
         <FilterRow label={names.row1[1]} items={data.row1} value={filters.row1} onChange={setRow("row1")} />
@@ -115,6 +117,11 @@ export function BottomBar({
           </DockPill>
         </div>
       </div>
+    </FilterTray>
+  );
+  return (
+    <>
+      {tray}
       <DaySheet
         open={dayOpen}
         filters={filters}
@@ -124,6 +131,6 @@ export function BottomBar({
           setDayOpen(false);
         }}
       />
-    </section>
+    </>
   );
 }
