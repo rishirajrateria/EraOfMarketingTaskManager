@@ -1,4 +1,4 @@
-# ADR 0017 — Notifications are a feed of what happened; Requests are decisions. Call / WhatsApp on the card
+# ADR 0017 — Notifications are a feed of what happened; Requests are decisions. Call / WhatsApp / Email on the card
 
 - Status: Accepted
 - Date: 2026-10-10
@@ -6,13 +6,14 @@
 - Supersedes: SPEC §7 "overdue → notify" (one TASK_OVERDUE), the bell rows for bills due and invoices to approve, the
   card's Calendar icon (ADR 0015 "five icons")
 - Reference: `docs/prototype/eom-tasks.html` — `NK`, `notifyTask`, `taskTick`, `openNotif`, `PAGES.notifications`, `.nrow`,
-  `.nhint`, `contactSheet`, "Add number", "Mobile / WhatsApp"
+  `.nhint`, `contactPeople`, `contactSheet`, `MODE={`, `.cav.mail`, "Add number", "Mobile / WhatsApp"
 
 ## Context
 The owner found the bell and the inbox doing the same job. They should feel different: **Requests** (inbox icon, red
 badge) are things waiting for a decision; **Notifications** (bell, blue badge) are a feed of what happened, nothing to
 decide. Each update should look like the task card it is about and open that task when tapped. Separately, people should
-be able to call or WhatsApp the client or their Team Leader straight from a card.
+be able to call, WhatsApp or email the right people straight from a card — and only the right people: a Team Leader or
+Executive must never get the client's phone numbers or email (owner's revision, 10 Oct).
 
 ## Decisions
 
@@ -77,18 +78,46 @@ user's list a toast says so. `task` / `completed` / `edit` are stripped from the
 `TopIcons` `Count` takes a tone: inbox red, bell blue (`data-badge`). `/admin/requests` and HR's leave inbox start with
 "Waiting for your decision — approve, decline or act. Updates that need nothing from you are in **Notifications**."
 
-### Call / WhatsApp on the card (`contacts.ts`, `ContactSheet.tsx`)
-- The card's Calendar icon is replaced by **Call** (lucide Phone) and **WhatsApp** (the top bar's outline glyph); six
-  32px icons (+ mic), the card does not get wider. Calendar stays in the (i) sheet.
-- Sheet rows: client (its contact person when the contact field is a name) + the task's Team Leader (the team's leader, else
-  an assignee's TL, else an assignee who is one); a **Team Leader** viewer gets the **Admin** (the creating Admin, else the
-  first) instead. Calls use the phone, else WhatsApp; WhatsApp the WhatsApp number, else the phone. Links `tel:+<digits>`
-  and `https://wa.me/<digits>?text=Hi <first>, about “<task>”: ` (new tab). A bare 10-digit Indian mobile gets 91.
-- A row without a number is greyed "no number saved"; for Admin it carries **Add number** → `/admin/clients?edit=<id>` or
-  `/admin/people?role=TEAM_LEADER&edit=<id>` (both pages now open that form from `?edit=`).
-- `User.phone` (new, E.164): people form field **Mobile / WhatsApp** ("Used by the Call and WhatsApp buttons on task
-  cards"), at least 10 digits, normalised like client WhatsApp; "" clears, leaving it out keeps it. The people list shows
-  the number or "no number". `DashboardData` carries client contact / phone / WhatsApp, people `phone`, team `leaderId`.
+### Call / WhatsApp / Email on the card (`contacts.ts`, `ContactSheet.tsx`, `contact-privacy.ts`)
+- The card's Calendar icon is replaced by **Call** (lucide Phone), **WhatsApp** (the top bar's outline glyph) and **Email**
+  (lucide Mail): seven icons, **30px** wide (26px when a voice-note mic makes eight) and a 4px gap before the time pill, so
+  "10:00am – 12:00pm" still fits at 390px without touching the icons. Calendar stays in the (i) sheet.
+- **Who** (one list for all three buttons, `contactTargets`; the viewer is never listed):
+  - **Admin** → the client (its contact person when the contact field is a name), the task's Team Leader (the team's
+    leader, else an assignee's TL, else an assignee who is one) and **one row per executive** assigned to the task;
+  - **Team Leader** → the Admin (the creating Admin, else the first) + each executive on the task. **Never the client.**
+  - **Executive** → their Team Leader (their own `teamLeaderId`, else the task's) + the Admin. Not the client.
+- **Links.** Calls use the phone, else WhatsApp; WhatsApp the WhatsApp number, else the phone: `tel:+<digits>` and
+  `https://wa.me/<digits>?text=Hi <first>, about “<task>”: ` (new tab). A bare 10-digit Indian mobile gets 91.
+  **Email** → `mailto:<email>?subject=…&body=…` (encodeURIComponent; `mailtoHref` / `mailBody`):
+  subject = the task title, for staff "[<Client>] <title>"; body = "Hi <first name>," (a client without a contact person:
+  "Hi <Client> team,"; an honorific stays with the name: "Hi Mr Rao,") + blank line + "Regarding “<title>”" (+ " (<Client>)"
+  for staff) + " — scheduled 08 Oct, 10:00am–12:00pm." (company time zone; left out when unscheduled) + blank lines +
+  "Thanks,\n<viewer name>\n<company name>" (`CompanySettings.companyName`). The client's address is its email, else the
+  contact field when that is an email; staff use their workspace email.
+- A row without a number / email is greyed "no number saved" / "no email saved"; for Admin it carries **Add number** /
+  **Add email** → `/admin/clients?edit=<id>` or `/admin/people?role=<TEAM_LEADER|EXECUTIVE>&edit=<id>` (both pages open
+  that form from `?edit=`). Nobody to contact → "Nobody to contact for this task".
+- `User.phone` (E.164): people form field **Mobile / WhatsApp** for every role, executives included ("Used by the Call and
+  WhatsApp buttons on task cards"), at least 10 digits, normalised like client WhatsApp; "" clears, leaving it out keeps
+  it. The people list shows the number or "no number".
+
+### Privacy: contact details are filtered on the server
+- `dashboardData` sends contact details only for the people on the viewer's sheets (`allowedContactIds` = the union of
+  `contactTargets` over the viewer's visible tasks — the same function the sheet uses, so UI and payload agree):
+  - **Admin**: every client's `emails` / `contact` / `phone` / `whatsapp` and every staff member's `phone` + `email`;
+  - **Team Leader**: `phone` + `email` of the Admin(s) and the executives on the tasks they see;
+  - **Executive**: `phone` + `email` of their Team Leader and the Admin.
+  Everyone else in `people` keeps only id / name / role / team (needed by filters and forms), without `phone` / `email` keys.
+- Team Leader / Executive `clients` rows are `{ id, name, guestCount }` — **no client email, contact or number at all**.
+- Meetings: a non-Admin task row lists only guests that are not the task client's own addresses and counts those in
+  `clientGuestCount` (the (i) sheet shows "<Client> (client)"). Picking the client on a Team Leader's / Executive's meeting
+  sets `inviteClient` (Guests sheet chip "<Client> (client)"); `createTask` adds the client's addresses on the server
+  (`taskInputSchema.inviteClient`). Admin's form keeps the visible, removable address chips. Editing is Admin-only, so the
+  hidden addresses cannot be lost by a non-Admin edit.
+- Tests: `tests/ui/contacts.test.ts` (who per role, links, mailto encoding, greeting fallback) and
+  `tests/tasks/contact-privacy.test.ts` (payload per role against Postgres, no client detail in the TL / Exec JSON, the
+  server-side client invite).
 
 ### Data
 Migration `20261010240000_notification_feed`: enum values above; `Notification.invoiceId`, index `(userId, createdAt)`;
@@ -103,5 +132,6 @@ whose times already passed are stamped so the live job doesn't repeat them; orph
 - The bell no longer nags about bills or approvals; the inbox's red count is the to-do list. Push / email reminders for
   them are unchanged.
 - Old rows keep their old long titles (shown as the headline under the task title); no data migration of texts.
-- Phone numbers of colleagues are sent to every dashboard user (internal staff only).
+- Colleagues' numbers / emails reach only the people who may contact them; client contact details reach Admins only.
+- A Team Leader / Executive cannot see which client addresses a meeting invites (only "<Client> (client)").
 - Open: rescheduling a task does not re-arm "Not started" / "Still not finished".

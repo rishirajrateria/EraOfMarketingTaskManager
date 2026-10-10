@@ -78,10 +78,24 @@ describe("picking the start", () => {
 describe("meeting guests", () => {
   it("picking a client adds its emails; deselecting / switching removes them; tasks never get them", () => {
     const f = meeting({ clientId: "" });
-    expect(pickClient(f, data, "repo")).toEqual({ clientId: "repo", clientGuests: ["billing@repo.example"] });
-    expect(pickClient({ ...f, clientId: "repo" }, data, "repo")).toEqual({ clientId: "", clientGuests: [] });
-    expect(pickClient({ ...f, clientId: "repo" }, data, "bare")).toEqual({ clientId: "bare", clientGuests: [] });
-    expect(pickClient({ ...emptyForm("WORK", "admin"), clientId: "" }, data, "repo")).toEqual({ clientId: "repo", clientGuests: [] });
+    expect(pickClient(f, data, "repo")).toEqual({ clientId: "repo", clientGuests: ["billing@repo.example"], inviteClient: false });
+    expect(pickClient({ ...f, clientId: "repo" }, data, "repo")).toEqual({ clientId: "", clientGuests: [], inviteClient: false });
+    expect(pickClient({ ...f, clientId: "repo" }, data, "bare")).toEqual({ clientId: "bare", clientGuests: [], inviteClient: false });
+    expect(pickClient({ ...emptyForm("WORK", "admin"), clientId: "" }, data, "repo")).toEqual({ clientId: "repo", clientGuests: [], inviteClient: false });
+  });
+  it("Team Leader / Executive data has no client emails: picking the client asks the server to invite it (ADR 0017)", () => {
+    const tlData = { ...data, me: { id: "priya", role: "TEAM_LEADER", teamId: "social" }, clients: [{ id: "repo", name: "Repo", guestCount: 2 }, { id: "bare", name: "Bare", guestCount: 0 }] };
+    const f = { ...emptyForm("MEETING", "priya", "TEAM_LEADER"), title: "Kickoff", clientId: "" };
+    const picked = pickClient(f, tlData, "repo");
+    expect(picked).toEqual({ clientId: "repo", clientGuests: [], inviteClient: true });
+    expect(pickClient(f, tlData, "bare").inviteClient).toBe(false);
+    const form = { ...f, ...picked };
+    expect(guestCount(form, tlData)).toBe(2);
+    expect(validateForm(form, tlData)).toEqual({});
+    const p = toTaskInput(form, TZ);
+    expect(p).toMatchObject({ inviteClient: true, guestEmails: [] });
+    expect(taskInputSchema.safeParse(p).success).toBe(true);
+    expect(toTaskInput({ ...form, type: "WORK" }, TZ).inviteClient).toBe(false);
   });
   it("invitees = me + the teams' Team Leaders (executives only when picked) + picked people; count excludes me", () => {
     const f = meeting({ teamIds: ["social"], assigneeIds: ["sana", "priya"], clientGuests: ["billing@repo.example"], guestEmails: ["Billing@repo.example", "x@y.co"] });

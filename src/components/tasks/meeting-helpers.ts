@@ -78,15 +78,31 @@ export const isShortcutDay = (kind: "tomorrow" | "today", scheduledStart: string
 
 export const clientEmails = (data: Pick<DashboardData, "clients">, clientId: string) => data.clients.find((c) => c.id === clientId)?.emails ?? [];
 
+/** Team Leader / Executive data: how many client addresses "invite the client" adds on the server (ADR 0017). */
+export function hiddenClientGuests(data: Pick<DashboardData, "clients">, clientId: string): number {
+  const c = data.clients.find((x) => x.id === clientId);
+  return c && !c.emails ? (c.guestCount ?? 0) : 0;
+}
+
+/** The client fields of a meeting form for `clientId`: Admin gets the addresses, everyone else the server-side invite. */
+export function clientGuestFields(type: AddTaskForm["type"], data: Pick<DashboardData, "clients">, clientId: string): Pick<AddTaskForm, "clientGuests" | "inviteClient"> {
+  const meeting = type === "MEETING" && !!clientId;
+  return { clientGuests: meeting ? clientEmails(data, clientId) : [], inviteClient: meeting && hiddenClientGuests(data, clientId) > 0 };
+}
+
 /** CLIENT pill: on a meeting, picking a client adds its addresses as guests; deselecting removes them. */
-export function pickClient(form: Pick<AddTaskForm, "type" | "clientId">, data: Pick<DashboardData, "clients">, clientId: string): Pick<AddTaskForm, "clientId" | "clientGuests"> {
+export function pickClient(form: Pick<AddTaskForm, "type" | "clientId">, data: Pick<DashboardData, "clients">, clientId: string): Pick<AddTaskForm, "clientId" | "clientGuests" | "inviteClient"> {
   const next = form.clientId === clientId ? "" : clientId;
-  return { clientId: next, clientGuests: form.type === "MEETING" && next ? clientEmails(data, next) : [] };
+  return { clientId: next, ...clientGuestFields(form.type, data, next) };
 }
 
 /** People invited besides me + external guests (the badge on the people glyph and the summary line). */
-export function guestCount(form: Pick<AddTaskForm, "teamIds" | "assigneeIds" | "clientGuests" | "guestEmails">, data: Pick<DashboardData, "people" | "me">): number {
-  return meetingInvitees(form, data).filter((id) => id !== data.me.id).length + externalGuests(form).length;
+export function guestCount(
+  form: Pick<AddTaskForm, "teamIds" | "assigneeIds" | "clientGuests" | "guestEmails" | "inviteClient" | "clientId">,
+  data: Pick<DashboardData, "people" | "me"> & Partial<Pick<DashboardData, "clients">>,
+): number {
+  const hidden = form.inviteClient && data.clients ? hiddenClientGuests({ clients: data.clients }, form.clientId) : 0;
+  return meetingInvitees(form, data).filter((id) => id !== data.me.id).length + externalGuests(form).length + hidden;
 }
 
 /** Voice notes are never uploaded for meetings (the description is the agenda). */

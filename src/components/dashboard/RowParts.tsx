@@ -12,8 +12,8 @@ export const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
 const HOLD_MS = 450;
 
-/** Inline outline icon button on the icon line of a card (details / Drive / Meet / Chat / Calendar) — 32px. */
-export function IconBtn({ label, onClick, disabled, children }: { label: string; onClick: () => void; disabled?: boolean; children: React.ReactNode }) {
+/** Inline outline icon button on the icon line of a card (details / Drive / Meet / Chat / Call / WhatsApp / Email) — 30×32px; `compact` 26px when a voice-note icon makes it eight. */
+export function IconBtn({ label, onClick, disabled, compact, children }: { label: string; onClick: () => void; disabled?: boolean; compact?: boolean; children: React.ReactNode }) {
   return (
     <button
       type="button"
@@ -26,7 +26,7 @@ export function IconBtn({ label, onClick, disabled, children }: { label: string;
         e.stopPropagation();
         onClick();
       }}
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-muted active:bg-chip disabled:opacity-35"
+      className={clsx("flex h-8 shrink-0 items-center justify-center rounded-[10px] text-muted active:bg-chip disabled:opacity-35", compact ? "w-[26px]" : "w-[30px]")}
     >
       {children}
     </button>

@@ -118,6 +118,11 @@ export const taskInputSchema = z.object({
   recurrence: recurrenceSchema.default(null),
   guestEmails: guestEmailsSchema.default([]),
   meetingOptions: meetingOptionsSchema.nullable().default(null),
+  /**
+   * Meetings: invite the client's own addresses, resolved on the server — Team Leaders and Executives never receive
+   * them (ADR 0017 privacy), so their form sends this instead of the emails.
+   */
+  inviteClient: z.boolean().default(false),
   /** when the creator accepted the proposed slot, the client passes it back; otherwise server recomputes */
   acceptProposedSlot: z.boolean().default(true),
 });

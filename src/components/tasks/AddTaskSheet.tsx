@@ -17,7 +17,7 @@ import { RepeatSheet } from "@/components/tasks/RecurrencePicker";
 import { MeetingGuestsSheet } from "@/components/tasks/MeetingGuestsSheet";
 import { MeetingOptionsSheet } from "@/components/tasks/MeetingOptionsSheet";
 import { FindTimeSheet } from "@/components/tasks/FindTimeSheet";
-import { clientEmails, findTimeDay, guestCount, meetingShortcut, meetingTz, voiceNotesFor } from "@/components/tasks/meeting-helpers";
+import { clientGuestFields, findTimeDay, guestCount, meetingShortcut, meetingTz, voiceNotesFor } from "@/components/tasks/meeting-helpers";
 import type { VoiceNote } from "@/components/tasks/VoiceRecorder";
 import {
   EMPTY_LOADS,
@@ -135,7 +135,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
       clientId: f.clientId,
       teamIds: f.teamIds,
       tagIds: f.tagIds,
-      clientGuests: type === "MEETING" && f.clientId ? clientEmails(data, f.clientId) : [],
+      ...clientGuestFields(type, data, f.clientId),
     }));
   };
 

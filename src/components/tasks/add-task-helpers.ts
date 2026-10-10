@@ -33,6 +33,11 @@ export type AddTaskForm = {
   recurrence: Recurrence | null;
   /** Meetings (ADR 0012): the client's addresses, added when the client is picked (removable in the Guests sheet). */
   clientGuests: string[];
+  /**
+   * Meetings, Team Leader / Executive: "invite the client" — their browser never has the client's addresses (ADR 0017
+   * privacy), so the server adds them. Admin's form lists them in `clientGuests` instead.
+   */
+  inviteClient?: boolean;
   /** Meetings: external guests typed in the Guests sheet. */
   guestEmails: string[];
   /** Meetings: Google Calendar options (Options sheet). `timeZone: ""` = the company time zone. */
@@ -193,6 +198,7 @@ export function toTaskInput(form: AddTaskForm, tz = DEFAULT_TZ) {
     priority: form.priority,
     recurrence: !form.recurrence ? null : { ...form.recurrence, trigger: "ON_SCHEDULE" as const },
     guestEmails: meeting ? externalGuests(form) : [],
+    inviteClient: meeting && !!form.inviteClient,
     meetingOptions: meeting ? { ...(form.meeting ?? defaultMeetingOptions()), timeZone: zone } : null,
   };
 }
@@ -226,7 +232,7 @@ function validateMeeting(form: AddTaskForm, errors: AddTaskErrors, data?: AddTas
   if (!form.clientId) errors.clientId = data ? "Pick a client in the rows below" : "Client is required";
   const invitees = data ? meetingInvitees(form, data) : form.assigneeIds;
   const others = data ? invitees.filter((id) => id !== data.me.id) : invitees;
-  if (!others.length && !externalGuests(form).length) errors.assigneeIds = "Invite someone: pick a team, people or add a guest email";
+  if (!others.length && !externalGuests(form).length && !form.inviteClient) errors.assigneeIds = "Invite someone: pick a team, people or add a guest email";
   if (!Number.isFinite(form.hours) || form.hours < 0.25) errors.hours = "Pick the duration (at least 15 minutes)";
   return errors;
 }

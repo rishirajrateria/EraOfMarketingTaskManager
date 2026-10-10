@@ -46,8 +46,10 @@ export type TaskRow = {
   meetingNotesUrl: string | null;
   /** Gemini notes / transcripts filed into that folder by the meeting-notes job (ADR 0015). */
   meetingNotes: { id: string; kind: "SMART_NOTES" | "TRANSCRIPT"; url: string; createdAt: string }[];
-  /** Meetings: external guests (ADR 0012); internal guests are the assignees. */
+  /** Meetings: external guests (ADR 0012); internal guests are the assignees. Team Leader / Executive payloads leave
+   * out the client's own addresses (ADR 0017 privacy) and count them in `clientGuestCount` instead. */
   guestEmails: string[];
+  clientGuestCount?: number;
   /** Meetings: Google Calendar options (ADR 0012); null for work tasks. */
   meetingOptions: MeetingOptions | null;
   chatSpaceUrl: string | null;
@@ -70,12 +72,21 @@ export type DashboardData = {
   row2: { id: string; label: string }[]; // clients (Exec: work types)
   /** `teamIds` empty = legacy work type available to every team (ADR 0008). */
   workTypes: { id: string; name: string; colour: string; teamIds: string[] }[];
-  /** `emails`: the client's addresses a meeting invites automatically (email + contact when it is one, ADR 0012). */
-  clients: { id: string; name: string; emails?: string[]; contact?: string | null; phone?: string | null; whatsapp?: string | null }[];
+  /**
+   * `emails`: the client's addresses a meeting invites automatically (email + contact when it is one, ADR 0012).
+   * Admin only — Team Leader / Executive payloads carry no client email, contact or number at all (ADR 0017); they get
+   * `guestCount` (how many addresses "invite the client" adds, resolved on the server).
+   */
+  clients: { id: string; name: string; emails?: string[]; guestCount?: number; contact?: string | null; phone?: string | null; whatsapp?: string | null }[];
   teams: { id: string; name: string; colour: string; leaderId?: string | null }[];
-  /** `phone` feeds the card's Call / WhatsApp sheet (ADR 0017). */
-  people: { id: string; name: string; role: string; teamId: string | null; teamLeaderId: string | null; specialityIds: string[]; phone?: string | null }[];
-  me: { id: string; role: string; teamId: string | null };
+  /**
+   * `phone` / `email` feed the card's Call / WhatsApp / Email sheet (ADR 0017) and are only present for the people the
+   * viewer may contact (Admin: everyone; Team Leader: Admin + executives of their tasks; Executive: their TL + Admin).
+   */
+  people: { id: string; name: string; role: string; teamId: string | null; teamLeaderId: string | null; specialityIds: string[]; phone?: string | null; email?: string | null }[];
+  me: { id: string; role: string; teamId: string | null; name?: string };
+  /** Signs the card's pre-written emails. */
+  companyName?: string;
   tz: string;
   /** yyyy-MM-dd of the user's next approved leave (drives the B4Leave pill filter). */
   nextLeaveKey: string | null;

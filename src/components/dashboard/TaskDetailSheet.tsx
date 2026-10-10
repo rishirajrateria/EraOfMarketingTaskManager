@@ -146,12 +146,18 @@ export function TaskDetailSheet({
                 k="Guests"
                 v={
                   <span className="flex flex-wrap justify-end gap-1">
-                    {t.guestEmails.length ? (
-                      t.guestEmails.map((e) => (
-                        <span key={e} className="glass-chip inline-flex items-center rounded-full px-2 py-0.5 text-xs">
-                          {e}
-                        </span>
-                      ))
+                    {t.guestEmails.length || t.clientGuestCount ? (
+                      <>
+                        {t.clientGuestCount ? (
+                          // Team Leader / Executive: the client's own addresses are not sent to them (ADR 0017).
+                          <span className="glass-chip inline-flex items-center rounded-full px-2 py-0.5 text-xs">{t.client.name} (client)</span>
+                        ) : null}
+                        {t.guestEmails.map((e) => (
+                          <span key={e} className="glass-chip inline-flex items-center rounded-full px-2 py-0.5 text-xs">
+                            {e}
+                          </span>
+                        ))}
+                      </>
                     ) : (
                       <span className="text-xs text-gray-500">No outside guests</span>
                     )}

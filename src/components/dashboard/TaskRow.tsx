@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { AlertTriangle, FolderOpen, Info, MessageSquare, Mic, Pause, Phone, Repeat, RotateCcw, Video } from "lucide-react";
+import { AlertTriangle, FolderOpen, Info, Mail, MessageSquare, Mic, Pause, Phone, Repeat, RotateCcw, Video } from "lucide-react";
 import { clsx } from "@/lib/clsx";
 import type { DashboardData, TaskRow as Row } from "@/server/tasks/types";
 import { useLongPress } from "@/components/ui/useLongPress";
@@ -22,7 +22,7 @@ export type RowHandlers = {
   onRetry: (t: Row) => void;
   /** Hold / right-click on the date, hours or start-time pill → the review menu for that pill (ADR 0015). */
   onPillMenu: (t: Row, field: ReviewField) => void;
-  /** Phone / WhatsApp icons → the Call / WhatsApp sheet (client + Team Leader, ADR 0017). */
+  /** Phone / WhatsApp / Email icons → the contact sheet (who depends on the viewer's role, ADR 0017). */
   onContact: (t: Row, mode: ContactMode) => void;
 };
 
@@ -146,29 +146,32 @@ export function TaskRow({ t, data, h, pendingDone }: { t: Row; data: DashboardDa
         <DateHoursPills t={t} tz={data.tz} onPillMenu={pillMenu} onTap={open} />
       </div>
 
-      {/* Row 3: the icons · the scheduled window */}
-      <div className="mt-1 flex min-w-0 items-center justify-between gap-2">
+      {/* Row 3: the icons (7 × 30px, 8 × 26px with voice notes) · the scheduled window — fits "10:00am – 12:00pm" at 390px */}
+      <div className="mt-1 flex min-w-0 items-center justify-between gap-1">
         <div className="-ml-1.5 flex items-center">
-          <IconBtn label="Task details" onClick={open}>
+          <IconBtn compact={hasVoice} label="Task details" onClick={open}>
             <Info size={19} strokeWidth={1.75} />
           </IconBtn>
-          <IconBtn label="Drive folder" onClick={openDrive} disabled={driveBusy}>
+          <IconBtn compact={hasVoice} label="Drive folder" onClick={openDrive} disabled={driveBusy}>
             <FolderOpen size={19} strokeWidth={1.75} />
           </IconBtn>
-          <IconBtn label="Google Meet" onClick={() => t.meetLink && openExternal(t.meetLink)} disabled={meetDisabled}>
+          <IconBtn compact={hasVoice} label="Google Meet" onClick={() => t.meetLink && openExternal(t.meetLink)} disabled={meetDisabled}>
             <Video size={19} strokeWidth={1.75} />
           </IconBtn>
-          <IconBtn label="Chat space" onClick={() => t.chatSpaceUrl && openExternal(t.chatSpaceUrl)} disabled={!t.chatSpaceUrl}>
+          <IconBtn compact={hasVoice} label="Chat space" onClick={() => t.chatSpaceUrl && openExternal(t.chatSpaceUrl)} disabled={!t.chatSpaceUrl}>
             <MessageSquare size={19} strokeWidth={1.75} />
           </IconBtn>
-          <IconBtn label="Call" onClick={() => h.onContact(t, "call")}>
+          <IconBtn compact={hasVoice} label="Call" onClick={() => h.onContact(t, "call")}>
             <Phone size={18} strokeWidth={1.75} />
           </IconBtn>
-          <IconBtn label="WhatsApp" onClick={() => h.onContact(t, "wa")}>
+          <IconBtn compact={hasVoice} label="WhatsApp" onClick={() => h.onContact(t, "wa")}>
             <WhatsAppIcon size={19} strokeWidth={1.75} />
           </IconBtn>
+          <IconBtn compact={hasVoice} label="Email" onClick={() => h.onContact(t, "mail")}>
+            <Mail size={18} strokeWidth={1.75} />
+          </IconBtn>
           {hasVoice ? (
-            <IconBtn label="Voice notes" onClick={() => h.onOpenAttachments(t)}>
+            <IconBtn compact={hasVoice} label="Voice notes" onClick={() => h.onOpenAttachments(t)}>
               <Mic size={19} strokeWidth={1.75} />
             </IconBtn>
           ) : null}

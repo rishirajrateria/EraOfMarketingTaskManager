@@ -15,6 +15,7 @@ import { nextRunAt, repeatRuleData } from "@/server/tasks/recurrence";
 import { completeRule } from "@/server/tasks/repeat-rule";
 import { ACTIVE_STATUSES } from "@/server/tasks/state";
 import { sanitizeDescription } from "@/lib/sanitize";
+import { clientGuestEmails, normaliseEmails } from "@/server/tasks/meeting";
 import { z } from "zod";
 
 const idsSchema = z.array(z.string().min(1)).max(50);
@@ -37,6 +38,12 @@ export async function validateAssignees(user: SessionUser, assigneeIds: string[]
     throw new ForbiddenError("Executives may only self-assign");
   }
   return users;
+}
+
+/** "Invite the client" (ADR 0017): the client's own addresses are added here, never sent to a non-Admin browser. */
+async function withClientGuests(clientId: string, typed: string[]): Promise<string[]> {
+  const client = await prisma.client.findUnique({ where: { id: clientId }, select: { email: true, contact: true } });
+  return normaliseEmails([...clientGuestEmails(client), ...typed]);
 }
 
 export type CreateResult = { taskId: string; slot: SlotProposal | null };
@@ -91,6 +98,7 @@ export async function createTask(raw: unknown): Promise<ActionResult<CreateResul
     const user = await requireUser();
     if (user.role === "HR" || user.role === "CA") throw new ForbiddenError();
     const input = taskInputSchema.parse(raw);
+    if (input.type === "MEETING" && input.inviteClient) input.guestEmails = await withClientGuests(input.clientId, input.guestEmails);
     const plan = await planAssignment(user, input, (ids, type) => validateAssignees(user, ids, type));
     const assignees = await prisma.user.findMany({ where: { id: { in: plan.assigneeIds } }, select: { id: true, teamLeaderId: true } });
     const settings = await getSettings();

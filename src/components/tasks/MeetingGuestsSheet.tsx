@@ -118,7 +118,12 @@ export function MeetingGuestsSheet({
       <div className="space-y-4 px-4 pb-5 pt-1">
         <section>
           <GroupLabel>From client</GroupLabel>
-          {form.clientGuests.length ? (
+          {form.inviteClient && client ? (
+            // Team Leader / Executive: the addresses stay on the server (ADR 0017); one chip stands for them.
+            <ul className="flex flex-wrap gap-1.5">
+              <GuestChip label={`${client.name} (client${(client.guestCount ?? 0) > 1 ? ` · ${client.guestCount} emails` : ""})`} onRemove={() => patch({ inviteClient: false })} />
+            </ul>
+          ) : form.clientGuests.length ? (
             <ul className="flex flex-wrap gap-1.5">
               {form.clientGuests.map((e) => (
                 <GuestChip key={e} label={e} onRemove={() => patch({ clientGuests: form.clientGuests.filter((x) => x !== e) })} />
@@ -126,7 +131,7 @@ export function MeetingGuestsSheet({
             </ul>
           ) : (
             <p className="text-xs text-muted">
-              {client ? ((client.emails ?? []).length ? `${client.name}'s email was removed — pick the client again to add it back` : `${client.name} has no email — add one in Clients`) : "Pick a client in the rows below to invite them"}
+              {client ? ((client.emails ?? []).length || (client.guestCount ?? 0) > 0 ? `${client.name}'s email was removed — pick the client again to add it back` : `${client.name} has no email${data.role === "ADMIN" ? " — add one in Clients" : ""}`) : "Pick a client in the rows below to invite them"}
             </p>
           )}
         </section>

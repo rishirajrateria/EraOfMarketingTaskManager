@@ -97,13 +97,27 @@ Sign in as **Admin** from the demo chooser. Everything below is in the order a r
 ### Task card & Google lifecycle (ADR 0015)
 - [ ] **Card** (compact, ≈120 px): title (2 lines max) + badges and the circle · client + teal **team chip** · date pill
   "08 Oct" (never Today / Tom — also for tasks added with Tom / upnext) + "4hrs" (meetings "🎥 30m", no Meeting chip) ·
-  icons (i · Drive · Meet · Chat · Call · WhatsApp, + mic with voice notes; no Calendar — it's in the (i) sheet) ·
-  "11:00am – 3:00pm" · once started "▶ 11:05am – …". No person, no pref chip, no star. Light + dark at 390 px.
-- [ ] **Call / WhatsApp** (ADR 0017): Call → "Call client · <contact> · +91…" and "Call team leader · <TL> · +91…"
-  (tel: links); WhatsApp → the same rows opening wa.me with "Hi <first name>, about “<task>”: ". As Team Leader the second
-  row is the Admin. A row without a number is greyed "no number saved"; as Admin it has **Add number** → the client form
-  (`/admin/clients?edit=…`) or the person's form. Demo: Pharma Bag Co has no number, Sunrise only WhatsApp.
-- [ ] People form has **Mobile / WhatsApp** ("Used by the Call and WhatsApp buttons on task cards"); fewer than 10 digits
+  icons (i · Drive · Meet · Chat · Call · WhatsApp · Email, + mic with voice notes; no Calendar — it's in the (i)
+  sheet; 30 px each, 26 px when the mic makes eight) · "11:00am – 3:00pm" · once started "▶ 11:05am – …". No person, no
+  pref chip, no star. Light + dark at 390 px: the icons never touch the time pill, even with "10:00am – 12:00pm".
+- [ ] **Call / WhatsApp / Email — who** (ADR 0017; same rows for all three): as **Admin** "<verb> client" (contact person,
+  else the client name), "<verb> team leader", then one "<verb> executive" per executive on the task. As **Team Leader**
+  (demo Rishi Kumar): "<verb> Admin" + one row per executive — **never the client**. As **Executive** (demo Arush):
+  "<verb> team leader" + "<verb> Admin". Nobody sees themself. Try "[demo] Robam product shoot edit" in all three roles.
+- [ ] **Links**: Call → `tel:+91…`; WhatsApp → wa.me with "Hi <first name>, about “<task>”: " (a client without a contact
+  person: "Hi <Client> team, …"); **Email** → the mail app opens pre-written: To = their email; Subject = the task title
+  (staff: "[<Client>] <task title>"); body "Hi <first name>," · blank line · "Regarding “<task>” (<Client> for staff) —
+  scheduled 08 Oct, 10:00am–12:00pm." · blank lines · "Thanks, / <your name> / <company name>".
+- [ ] **Missing**: a row without a number is greyed "no number saved", without an email "no email saved"; as Admin it has
+  **Add number** / **Add email** → the client form (`/admin/clients?edit=…`) or that person's form
+  (`/admin/people?role=EXECUTIVE&edit=…` for an executive). Demo: Pharma Bag Co has no number, Sunrise only WhatsApp,
+  Dev Patel (executive, "[demo] Dev portfolio refresh") has no number.
+- [ ] **Privacy**: signed in as Team Leader or Executive, View source / DevTools → Network on `/dashboard`: no client
+  email, contact or phone / WhatsApp number anywhere (e.g. search "billing@", "98765"); colleagues' numbers only for the
+  people on your sheets. A Team Leader's new meeting with a client shows one "<Client> (client)" guest chip (the
+  addresses are added on the server); its (i) sheet shows "<Client> (client)", never the addresses.
+- [ ] People form has **Mobile / WhatsApp** for Team Leaders **and executives** ("Used by the Call and WhatsApp buttons on
+  task cards"); an executive's number shows on Admin's / their Team Leader's sheets; fewer than 10 digits
   is refused; a 10-digit mobile is saved as +91…; the people list shows the number or "no number".
 - [ ] **Top summary**: "OPEN HOURS · all tasks", then one line per group — TEAMS / CLIENTS chips "Graphic 20.5h (6)",
   swipe sideways for more; tap a

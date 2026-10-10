@@ -6,11 +6,13 @@ import { rowColour, ACTIVE_STATUSES } from "@/server/tasks/state";
 import { describeRecord } from "@/server/tasks/recurrence";
 import { DEFAULT_TZ } from "@/lib/time";
 import type { DashboardData, TaskRow } from "@/server/tasks/types";
-import { clientGuestEmails, readMeetingOptions } from "@/server/tasks/meeting";
+import { readMeetingOptions } from "@/server/tasks/meeting";
+import { hidesClientContact, shapeClients, shapePeople, splitClientGuests } from "@/server/tasks/contact-privacy";
 import { reviewFieldsOf } from "@/server/tasks/review-fields";
 
 export const taskInclude = {
-  client: { select: { id: true, name: true } },
+  // email / contact only to tell the client's own meeting guests apart (never copied onto the row as such).
+  client: { select: { id: true, name: true, email: true, contact: true } },
   teams: { include: { team: { select: { id: true, name: true, colour: true } } } },
   assignees: { include: { user: { select: { id: true, name: true, avatar: true } } } },
   tags: { include: { workType: { select: { id: true, name: true, colour: true } } }, orderBy: { workType: { name: "asc" } } },
@@ -24,7 +26,9 @@ export const taskInclude = {
 
 export type TaskWithRelations = Prisma.TaskGetPayload<{ include: typeof taskInclude }>;
 
-export function toRow(t: TaskWithRelations): TaskRow {
+/** `hideClientContact` (Team Leader / Executive, ADR 0017): the client's own meeting-guest addresses are left out. */
+export function toRow(t: TaskWithRelations, opts: { hideClientContact?: boolean } = {}): TaskRow {
+  const guests = splitClientGuests(t.guestEmails, t.client, !!opts.hideClientContact);
   return {
     id: t.id,
     title: t.title,
@@ -45,7 +49,7 @@ export function toRow(t: TaskWithRelations): TaskRow {
     repeatText: t.recurrenceRule && !t.recurrenceRule.stopped ? describeRecord(t.recurrenceRule, t.scheduledStart, DEFAULT_TZ) : null,
     selfAssigned: t.selfAssigned,
     protected: t.protected,
-    client: t.client,
+    client: { id: t.client.id, name: t.client.name },
     teams: t.teams.map((x) => x.team),
     assignees: t.assignees.map((a) => a.user),
     preferredAssigneeIds: t.preferredAssigneeIds,
@@ -61,7 +65,8 @@ export function toRow(t: TaskWithRelations): TaskRow {
     meetActive: t.meetActive,
     meetingNotesUrl: t.meetNotesFolderId ? `https://drive.google.com/drive/folders/${t.meetNotesFolderId}` : null,
     meetingNotes: t.meetingNotes.map((n) => ({ id: n.id, kind: n.kind, url: n.docUrl, createdAt: n.createdAt.toISOString() })),
-    guestEmails: t.guestEmails,
+    guestEmails: guests.guestEmails,
+    clientGuestCount: guests.clientGuestCount,
     meetingOptions: t.type === "MEETING" ? readMeetingOptions(t.meetingOptions) : null,
     chatSpaceUrl: t.chatSpaceUrl,
     calendarEventId: t.calendarEventId,
@@ -109,12 +114,12 @@ export async function listTasks(user: SessionUser, opts: { includeCompleted?: bo
     orderBy: [{ scheduledStart: "asc" }, { createdAt: "desc" }],
     take: 500,
   });
-  return rows.map(toRow);
+  return rows.map((t) => toRow(t, { hideClientContact: hidesClientContact(user.role) }));
 }
 
 export async function getTaskRow(user: SessionUser, id: string): Promise<TaskRow | null> {
   const t = await prisma.task.findFirst({ where: { id, deletedAt: null, ...scopeWhere(user) }, include: taskInclude });
-  return t ? toRow(t) : null;
+  return t ? toRow(t, { hideClientContact: hidesClientContact(user.role) }) : null;
 }
 
 /** Can this user see the task at all? */
@@ -134,11 +139,12 @@ export async function dashboardData(user: SessionUser): Promise<DashboardData> {
     prisma.user.findMany({
       where: { active: true, role: { in: ["ADMIN", "TEAM_LEADER", "EXECUTIVE"] } },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, role: true, teamId: true, teamLeaderId: true, phone: true, specialities: { select: { id: true } } },
+      select: { id: true, name: true, role: true, teamId: true, teamLeaderId: true, phone: true, email: true, specialities: { select: { id: true } } },
     }),
   ]);
   const workTypes = workTypeRows.map(({ teams: wt, ...w }) => ({ ...w, teamIds: wt.map((t) => t.id) }));
-  const people = peopleRows.map(({ specialities, ...p }) => ({ ...p, specialityIds: specialities.map((w) => w.id) }));
+  // Contact details only for the people this viewer may contact (ADR 0017 privacy).
+  const people = shapePeople(user, peopleRows.map(({ specialities, ...p }) => ({ ...p, specialityIds: specialities.map((w) => w.id) })), tasks, teams);
   let nextLeaveKey: string | null = null;
   try {
     const { nextApprovedLeave } = await import("@/server/inventory/queries");
@@ -169,10 +175,11 @@ export async function dashboardData(user: SessionUser): Promise<DashboardData> {
     row1,
     row2,
     workTypes,
-    clients: clients.map((c) => ({ id: c.id, name: c.name, emails: clientGuestEmails(c), contact: c.contact, phone: c.phone, whatsapp: c.whatsapp })),
+    clients: shapeClients(user, clients),
     teams,
     people,
-    me: { id: user.id, role: user.role, teamId: user.teamId },
+    me: { id: user.id, role: user.role, teamId: user.teamId, name: user.name ?? peopleRows.find((p) => p.id === user.id)?.name ?? "" },
+    companyName: settings.companyName,
     tz: settings.timezone,
     nextLeaveKey,
   };
