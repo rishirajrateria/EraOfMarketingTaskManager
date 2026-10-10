@@ -736,6 +736,9 @@ select.in{padding-right:10px}
 .pgtop:empty{display:none}
 #s-page .hdr{height:46px;padding-top:0!important}
 #pgMenu{display:none!important}
+.dblinks{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 12px}
+.dblinks .pill{height:32px;font-size:12.5px;font-weight:600}
+.t-red{background:linear-gradient(150deg,#f87171,#dc2626)}
 </style><div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
@@ -1447,19 +1450,15 @@ function menuModel(){
  const gst=occ.filter(x=>x.o.status==="PAID"&&x.o.itc&&dk(new Date(x.o.paidAt)).slice(0,7)===dk().slice(0,7)).reduce((s,x)=>s+(x.o.gst||0),0);
  const B=(n,c)=>n?{n,c}:null;
  return [
-  {h:"Money",t:"t-money",items:[
-   {go:"insights:FIN",ic:"chart",l:"Dashboards",s:"Finance · HR · Tasks"},
-   {go:"invoices",ic:"invoice",l:"Invoices",s:toApprove?toApprove+" waiting for your approval":"Create, approve and send",b:B(toApprove,"red")},
-   {go:"payments",ic:"wallet",l:"Payments & finance",s:[toApprove?toApprove+" to approve":null,outstanding?inr(outstanding)+" outstanding":null].filter(Boolean).join(" · ")||"Approvals, reminders, totals, TDS, GST",b:B(payTodo().late.length,"red")},
-   {go:"expenses",ic:"receipt",l:"Expenses",s:overdueBills?overdueBills+" overdue · "+dueSoon+" due this week":dueSoon?dueSoon+" due this week":"Bills, GST credit, TDS",b:overdueBills?{n:overdueBills,c:"red"}:B(dueSoon,"amber")},
+  {h:"Dashboards",t:"t-money",items:[
+   {go:"insights:FIN",ic:"chart",l:"Finance dashboard",s:[toApprove?toApprove+" to approve":null,outstanding?inr(outstanding)+" outstanding":null].filter(Boolean).join(" · ")||"Income, expense, invoices, bills",b:B(toApprove+overdueBills,"red")},
+   {go:"insights:HR",ic:"calcheck",l:"HR dashboard",s:(()=>{const t=S.attendance[dk()]||{};const st=S.users.filter(u=>["TEAM_LEADER","EXECUTIVE"].includes(u.role));const p=st.filter(u=>t[u.id]==="P"||t[u.id]==="HD").length,l=st.filter(u=>t[u.id]==="L").length;return Object.keys(t).length?p+" present · "+l+" on leave today":"Attendance, inventory, leave";})()},
+   {go:"insights:TASK",ic:"task",l:"Task dashboard",s:(()=>{const o=S.tasks.filter(t=>t.status!=="COMPLETED");const late=o.filter(t=>rowColour(t)==="red").length;return o.length+" open"+(late?" · "+late+" late to start":"");})(),b:B(S.tasks.filter(t=>t.status!=="COMPLETED"&&rowColour(t)==="red").length,"amber")},
    {go:"drive",ic:"folder",l:"Monthly Drive folders",s:"Invoices, bills, GST pack, cancelled"}]},
   {h:"Clients",t:"t-client",items:[
    {go:"clients",ic:"building",l:"Clients",s:S.clients.length+" clients · GST, PAN, TDS"},
    {go:"kit",ic:"key",l:"Client kit",s:(()=>{const k=S.clients.filter(c=>c.kit).length;return k+" of "+S.clients.length+" have a kit"+(expiring?" · "+expiring+" expiring":" · Drive, logins");})(),b:B(expiring,"amber")},
    {go:"vault:SHARED_DRIVE_LINK",ic:"drive",l:"Shared drive links",s:"Folders shared with clients"}]},
-  {h:"Workday",t:"t-day",items:[
-   {go:"attendance",ic:"calcheck",l:"Attendance",s:"Mark present, half day, leave"},
-   {go:"inventory",ic:"clock",l:"Inventory",s:"Hours available vs assigned"}]},
   {h:"Team",t:"t-team",items:[
    {go:"people:EXECUTIVE",ic:"users",l:"Executives",s:S.users.filter(u=>u.role==="EXECUTIVE").length+" people · specialities"},
    {go:"people:TEAM_LEADER",ic:"lead",l:"Team leaders",s:"One per team"},
@@ -1479,7 +1478,7 @@ function renderMenu(){
  $("#mBody").replaceChildren(...(secs.length?secs.map(sec=>el("div",{class:"msec"},el("h5",{},sec.h),el("div",{class:"mcard"},...sec.items.map(it=>el("button",{class:"mrow"+(it.danger?" danger":""),onclick:()=>{closeMenu();nav(it.go);}},
    el("span",{class:"mi "+(it.danger?"t-red":sec.t)},msvg(it.ic,18)),el("span",{class:"mt"},el("b",{},it.l),it.s?el("small",{},it.s):null),it.b?el("span",{class:"mbadge "+it.b.c},String(it.b.n)):null,it.danger?null:el("span",{class:"mchev"},msvg("chev",16))))))):[el("div",{class:"mempty"},"Nothing matches “"+q+"”")]));
 }
-$("#mQuick").replaceChildren(...[["task","t-task","New task",()=>nav("add")],["invoice","t-money","New invoice",()=>{nav("invoices");openWizard();}],["receipt","t-money","Add expense",()=>{nav("expenses");billEditor();}],["building","t-client","Add client",()=>nav("clients:add")]].map(([ic,t,l,fn])=>el("button",{class:"mq",onclick:()=>{closeMenu();fn();}},el("span",{class:t},msvg(ic,20)),l)));
+$("#mQuick").replaceChildren(...[["invoice","t-money","New invoice",()=>{nav("invoices");openWizard();}],["receipt","t-money","Add expense",()=>{nav("expenses");billEditor();}],["inbox","t-red","Approvals",()=>{reqTab="FIN";reqFin="APPR";nav("requests");}],["task","t-task","New task",()=>nav("add")]].map(([ic,t,l,fn])=>el("button",{class:"mq",onclick:()=>{closeMenu();fn();}},el("span",{class:t},msvg(ic,20)),l)));
 $("#mSearchIco").replaceChildren(msvg("search",16));$("#mClose").replaceChildren(msvg("x",18));$("#mSettings").replaceChildren(msvg("gear",18));
 $("#mClose").onclick=()=>closeMenu();$("#mSettings").onclick=()=>{closeMenu();nav("settings");};
 $("#mSearch").oninput=renderMenu;
@@ -1913,21 +1912,22 @@ function clientForm(c){
   [zoneActions(el("button",{class:"btn ghost",onclick:()=>PAGES.clients()},"Cancel"),c?el("button",{class:"btn ghost",onclick:()=>c.kit?PAGES.kit(c.id):kitCreate(c)},c.kit?"Client kit":"Create kit"):null,el("button",{class:"btn blue",onclick:()=>{if(!v.name.trim())return toast("Name is required","err");v.pan=(v.pan||"").toUpperCase().trim();if(v.pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v.pan))return toast("PAN must look like AAACZ1234F","err");v.gstin=(v.gstin||"").toUpperCase().trim();v.tdsPercent=Number(v.tdsPercent)||0;if(v.country!=="IN"){v.stateCode="";v.stateName="";v.pan="";v.tdsPercent=0;v.gstin="";}if(c)Object.assign(c,v);else S.clients.push(Object.assign({id:uid(),onHold:false},v));save();toast(c?"Client saved":"Client added · shows in filters once it has a task");PAGES.clients();}},"Save"))]);
 }
 /* ---------- requests ---------- */
-let reqTab="ALL";
+let reqTab="ALL",reqFin="ALL";
 /* One requests inbox for everything: Finance (approvals, overdue clients, bills), Work (review / time change), HR (leave). */
 PAGES.requests=function(){
  const KL={REVIEW:"Review",TIME_CHANGE:"Time change",LEAVE:"Leave",FIX_SELF:"Fix self task"};
  const area=r=>r.kind==="LEAVE"?"HR":"WORK";
- const T=role()==="ADMIN"?payTodo():{appr:[],late:[],bills:[]};const finN=T.appr.length+T.late.length+T.bills.filter(x=>isOver(x.o)).length;
+ const T=role()==="ADMIN"?payTodo():{appr:[],late:[],bills:[]};const finN=T.appr.length+T.late.length+T.bills.length;
  const tabs=[["ALL","All"],["FIN","Finance"+(finN?" · "+finN:"")],["WORK","Work · "+S.requests.filter(r=>r.status==="OPEN"&&area(r)==="WORK").length],["HR","HR · "+S.requests.filter(r=>r.status==="OPEN"&&area(r)==="HR").length]];
  const sel=r=>reqTab==="ALL"||area(r)===reqTab;
  const open=S.requests.filter(r=>r.status==="OPEN"&&sel(r)),done=S.requests.filter(r=>r.status!=="OPEN"&&sel(r));
+ const fOk=k=>reqTab!=="FIN"||reqFin==="ALL"||reqFin===k;
  const fin=(reqTab==="ALL"||reqTab==="FIN")&&role()==="ADMIN"?[
-  ...T.appr.map(i=>el("div",{class:"item",onclick:()=>approveSheet(i)},el("div",{class:"m"},el("b",{},(clientById(i.client)||{}).name),el("small",{},"Finance · approve & send "+DOCL[i.docType].toLowerCase())),el("div",{class:"amt"},inr(total(i))))),
-  ...T.late.map(i=>el("div",{class:"item",onclick:()=>openInvoice(i)},el("div",{class:"m"},el("b",{},(clientById(i.client)||{}).name),el("small",{},"Finance · "+i.number+" · "+(-dayOff(i.due))+" days late")),el("div",{class:"amt",style:"color:#dc2626"},inr(balance(i))))),
-  ...T.bills.filter(x=>isOver(x.o)).map(x=>el("div",{class:"item",onclick:()=>markPaid(x.e,x.o)},el("div",{class:"m"},el("b",{},x.e.payee),el("small",{},"Finance · bill overdue · mark paid")),el("div",{class:"amt",style:"color:#dc2626"},inr(x.o.amount))))]:[];
+  ...(fOk("APPR")?T.appr:[]).map(i=>el("div",{class:"item",onclick:()=>approveSheet(i)},el("div",{class:"m"},el("b",{},(clientById(i.client)||{}).name),el("small",{},"Finance · approve & send "+DOCL[i.docType].toLowerCase())),el("div",{class:"amt"},inr(total(i))))),
+  ...(fOk("PAY")?T.late:[]).map(i=>el("div",{class:"item",onclick:()=>openInvoice(i)},el("div",{class:"m"},el("b",{},(clientById(i.client)||{}).name),el("small",{},"Finance · "+i.number+" · "+(-dayOff(i.due))+" days late")),el("div",{class:"amt",style:"color:#dc2626"},inr(balance(i))))),
+  ...(fOk("EXP")?T.bills:[]).map(x=>el("div",{class:"item",onclick:()=>markPaid(x.e,x.o)},el("div",{class:"m"},el("b",{},x.e.payee),el("small",{},"Finance · "+(isOver(x.o)?"bill overdue":"bill due "+fmtD(x.o.due))+" · mark paid")),el("div",{class:"amt",style:isOver(x.o)?"color:#dc2626":""},inr(x.o.amount))))]:[];
  const card=r=>{const t=r.task?S.tasks.find(x=>x.id===r.task):null;return el("div",{class:"card"},el("div",{style:"display:flex;gap:6px;align-items:center;margin-bottom:4px"},el("span",{class:"tag draft"},KL[r.kind]),el("b",{style:"font-size:13px"},first(userById(r.by).name)),el("span",{style:"margin-left:auto;font-size:11px;color:var(--muted)"},fmtD(r.at))),t?el("div",{style:"font-size:13px;font-weight:600"},t.title):null,el("div",{style:"font-size:13px;margin:4px 0 8px"},r.note),r.status==="OPEN"?el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{r.status="DECLINED";if(t)t.review=false;notify(r.by,"Request declined: "+r.note.slice(0,40));save();PAGES.requests();toast("Declined");}},"Decline"),el("button",{class:"btn green",onclick:()=>{r.status="APPROVED";if(t){t.review=false;if(r.kind==="TIME_CHANGE"){const s=new Date(t.start);s.setDate(s.getDate()+1);const e=new Date(t.end);e.setDate(e.getDate()+1);t.start=s.toISOString();t.end=e.toISOString();}}if(r.kind==="LEAVE"){const u=userById(r.by);S.tasks.filter(x=>x.assignees.includes(u.id)&&!x.protected&&x.status==="NOT_STARTED"&&dayOff(x.start)>=0).forEach(x=>{const s=new Date(x.start);s.setDate(s.getDate()+1);const e=new Date(x.end);e.setDate(e.getDate()+1);x.start=s.toISOString();x.end=e.toISOString();});}notify(r.by,"Request approved: "+r.note.slice(0,40));save();PAGES.requests();toast(r.kind==="LEAVE"?"Leave approved · unprotected tasks shifted a day":"Approved");}},"Approve")):el("span",{class:"tag "+(r.status==="APPROVED"?"paid":"canc")},r.status.toLowerCase()));};
- page("Requests",[...fin,reqTab!=="FIN"?el("div",{style:"padding:12px 12px 0;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em"},"Open · "+open.length):null,...(reqTab==="FIN"?[]:open.map(card)),reqTab==="FIN"?(fin.length?null:el("div",{class:"empty"},"No finance approvals or reminders.")):open.length||fin.length?null:el("div",{class:"empty"},"Inbox zero."),done.length&&reqTab!=="FIN"?el("div",{style:"padding:12px 12px 0;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em"},"Handled"):null,...(reqTab==="FIN"?[]:done.map(card))].filter(Boolean),[role()==="ADMIN"?zoneTabs(tabs,reqTab,k=>{reqTab=k;PAGES.requests();}):null,zoneActions(el("button",{class:"btn ghost",onclick:()=>nav("dash")},"Task list"),role()==="ADMIN"?el("button",{class:"btn",onclick:()=>nav("insights:"+(reqTab==="HR"?"HR":reqTab==="WORK"?"TASK":"FIN"))},"Dashboards"):null)]);
+ page("Requests",[...fin,reqTab!=="FIN"?el("div",{style:"padding:12px 12px 0;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em"},"Open · "+open.length):null,...(reqTab==="FIN"?[]:open.map(card)),reqTab==="FIN"?(fin.length?null:el("div",{class:"empty"},"No finance approvals or reminders.")):open.length||fin.length?null:el("div",{class:"empty"},"Inbox zero."),done.length&&reqTab!=="FIN"?el("div",{style:"padding:12px 12px 0;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em"},"Handled"):null,...(reqTab==="FIN"?[]:done.map(card))].filter(Boolean),[role()==="ADMIN"?zoneTabs(tabs,reqTab,k=>{reqTab=k;reqFin="ALL";PAGES.requests();}):null,role()==="ADMIN"&&reqTab==="FIN"?zoneTabs([["ALL","All"],["APPR","Approvals "+T.appr.length],["PAY","Payments "+T.late.length],["EXP","Expenses "+T.bills.length]],reqFin,k=>{reqFin=k;PAGES.requests();}):null,zoneActions(el("button",{class:"btn ghost",onclick:()=>nav("dash")},"Task list"),role()==="ADMIN"?el("button",{class:"btn",onclick:()=>nav("insights:"+(reqTab==="HR"?"HR":reqTab==="WORK"?"TASK":"FIN"))},"Dashboards"):null)]);
 };
 PAGES.notifications=function(){
  const m=me();const mine=S.notifs.filter(n=>n.for===m.id);
@@ -2356,15 +2356,17 @@ function finBody(){const d=finData();const t=(l,v,s)=>el("div",{class:"tile"},el
  const byCat={};d.occ.filter(x=>x.o.status==="PAID"&&inR(x.o.paidAt,d.R)).forEach(x=>{byCat[x.e.cat||"Other"]=(byCat[x.e.cat||"Other"]||0)+x.o.amount;});
  const cats=Object.entries(byCat).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
  const upcoming=d.occ.filter(x=>x.o.status==="DUE").sort((a,b)=>new Date(a.o.due)-new Date(b.o.due)).slice(0,5);
+ const links=(...x)=>el("div",{class:"dblinks"},...x.map(([l,fn])=>el("button",{class:"pill",onclick:fn},l+" ›")));
+ const L={inv:["Invoices",()=>nav("invoices")],pay:["Payments",()=>nav("payments")],exp:["Expenses",()=>nav("expenses")],drv:["Drive folders",()=>nav("drive")]};
  if(DB.fin==="INC")return [el("div",{class:"tiles dbtiles"},t("Received",inr(d.received)),t("Invoiced",inr(d.billed)),t("TDS cut",inr(d.tds),"credit at year end"),t("Outstanding",inr(d.outstanding)),t("Overdue",inr(d.overdue)),t("To approve",String(S.invoices.filter(i=>i.status==="AWAITING_APPROVAL"&&(!DB.client||i.client===DB.client)).length),"invoices")),
   el("div",{class:"card"},el("h4",{},"Received by client"),byClient.length?barList(byClient,inr):el("div",{class:"pre"},"Nothing received in this period")),
-  el("div",{class:"card"},el("h4",{},"Still owed"),owed.length?barList(owed,inr,"var(--s2)"):el("div",{class:"pre"},"Nobody owes you 🎉"))];
+  el("div",{class:"card"},el("h4",{},"Still owed"),owed.length?barList(owed,inr,"var(--s2)"):el("div",{class:"pre"},"Nobody owes you 🎉")),links(L.inv,L.pay)];
  if(DB.fin==="EXP")return [el("div",{class:"tiles dbtiles"},t("Spent",inr(d.spent)),t("To pay",inr(d.due)),t("Overdue bills",inr(d.billsOver)),t("GST to claim",inr(d.gst)),t("TDS deducted",inr(d.occ.filter(x=>x.o.status==="PAID"&&inR(x.o.paidAt,d.R)).reduce((s,x)=>s+(x.o.tds||0),0))),t("Bills paid",String(d.occ.filter(x=>x.o.status==="PAID"&&inR(x.o.paidAt,d.R)).length),"this period")),
   el("div",{class:"card"},el("h4",{},"Spent by category"),cats.length?barList(cats,inr,"var(--s2)"):el("div",{class:"pre"},"No expenses paid in this period")),
-  el("div",{class:"card"},el("h4",{},"Next bills"),...(upcoming.length?upcoming.map(x=>el("div",{class:"kv",style:"cursor:pointer",onclick:()=>markPaid(x.e,x.o)},el("span",{},x.e.payee+" · "+(isOver(x.o)?"overdue":"due "+fmtD(x.o.due))),el("b",{class:"num",style:isOver(x.o)?"color:#dc2626":""},inr(x.o.amount)))):[el("div",{class:"pre"},"Nothing due")]))];
+  el("div",{class:"card"},el("h4",{},"Next bills"),...(upcoming.length?upcoming.map(x=>el("div",{class:"kv",style:"cursor:pointer",onclick:()=>markPaid(x.e,x.o)},el("span",{},x.e.payee+" · "+(isOver(x.o)?"overdue":"due "+fmtD(x.o.due))),el("b",{class:"num",style:isOver(x.o)?"color:#dc2626":""},inr(x.o.amount)))):[el("div",{class:"pre"},"Nothing due")])),links(L.exp,L.drv)];
  return [el("div",{class:"tiles dbtiles"},t("Received",inr(d.received)),t("Spent",inr(d.spent)),t("Net",inr(d.received-d.spent)),t("Outstanding",inr(d.outstanding),d.overdue?inr(d.overdue)+" overdue":""),t("To pay",inr(d.due)),t("GST to claim",inr(d.gst))),
   DB.client?null:incomeExpenseChart(d.months),
-  el("div",{class:"card"},el("h4",{},"Top clients · received"),byClient.length?barList(byClient.slice(0,5),inr):el("div",{class:"pre"},"Nothing received in this period"))];}
+  el("div",{class:"card"},el("h4",{},"Top clients · received"),byClient.length?barList(byClient.slice(0,5),inr):el("div",{class:"pre"},"Nothing received in this period")),links(L.inv,L.pay,L.exp,L.drv)];}
 function hrBody(){const staff=S.users.filter(u=>["TEAM_LEADER","EXECUTIVE"].includes(u.role)&&(!DB.team||u.teamId===DB.team));
  const today=S.attendance[dk()]||{};const R=periodRange(DB.period);const days=Math.max(1,Math.round((Math.min(R[1],new Date(Date.now()+30*DAY))-R[0])/DAY));
  const weeks=Math.max(1,days/7);
