@@ -275,7 +275,7 @@ svg{display:block}
   --shadow:0 1px 1px rgba(15,40,70,.04),0 8px 24px -8px rgba(15,40,70,.18),inset 0 1px 0 rgba(255,255,255,.9);
   --shadow-lg:0 20px 50px -12px rgba(15,40,70,.35);
   /* top zone: teal → sky */
-  --z1a:rgba(6,182,212,.86);--z1b:rgba(14,165,233,.78);--z1c:rgba(56,189,248,.70);
+  --capfg:#06283d;--capcell:rgba(255,255,255,.42);--z1a:rgba(6,182,212,.86);--z1b:rgba(14,165,233,.78);--z1c:rgba(56,189,248,.70);
   --z1pill:rgba(255,255,255,.58);--z1pill-on:rgba(255,255,255,.95);--z1ink:#06303d;--z1ring:#0e7490;--z1icon:rgba(255,255,255,.88);
   /* bottom zone: emerald */
   --z2a:rgba(16,185,129,.80);--z2b:rgba(34,197,94,.74);--z2bar-a:rgba(5,150,105,.92);--z2bar-b:rgba(22,163,74,.88);
@@ -291,7 +291,7 @@ svg{display:block}
   --bg:#070e18;--frame:rgba(255,255,255,.02);
   --glass:rgba(20,30,46,.55);--glass-strong:rgba(20,30,46,.80);--chip:rgba(255,255,255,.08);--input:rgba(255,255,255,.06);--sheet:rgba(14,22,36,.86);
   --shadow:0 1px 1px rgba(0,0,0,.2),0 10px 28px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06);--shadow-lg:0 24px 60px -12px rgba(0,0,0,.7);
-  --z1a:rgba(8,145,178,.62);--z1b:rgba(3,105,161,.55);--z1c:rgba(14,116,144,.50);
+  --capfg:#fff;--capcell:rgba(255,255,255,.16);--z1a:rgba(8,145,178,.62);--z1b:rgba(3,105,161,.55);--z1c:rgba(14,116,144,.50);
   --z1pill:rgba(255,255,255,.12);--z1pill-on:rgba(255,255,255,.88);--z1ink:#e6fbff;--z1ring:#67e8f9;--z1icon:rgba(255,255,255,.8);
   --z2a:rgba(5,150,105,.55);--z2b:rgba(21,128,61,.52);--z2bar-a:rgba(4,120,87,.85);--z2bar-b:rgba(21,128,61,.82);
   --z2pill:rgba(255,255,255,.12);--z2pill-on:rgba(255,255,255,.9);--z2ink:#ecfdf5;--z2label:rgba(236,253,245,.85);
@@ -303,7 +303,7 @@ svg{display:block}
   --bg:#070e18;--frame:rgba(255,255,255,.02);
   --glass:rgba(20,30,46,.55);--glass-strong:rgba(20,30,46,.80);--chip:rgba(255,255,255,.08);--input:rgba(255,255,255,.06);--sheet:rgba(14,22,36,.86);
   --shadow:0 1px 1px rgba(0,0,0,.2),0 10px 28px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06);--shadow-lg:0 24px 60px -12px rgba(0,0,0,.7);
-  --z1a:rgba(8,145,178,.62);--z1b:rgba(3,105,161,.55);--z1c:rgba(14,116,144,.50);
+  --capfg:#fff;--capcell:rgba(255,255,255,.16);--z1a:rgba(8,145,178,.62);--z1b:rgba(3,105,161,.55);--z1c:rgba(14,116,144,.50);
   --z1pill:rgba(255,255,255,.12);--z1pill-on:rgba(255,255,255,.88);--z1ink:#e6fbff;--z1ring:#67e8f9;--z1icon:rgba(255,255,255,.8);
   --z2a:rgba(5,150,105,.55);--z2b:rgba(21,128,61,.52);--z2bar-a:rgba(4,120,87,.85);--z2bar-b:rgba(21,128,61,.82);
   --z2pill:rgba(255,255,255,.12);--z2pill-on:rgba(255,255,255,.9);--z2ink:#ecfdf5;--z2label:rgba(236,253,245,.85);
@@ -525,6 +525,41 @@ select.in{padding-right:10px}
 #tRowStart{overflow:hidden}
 .tstrip{display:flex;align-items:center;gap:8px;overflow-x:auto;min-width:0;flex:1;scrollbar-width:none;height:100%}
 .tstrip::-webkit-scrollbar{display:none}
+.addhdr{padding:10px 12px 12px!important;padding-top:calc(10px + env(safe-area-inset-top,0px))!important;gap:8px;animation:capin .22s ease-out}
+.addhdr[hidden]{display:none!important}
+@keyframes capin{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.addhdr{animation:none}}
+.caphd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11px;letter-spacing:.04em;color:var(--capfg);opacity:.85}
+.capnm{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--capfg);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.capgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.capc{display:flex;flex-direction:column;gap:1px;padding:7px 8px;border-radius:12px;background:var(--capcell);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 0 0 1px rgba(255,255,255,.28);color:var(--capfg);min-width:0;font-variant-numeric:tabular-nums}
+.capc.full{background:rgba(239,68,68,.28)}
+.capl{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.85}
+.capc b{font-size:16px;font-weight:800;line-height:1.15;white-space:nowrap}
+.capc b small{font-size:10.5px;font-weight:600;opacity:.85}
+.capb{font-size:11px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sech{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:12px 4px 4px}
+.dcard{padding:12px!important}
+.dhead{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.dhead h4{margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dbtn{height:32px!important;padding:0 11px!important;font-size:12.5px!important;white-space:nowrap}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.dchip{display:flex;align-items:center;justify-content:space-between;gap:6px;height:40px;padding:0 12px;border-radius:12px;border:0;background:var(--chip);color:var(--ink);font:inherit;font-size:13px;cursor:pointer;min-width:0;font-variant-numeric:tabular-nums}
+.dchip .dl{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shadd{display:flex;align-items:flex-start;gap:8px}
+.shchips{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:46px;padding:6px 10px;border-radius:14px;background:var(--input);box-shadow:inset 0 0 0 1px var(--hair)}
+.shin{flex:1;min-width:120px;border:0;background:transparent;color:var(--ink);font:inherit;font-size:15px;outline:none;height:32px}
+.shchip{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 4px 0 10px;border-radius:999px;background:var(--chip);font-size:13px;max-width:100%;overflow:hidden}
+.shchip button{border:0;background:transparent;color:var(--muted);font-size:16px;width:22px;height:22px;cursor:pointer}
+.shsel{height:36px;border-radius:10px;border:0;background:var(--chip);color:var(--ink);font:inherit;font-size:13px;padding:0 8px;max-width:150px}
+.shrow{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--hair)}
+.shrow .m{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.shrow .m b,.shrow .m small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shrow .m small{color:var(--muted);font-size:12px;white-space:normal}
+.shrow .m .shsel{align-self:flex-start;background:transparent;padding:0;height:24px;font-weight:700;font-size:14px;max-width:100%}
+.shav{width:34px;height:34px;flex-shrink:0;border-radius:999px;display:grid;place-items:center;background:var(--primary);color:#fff;font-weight:800;font-size:14px}
+.shav.on{background:#16a34a}
+.shown{font-size:13px;color:var(--muted)}
 </style><div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
@@ -962,20 +997,23 @@ function openAdd(mode,edit){
  show("add");renderAdd();
 }
 const fmtTimeInput=iso=>{const d=new Date(iso);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");};
+function capTeams(){const r=role(),m=me();return r==="ADMIN"?AF.teams:(m.teamId?[m.teamId]:[]);}
 function loads(){
- const r=role(),m=me();
- let people=r==="ADMIN"?(AF.prefs.length?AF.prefs:S.users.filter(u=>u.role==="EXECUTIVE"&&(!AF.teams.length||AF.teams.includes(u.teamId))).map(u=>u.id)):(AF.assignees.length?AF.assignees:S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===m.teamId).map(u=>u.id));
- if(r==="EXECUTIVE")people=[m.id];
+ const tids=capTeams();if(!tids.length)return null;
+ const people=S.users.filter(u=>(u.role==="EXECUTIVE"||u.role==="TEAM_LEADER")&&u.active!==false&&tids.includes(u.teamId)).map(u=>u.id);
  const per=S.inventory.hours;const dayH=id=>(per[id]||40)/5;
  const periods={today:[0,0],tomorrow:[1,1],week:[0,6],month:[0,29]};
  const out={};
- for(const [k,[a,b]] of Object.entries(periods)){const days=b-a+1;const ts=S.tasks.filter(t=>t.status!=="COMPLETED"&&t.assignees.some(id=>people.includes(id))&&dayOff(t.start)>=a&&dayOff(t.start)<=b);const cap=people.reduce((s,id)=>s+dayH(id)*Math.min(days,k==="week"?5:k==="month"?22:1),0);const used=ts.reduce((s,t)=>s+t.mins/60,0);out[k]={left:Math.max(0,cap-used),count:ts.length};}
+ for(const [k,[a,b]] of Object.entries(periods)){const days=b-a+1;const ts=S.tasks.filter(t=>t.status!=="COMPLETED"&&t.assignees.some(id=>people.includes(id))&&dayOff(t.start)>=a&&dayOff(t.start)<=b);const cap=people.reduce((s,id)=>s+dayH(id)*Math.min(days,k==="week"?5:k==="month"?22:1),0);const used=ts.reduce((s,t)=>s+t.mins/60,0);out[k]={left:Math.max(0,cap-used),booked:used,count:ts.length};}
+ out.name=tids.map(id=>(S.teams.find(t=>t.id===id)||{}).name).filter(Boolean).join(" + ");out.people=people.length;
  return out;
 }
 function renderAdd(){
  const r=role(),m=me(),L=loads();
  {const wl0=workFor(r==="ADMIN"?AF.teams:[m.teamId]);if(wl0.length&&!wl0.some(w=>w.id===AF.work))AF.work=wl0[0].id;}
- $("#addLoads").replaceChildren(...[["today","Today"],["tomorrow","Tom"],["week","Week"],["month","month"]].map(([k,l])=>el("div",{class:"ltile",title:`${L[k].left} hours left to assign · ${L[k].count} task(s) already assigned`},el("b",{},l),` - ${Number.isInteger(L[k].left)?L[k].left:L[k].left.toFixed(1)} Hours - `,el("b",{},L[k].count))));
+ {const H=$("#addLoads");if(!L){H.hidden=true;H.replaceChildren();}else{H.hidden=false;const fh=v=>(v>=10||Number.isInteger(v)?Math.round(v):v.toFixed(1))+"h";
+  H.replaceChildren(el("div",{class:"caphd"},el("span",{class:"capnm"},L.name),el("span",{},L.people+" people · left / booked")),
+   el("div",{class:"capgrid"},...[["today","Today"],["tomorrow","Tom"],["week","Week"],["month","Month"]].map(([k,l])=>el("div",{class:"capc"+(L[k].left<=0?" full":""),title:`${l}: ${fh(L[k].left)} free to assign · ${fh(L[k].booked)} booked in ${L[k].count} task(s)`},el("span",{class:"capl"},l),el("b",{},fh(L[k].left),el("small",{}," left")),el("span",{class:"capb"},fh(L[k].booked)+" booked")))));}}
  $("#tTitle").value=AF.title;$("#tTitle").placeholder=AF.type==="MEETING"?"Meeting title":"Task title";
  $("#tDesc").value=AF.desc;$("#tHours").value=AF.hours;
  const HP=[0.5,1,2,3,4,6,8];const hl=h=>h===0.5?"½h":(Number.isInteger(h)?h:h.toFixed(2).replace(/0$/,""))+"h";
@@ -1159,9 +1197,8 @@ function menuModel(){
  return [
   {h:"Money",t:"t-money",items:[
    {go:"invoices",ic:"invoice",l:"Invoices",s:toApprove?toApprove+" waiting for your approval":"Create, approve and send",b:B(toApprove,"red")},
-   {go:"payments",ic:"wallet",l:"Payments",s:outstanding?inr(outstanding)+" outstanding":"Nothing outstanding"},
+   {go:"payments",ic:"wallet",l:"Payments & finance",s:[toApprove?toApprove+" to approve":null,outstanding?inr(outstanding)+" outstanding":null].filter(Boolean).join(" · ")||"Approvals, reminders, totals, TDS, GST",b:B(payTodo().late.length,"red")},
    {go:"expenses",ic:"receipt",l:"Expenses",s:overdueBills?overdueBills+" overdue · "+dueSoon+" due this week":dueSoon?dueSoon+" due this week":"Bills, GST credit, TDS",b:overdueBills?{n:overdueBills,c:"red"}:B(dueSoon,"amber")},
-   {go:"finance",ic:"chart",l:"Finance sheet",s:gst?"GST to claim this month "+inr(gst):"Totals, TDS and GST"},
    {go:"drive",ic:"folder",l:"Monthly Drive folders",s:"Invoices, bills, GST pack, cancelled"}]},
   {h:"Clients",t:"t-client",items:[
    {go:"clients",ic:"building",l:"Clients",s:S.clients.length+" clients · GST, PAN, TDS"},
@@ -1341,6 +1378,14 @@ const total=i=>i.amount*(1+(i.gst||0)/100);
 const balance=i=>Math.max(0,total(i)-i.paid);
 const fyKey=()=>{const d=new Date();const y=d.getMonth()>=3?d.getFullYear():d.getFullYear()-1;return String(y).slice(2)+"-"+String(y+1).slice(2);};
 const nextNumber=()=>{S.seq+=1;return `${S.settings.fyPrefix}/${fyKey()}/${String(S.seq).padStart(4,"0")}`;};
+const cleanFn=s=>String(s||"").replace(/[\/\\:*?"<>|]+/g,"-").replace(/\s+/g," ").trim();
+/* File names used for Drive, email/WhatsApp attachments and downloads. */
+function invFileName(i){const c=clientById(i.client)||{};const who=cleanFn(c.businessName||c.name),n=cleanFn(i.number);
+ if(i.docType==="PROFORMA")return `P Invoice (${who}).pdf`;
+ if(i.status==="CANCELLED")return `C Invoice No. ${n} (${who}).pdf`;
+ if(i.docType==="EXPORT_INVOICE")return `Ex Invoice No. ${n} (${who}).pdf`;
+ if(i.docType==="CREDIT_NOTE")return `Credit Note ${n} (${who}).pdf`;
+ return `Invoice No. ${n} (${who}).pdf`;}
 const stTag=i=>el("span",{class:"tag "+STL[i.status][1]},STL[i.status][0]);
 const docTag=i=>el("span",{class:"tag "+DOCC[i.docType]},DOCL[i.docType]);
 
@@ -1418,7 +1463,8 @@ function openInvoice(i){
  const acts=[];
  const z=[];
  if(i.status==="AWAITING_APPROVAL")z.push(el("button",{class:"btn green",onclick:()=>approveSheet(i)},"Approve & send…"));
- if(["SENT","PARTIALLY_PAID","OVERDUE"].includes(i.status)){z.push(el("button",{class:"btn blue",onclick:()=>paymentSheet(i)},"Record payment"));}
+ if(i.docType==="PROFORMA"&&i.status!=="AWAITING_APPROVAL"){const cc=clientById(i.client);z.push(el("button",{class:"btn blue",onclick:()=>{i.docType=docFor(cc);i.taxMode=taxFor(cc);i.gst=i.taxMode==="EXPORT_LUT"?0:18;i.status="AWAITING_APPROVAL";i.number="DRAFT-"+uid().slice(0,4);save();toast("Converted · approve to number and send");openInvoice(i);}},"Make tax invoice"));}
+ else if(["SENT","PARTIALLY_PAID","OVERDUE"].includes(i.status)){z.push(el("button",{class:"btn blue",onclick:()=>paymentSheet(i)},"Record payment"));}
  z.push(el("button",{class:"btn ghost",onclick:()=>invoicePreview(i)},"Preview"));if(i.status!=="CANCELLED")z.push(el("button",{class:"btn ghost",onclick:()=>invoiceActions(i)},"More"));
  page(i.number.startsWith("DRAFT")?"Draft invoice":i.number,[
   i.status==="CANCELLED"?el("div",{class:"cxl"},el("b",{},"Cancelled on "+fmtDY(i.cancelledAt)),el("div",{},"Reason: "+(i.cancelReason||"—")),el("div",{class:"pre"},"Number "+i.number+" stays used and is never given to another invoice. Filed in Drive › Finance › "+mkOf(i.issued||i.cancelledAt)+" › Cancelled invoices.")):null,
@@ -1437,12 +1483,12 @@ function approveSheet(i){
  const em=el("input",{type:"checkbox",checked:c.email?true:null,disabled:!c.email||null}),wa=el("input",{type:"checkbox",checked:c.phone?true:null,disabled:!c.phone||null}),dl=el("input",{type:"checkbox"});
  const partDesc=i.plan==="PART"?el("input",{class:"in",placeholder:"Description for part 1 (optional)",value:i.parts[0]?.desc||""}):null;
  openSheet("Approve "+DOCL[i.docType].toLowerCase()+"?",
-  el("p",{style:"font-size:13px;margin:0 0 10px"},"Number ",el("b",{},i.docType==="PROFORMA"?"PF-"+String(S.seq+1).padStart(4,"0"):S.settings.fyPrefix+"/"+fyKey()+"/"+String(S.seq+1).padStart(4,"0"))," will be assigned. Total ",el("b",{},inr(i.plan==="PART"?i.parts[0].amount:total(i)))),
+  i.docType==="PROFORMA"?el("p",{style:"font-size:13px;margin:0 0 10px"},"A proforma gets no invoice number and isn't kept in your books. File: ",el("b",{},invFileName(i)),". Total ",el("b",{},inr(total(i)))):el("p",{style:"font-size:13px;margin:0 0 10px"},"Number ",el("b",{},S.settings.fyPrefix+"/"+fyKey()+"/"+String(S.seq+1).padStart(4,"0"))," will be assigned. Total ",el("b",{},inr(i.plan==="PART"?i.parts[0].amount:total(i)))),
   partDesc?field("Part 1 description",partDesc):null,
   el("label",{class:"check"},em,el("div",{},el("b",{},"Email the PDF"),el("small",{},c.email||"no email on the client"))),
   el("label",{class:"check"},wa,el("div",{},el("b",{},"WhatsApp (Twilio)"),el("small",{},c.phone||"no WhatsApp number on the client"))),el("label",{class:"check"},dl,el("div",{},el("b",{},"Download the PDF"),el("small",{},"Save a copy on this phone to send yourself"))),el("p",{class:"pre",style:"margin:0 0 8px"},"Untick both channels to just approve and number it without sending."),
   el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Not now"),el("button",{class:"btn green",onclick:()=>{
-   i.number=i.docType==="PROFORMA"?"PF-"+String(++S.seq).padStart(4,"0"):nextNumber();i.status="SENT";i.issued=new Date().toISOString();i.publicToken=uid()+uid();
+   i.number=i.docType==="PROFORMA"?"Proforma":nextNumber();i.status="SENT";i.issued=new Date().toISOString();i.publicToken=uid()+uid();
    if(em.checked)i.emailAt=i.issued;if(wa.checked){i.waAt=i.issued;i.waStatus="delivered (mock)";}
    if(i.plan==="PART"&&i.parts[0]){i.parts[0].status="SENT";if(partDesc)i.parts[0].desc=partDesc.value;}
    i.remindAt=null;save();closeSheet();const done=[em.checked?"emailed":null,wa.checked?"WhatsApp sent":null,dl.checked?"PDF downloaded":null].filter(Boolean);toast(done.length?"Approved · "+done.join(" + "):"Approved · numbered, not sent");if(dl.checked)invoicePreview(i);else openInvoice(i);}},"Approve"+((em.checked||wa.checked)?" & send":""))));
@@ -1463,7 +1509,7 @@ function cancelSheet(i){
    i.status="CANCELLED";i.cancelledAt=new Date().toISOString();i.cancelReason=reason.value.trim();i.remindAt=null;
    if(i.plan==="PART")i.parts.forEach(pt=>{if(pt.status!=="PAID")pt.status="CANCELLED";});
    if(c.onHold&&c.holdInvoice===i.id){c.onHold=false;S.tasks.filter(t=>t.client===c.id).forEach(t=>t.paused=false);}
-   save();closeSheet();toast(i.number+" cancelled"+(em.checked||wa.checked?" · client informed (real app)":"")+" · next invoice will be "+nextNo);openInvoice(i);}},"Cancel invoice")));
+   save();closeSheet();toast(i.number+" cancelled · filed as “"+invFileName(i)+"”"+(em.checked||wa.checked?" · client informed":"")+" · next invoice will be "+nextNo);openInvoice(i);}},"Cancel invoice")));
 }
 function paymentSheet(i){
  const c=clientById(i.client);const bal=balance(i);
@@ -1499,24 +1545,46 @@ function invoiceActions(i){
  if(i.docType==="PROFORMA"&&i.status!=="AWAITING_APPROVAL")items.push({label:"Convert to tax invoice",onClick:go(()=>{i.docType=docFor(c);i.taxMode=taxFor(c);i.gst=i.taxMode==="EXPORT_LUT"?0:18;i.status="AWAITING_APPROVAL";i.number="DRAFT-"+uid().slice(0,4);},"Converted · approve to number and send")});
  items.push({label:"Preview invoice",hint:"Exactly what the client receives (your template)",onClick:()=>{closeSheet();invoicePreview(i);}});items.push({label:"Open public PDF link",hint:"Signed link the client can open without login",onClick:()=>{closeSheet();toast("Opens /api/public/invoice/"+(i.publicToken||"…").slice(0,8)+"…");}});
  if(i.status==="AWAITING_APPROVAL")items.push({label:"Delete draft",danger:true,onClick:()=>{S.invoices=S.invoices.filter(x=>x.id!==i.id);save();closeSheet();toast("Draft deleted");PAGES.invoices();}});
+ else if(i.docType==="PROFORMA")items.push({label:"Delete proforma",danger:true,hint:"Proformas can't be cancelled and aren't kept in your books",onClick:()=>{S.invoices=S.invoices.filter(x=>x.id!==i.id);save();closeSheet();toast("Proforma deleted");PAGES.invoices();}});
  else if(i.status!=="PAID"&&i.status!=="CANCELLED"&&i.docType!=="CREDIT_NOTE")items.push(i.paid>0?{label:"Cancel invoice",hint:"Has payments recorded · issue a credit note instead",onClick:()=>toast("This invoice has payments. Use Credit note to reverse it.","err")}:{label:"Cancel invoice",danger:true,hint:"Number stays used; next invoice continues the series",onClick:()=>{closeSheet();cancelSheet(i);}});
  openSheet(i.number,actionList(items));
 }
 
 /* ---------- payments dashboard ---------- */
-let payTab="OUT";
+let payTab="TODO";
+/* Payments & finance hub: what needs you (approvals + reminders), the finance summary, and the payment lists. */
+function payTodo(){
+ expenseTick();
+ const appr=S.invoices.filter(i=>i.status==="AWAITING_APPROVAL");
+ const open=S.invoices.filter(i=>!["PAID","CANCELLED","AWAITING_APPROVAL"].includes(i.status)&&i.docType!=="PROFORMA"&&i.docType!=="CREDIT_NOTE");
+ const late=open.filter(i=>dayOff(i.due)<0).sort((a,b)=>new Date(a.due)-new Date(b.due));
+ const week=open.filter(i=>dayOff(i.due)>=0&&dayOff(i.due)<=7).sort((a,b)=>new Date(a.due)-new Date(b.due));
+ const bills=allOcc().filter(x=>x.o.status==="DUE"&&dayOff(x.o.due)<=7).sort((a,b)=>new Date(a.o.due)-new Date(b.o.due));
+ return {appr,late,week,bills,n:appr.length+late.length+bills.filter(x=>isOver(x.o)).length};
+}
 PAGES.payments=function(){
  const open=S.invoices.filter(i=>!["PAID","CANCELLED","AWAITING_APPROVAL"].includes(i.status)&&i.docType!=="PROFORMA"&&i.docType!=="CREDIT_NOTE");
  const byClient=S.clients.map(c=>({c,bal:open.filter(i=>i.client===c.id).reduce((s,i)=>s+balance(i),0),n:open.filter(i=>i.client===c.id).length})).filter(x=>x.bal>0).sort((a,b)=>b.bal-a.bal);
  const soon=open.filter(i=>dayOff(i.due)<=7).sort((a,b)=>new Date(a.due)-new Date(b.due));
  const recv=S.payments.slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
  const month=recv.filter(p=>dayOff(p.date)>=-30).reduce((s,p)=>s+p.amount,0);
+ const T=payTodo();
+ const sec=(h,rows)=>rows.length?[el("div",{class:"sech"},h+" · "+rows.length),...rows]:[];
+ const invRow=(i,sub,act,red)=>el("div",{class:"item",onclick:act},el("div",{class:"m"},el("b",{},(clientById(i.client)||{}).name||"—"),el("small",{},sub)),el("div",{class:"amt",style:red?"color:#dc2626":""},inr(i.plan==="PART"&&i.status==="AWAITING_APPROVAL"&&i.parts[0]?i.parts[0].amount:i.status==="AWAITING_APPROVAL"?total(i):balance(i))));
  let body;
- if(payTab==="OUT")body=byClient.length?byClient.map(x=>el("div",{class:"item",onclick:()=>{S._client=x.c.id;PAGES.ledger(x.c.id);}},el("div",{class:"m"},el("b",{},x.c.name),el("small",{},x.n+" open invoice"+(x.n>1?"s":"")+(x.c.onHold?" · WORK ON HOLD":""))),el("div",{class:"amt",style:x.c.onHold?"color:#dc2626":""},inr(x.bal)))):[el("div",{class:"empty"},"Nothing outstanding 🎉")];
+ if(payTab==="TODO"){
+  body=[...sec("Approve & send",T.appr.map(i=>invRow(i,DOCL[i.docType]+" · "+(i.remindAt?"reminder "+fmtD(i.remindAt)+" "+fmtT(i.remindAt):"waiting for approval"),()=>approveSheet(i)))),
+   ...sec("Client payments overdue",T.late.map(i=>invRow(i,i.number+" · "+(-dayOff(i.due))+" days late",()=>openInvoice(i),true))),
+   ...sec("Client payments due this week",T.week.map(i=>invRow(i,i.number+" · due "+fmtD(i.due),()=>openInvoice(i)))),
+   ...sec("Bills to pay",T.bills.map(x=>el("div",{class:"item",onclick:()=>markPaid(x.e,x.o)},el("div",{class:"m"},el("b",{},x.e.payee),el("small",{},(isOver(x.o)?(-dayOff(x.o.due))+" days overdue":"due "+fmtD(x.o.due))+" · mark paid")),el("div",{class:"amt",style:isOver(x.o)?"color:#dc2626":""},inr(x.o.amount)))))];
+  if(!body.length)body=[el("div",{class:"empty"},"All clear — nothing to approve or chase 🎉")];
+ }
+ else if(payTab==="SUM")body=financeSummary();
+ else if(payTab==="OUT")body=byClient.length?byClient.map(x=>el("div",{class:"item",onclick:()=>{S._client=x.c.id;PAGES.ledger(x.c.id);}},el("div",{class:"m"},el("b",{},x.c.name),el("small",{},x.n+" open invoice"+(x.n>1?"s":"")+(x.c.onHold?" · WORK ON HOLD":""))),el("div",{class:"amt",style:x.c.onHold?"color:#dc2626":""},inr(x.bal)))):[el("div",{class:"empty"},"Nothing outstanding 🎉")];
  else if(payTab==="SOON")body=soon.length?soon.map(i=>el("div",{class:"item",onclick:()=>openInvoice(i)},el("div",{class:"m"},el("b",{},clientById(i.client).name),el("small",{},i.number+" · due "+fmtD(i.due)+(dayOff(i.due)<0?" · "+(-dayOff(i.due))+" days late":""))),el("div",{class:"amt",style:dayOff(i.due)<0?"color:#dc2626":""},inr(balance(i))))):[el("div",{class:"empty"},"Nothing due this week")];
  else body=recv.map(p=>{const i=S.invoices.find(x=>x.id===p.invoice);return el("div",{class:"item",onclick:()=>i&&openInvoice(i)},el("div",{class:"m"},el("b",{},i?clientById(i.client).name:"—"),el("small",{},fmtDY(p.date)+" · "+p.method+(p.tds?" · TDS "+inr(p.tds):"")+(p.note?" · "+p.note:""))),el("div",{class:"amt"},inr(p.amount)));});
- page("Payments",[el("div",{class:"tiles"},tile("Outstanding",inr(open.reduce((s,i)=>s+balance(i),0))),tile("Overdue",inr(open.filter(i=>dayOff(i.due)<0).reduce((s,i)=>s+balance(i),0))),tile("Received · 30d",inr(month)),tile("Due · 7d",inr(soon.filter(i=>dayOff(i.due)>=0).reduce((s,i)=>s+balance(i),0)))),...body],
-  [zoneTabs([["OUT","By client"],["SOON","Due soon"],["RECV","Received"]],payTab,k=>{payTab=k;PAGES.payments();}),zoneActions(el("button",{class:"btn ghost",onclick:()=>nav("invoices")},"Invoices"),el("button",{class:"btn blue",onclick:()=>openWizard()},"+ New invoice"))]);
+ page("Payments & finance",[payTab==="SUM"?null:el("div",{class:"tiles"},tile("Outstanding",inr(open.reduce((s,i)=>s+balance(i),0))),tile("Overdue",inr(open.filter(i=>dayOff(i.due)<0).reduce((s,i)=>s+balance(i),0))),tile("Received · 30d",inr(month)),tile("Due · 7d",inr(soon.filter(i=>dayOff(i.due)>=0).reduce((s,i)=>s+balance(i),0)))),...body],
+  [zoneTabs([["TODO","Needs you"+(T.n?" · "+T.n:"")],["SUM","Summary"],["OUT","By client"],["SOON","Due soon"],["RECV","Received"]],payTab,k=>{payTab=k;PAGES.payments();}),zoneActions(payTab==="SUM"?el("button",{class:"btn ghost",onclick:()=>toast("Pushed to Google Sheets (mock)")},"Push to Sheets"):el("button",{class:"btn ghost",onclick:()=>nav("invoices")},"Invoices"),el("button",{class:"btn blue",onclick:()=>openWizard()},"+ New invoice"))]);
 };
 PAGES.ledger=function(cid){
  const c=clientById(cid);const inv=S.invoices.filter(i=>i.client===cid);
@@ -1558,7 +1626,7 @@ function invoicePreview(i){
   el("div",{class:"ft"},el("span",{},s.website),el("span",{},"HSN Code - "+s.hsn),el("span",{},tt)));
  const wrap=el("div",{class:"invwrap"},pageEl);
  const fit=()=>{const w=wrap.clientWidth-20;const sc=invZoom==="fit"?Math.min(1,w/595):1;pageEl.style.transform="scale("+sc+")";pageEl.style.marginBottom=(842*sc-842)+"px";pageEl.style.marginRight=(595*sc-595)+"px";};
- page(numLabel,[wrap],[zoneActions(el("button",{class:"btn ghost",onclick:()=>{invZoom=invZoom==="fit"?"100":"fit";fit();}},"Zoom"),el("button",{class:"btn ghost",onclick:()=>openInvoice(i)},"Back"),el("button",{class:"btn blue",onclick:()=>toast("PDF downloads in the real app (public signed link)")},"Download PDF"))]);
+ page(numLabel,[wrap],[zoneActions(el("button",{class:"btn ghost",onclick:()=>{invZoom=invZoom==="fit"?"100":"fit";fit();}},"Zoom"),el("button",{class:"btn ghost",onclick:()=>openInvoice(i)},"Back"),el("button",{class:"btn blue",onclick:()=>toast("Downloads “"+invFileName(i)+"”")},"Download PDF"))]);
  $("#pgBody").style.display="flex";$("#pgBody").style.flexDirection="column";requestAnimationFrame(fit);
  const obs=new MutationObserver(()=>{if(!document.body.contains(wrap)){$("#pgBody").style.display="";obs.disconnect();}});obs.observe($("#pgBody"),{childList:true});
 }
@@ -1809,15 +1877,15 @@ function billEditor(e){
  };
  page(isNew?"Add expense":"Edit · "+e.payee,[box],[zoneActions(isNew?el("button",{class:"btn ghost",onclick:()=>PAGES.expenses()},"Cancel"):el("button",{class:"btn ghost",style:"color:#dc2626",onclick:()=>{openSheet("Delete this bill?",el("p",{class:"pre",style:"margin:0 0 10px"},"Removes "+e.payee+" and all its payments from the books."),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Keep"),el("button",{class:"btn red",onclick:()=>{S.expenses=S.expenses.filter(x=>x!==e);save();closeSheet();PAGES.expenses();toast("Deleted");}},"Delete")));}},"Delete"),el("button",{class:"btn blue",onclick:saveBill},"Save"))]);
 }
-PAGES.finance=function(){
+PAGES.finance=function(){payTab="SUM";PAGES.payments();};
+function financeSummary(){
  const inv=S.invoices.filter(i=>i.docType!=="PROFORMA"&&i.docType!=="CREDIT_NOTE"&&!["AWAITING_APPROVAL","CANCELLED"].includes(i.status));
  const billed=inv.reduce((s,i)=>s+total(i),0),recv=S.payments.reduce((s,p)=>s+p.amount,0),tds=S.payments.filter(p=>inFY(p.date)).reduce((s,p)=>s+p.tds,0),exp=allOcc().filter(x=>x.o.status==="PAID").reduce((s,x)=>s+x.o.amount,0),tdsOut=allOcc().filter(x=>x.o.status==="PAID"&&inFY(x.o.paidAt)).reduce((s,x)=>s+(x.o.tds||0),0);expenseTick();const dueAll=allOcc().filter(x=>x.o.status==="DUE"),payOver=dueAll.filter(x=>isOver(x.o)).reduce((s,x)=>s+x.o.amount,0),pay30=dueAll.filter(x=>dayOff(x.o.due)<=30).reduce((s,x)=>s+x.o.amount,0);
  const fyk=fyKey();const byCl={};S.payments.filter(p=>inFY(p.date)&&p.tds>0).forEach(p=>{const i=S.invoices.find(x=>x.id===p.invoice);if(!i)return;byCl[i.client]=(byCl[i.client]||0)+p.tds;});
- page("Finance sheet",[el("div",{class:"tiles"},tile("Billed",inr(billed)),tile("Received",inr(recv)),tile("Expenses paid",inr(exp)),tile("To pay · 30 days",inr(pay30)),tile("Overdue to pay",inr(payOver)),tile("Outstanding",inr(inv.reduce((s,i)=>s+balance(i),0))),tile("TDS receivable · FY "+fyk,inr(tds)),tile("TDS deducted · FY "+fyk,inr(tdsOut)),tile("GST to claim · "+new Date().toLocaleDateString("en-IN",{month:"short"}),inr(allOcc().filter(x=>x.o.status==="PAID"&&x.o.itc&&mkOf(x.o.paidAt)===dk().slice(0,7)).reduce((s,x)=>s+(x.o.gst||0),0))),tile("Expense bills attached",allOcc().filter(x=>x.o.status==="PAID"&&mkOf(x.o.paidAt)===dk().slice(0,7)&&x.o.file).length+" this month")),
+ return [el("div",{class:"tiles"},tile("Billed",inr(billed)),tile("Received",inr(recv)),tile("Expenses paid",inr(exp)),tile("To pay · 30 days",inr(pay30)),tile("Overdue to pay",inr(payOver)),tile("Outstanding",inr(inv.reduce((s,i)=>s+balance(i),0))),tile("TDS receivable · FY "+fyk,inr(tds)),tile("TDS deducted · FY "+fyk,inr(tdsOut)),tile("GST to claim · "+new Date().toLocaleDateString("en-IN",{month:"short"}),inr(allOcc().filter(x=>x.o.status==="PAID"&&x.o.itc&&mkOf(x.o.paidAt)===dk().slice(0,7)).reduce((s,x)=>s+(x.o.gst||0),0))),tile("Bills attached · "+new Date().toLocaleDateString("en-IN",{month:"short"}),String(allOcc().filter(x=>x.o.status==="PAID"&&mkOf(x.o.paidAt)===dk().slice(0,7)&&x.o.file).length))),
   el("div",{class:"card"},el("h4",{},"TDS cut by clients this FY (your credit at year end)"),...(Object.keys(byCl).length?Object.entries(byCl).sort((a,b)=>b[1]-a[1]).map(([cid,v])=>el("div",{class:"kv"},el("span",{},clientById(cid).name+(clientById(cid).pan?" · "+clientById(cid).pan:"")),el("span",{class:"num"},inr(v)))):[el("div",{class:"pre"},"No TDS recorded yet this FY")]),el("div",{class:"kv"},el("b",{},"Total"),el("b",{class:"num"},inr(tds)))),
   el("div",{class:"card"},el("h4",{},"Google Sheets sync"),el("div",{class:"kv"},el("span",{},"Mode"),el("span",{},"Push only (app → sheet)")),el("div",{class:"kv"},el("span",{},"Last push"),el("span",{},fmtDY(new Date().toISOString())+" "+fmtT(new Date().toISOString()))),el("div",{class:"kv"},el("span",{},"Tabs"),el("span",{},"Invoices · Payments · Expenses"))),
-  el("div",{class:"card"},el("h4",{},"GST summary · "+new Date().toLocaleDateString("en-IN",{month:"long"})),...["CGST_SGST","IGST","EXPORT_LUT"].map(k=>el("div",{class:"kv"},el("span",{},TAXL[k]),el("span",{class:"num"},inr(inv.filter(i=>i.taxMode===k).reduce((s,i)=>s+i.amount*i.gst/100,0))))))],
-  [zoneActions(el("button",{class:"btn ghost",onclick:()=>toast("Pushed to Google Sheets (mock)")},"Push to Sheets"),el("button",{class:"btn",onclick:()=>nav("payments")},"Payments"))]);
+  el("div",{class:"card"},el("h4",{},"GST summary · "+new Date().toLocaleDateString("en-IN",{month:"long"})),...["CGST_SGST","IGST","EXPORT_LUT"].map(k=>el("div",{class:"kv"},el("span",{},TAXL[k]),el("span",{class:"num"},inr(inv.filter(i=>i.taxMode===k).reduce((s,i)=>s+i.amount*i.gst/100,0))))))];
 };
 PAGES.settings=function(){
  const s=S.settings;const inp=(k,type="text")=>el("input",{class:"in",type,value:s[k],oninput:e=>{s[k]=type==="number"?Number(e.target.value):e.target.value;}});
@@ -1867,13 +1935,57 @@ function workForm(w){
 }
 PAGES.teams=function(){page("Teams",[...S.teams.map(t=>el("div",{class:"item",style:"cursor:default"},el("div",{class:"m"},el("b",{},t.name),el("small",{},(S.users.filter(u=>u.teamId===t.id).map(u=>first(u.name)).join(", ")||"nobody yet")+" · work: "+(S.workTypes.filter(w=>(w.teams||[]).includes(t.id)).map(w=>w.name).join(", ")||"none"))),el("div",{class:"amt"},S.tasks.filter(x=>x.team===t.id&&x.status!=="COMPLETED").length+" open")))],[zoneActions(el("button",{class:"btn blue",onclick:()=>{const n=el("input",{class:"in",placeholder:"e.g. Video"});openSheet("Add team",field("Name",n),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>{if(!n.value.trim())return;S.teams.push({id:uid(),name:n.value.trim()});save();closeSheet();PAGES.teams();}},"Add")));}},"+ Add team"))]);};
 
+/* Google-Drive-style share sheet for a month folder (Drive API permissions in the real app). */
+const DROLES=[["reader","Viewer"],["commenter","Commenter"],["writer","Editor"]];
+function driveShare(key,label,onDone){
+ S.shares=S.shares||{};const sh=S.shares[key]=S.shares[key]||{people:[],link:"RESTRICTED",linkRole:"reader"};
+ const owner=S.settings.email;const url="https://drive.google.com/drive/folders/"+btoa(key).replace(/=/g,"");
+ const pending=[];
+ const render=()=>{
+  const chipsBox=el("div",{class:"shchips"});const inp=el("input",{class:"shin",type:"email",placeholder:pending.length?"":"Add people by email"});
+  const add=()=>{const v=inp.value.trim().replace(/[,;]$/,"");if(!v)return true;if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)){toast("“"+v+"” isn't an email","err");return false;}if(v===owner||sh.people.some(p=>p.email===v)||pending.includes(v)){inp.value="";return true;}pending.push(v);render();setTimeout(()=>sheetEl.querySelector(".shin")?.focus(),0);return true;};
+  inp.onkeydown=e=>{if(e.key==="Enter"||e.key===","||e.key===";"){e.preventDefault();add();}else if(e.key==="Backspace"&&!inp.value&&pending.length){pending.pop();render();}};
+  inp.onblur=()=>{if(inp.value.trim())add();};
+  chipsBox.append(...pending.map((p,ix)=>el("span",{class:"shchip"},p,el("button",{"aria-label":"Remove "+p,onclick:()=>{pending.splice(ix,1);render();}},"×"))),inp);
+  const nrole=el("select",{class:"shsel","aria-label":"Role for new people"},...DROLES.map(([v,l])=>el("option",{value:v,selected:v==="reader"||null},l)));
+  const notify=el("input",{type:"checkbox",checked:true}),msg=el("textarea",{class:"in",rows:2,placeholder:"Message"});
+  const av=e=>el("span",{class:"shav"},e[0].toUpperCase());
+  const people=[el("div",{class:"shrow"},av(owner),el("div",{class:"m"},el("b",{},"You"),el("small",{},owner)),el("span",{class:"shown"},"Owner")),
+   ...sh.people.map(p=>{const sel=el("select",{class:"shsel","aria-label":"Access for "+p.email},...DROLES.map(([v,l])=>el("option",{value:v,selected:p.role===v||null},l)),el("option",{disabled:true},"──────"),el("option",{value:"remove"},"Remove access"));
+    sel.onchange=()=>{if(sel.value==="remove"){sh.people=sh.people.filter(x=>x!==p);toast("Removed "+p.email);}else{p.role=sel.value;toast(p.email+" is now "+DROLES.find(r=>r[0]===sel.value)[1].toLowerCase());}save();render();};
+    return el("div",{class:"shrow"},av(p.email),el("div",{class:"m"},el("b",{},p.email.split("@")[0]),el("small",{},p.email)),sel);})];
+  const gen=el("select",{class:"shsel","aria-label":"General access"},el("option",{value:"RESTRICTED",selected:sh.link==="RESTRICTED"||null},"Restricted"),el("option",{value:"ANYONE",selected:sh.link==="ANYONE"||null},"Anyone with the link"));
+  gen.onchange=()=>{sh.link=gen.value;save();render();toast(sh.link==="ANYONE"?"Anyone with the link can open it":"Only people with access can open it");};
+  const lrole=el("select",{class:"shsel","aria-label":"Link role"},...DROLES.map(([v,l])=>el("option",{value:v,selected:sh.linkRole===v||null},l)));lrole.onchange=()=>{sh.linkRole=lrole.value;save();};
+  const copy=()=>{const done=()=>toast("Link copied");try{navigator.clipboard.writeText(url).then(done,()=>toast(url));}catch(e){toast(url);}};
+  openSheet("Share “"+label+"”",
+   el("div",{class:"shadd"},chipsBox,pending.length?nrole:null),
+   pending.length?[el("label",{class:"check"},notify,el("div",{},el("b",{},"Notify people"),el("small",{},"Google Drive emails them a link"))),msg,
+    el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{pending.length=0;render();}},"Cancel"),el("button",{class:"btn blue",onclick:()=>{if(inp.value.trim()&&!add())return;pending.forEach(e=>sh.people.push({email:e,role:nrole.value}));const n=pending.length;pending.length=0;save();render();toast("Shared with "+n+" "+(n>1?"people":"person")+(notify.checked?" · email sent":""));}},"Send"))]
+   :[el("div",{class:"sech",style:"margin-top:12px"},"People with access"),...people,
+    el("div",{class:"sech",style:"margin-top:12px"},"General access"),
+    el("div",{class:"shrow"},el("span",{class:"shav "+(sh.link==="ANYONE"?"on":"")},sh.link==="ANYONE"?"🌐":"🔒"),el("div",{class:"m"},gen,el("small",{},sh.link==="ANYONE"?"Anyone on the internet with the link can "+(sh.linkRole==="reader"?"view":sh.linkRole==="commenter"?"comment":"edit"):"Only people with access can open with the link")),sh.link==="ANYONE"?lrole:null),
+    el("div",{class:"btnrow",style:"margin-top:12px"},el("button",{class:"btn ghost",onclick:copy},"🔗 Copy link"),el("button",{class:"btn",onclick:()=>{closeSheet();onDone&&onDone();}},"Done"))]);
+ };
+ render();
+}
+function driveFiles(title,names,extra){openSheet(title,names.length?el("div",{class:"card",style:"margin:0 0 10px"},...names.map(n=>el("div",{class:"kv"},el("span",{style:"overflow-wrap:anywhere"},"📄 "+n)))):el("div",{class:"empty"},"No files yet"),extra||null,el("div",{class:"btnrow"},el("button",{class:"btn",onclick:closeSheet},"Close")));}
 PAGES.drive=function(){
  const now=new Date(),start=fyStart(now),months=[];for(let d=new Date(now.getFullYear(),now.getMonth(),1);d>=start;d=new Date(d.getFullYear(),d.getMonth()-1,1))months.push(dk(d).slice(0,7));
- const cnt=m=>{const occ=allOcc().filter(x=>x.o.status==="PAID"&&mkOf(x.o.paidAt)===m);return {cxl:S.invoices.filter(i=>i.status==="CANCELLED"&&i.issued&&mkOf(i.issued)===m).length,inv:S.invoices.filter(i=>i.issued&&mkOf(i.issued)===m&&i.docType!=="PROFORMA"&&i.status!=="CANCELLED").length,bills:occ.filter(x=>x.o.file).length,itc:occ.filter(x=>x.o.itc&&x.o.gst>0&&x.o.file).length,gst:occ.filter(x=>x.o.itc).reduce((s,x)=>s+(x.o.gst||0),0)};};
- const fr=(icon,name,n,extra)=>el("div",{class:"kv"},el("span",{},icon+" "+name),el("span",{class:"num"},n+" file"+(n===1?"":"s")+(extra||"")));
- page("Monthly Drive folders",[el("p",{class:"pre",style:"padding:12px 12px 0"},"On the 1st of every month a folder is created in Google Drive under Finance › YYYY-MM. Approved invoices and attached expense bills are filed into it automatically; bills whose GST you get back are also put in “GST claimable”, ready for your finance person. Cancelled invoices move to “Cancelled invoices” in the month they were issued, stamped CANCELLED, so the number series has no gaps."),
-  ...months.map(m=>{const c=cnt(m);return el("div",{class:"card"},el("div",{style:"display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px"},el("h4",{style:"margin:0"},"📁 "+mkLabel(m)),el("button",{class:"pill",onclick:()=>toast("Opens Drive › Finance › "+m+" (real app)")},"Open in Drive")),fr("🧾","Sales invoices",c.inv),fr("📎","Expense bills",c.bills),fr("✅","GST claimable",c.itc,c.gst?" · "+inr(c.gst):""),fr("🚫","Cancelled invoices",c.cxl),el("div",{style:"display:flex;justify-content:flex-end;margin-top:8px"},el("button",{class:"pill",onclick:()=>{gstMonth=m;expTab="GST";nav("expenses");}},"GST pack ›")));})],
-  [zoneActions(el("button",{class:"btn blue",onclick:()=>toast("Opens Drive › Finance (real app)")},"Open Finance folder in Drive"))]);
+ const files=m=>{const occ=allOcc().filter(x=>x.o.status==="PAID"&&mkOf(x.o.paidAt)===m);return {cxl:S.invoices.filter(i=>i.status==="CANCELLED"&&i.issued&&mkOf(i.issued)===m&&i.docType!=="PROFORMA"),inv:S.invoices.filter(i=>i.issued&&mkOf(i.issued)===m&&i.docType!=="PROFORMA"&&i.status!=="CANCELLED"),bills:occ.filter(x=>x.o.file),itc:occ.filter(x=>x.o.itc&&x.o.gst>0&&x.o.file),gst:occ.filter(x=>x.o.itc).reduce((s,x)=>s+(x.o.gst||0),0)};};
+ const shared=k=>{const sh=(S.shares||{})[k];return sh&&(sh.people.length||sh.link==="ANYONE")?(sh.link==="ANYONE"?"link":sh.people.length):"";};
+ const chip=(icon,name,n,on,extra)=>el("button",{class:"dchip",onclick:on},el("span",{class:"dl"},icon+" "+name),el("b",{},n+(extra||"")));
+ page("Monthly Drive folders",[el("p",{class:"pre",style:"padding:12px 12px 4px;margin:0"},"In your Google Drive ("+S.settings.email+") › Finance. Share a month like any Drive folder. Proformas aren't filed."),
+  ...months.map(m=>{const c=files(m),lab="Finance › "+m,sc=shared(m);return el("div",{class:"card dcard"},
+   el("div",{class:"dhead"},el("h4",{},"📁 "+mkLabel(m)),
+    el("button",{class:"pill dbtn",onclick:()=>driveShare(m,lab,PAGES.drive)},"👤+ Share"+(sc?" · "+sc:"")),
+    el("button",{class:"pill dbtn",onclick:()=>toast("Opens Drive › "+lab)},"Open ↗")),
+   el("div",{class:"dgrid"},
+    chip("🧾","Sales",c.inv.length,()=>driveFiles(mkLabel(m)+" · Sales invoices",c.inv.map(invFileName))),
+    chip("📎","Bills",c.bills.length,()=>driveFiles(mkLabel(m)+" · Expense bills",c.bills.map(x=>x.o.file.name))),
+    chip("✅","GST claim",c.itc.length,()=>driveFiles(mkLabel(m)+" · GST claimable",c.itc.map(x=>x.o.file.name),el("div",{class:"btnrow",style:"margin-bottom:8px"},el("button",{class:"btn blue",onclick:()=>{closeSheet();gstMonth=m;expTab="GST";nav("expenses");}},"Open GST pack"+(c.gst?" · "+inr(c.gst):""))))),
+    chip("🚫","Cancelled",c.cxl.length,()=>driveFiles(mkLabel(m)+" · Cancelled invoices",c.cxl.map(invFileName)))));})],
+  [zoneActions(el("button",{class:"btn ghost",onclick:()=>driveShare("ROOT","Finance",PAGES.drive)},"Share Finance"),el("button",{class:"btn blue",onclick:()=>toast("Opens Drive › Finance")},"Open in Drive"))]);
 };
 /* ---------- boot ---------- */
 document.querySelectorAll("[data-login]").forEach(b=>b.onclick=()=>{const r=b.dataset.login;S.me=S.users.find(u=>u.role===r).id;save();if(r==="HR"){show("page");PAGES.attendance();}else{show("dash");renderDash();}});
