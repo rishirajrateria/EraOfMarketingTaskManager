@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { AlertTriangle, FolderOpen, Info, Mail, MessageSquare, Mic, Pause, Phone, Repeat, RotateCcw, Video } from "lucide-react";
+import { AlertTriangle, FolderOpen, Info, Mail, MessageSquare, Mic, Pause, Phone, Repeat, Video } from "lucide-react";
 import { clsx } from "@/lib/clsx";
 import type { DashboardData, TaskRow as Row } from "@/server/tasks/types";
 import { useLongPress } from "@/components/ui/useLongPress";
@@ -85,11 +85,6 @@ export function TaskRow({ t, data, h, pendingDone }: { t: Row; data: DashboardDa
       data-task-id={t.id}
       aria-label={t.title}
     >
-      {t.parentTaskId ? (
-        <span className="absolute left-2 top-0 flex h-[18px] w-[18px] items-center justify-center rounded-b-lg bg-restart text-white" aria-label="Restarted task" title="Restarted task">
-          <RotateCcw size={10} strokeWidth={3} />
-        </span>
-      ) : null}
 
       {/* Row 1: title (2 lines max) + badges · the circle top-right */}
       <div className="flex items-start gap-2">
