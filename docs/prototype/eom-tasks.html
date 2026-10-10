@@ -569,6 +569,9 @@ select.in{padding-right:10px}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .chip.team{color:#c4b5fd}:root:not([data-theme="light"]) .rpills .pill.ok{color:#4ade80}:root:not([data-theme="light"]) .rpills .pill.od{color:#f87171}}
 :root[data-theme="dark"] .chip.team{color:#c4b5fd}:root[data-theme="dark"] .rpills .pill.ok{color:#4ade80}:root[data-theme="dark"] .rpills .pill.od{color:#f87171}
 .toast .undo{margin-left:12px;border:0;background:transparent;color:#7dd3fc;font:inherit;font-weight:800;cursor:pointer;padding:2px 4px}
+.row.grey{background:var(--row-white)!important;opacity:.55;filter:saturate(.45)}
+.row.grey::before{opacity:.5}
+.doubtTag{flex-shrink:0;display:inline-grid;place-items:center;width:18px;height:18px;border-radius:999px;background:#f59e0b;color:#111;font-size:12px;font-weight:900}
 </style><div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
@@ -605,7 +608,6 @@ select.in{padding-right:10px}
         <div class="g" id="barg"></div>
         <div class="w">
           <button class="sq" id="addMeet" aria-label="Schedule a meeting"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h5v5H3z" fill="#00832D"/><path d="M3 11h7v5H5a2 2 0 0 1-2-2z" fill="#0066DA"/><path d="M10 6h5v5h-5z" fill="#2684FC"/><path d="M10 11h5v5h-5z" fill="#00AC47"/><path d="M15 6h.5a1.5 1.5 0 0 1 1.5 1.5V11h-2z" fill="#FFBA00"/><path d="M15 11h2v3.5a1.5 1.5 0 0 1-1.5 1.5H15z" fill="#00AC47"/><path d="M17 10.2 21 7v8l-4-3.2z" fill="#00AC47"/></svg></button>
-          <button class="pill" id="addWork">Work</button>
           <button class="sq" id="addChoose" aria-label="Add task"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
         </div>
       </div>
@@ -818,7 +820,8 @@ const dayOff=iso=>Math.round((new Date(iso).setHours(0,0,0,0)-today0().getTime()
 const dateChip=iso=>fmtD(iso);
 /* Actual-time pill: green when started on time / finished inside the slot, red when started late or running past the end. */
 const actualTone=t=>{if(!t.actualStart)return "";const late=new Date(t.actualStart)>new Date(t.start);if(t.status==="COMPLETED")return t.actualEnd&&new Date(t.actualEnd)<=new Date(t.end)?"ok":"od";if(new Date()>new Date(t.end))return "od";return late?"od":"ok";};
-const rowColour=t=>t.status==="COMPLETED"?"grey":t.doubt?"yellow":(t.status!=="COMPLETED"&&new Date(t.end)<new Date()&&t.status!=="FINISH_REQUESTED")?"red":t.status==="STARTED"?"green":"white";
+/* Row colour: completed = faded, paused = yellow, started = green, not started after its start time = red. */
+const rowColour=t=>t.status==="COMPLETED"?"grey":t.paused?"yellow":(t.status==="STARTED"||t.status==="FINISH_REQUESTED")?"green":new Date(t.start)<new Date()?"red":"white";
 const toastEl=$("#toast");let toastT=null;
 function toast(msg,kind){toastEl.textContent=msg;toastEl.className="toast"+(kind==="err"?" err":"");toastEl.style.pointerEvents="";toastEl.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>toastEl.hidden=true,2200);}
 /* Google-Tasks style toast with Undo (5s). */
@@ -896,8 +899,7 @@ function renderDash(){
   el("button",{class:"itog"+(f.icons.includes("restarted")?" on":""),title:"Restarted tasks",onclick:()=>{f.icons=tog(f.icons,"restarted");save();renderDash();}},svg(I.restart,15,2.5)),
   el("button",{class:"comp"+(f.completed?" on":""),onclick:()=>{f.completed=!f.completed;save();renderDash();}},"completed"),
   el("button",{class:"itog"+(f.icons.includes("recurring")?" on":""),title:"Recurring tasks",onclick:()=>{f.icons=tog(f.icons,"recurring");save();renderDash();}},svg(I.repeat,15,2.5)),
-  el("button",{class:"itog"+(f.icons.includes("paused")?" on":""),title:"Paused tasks",onclick:()=>{f.icons=tog(f.icons,"paused");save();renderDash();}},svg(I.pause,13,0)),
-  ...[["red","#F8CACA","Overdue"],["yellow","#F6E7B4","Doubt raised"],["green","#CBEFCB","Ongoing"]].map(([k,hex,l])=>el("button",{class:"sw"+(f.colours.includes(k)?" on":""),style:"background:"+hex,title:l,"aria-label":l,onclick:()=>{f.colours=tog(f.colours,k);save();renderDash();}})),
+  ...[["red","#F8CACA","Not started · start time passed"],["yellow","#F6E7B4","Paused"],["green","#CBEFCB","Started"]].map(([k,hex,l])=>el("button",{class:"sw"+(f.colours.includes(k)?" on":""),style:"background:"+hex,title:l,"aria-label":l,onclick:()=>{f.colours=tog(f.colours,k);save();renderDash();}})),
   el("button",{class:"rdbtn"+(f.icons.includes("review")?" on":""),title:"Review requested",onclick:()=>{f.icons=tog(f.icons,"review");save();renderDash();}},el("i")));
  // green rows
  const vis=visibleTasks();
@@ -921,7 +923,7 @@ function taskRow(t){
  const ib=(label,icon,on,dis)=>el("button",{title:label,"aria-label":label,disabled:dis||null,onclick:e=>{e.stopPropagation();on();}},svg(icon,20));
  const circle=(()=>{
   if(t.status==="COMPLETED")return el("button",{class:"circle",title:"Restart",onclick:e=>{e.stopPropagation();restartTask(t);}},svg(I.restart,15,2.5));
-  const cls="circle"+(t.doubt?" doubt":col==="green"?" started":"");
+  const cls="circle"+(col==="green"?" started":"");
   let ct=null,clong=false;
   return el("button",{class:cls,title:"Tap to complete · hold or right-click for more","aria-label":"Complete “"+t.title+"” (hold or right-click for more)",
    onpointerdown:e=>{e.stopPropagation();clong=false;ct=setTimeout(()=>{clong=true;openActions(t);},450);},onpointerup:e=>{e.stopPropagation();clearTimeout(ct);},onpointerleave:()=>clearTimeout(ct),onpointercancel:()=>clearTimeout(ct),
@@ -935,7 +937,7 @@ function taskRow(t){
   onpointerup:()=>{clearTimeout(pressT);},onpointerleave:()=>clearTimeout(pressT),onpointercancel:()=>clearTimeout(pressT),
   onclick:()=>{if(!long)openDetail(t);},oncontextmenu:e=>{e.preventDefault();clearTimeout(pressT);openActions(t);}},
   t.parent?el("span",{class:"restartTag",title:"Restarted task"},svg(I.restart,10,3)):null,
-  el("div",{class:"title"},el("b",{},t.title),t.recurring?el("span",{style:"color:#2563eb;flex-shrink:0"},svg(I.repeat,12,2.5)):null,t.paused?el("span",{class:"pauseTag",title:"Paused"},svg(I.pause,9,0)):null,
+  el("div",{class:"title"},el("b",{},t.title),t.recurring?el("span",{style:"color:#2563eb;flex-shrink:0"},svg(I.repeat,12,2.5)):null,t.paused?el("span",{class:"pauseTag",title:"Paused"},svg(I.pause,9,0)):null,t.doubt?el("span",{class:"doubtTag",title:"Doubt raised"},"?"):null,
    null),
   el("div",{class:"body"},
    el("div",{class:"left"},
@@ -1180,7 +1182,7 @@ $("#tTitle").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();saveTask();}};
 // save button lives in the header tiles area? No: the real app saves from the title row ✓ — add a floating save
 const saveBtn=el("button",{class:"btn",style:"flex:none;height:40px;border-radius:999px;padding:0 22px;box-shadow:0 8px 24px rgba(0,0,0,.2);pointer-events:auto",onclick:saveTask},"Save");
 $("#s-add .addbody").append(el("div",{style:"position:sticky;bottom:10px;display:flex;justify-content:flex-end;margin-top:12px;pointer-events:none"},saveBtn));
-$("#addMeet").onclick=()=>openAdd("MEETING");$("#addWork").onclick=()=>openAdd("WORK");$("#addChoose").onclick=()=>openAdd("CHOOSE");
+$("#addMeet").onclick=()=>openAdd("MEETING");$("#addChoose").onclick=()=>openAdd("CHOOSE");
 
 /* ---------- menu ---------- */
 const MI={
