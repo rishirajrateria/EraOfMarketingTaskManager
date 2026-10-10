@@ -899,7 +899,8 @@ select.in{padding-right:10px}
 .traytog{position:absolute;left:50%;top:-12px;transform:translateX(-50%);z-index:3;height:24px;min-width:44px;padding:0 10px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:999px;border:1px solid var(--hair);background:var(--glass-strong);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:var(--shadow);color:var(--ink);font:inherit;font-size:12px;font-weight:600;cursor:pointer;max-width:calc(100% - 32px)}
 .traytog span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .traytog:focus-visible{outline:2px solid #3b82f6;outline-offset:2px}
-.tray.min>:not(.traytog){display:none!important}
+/* ID-scoped row styles (#s-dash .greenarea etc.) outrank a class rule, so the hide rule carries the IDs too */
+.tray.min>:not(.traytog),#s-dash .tray.min>:not(.traytog),#s-add .tray.min>:not(.traytog),#pgZone .tray.min>:not(.traytog){display:none!important}
 .tray.min{height:40px;border-top:1px solid var(--hair);background:var(--glass);border-radius:20px 20px 0 0;box-shadow:0 -10px 30px -18px rgba(15,40,70,.4)}
 .tray.min .traytog{top:7px;height:26px}
 .tray:not(.min) .traytog{height:22px;min-width:40px;padding:0 8px}
