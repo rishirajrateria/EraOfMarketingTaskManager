@@ -33,9 +33,12 @@ function useTrayMin(storageKey: string): [boolean, (min: boolean) => void] {
  * A minimisable bottom tray (ADR 0016 addendum, prototype `.tray` / `.traytog`): its rows, with a small glass tab
  * centred on its top edge. Tapping the tab (chevron down) collapses the tray to a slim 40px bar that only shows the tab
  * — chevron up and the caption (`label`: "Filters · Social · Today", "Details · Social · Acme · Up next") — and the
- * screen above gains the space; tapping it again expands. Remembered per user and per tray (`kind`, tray-key). The
- * task dashboard's filters (`FilterTray`), the add-task screen's details and the Admin dashboards' filters share it.
- * `className` positions it (default `relative`; the Admin dashboards pass `zone-sticky`, also a positioned box).
+ * screen above gains the space; tapping it again expands. A caption longer than the bar wraps (up to three lines at
+ * 360px; the bar grows with it) rather than losing its end — for the add-task tray that end is the resolved start ("…
+ * Mon 12 Oct - next free 10 am"), the one thing the minimised bar must still show. Remembered per user and per tray (`kind`,
+ * tray-key). The task dashboard's filters (`FilterTray`), the add-task screen's details and the Admin dashboards'
+ * filters share it. `className` positions it (default `relative`; the Admin dashboards pass `zone-sticky`, also a
+ * positioned box).
  */
 export function MinimisableTray({ kind, userId, label, className, children }: { kind: TrayKind; userId: string; label: string; className?: string; children: React.ReactNode }) {
   const [min, setMin] = useTrayMin(trayStorageKey(kind, userId));
@@ -43,7 +46,12 @@ export function MinimisableTray({ kind, userId, label, className, children }: { 
   const names = TRAY_NAME[kind];
   const name = min ? names.show : names.hide;
   return (
-    <section aria-label={names.region} data-tray={min ? "min" : "open"} data-tray-kind={kind} className={clsx(className ?? "relative", "shrink-0", min && "zone-top bar-glass h-10 border-t border-hair")}>
+    <section
+      aria-label={names.region}
+      data-tray={min ? "min" : "open"}
+      data-tray-kind={kind}
+      className={clsx(className ?? "relative", "shrink-0", min && "zone-top bar-glass flex min-h-10 items-start justify-center border-t border-hair px-4 py-[7px]")}
+    >
       <button
         type="button"
         onClick={() => setMin(!min)}
@@ -53,13 +61,13 @@ export function MinimisableTray({ kind, userId, label, className, children }: { 
         title={name}
         data-tray-toggle
         className={clsx(
-          "glass-strong absolute left-1/2 z-[3] flex max-w-[calc(100%-32px)] -translate-x-1/2 items-center justify-center gap-1.5 rounded-full text-[12px] font-semibold text-ink outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]",
-          min ? "top-[7px] h-[26px] min-w-11 px-2.5" : "-top-[11px] h-[22px] min-w-10 px-2",
+          "glass-strong z-[3] flex items-center justify-center gap-1.5 rounded-full text-[12px] font-semibold text-ink outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]",
+          min ? "relative min-h-[26px] min-w-11 max-w-full px-2.5 py-1" : "absolute -top-[11px] left-1/2 h-[22px] min-w-10 max-w-[calc(100%-32px)] -translate-x-1/2 px-2",
         )}
       >
-        {min ? <ChevronUp size={16} strokeWidth={2.5} aria-hidden /> : <ChevronDown size={16} strokeWidth={2.5} aria-hidden />}
+        {min ? <ChevronUp size={16} strokeWidth={2.5} aria-hidden className="shrink-0" /> : <ChevronDown size={16} strokeWidth={2.5} aria-hidden />}
         {min ? (
-          <span aria-hidden className="truncate">
+          <span aria-hidden className="line-clamp-3 min-w-0 text-left leading-[16px] [overflow-wrap:anywhere]">
             {label}
           </span>
         ) : null}

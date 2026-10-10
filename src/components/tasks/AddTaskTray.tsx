@@ -75,7 +75,7 @@ function TimeRow({ form, type, tz, preview, onShortcut, onOpenSchedule }: { form
         </TagPill>
       </div>
       {dayOnly ? (
-        <p data-slot-preview className="-mt-2 truncate px-3 pb-2 text-[12px] text-muted" aria-live="polite">
+        <p data-slot-preview className={clsx("-mt-2 truncate px-3 pb-2 text-[12px]", preview?.error ? "text-red-600" : "text-muted")} aria-live="polite">
           {whenCaption(form, new Date(), tz, preview)}
           {preview?.day?.requestedDay === form.scheduledStart ? "" : "…"}
         </p>

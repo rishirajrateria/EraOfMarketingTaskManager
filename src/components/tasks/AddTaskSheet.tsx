@@ -141,8 +141,12 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
   const assignees = useMemo(() => allowedAssignees(data, chosen ?? "WORK"), [data, chosen]);
   const meeting = chosen === "MEETING";
 
+  // Meetings: the start is chosen and shown in the meeting's time zone (Options → Time zone).
+  const zone = meeting ? meetingTz(form, data.tz) : data.tz;
+
   // A day with no time ("2026-10-23", from Today / Tomorrow or the calendar icon): ask the server for the next free time
   // on that day for the people the task lands on (debounced 300ms) so the tray can show "Fri 23 Oct - next free 11:30 am".
+  // The day is read in `zone` (meetings: their own), like the server does on Save; a refusal shows in place of the time.
   const [preview, setPreview] = useState<SlotPreview | null>(null);
   const previewDay = isDateOnly(form.scheduledStart) && !(meeting && form.meeting?.allDay) ? form.scheduledStart : "";
   const previewIds = effectiveAssignees({ ...form, type: chosen ?? "WORK" }, data).join(",");
@@ -152,18 +156,20 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
     if (!open || !previewDay || !previewIds) return;
     let cancelled = false;
     const t = setTimeout(async () => {
-      const res = await previewSlot(previewIds.split(","), previewMinutes, chosen ?? "WORK", previewDay).catch(() => null);
-      if (cancelled || !res || !res.ok) return;
-      setPreview(res.data);
+      const res = await previewSlot(previewIds.split(","), previewMinutes, chosen ?? "WORK", previewDay, meeting ? zone : null).catch(() => null);
+      if (cancelled) return;
+      const day = { requestedDay: previewDay };
+      if (!res) setPreview({ day, error: "Could not check that day" });
+      else if (!res.ok) setPreview({ day, error: res.error });
+      else if (!res.data) setPreview({ day, error: "No free time in the next 60 days" });
+      else setPreview(res.data);
     }, 300);
     return () => {
       cancelled = true;
       clearTimeout(t);
     };
-  }, [open, previewDay, previewIds, previewMinutes, chosen]);
+  }, [open, previewDay, previewIds, previewMinutes, chosen, meeting, zone]);
   const subSheetOpen = scheduleOpen || assigneesOpen || repeatOpen || optionsOpen || findOpen;
-  // Meetings: the start is chosen and shown in the meeting's time zone (Options → Time zone).
-  const zone = meeting ? meetingTz(form, data.tz) : data.tz;
 
   const choose = (type: TaskMode) => {
     if (type === chosen) return;

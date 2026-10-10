@@ -97,19 +97,30 @@ Owner's revision (prototype `scheduleSheet`, `dayFreeSlot`, `plannedAssignees`):
 - **Server** (`taskInputSchema` / `taskUpdateSchema.scheduledStart`): ISO instant, a real `yyyy-MM-dd`, or null. A
   date-only start is resolved in `createTask` / `updateTask` before saving — the DB never holds a date-only value and
   `new Date("yyyy-MM-dd")` (UTC midnight) is never used. `proposeSlotOnDay` (`src/server/scheduling/day-slot.ts`) =
-  the same busy data and `findSlot` as Up next (`collectBusy`), with `from = max(that day's start in the company tz,
-  now)` bound to that day, **strict only** (a subordinate's self-assigned task is never displaced just to fit the
+  the same busy data and `findSlot` as Up next (`collectBusy`), with `from = max(that day's start, now)` bound to that
+  day (`findSlot`'s `until`), **strict only** (a subordinate's self-assigned task is never displaced just to fit the
   requested day). Like the prototype's `dayFreeSlot`, the first gap the WHOLE task fits in wins; only a task longer
   than any lunch-bounded block may be split across that day's free time (as Up next does). It skips the assignees'
   active tasks, Calendar busy blocks, lunch, holidays and approved leave, and the assignees are the ones
   `planAssignment` already resolves (Admin → the teams' Team Leaders; TL → picked executives / the team; Exec → self;
-  meetings → organiser + internal attendees). A day with no fit falls back to the next contiguous gap from that day
-  onward (60 days), else the usual Up-next proposal from that day (split, then overlap), and the result carries
-  `day: { requestedDay, onRequestedDay, requestedDayOff }`. A day before today is refused ("That day has passed — pick today or later"). The day key is read
-  in the **company** time zone (working hours live there); all-day meetings read it in the meeting zone (= that day's
-  midnight, as before). The repeat rule anchors on the day the task actually got.
+  meetings → organiser + internal attendees). A day with no room falls back **day by day** — the same whole-then-split
+  search on each following day (60 days), so the task lands where Up next would put it (a nearer day it fits on split
+  beats a later day it fits on whole); a task longer than any single day takes the usual Up-next proposal from that
+  day (split across days, then overlap), which may well still START on the requested day. The result carries
+  `day: { requestedDay, onRequestedDay, missed, freeMinutes }` — `onRequestedDay` = the start is on that day (whatever
+  path found it); `missed` = why not: `day-off` (weekend / holiday / everyone on leave), `over` (today, after hours),
+  `full` (every minute taken) or `no-room` (some free time, `freeMinutes`, but less than the task). A day before today
+  is refused ("That day has passed — pick today or later"; the sheet refuses it too, `min` on the date). The day key
+  is read in the **company** time zone for tasks (working hours live there) and in the **meeting's** zone for meetings
+  (`dayZone` — the form picks and shows it there, so Today / Tomorrow / the sheet's date mean the same day on both
+  sides; the working hours stay the company's, a meeting-zone day may straddle two company days); all-day meetings
+  read it in the meeting zone as before (= that day's midnight). The repeat rule anchors on the day the task actually
+  got.
 - **UI**: the details tray caption reads "Fri 23 Oct - next free 11:30 am" (date-only, resolved by a debounced
   `previewSlot(ids, minutes, type, day)`), "Fri 23 Oct 2 pm" (explicit), "Up next" (none); a line under the time row
-  shows the same while the tray is open. When the day did not fit, the caption says "Fri 23 Oct full - next free Sat
-  24 Oct 10 am" and the success toast says "Fri 23 Oct was full - scheduled for Sat 24 Oct 10 am" (a weekend / holiday:
-  "is a day off"). The Edit sheet keeps its datetime-local inputs (explicit times only).
+  shows the same while the tray is open (red when the server refused the day: "Fri 9 Oct - That day has passed — pick
+  today or later"). When the day did not fit, the caption says "Fri 23 Oct full - next free Sat 24 Oct 10 am" and the
+  success toast says "Fri 23 Oct was full - scheduled for Sat 24 Oct 10 am" — a weekend / holiday: "is a day off";
+  today after hours: "is over"; too little room: "has / had only 1h free". The minimised tray's caption wraps onto a
+  second line rather than truncating, so the resolved time at its end stays visible at 360px. The Edit sheet keeps its
+  datetime-local inputs (explicit times only).

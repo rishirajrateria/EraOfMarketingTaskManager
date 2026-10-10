@@ -4,7 +4,7 @@ import { DEFAULT_TZ, dateKey } from "@/lib/time";
 import type { DashboardData } from "@/server/tasks/types";
 import type { DayPlacement } from "@/server/scheduling/day-slot";
 import { isDateOnly, type AddTaskForm } from "@/components/tasks/add-task-helpers";
-import { fmtStartPill, startMinutes } from "@/components/tasks/meeting-helpers";
+import { fmtDuration, fmtStartPill, startMinutes } from "@/components/tasks/meeting-helpers";
 
 /**
  * Caption of the add-task screen's minimised details tray (ADR 0016 addendum, prototype `addTrayTog`): what the
@@ -20,8 +20,14 @@ export function fmtDayKey(key: string): string {
   return `${WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]} ${d} ${MONTHS[m - 1]}`;
 }
 
-/** The server's answer to "next free time on that day" (`previewSlot(…, day)` / `createTask`), Dates or their JSON. */
-export type SlotPreview = { start: Date | string; end: Date | string; day?: DayPlacement };
+/** A slot as the server returns it (Dates) or as it arrives in the browser (JSON strings). */
+export type SlotLike = { start: Date | string; end: Date | string };
+
+/**
+ * The server's answer to "next free time on that day" (`previewSlot(…, day)` / `createTask`) — or why it had none
+ * (`error`, e.g. "That day has passed — pick today or later", shown in place of the time).
+ */
+export type SlotPreview = (SlotLike & { day?: DayPlacement; error?: undefined }) | { day: Pick<DayPlacement, "requestedDay">; error: string };
 
 /** Minutes of day of an instant in `tz`, for `fmtStartPill`. */
 const minutesOfDay = (d: Date | string, tz: string) => {
@@ -35,10 +41,28 @@ function dayLabelOf(day: string, now: Date, tz: string): string {
 }
 
 /**
+ * Why the day did not do, as a verb phrase after its name: "is a day off" / "is over" / "has only 1h free" / "full"
+ * (`past`: "was full", "had only 1h free" — for the toast, once the task is saved).
+ */
+function missedPhrase(day: Pick<DayPlacement, "missed" | "freeMinutes">, past: boolean): string {
+  switch (day.missed) {
+    case "day-off":
+      return "is a day off";
+    case "over":
+      return "is over";
+    case "no-room":
+      return `${past ? "had" : "has"} only ${fmtDuration(day.freeMinutes / 60)} free`;
+    default:
+      return past ? "was full" : "full";
+  }
+}
+
+/**
  * The start: "Up next" (none picked: the next free slot), else the day — "Today" / "Tomorrow" / "Tue 13 Oct" in `tz`
  * (the meeting's zone for meetings) — and the time as on the START pills ("11 am"); all-day meetings show the day only.
  * A day with no time reads "Fri 23 Oct - next free 11:30 am" once the server's `preview` for that day is in ("- next
- * free" until then); when that day was full: "Fri 23 Oct full - next free Sat 24 Oct 10 am".
+ * free" until then); when that day had no room: "Fri 23 Oct full - next free Sat 24 Oct 10 am" ("is a day off", "is
+ * over", "has only 1h free"); when the server refused it: "Fri 9 Oct - That day has passed — pick today or later".
  */
 export function whenCaption(form: Pick<AddTaskForm, "type" | "scheduledStart" | "meeting">, now = new Date(), tz = DEFAULT_TZ, preview?: SlotPreview | null): string {
   const value = form.scheduledStart;
@@ -50,9 +74,10 @@ export function whenCaption(form: Pick<AddTaskForm, "type" | "scheduledStart" | 
   if (isDateOnly(value)) {
     const p = preview?.day?.requestedDay === day ? preview : null;
     if (!p) return `${dayLabel} - next free`;
+    if (!("start" in p)) return `${dayLabel} - ${p.error}`;
     const time = fmtStartPill(minutesOfDay(p.start, tz));
-    if (p.day?.onRequestedDay) return `${dayLabel} - next free ${time}`;
-    return `${dayLabel} ${p.day?.requestedDayOff ? "is a day off" : "full"} - next free ${dayLabelOf(dateKey(new Date(p.start), tz), now, tz)} ${time}`;
+    if (!p.day || p.day.onRequestedDay) return `${dayLabel} - next free ${time}`;
+    return `${dayLabel} ${missedPhrase(p.day, false)} - next free ${dayLabelOf(dateKey(new Date(p.start), tz), now, tz)} ${time}`;
   }
   const min = startMinutes(value);
   return min === null ? dayLabel : `${dayLabel} ${fmtStartPill(min)}`;
@@ -73,12 +98,12 @@ export function detailsCaption(
 
 /**
  * Success toast when a date-only start could not be placed on that day (ADR 0010 addendum): "Fri 23 Oct was full -
- * scheduled for Sat 24 Oct 10 am" / "Sun 25 Oct is a day off - scheduled for Mon 26 Oct 10 am". Null when it fit.
+ * scheduled for Sat 24 Oct 10 am" / "Sun 25 Oct is a day off - …" / "Sat 10 Oct is over - …" / "Fri 23 Oct had only
+ * 1h free - …". Null when it fit (also when the task starts on that day and runs on into the next).
  */
-export function dayFallbackToast(result: { slot: SlotPreview | null; day?: DayPlacement }, tz = DEFAULT_TZ): string | null {
+export function dayFallbackToast(result: { slot: SlotLike | null; day?: DayPlacement }, tz = DEFAULT_TZ): string | null {
   const { slot, day } = result;
   if (!slot || !day || day.onRequestedDay) return null;
   const start = new Date(slot.start);
-  const why = day.requestedDayOff ? "is a day off" : "was full";
-  return `${fmtDayKey(day.requestedDay)} ${why} - scheduled for ${fmtDayKey(dateKey(start, tz))} ${fmtStartPill(minutesOfDay(start, tz))}`;
+  return `${fmtDayKey(day.requestedDay)} ${missedPhrase(day, true)} - scheduled for ${fmtDayKey(dateKey(start, tz))} ${fmtStartPill(minutesOfDay(start, tz))}`;
 }

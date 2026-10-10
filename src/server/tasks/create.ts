@@ -10,7 +10,7 @@ import { getSettings } from "@/lib/settings";
 import { proposeSlot, shiftDisplacedTasks, type SlotProposal } from "@/server/scheduling/slot";
 import { proposeSlotOnDay, type DayPlacement } from "@/server/scheduling/day-slot";
 import { queueTaskCreation } from "@/google/task-integrations";
-import { isDateOnly, taskInputSchema, type TaskInput } from "@/server/tasks/schema";
+import { isDateOnly, taskInputSchema, timeZoneInput, type TaskInput } from "@/server/tasks/schema";
 import { firstName, planAssignment, type AssignmentPlan } from "@/server/tasks/assignment";
 import { nextRunAt, repeatRuleData } from "@/server/tasks/recurrence";
 import { completeRule } from "@/server/tasks/repeat-rule";
@@ -124,7 +124,8 @@ export async function createTask(raw: unknown): Promise<ActionResult<CreateResul
     let day: DayPlacement | undefined;
     if (start && !end) end = new Date(start.getTime() + input.allocatedMinutes * 60000);
     if (!start && dayOnly) {
-      const r = await proposeSlotOnDay(plan.assigneeIds, input.allocatedMinutes, dayOnly, { requesterRole: user.role, requesterId: user.id });
+      // Meetings read the day in their own zone (the form picked it there); the working hours stay the company's.
+      const r = await proposeSlotOnDay(plan.assigneeIds, input.allocatedMinutes, dayOnly, { requesterRole: user.role, requesterId: user.id, dayZone: meetingOptions?.timeZone });
       if (!r) throw new Error(NO_SLOT_MESSAGE);
       const { slot: found, ...placement } = r;
       slot = found;
@@ -183,8 +184,15 @@ export type SlotPreview = SlotProposal & { day?: DayPlacement };
 /**
  * Preview the next available slot before saving (SPEC §9.2 step 5). With `day` (yyyy-MM-dd): the next free time on that
  * day — the add-task tray's "Fri 23 Oct - next free 11:30 am" caption; `day` on the result says whether it fell back.
+ * `dayZone`: the zone the day was picked in (a meeting's own zone; "" / omitted = the company zone).
  */
-export async function previewSlot(assigneeIds: string[], allocatedMinutes: number, type: "WORK" | "MEETING" = "WORK", day?: string | null): Promise<ActionResult<SlotPreview | null>> {
+export async function previewSlot(
+  assigneeIds: string[],
+  allocatedMinutes: number,
+  type: "WORK" | "MEETING" = "WORK",
+  day?: string | null,
+  dayZone?: string | null,
+): Promise<ActionResult<SlotPreview | null>> {
   return wrap(async () => {
     const user = await requireUser();
     if (user.role === "HR" || user.role === "CA") throw new ForbiddenError();
@@ -195,7 +203,8 @@ export async function previewSlot(assigneeIds: string[], allocatedMinutes: numbe
     const opts = { requesterRole: user.role, requesterId: user.id };
     if (!day) return proposeSlot(ids, minutes, opts);
     if (!isDateOnly(day)) throw new Error("Use a yyyy-MM-dd date");
-    const r = await proposeSlotOnDay(ids, minutes, day, opts);
+    const zone = type === "MEETING" ? timeZoneInput.parse(dayZone ?? "") : "";
+    const r = await proposeSlotOnDay(ids, minutes, day, { ...opts, dayZone: zone || undefined });
     if (!r) return null;
     const { slot, ...placement } = r;
     return { ...slot, day: placement };

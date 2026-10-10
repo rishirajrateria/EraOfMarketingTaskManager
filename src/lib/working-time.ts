@@ -93,13 +93,14 @@ export function clipMinutes(intervals: Interval[], from: Date, to: Date): number
  * First contiguous gap ≥ `minutes` at/after `from` in the free timeline.
  * Tasks may span days (SPEC §9.2 step 2): if `allowSplit`, we allocate across consecutive
  * free intervals and return the whole span (sessions = the free chunks).
+ * `until` clips the free time to [from, until): the slot must be found — whole — before it (a day-bound search).
  */
 export function findSlot(
   from: Date,
   minutes: number,
   c: WorkingConfig,
   busy: Interval[],
-  opts: { extraOff?: Set<string>; maxDays?: number; allowSplit?: boolean } = {},
+  opts: { extraOff?: Set<string>; maxDays?: number; allowSplit?: boolean; until?: Date } = {},
 ): { start: Date; end: Date; chunks: Interval[] } | null {
   const maxDays = opts.maxDays ?? 90;
   const allowSplit = opts.allowSplit ?? true;
@@ -108,7 +109,7 @@ export function findSlot(
   let remaining = minutes;
   for (let i = 0; i < maxDays; i++) {
     const free = subtractIntervals(workingIntervalsForDay(day, c, opts.extraOff), busy)
-      .map((iv) => ({ start: iv.start > from ? iv.start : from, end: iv.end }))
+      .map((iv) => ({ start: iv.start > from ? iv.start : from, end: opts.until && iv.end > opts.until ? opts.until : iv.end }))
       .filter((iv) => iv.end > iv.start)
       .sort((a, b) => a.start.getTime() - b.start.getTime());
     for (const iv of free) {

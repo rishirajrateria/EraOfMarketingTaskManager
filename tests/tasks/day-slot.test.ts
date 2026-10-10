@@ -52,7 +52,8 @@ describe("proposeSlotOnDay", () => {
     expect(r).not.toBeNull();
     expect(r!.onRequestedDay).toBe(true);
     expect(r!.requestedDay).toBe(day);
-    expect(r!.requestedDayOff).toBe(false);
+    expect(r!.missed).toBeNull();
+    expect(r!.freeMinutes).toBe(480); // 10:00–19:00 minus lunch
     expect(dateKey(r!.slot.start, TZ)).toBe(day);
     expect(hhmm(r!.slot.start)).toBe("10:00");
     expect(hhmm(r!.slot.end)).toBe("11:00");
@@ -98,9 +99,14 @@ describe("proposeSlotOnDay", () => {
     expect(hhmm(r!.slot.start)).toBe("10:00");
     expect(hhmm(r!.slot.end)).toBe("19:00");
     expect(r!.slot.chunks).toHaveLength(2);
-    // 8h 30m is more than the day has → the next working day
+    // 8h 30m is more than any day has: no day fits it whole, so — as Up next would — it starts on the requested day
+    // and runs on into the next; that still counts as "on that day" (no "was full" toast)
     const more = await proposeSlotOnDay([tl.id], 510, day, { requesterRole: "ADMIN", requesterId: admin.id });
-    expect(more!.onRequestedDay).toBe(false);
+    expect(more!.onRequestedDay).toBe(true);
+    expect(more!.missed).toBeNull();
+    expect(dateKey(more!.slot.start, TZ)).toBe(day);
+    expect(hhmm(more!.slot.start)).toBe("10:00");
+    expect(dateKey(more!.slot.end, TZ)).toBe(nextKey(3, parseDateKey(day, TZ)));
   });
 
   it("a full day falls back to the next free slot from that day onward and says so", async () => {
@@ -111,7 +117,8 @@ describe("proposeSlotOnDay", () => {
     const r = await proposeSlotOnDay([tl.id], 60, day, { requesterRole: "ADMIN", requesterId: admin.id });
     expect(r).not.toBeNull();
     expect(r!.onRequestedDay).toBe(false);
-    expect(r!.requestedDayOff).toBe(false);
+    expect(r!.missed).toBe("full");
+    expect(r!.freeMinutes).toBe(0);
     expect(r!.requestedDay).toBe(day);
     expect(dateKey(r!.slot.start, TZ)).toBe(nextKey(3, parseDateKey(day, TZ))); // Wednesday
     expect(hhmm(r!.slot.start)).toBe("10:00");
@@ -121,28 +128,69 @@ describe("proposeSlotOnDay", () => {
     const late = await proposeSlotOnDay([tl.id], 60, day, { requesterRole: "ADMIN", requesterId: admin.id });
     expect(late!.onRequestedDay).toBe(true);
     expect(hhmm(late!.slot.start)).toBe("18:00");
-    // but a longer one does not fit on that day any more
+    // but a longer one does not fit on that day any more: "had only 1h free"
     const long = await proposeSlotOnDay([tl.id], 90, day, { requesterRole: "ADMIN", requesterId: admin.id });
     expect(long!.onRequestedDay).toBe(false);
+    expect(long!.missed).toBe("no-room");
+    expect(long!.freeMinutes).toBe(60);
+    expect(dateKey(long!.slot.start, TZ)).toBe(nextKey(3, parseDateKey(day, TZ)));
   });
 
-  it("the fallback also prefers a gap the whole task fits in, over splitting it across a nearer day", async () => {
+  it("the fallback goes day by day like Up next: a nearer day where the task fits split beats a later one where it fits whole", async () => {
     const { admin, tl, client } = await seedBasics();
     const day = nextKey(2);
-    const next = nextKey(3, parseDateKey(day, TZ)); // Wednesday: two 1h gaps only
+    const next = nextKey(3, parseDateKey(day, TZ)); // Wednesday: two 1h gaps only (10–11, 12–13)
     await busyBlock({ clientId: client.id, createdById: admin.id, assigneeIds: [tl.id], start: at(day, "10:00"), end: at(day, "19:00") });
     await busyBlock({ clientId: client.id, createdById: admin.id, assigneeIds: [tl.id], start: at(next, "11:00"), end: at(next, "12:00") });
     await busyBlock({ clientId: client.id, createdById: admin.id, assigneeIds: [tl.id], start: at(next, "13:00"), end: at(next, "19:00") });
     const { proposeSlotOnDay } = await import("@/server/scheduling/day-slot");
     const r = await proposeSlotOnDay([tl.id], 120, day, { requesterRole: "ADMIN", requesterId: admin.id });
     expect(r!.onRequestedDay).toBe(false);
-    expect(dateKey(r!.slot.start, TZ)).toBe(nextKey(4, parseDateKey(day, TZ))); // Thursday 10:00, in one piece
+    expect(r!.missed).toBe("full");
+    expect(dateKey(r!.slot.start, TZ)).toBe(next); // Wednesday 10:00–11:00 + 12:00–13:00, not Thursday in one piece
     expect(hhmm(r!.slot.start)).toBe("10:00");
-    expect(r!.slot.chunks).toHaveLength(1);
-    // a 1h task fits Wednesday's first gap
+    expect(hhmm(r!.slot.end)).toBe("13:00");
+    expect(r!.slot.chunks).toHaveLength(2);
+    // on each day a whole gap still comes first: 1h takes Wednesday's first gap
     const short = await proposeSlotOnDay([tl.id], 60, day, { requesterRole: "ADMIN", requesterId: admin.id });
     expect(dateKey(short!.slot.start, TZ)).toBe(next);
-    expect(hhmm(short!.slot.start)).toBe("10:00");
+    expect(short!.slot.chunks).toHaveLength(1);
+    // 3h is more than Wednesday's 2h: Thursday 10:00, whole
+    const three = await proposeSlotOnDay([tl.id], 180, day, { requesterRole: "ADMIN", requesterId: admin.id });
+    expect(dateKey(three!.slot.start, TZ)).toBe(nextKey(4, parseDateKey(day, TZ)));
+    expect(hhmm(three!.slot.start)).toBe("10:00");
+    expect(three!.slot.chunks).toHaveLength(1);
+  });
+
+  it("a task too long for what is left of the day goes to the next day it fits on (split there if need be), and says how much was free", async () => {
+    const { admin, tl, client } = await seedBasics();
+    const day = nextKey(2);
+    await busyBlock({ clientId: client.id, createdById: admin.id, assigneeIds: [tl.id], start: at(day, "10:00"), end: at(day, "17:00") });
+    const { proposeSlotOnDay } = await import("@/server/scheduling/day-slot");
+    // 6h: Tuesday has 2h left; Wednesday has no 6h gap (lunch) but fits it split 10:00–13:30 + 14:30–17:00
+    const r = await proposeSlotOnDay([tl.id], 360, day, { requesterRole: "ADMIN", requesterId: admin.id });
+    expect(r!.onRequestedDay).toBe(false);
+    expect(r!.missed).toBe("no-room");
+    expect(r!.freeMinutes).toBe(120);
+    expect(dateKey(r!.slot.start, TZ)).toBe(nextKey(3, parseDateKey(day, TZ)));
+    expect(hhmm(r!.slot.start)).toBe("10:00");
+    expect(hhmm(r!.slot.end)).toBe("17:00");
+    expect(r!.slot.chunks).toHaveLength(2);
+  });
+
+  it("today after working hours is 'over', not 'full'", async () => {
+    const { admin, tl } = await seedBasics();
+    const day = nextKey(2);
+    const { proposeSlotOnDay } = await import("@/server/scheduling/day-slot");
+    const r = await proposeSlotOnDay([tl.id], 60, day, { requesterRole: "ADMIN", requesterId: admin.id }, at(day, "19:30"));
+    expect(r!.onRequestedDay).toBe(false);
+    expect(r!.missed).toBe("over");
+    expect(r!.freeMinutes).toBe(0);
+    expect(dateKey(r!.slot.start, TZ)).toBe(nextKey(3, parseDateKey(day, TZ)));
+    // still inside the day: a 1h task fits the last hour, a 2h one has "only 1h free"
+    const inDay = await proposeSlotOnDay([tl.id], 120, day, { requesterRole: "ADMIN", requesterId: admin.id }, at(day, "18:00"));
+    expect(inDay!.missed).toBe("no-room");
+    expect(inDay!.freeMinutes).toBe(60);
   });
 
   it("a day with no working hours (Sunday) is reported as a day off and the task goes to Monday", async () => {
@@ -151,7 +199,8 @@ describe("proposeSlotOnDay", () => {
     const { proposeSlotOnDay } = await import("@/server/scheduling/day-slot");
     const r = await proposeSlotOnDay([tl.id], 60, sunday, { requesterRole: "ADMIN", requesterId: admin.id });
     expect(r!.onRequestedDay).toBe(false);
-    expect(r!.requestedDayOff).toBe(true);
+    expect(r!.missed).toBe("day-off");
+    expect(r!.freeMinutes).toBe(0);
     expect(dateKey(r!.slot.start, TZ)).toBe(nextKey(1, parseDateKey(sunday, TZ)));
   });
 
@@ -163,8 +212,32 @@ describe("proposeSlotOnDay", () => {
     const { proposeSlotOnDay } = await import("@/server/scheduling/day-slot");
     const r = await proposeSlotOnDay([tl.id], 60, day, { requesterRole: "ADMIN", requesterId: admin.id });
     expect(r!.onRequestedDay).toBe(false);
+    expect(r!.missed).toBe("day-off");
     expect(dateKey(r!.slot.start, TZ)).not.toBe(day);
     expect(r!.slot.start.getTime()).toBeGreaterThan(parseDateKey(day, TZ).getTime());
+  });
+
+  it("meetings read the day in their own zone: today in Los Angeles may be yesterday or tomorrow in Kolkata", async () => {
+    const { admin, tl } = await seedBasics();
+    const { proposeSlotOnDay, PAST_DAY_MESSAGE } = await import("@/server/scheduling/day-slot");
+    const opts = { requesterRole: "ADMIN" as const, requesterId: admin.id };
+    // Sat 10 Oct 08:00 IST = Fri 9 Oct 19:30 in Los Angeles: "Today" there is the 9th — not a past day
+    const now = new Date("2026-10-10T02:30:00Z");
+    await expect(proposeSlotOnDay([tl.id], 60, "2026-10-09", opts, now)).rejects.toThrow(PAST_DAY_MESSAGE);
+    const la = await proposeSlotOnDay([tl.id], 60, "2026-10-09", { ...opts, dayZone: "America/Los_Angeles" }, now);
+    expect(la!.onRequestedDay).toBe(true);
+    expect(la!.missed).toBeNull();
+    // the Los Angeles 9th runs until 12:30 IST on Saturday the 10th: the first working time in it is Saturday 10:00 IST
+    expect(dateKey(la!.slot.start, "America/Los_Angeles")).toBe("2026-10-09");
+    expect(dateKey(la!.slot.start, TZ)).toBe("2026-10-10");
+    expect(hhmm(la!.slot.start)).toBe("10:00");
+    // Sat 10 Oct 23:10 IST = Sun 11 Oct 02:40 in Tokyo: "Today" there is the 11th, a Sunday in Kolkata too → day off
+    const late = new Date("2026-10-10T17:40:00Z");
+    const tokyo = await proposeSlotOnDay([tl.id], 60, "2026-10-11", { ...opts, dayZone: "Asia/Tokyo" }, late);
+    expect(tokyo!.onRequestedDay).toBe(false);
+    expect(tokyo!.missed).toBe("day-off");
+    expect(dateKey(tokyo!.slot.start, "Asia/Tokyo")).toBe("2026-10-12");
+    expect(hhmm(tokyo!.slot.start)).toBe("10:00"); // Monday 10:00 IST
   });
 
   it("today: never in the past — the search starts now", async () => {
@@ -216,7 +289,7 @@ describe("createTask / previewSlot / updateTask with a date-only start", () => {
     const res = await createTask({ title: "Banner", clientId: client.id, teamIds: [team.id], tagIds: [work.id], allocatedMinutes: 90, scheduledStart: day });
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    expect(res.data.day).toEqual({ requestedDay: day, onRequestedDay: true, requestedDayOff: false });
+    expect(res.data.day).toEqual({ requestedDay: day, onRequestedDay: true, missed: null, freeMinutes: 480 });
     expect(res.data.slot).not.toBeNull();
     const t = await loadTask(res.data.taskId);
     expect(t.assignees.map((a) => a.userId)).toEqual([tl.id]);
@@ -256,7 +329,7 @@ describe("createTask / previewSlot / updateTask with a date-only start", () => {
     const res = await createTask({ title: "Overflow", clientId: client.id, teamIds: [team.id], tagIds: [work.id], allocatedMinutes: 60, scheduledStart: day, recurrence: { freq: "DAILY" } });
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    expect(res.data.day).toMatchObject({ requestedDay: day, onRequestedDay: false, requestedDayOff: false });
+    expect(res.data.day).toMatchObject({ requestedDay: day, onRequestedDay: false, missed: "full" });
     const t = await loadTask(res.data.taskId);
     const landed = dateKey(t.scheduledStart!, TZ);
     expect(landed).not.toBe(day);
@@ -313,7 +386,7 @@ describe("createTask / previewSlot / updateTask with a date-only start", () => {
     const r = await previewSlot([tl.id], 60, "WORK", day);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.data!.day).toEqual({ requestedDay: day, onRequestedDay: true, requestedDayOff: false });
+    expect(r.data!.day).toEqual({ requestedDay: day, onRequestedDay: true, missed: null, freeMinutes: 390 });
     expect(hhmm(r.data!.start)).toBe("11:30");
     expect(dateKey(r.data!.start, TZ)).toBe(day);
     // without a day: unchanged — the next free slot from now, no day info
@@ -321,6 +394,12 @@ describe("createTask / previewSlot / updateTask with a date-only start", () => {
     expect(plain.ok && plain.data && plain.data.day).toBeUndefined();
     // a malformed day is refused; so is a day for someone this user may not assign
     expect((await previewSlot([tl.id], 60, "WORK", "23-10-2026")).ok).toBe(false);
+    // meetings: the day is read in the meeting's zone (an unknown zone is refused; work tasks ignore it)
+    const la = await previewSlot([tl.id], 60, "MEETING", day, "America/Los_Angeles");
+    expect(la.ok).toBe(true);
+    if (la.ok) expect(dateKey(la.data!.start, "America/Los_Angeles")).toBe(day);
+    expect((await previewSlot([tl.id], 60, "MEETING", day, "Mars/Olympus")).ok).toBe(false);
+    expect((await previewSlot([tl.id], 60, "WORK", day, "Mars/Olympus")).ok).toBe(true);
     session.set((await testDb.user.findFirstOrThrow({ where: { role: "EXECUTIVE" } })));
     expect((await previewSlot([tl.id], 60, "WORK", day)).ok).toBe(false);
   });

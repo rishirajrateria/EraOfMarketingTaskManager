@@ -63,14 +63,15 @@ export async function updateTask(raw: unknown): Promise<ActionResult<undefined>>
     let end = input.scheduledEnd === undefined ? undefined : input.scheduledEnd ? new Date(input.scheduledEnd) : null;
     if (dayOnly) {
       const stored = (t.meetingOptions ?? null) as { allDay?: boolean; timeZone?: string } | null;
+      // Meetings read the day in their own zone (all-day: that day's midnight there; timed: the next free time there).
+      const zone = meeting ? meetingOptions?.timeZone || stored?.timeZone || tz : tz;
       if (meetingOptions?.allDay ?? (meeting && !!stored?.allDay)) {
-        const zone = meetingOptions?.timeZone || stored?.timeZone || tz;
         start = parseDateKey(dayOnly, zone);
         end = zonedEndOfDay(start, zone);
       } else {
         const ids = input.assigneeIds ?? t.assignees.map((a) => a.userId);
         const minutes = input.allocatedMinutes ?? t.allocatedMinutes;
-        const r = await proposeSlotOnDay(ids, minutes, dayOnly, { requesterRole: user.role, requesterId: user.id, excludeTaskId: t.id });
+        const r = await proposeSlotOnDay(ids, minutes, dayOnly, { requesterRole: user.role, requesterId: user.id, excludeTaskId: t.id, dayZone: zone });
         if (!r) throw new Error("No available slot found in the next 60 days");
         start = r.slot.start;
         end = r.slot.end;

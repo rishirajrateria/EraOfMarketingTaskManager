@@ -129,6 +129,22 @@ describe("findSlot", () => {
     expect(slot!.chunks).toHaveLength(1);
   });
 
+  it("`until` bounds the search: the whole task must fit before it, split or not", () => {
+    // a day-bound search (date-only starts): nothing after 13:00 counts
+    expect(findSlot(tue9, 240, DEFAULT_WORKING, [], { until: ist("2026-09-15T13:00:00") })).toBeNull();
+    const split = findSlot(tue9, 240, DEFAULT_WORKING, [], { until: ist("2026-09-15T15:00:00") });
+    expect(split!.chunks.map((c) => [hhmm(c.start), hhmm(c.end)])).toEqual([
+      ["10:00", "13:30"],
+      ["14:30", "15:00"],
+    ]);
+    expect(findSlot(tue9, 60, DEFAULT_WORKING, [], { until: ist("2026-09-15T10:30:00"), allowSplit: false })).toBeNull();
+    const whole = findSlot(tue9, 60, DEFAULT_WORKING, [], { until: ist("2026-09-15T11:00:00"), allowSplit: false });
+    expect([hhmm(whole!.start), hhmm(whole!.end)]).toEqual(["10:00", "11:00"]);
+    // the bound may fall on a later day: Tuesday is too short for 9h, so it spans into Wednesday — but not past noon
+    expect(findSlot(tue9, 540, DEFAULT_WORKING, [], { until: ist("2026-09-16T11:00:00") })).not.toBeNull();
+    expect(findSlot(tue9, 540, DEFAULT_WORKING, [], { until: ist("2026-09-16T10:30:00") })).toBeNull();
+  });
+
   it("starts at `from` when it falls inside a working interval", () => {
     const slot = findSlot(ist("2026-09-15T11:00:00"), 60, DEFAULT_WORKING, []);
     expect(hhmm(slot!.start)).toBe("11:00");
