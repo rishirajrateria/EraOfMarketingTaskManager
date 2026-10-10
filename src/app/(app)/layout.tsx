@@ -21,10 +21,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {demo ? (
         <a
           href="/login?switch=1"
-          className="fixed left-1/2 top-2 z-40 flex h-[22px] -translate-x-1/2 items-center rounded-full border border-white/35 bg-[rgba(6,48,61,.35)] px-2.5 text-[10.5px] font-semibold text-white backdrop-blur-md"
-          title="Demo mode: switch role"
+          className="fixed left-0 top-[42%] z-40 flex items-center rounded-r-lg border border-l-0 border-white/35 bg-[rgba(6,48,61,.55)] px-[2px] py-1.5 text-[9.5px] opacity-80 font-semibold tracking-wide text-white backdrop-blur-md [writing-mode:vertical-rl]"
+          title={`Demo mode (${user.role.replace("_", " ").toLowerCase()}): switch role`}
+          aria-label="Demo mode: switch role"
         >
-          Demo · {user.role.replace("_", " ").toLowerCase()} · switch
+          Demo ⇄
         </a>
       ) : null}
       <AppFrame user={{ id: user.id, name: user.name ?? "", role: user.role, image: user.image ?? null }} unread={unread} openRequests={openRequests}>
