@@ -7,32 +7,36 @@ import { Sheet } from "@/components/ui/Sheet";
 import { Field, btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
 import { SegButton } from "@/components/ui/Controls";
 import type { DashboardData } from "@/server/tasks/types";
-import { toggleId, type AddTaskForm, type Person } from "@/components/tasks/add-task-helpers";
+import { scheduleValue, toggleId, type AddTaskForm, type Person } from "@/components/tasks/add-task-helpers";
 
 /**
- * "When should it start?" (prototype `scheduleSheet`), opened from the calendar icon in the bottom bar: date + start
- * time, or "Next free slot" (= upnext). The add-task body itself has no date / time inputs (ADR 0010).
+ * "When should it start?" (prototype `scheduleSheet`), opened from the calendar icon in the bottom bar: a date and an
+ * OPTIONAL start time — left blank, the task goes to the next free time on that day (ADR 0010 addendum) — or "Next free
+ * slot" (= upnext). The add-task body itself has no date / time inputs (ADR 0010).
  */
-export function ScheduleSheet({ open, onClose, value, tz, onSet, onError }: { open: boolean; onClose: () => void; value: string; tz: string; onSet: (datetimeLocal: string) => void; onError: (m: string) => void }) {
+export function ScheduleSheet({ open, onClose, value, tz, onSet, onError }: { open: boolean; onClose: () => void; value: string; tz: string; onSet: (scheduledStart: string) => void; onError: (m: string) => void }) {
   const [date, setDate] = useState("");
-  const [time, setTime] = useState("10:00");
+  const [time, setTime] = useState("");
   useEffect(() => {
     if (!open) return;
     setDate(value ? value.slice(0, 10) : dateKey(addDays(new Date(), 1), tz));
-    setTime(value ? value.slice(11, 16) : "10:00");
+    setTime(value.length >= 16 ? value.slice(11, 16) : "");
   }, [open, value, tz]);
   return (
     <Sheet open={open} onClose={onClose} title="When should it start?">
       <div className="px-4 pb-5 pt-1">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 items-end gap-2">
           <Field label="Date">
             <input type="date" className={inputCls} value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
-          <Field label="Start time">
-            <input type="time" className={inputCls} value={time} onChange={(e) => setTime(e.target.value)} />
+          <Field label="Start time (optional)">
+            <input type="time" className={inputCls} value={time} placeholder="Next free" aria-describedby="schedule-time-hint" onChange={(e) => setTime(e.target.value)} />
           </Field>
         </div>
-        <p className="mb-2 mt-3 text-xs text-muted">Or close this and use upnext / Tom / today in the bar.</p>
+        <p id="schedule-time-hint" className="mt-1.5 text-[11.5px] leading-snug text-muted">
+          Leave blank: the next free time on that day.
+        </p>
+        <p className="mb-2 mt-3 text-xs text-muted">Or close this and use Up next / Today / Tomorrow in the bar.</p>
         <div className="mt-3 flex gap-2.5">
           <button
             type="button"
@@ -49,7 +53,7 @@ export function ScheduleSheet({ open, onClose, value, tz, onSet, onError }: { op
             className={clsx(btnPrimary, "flex-1")}
             onClick={() => {
               if (!date) return onError("Pick a date");
-              onSet(`${date}T${time || "10:00"}`);
+              onSet(scheduleValue(date, time));
               onClose();
             }}
           >

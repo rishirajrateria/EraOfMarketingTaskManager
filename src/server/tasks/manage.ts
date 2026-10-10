@@ -7,7 +7,8 @@ import { notify, taskStakeholderIds, publishTaskChanged } from "@/lib/notify";
 import { bus } from "@/lib/events";
 import { safeRevalidate } from "@/lib/revalidate";
 import { canView } from "@/server/tasks/queries";
-import { assignExecutivesSchema, taskUpdateSchema } from "@/server/tasks/schema";
+import { assignExecutivesSchema, isDateOnly, taskUpdateSchema } from "@/server/tasks/schema";
+import { proposeSlotOnDay } from "@/server/scheduling/day-slot";
 import { assignableMembers, firstName } from "@/server/tasks/assignment";
 import { taskDeepLink } from "@/lib/notification-kinds";
 import { validateAssignees } from "@/server/tasks/create";
@@ -20,7 +21,7 @@ import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { sanitizeDescription } from "@/lib/sanitize";
 import { getSettings } from "@/lib/settings";
-import { zonedEndOfDay, zonedStartOfDay } from "@/lib/time";
+import { parseDateKey, zonedEndOfDay, zonedStartOfDay } from "@/lib/time";
 
 const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 const attachmentSchema = z.object({
@@ -55,8 +56,26 @@ export async function updateTask(raw: unknown): Promise<ActionResult<undefined>>
     const meeting = (input.type ?? t.type) === "MEETING";
     const tz = (await getSettings()).timezone;
     const meetingOptions = meeting && input.meetingOptions ? { ...input.meetingOptions, timeZone: input.meetingOptions.timeZone || tz } : undefined;
-    let start = input.scheduledStart === undefined ? undefined : input.scheduledStart ? new Date(input.scheduledStart) : null;
+    // A date only ("2026-10-23") = the next free time on that day for the task's people (ADR 0010 addendum); it is
+    // resolved here so the DB never holds a date-only value. All-day meetings: that day's midnight in the meeting zone.
+    const dayOnly = isDateOnly(input.scheduledStart) ? input.scheduledStart : null;
+    let start = input.scheduledStart === undefined ? undefined : input.scheduledStart && !dayOnly ? new Date(input.scheduledStart) : null;
     let end = input.scheduledEnd === undefined ? undefined : input.scheduledEnd ? new Date(input.scheduledEnd) : null;
+    if (dayOnly) {
+      const stored = (t.meetingOptions ?? null) as { allDay?: boolean; timeZone?: string } | null;
+      if (meetingOptions?.allDay ?? (meeting && !!stored?.allDay)) {
+        const zone = meetingOptions?.timeZone || stored?.timeZone || tz;
+        start = parseDateKey(dayOnly, zone);
+        end = zonedEndOfDay(start, zone);
+      } else {
+        const ids = input.assigneeIds ?? t.assignees.map((a) => a.userId);
+        const minutes = input.allocatedMinutes ?? t.allocatedMinutes;
+        const r = await proposeSlotOnDay(ids, minutes, dayOnly, { requesterRole: user.role, requesterId: user.id, excludeTaskId: t.id });
+        if (!r) throw new Error("No available slot found in the next 60 days");
+        start = r.slot.start;
+        end = r.slot.end;
+      }
+    }
     if (start && end === undefined) end = new Date(start.getTime() + (input.allocatedMinutes ?? t.allocatedMinutes) * 60000);
     if (meetingOptions?.allDay) {
       // All-day meetings cover whole days in the meeting's zone (ADR 0012).

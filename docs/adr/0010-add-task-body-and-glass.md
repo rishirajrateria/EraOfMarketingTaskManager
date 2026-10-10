@@ -82,3 +82,34 @@ Custom "Loop", and no dark theme.
 - Old recurring tasks keep producing occurrences on the same dates as before; editing a rule is still not offered.
 - The app follows the device's light / dark setting; there is no in-app theme toggle yet (`data-theme="light"` on
   `<html>` would force light).
+
+## Addendum (2026-10-10) — the start time is optional: date-only scheduling
+
+Owner's revision (prototype `scheduleSheet`, `dayFreeSlot`, `plannedAssignees`): in "When should it start?" the
+**start time is optional**. A date with no time means "the next free time on that day" for the people the task lands on.
+
+- **Form value** (`AddTaskForm.scheduledStart`): `""` = Up next (next free slot from now, unchanged); `"yyyy-MM-dd"` =
+  a day with no time (the calendar icon with the time left blank, and now also the **Today / Tomorrow** pills — they no
+  longer mean a fixed 10:00 / next full hour); `"yyyy-MM-ddTHH:mm"` = an explicit start (the time typed in, the
+  meeting START pills, Find a time). `toTaskInput` sends a date-only value through untouched; `scheduleValue(date, time)`
+  builds the sheet's value. The sheet's time field is blank by default (label "Start time (optional)", hint "Leave
+  blank: the next free time on that day").
+- **Server** (`taskInputSchema` / `taskUpdateSchema.scheduledStart`): ISO instant, a real `yyyy-MM-dd`, or null. A
+  date-only start is resolved in `createTask` / `updateTask` before saving — the DB never holds a date-only value and
+  `new Date("yyyy-MM-dd")` (UTC midnight) is never used. `proposeSlotOnDay` (`src/server/scheduling/day-slot.ts`) =
+  the same busy data and `findSlot` as Up next (`collectBusy`), with `from = max(that day's start in the company tz,
+  now)` bound to that day, **strict only** (a subordinate's self-assigned task is never displaced just to fit the
+  requested day). Like the prototype's `dayFreeSlot`, the first gap the WHOLE task fits in wins; only a task longer
+  than any lunch-bounded block may be split across that day's free time (as Up next does). It skips the assignees'
+  active tasks, Calendar busy blocks, lunch, holidays and approved leave, and the assignees are the ones
+  `planAssignment` already resolves (Admin → the teams' Team Leaders; TL → picked executives / the team; Exec → self;
+  meetings → organiser + internal attendees). A day with no fit falls back to the next contiguous gap from that day
+  onward (60 days), else the usual Up-next proposal from that day (split, then overlap), and the result carries
+  `day: { requestedDay, onRequestedDay, requestedDayOff }`. A day before today is refused ("That day has passed — pick today or later"). The day key is read
+  in the **company** time zone (working hours live there); all-day meetings read it in the meeting zone (= that day's
+  midnight, as before). The repeat rule anchors on the day the task actually got.
+- **UI**: the details tray caption reads "Fri 23 Oct - next free 11:30 am" (date-only, resolved by a debounced
+  `previewSlot(ids, minutes, type, day)`), "Fri 23 Oct 2 pm" (explicit), "Up next" (none); a line under the time row
+  shows the same while the tray is open. When the day did not fit, the caption says "Fri 23 Oct full - next free Sat
+  24 Oct 10 am" and the success toast says "Fri 23 Oct was full - scheduled for Sat 24 Oct 10 am" (a weekend / holiday:
+  "is a day off"). The Edit sheet keeps its datetime-local inputs (explicit times only).
