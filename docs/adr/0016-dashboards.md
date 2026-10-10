@@ -279,3 +279,36 @@ Reference: prototype `typeseg`, `#addTray` / `addTrayTog`, `.hasnav #s-add`, `co
   and client, combine, and a second tap clears (All); they live in the URL (`?tab=WORK&team=&client=`, dropped on
   other tabs) and only show on Work. `RequestItem.task` carries `clientId` / `teamIds`; `matchesWorkFilter`,
   `workFilterCounts`, `parseWorkFilter` (`areas.ts`) and `workFilterOptions` are tested.
+
+### Nav v4: six tabs, Attendance and Folders in the nav (2026-10-10, late)
+Reference: prototype `renderDashNav` (the two tab lists), `foldersBtn` / `.navpop` (the Folders popover), `HYPH` /
+`hyph` (soft-hyphenated labels), `.nv .nlab` / `.nv{min-width:0;padding:0 1px}` (label and tab sizing). Supersedes
+the tab order of "Nav v3" above and the menu list of the previous section.
+- **Bottom nav order**: Admin **Dashboard · Requests · Attendance | + | Notifications · Folders · Home** (three tabs
+  each side of the centred +, `nav-model` `navItems`); Team Leaders / Executives (and parked CA) **Attendance ·
+  Notifications | + | Home** (the attendance page shows them their own month, read-only). **HR is unchanged**:
+  Requests · Notifications | × slot | Home, because HR's Home already IS `/attendance` — a second Attendance tab
+  would duplicate it (same href: only the first match highlights, and its toggle to `navHome(HR)` is a no-op).
+  Attendance toggles like the other tabs (open → tapped again → `/dashboard`) and is highlighted on `/attendance`.
+- **Folders** (folder icon, Admin only; `FoldersTab`): a `<button>` (not a link) with `aria-haspopup="menu"` /
+  `aria-expanded` / `aria-controls`. Tapping it opens a small popover anchored above the tab (`role="menu"`, two
+  `menuitem` links, the first one focused on open, ↑ ↓ Home End between them): **Drive folders** (green
+  `#34d399 → #059669` folder tile, "Invoices · bills · GST pack", → `/admin/drive-folders`) and **Shared links**
+  (blue `#60a5fa → #2563eb` drive tile, "Folders shared with clients", → `/admin/vault?tab=SHARED_DRIVE_LINK`);
+  `FOLDER_LINKS` in `nav-model`, tested. Tapping the tab again, tapping outside, Escape (focus back on the tab), a
+  resize or a route change closes it; choosing navigates and closes. The popover is portalled to `<body>`, fixed 2px
+  above the nav row and clamped inside the row ± 8px (the tab sits near the right edge, so at 360px it shifts left),
+  `z-[55]` so a sheet's dim (z-50) cannot hide it. The tab is highlighted (`aria-current`) on either page
+  (`NavItem.also: ["/admin/vault"]`, `activeNavKey`), and its icon tint also shows while the popover is up. The +
+  speed dial and the popover never stay open together: each closes on a pointerdown outside itself (the dial's
+  listener already did; the popover's is the same pattern), so pressing one closes the other before its click opens
+  it. The popover is not registered in `corner-store` (the + does not turn into ×).
+- **360px fit, no clipped labels**: `navItemCls` lost `min-w-12 shrink-0` (3 × 48px + gaps did not fit the ~146px a
+  group gets beside the 52px +) for `min-w-0 flex-1 basis-0 px-px`; labels are 9.5px semibold, line-height 1.05,
+  centred, `white-space: normal` with `overflow-wrap: anywhere`, and wrap at a natural break through a soft hyphen
+  (`navLabel` / `NAV_HYPH` = the prototype's map: Dash-board, Re-quests, Atten-dance, Notifi-cations; any other word
+  of ten letters or more splits in the middle). `aria-label` and `title` keep the plain words. Badges (Requests /
+  Notifications counts) are unchanged.
+- **Menu**: the Attendance, Drive folders and Shared links tiles leave (they are in the nav now); `menuSections`
+  drops empty groups, so Money and Clients disappear with their last tile. Left: **Team · HR, Tasks, Inventory;
+  Other · Settings, Sign out**. The Money / Clients tones stay in `MenuTray` for tiles that may return.

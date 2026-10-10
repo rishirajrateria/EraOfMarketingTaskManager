@@ -2,18 +2,19 @@
 import Link from "next/link";
 import { useCallback, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { BarChart3, Bell, House, Inbox, type LucideIcon } from "lucide-react";
+import { BarChart3, Bell, Folder, House, Inbox, UserCheck, type LucideIcon } from "lucide-react";
 import { clsx } from "@/lib/clsx";
 import { AddSpeedDial } from "@/components/dashboard/AddSpeedDial";
-import { NavRow, navItemCls, navLabCls } from "@/components/dashboard/NavRow";
+import { NavRow, navIconCls, navItemCls, navLabCls } from "@/components/dashboard/NavRow";
 import { useFabRunner } from "@/components/dashboard/useFabRunner";
 import { useLiveBadges } from "@/components/shell/useLiveBadges";
 import { addTaskStore, useAddTaskShown, type AddTaskMode } from "@/components/shell/add-task-store";
 import { cornerStore } from "@/components/shell/corner-store";
-import { activeNavKey, addTaskHref, allNavItems, canAdd, navItems, navTarget, shownNavKey, type NavItem, type NavKey } from "@/components/shell/nav-model";
+import { FoldersTab } from "@/components/shell/FoldersTab";
+import { activeNavKey, addTaskHref, allNavItems, canAdd, navItems, navLabel, navTarget, shownNavKey, type NavItem, type NavKey } from "@/components/shell/nav-model";
 import type { TopBarUser } from "@/components/shell/TopBar";
 
-const ICONS: Record<NavKey, LucideIcon> = { DASHBOARD: BarChart3, REQUESTS: Inbox, NOTIFICATIONS: Bell, HOME: House };
+const ICONS: Record<NavKey, LucideIcon> = { DASHBOARD: BarChart3, REQUESTS: Inbox, ATTENDANCE: UserCheck, NOTIFICATIONS: Bell, FOLDERS: Folder, HOME: House };
 
 function Badge({ n, tone }: { n: number; tone: "red" | "blue" }) {
   if (n <= 0) return null;
@@ -30,18 +31,21 @@ function Badge({ n, tone }: { n: number; tone: "red" | "blue" }) {
   );
 }
 
-/** A tab: icon over a tiny label, sharing its group's width. Open = blue icon + label on a tinted square, `aria-current`. */
+/**
+ * A tab: icon over a tiny label (soft-hyphenated so it wraps rather than clips, `navLabel`), sharing its group's
+ * width. Open = blue icon + label on a tinted square, `aria-current`.
+ */
 function NavTab({ it, on, href, count, onClick }: { it: NavItem; on: boolean; href: string; count: number; onClick?: (e: React.MouseEvent) => void }) {
   const Icon = ICONS[it.key];
   const aria = count ? `${it.label}, ${count} ${it.key === "REQUESTS" ? "open" : "unread"}` : it.label;
   const title = on && it.key !== "HOME" ? `Close ${it.label.toLowerCase()}` : it.label;
   return (
-    <Link href={href} onClick={onClick} aria-label={aria} aria-current={on ? "page" : undefined} title={title} data-nav={it.key} className={clsx(navItemCls, "min-w-0 flex-1 basis-0")}>
-      <span aria-hidden className={clsx("flex h-[30px] w-[34px] items-center justify-center rounded-[10px]", on && "bg-[var(--nav-on-bg)] text-[var(--nav-on)]")}>
+    <Link href={href} onClick={onClick} aria-label={aria} aria-current={on ? "page" : undefined} title={title} data-nav={it.key} className={navItemCls}>
+      <span aria-hidden className={clsx(navIconCls, on && "bg-[var(--nav-on-bg)] text-[var(--nav-on)]")}>
         <Icon size={20} strokeWidth={on ? 2.3 : 2.1} />
       </span>
-      <span aria-hidden className={clsx(navLabCls, "max-w-full truncate tracking-[-0.02em]", on ? "text-[var(--nav-on)]" : "text-muted")}>
-        {it.label}
+      <span aria-hidden className={clsx(navLabCls, on ? "text-[var(--nav-on)]" : "text-muted")}>
+        {navLabel(it.label)}
       </span>
       <Badge n={count} tone={it.key === "REQUESTS" ? "red" : "blue"} />
     </Link>
@@ -49,14 +53,16 @@ function NavTab({ it, on, href, count, onClick }: { it: NavItem; on: boolean; hr
 }
 
 /**
- * The bottom nav row of every signed-in screen (ADR 0016 addendum, prototype `#gNav` nav v3): fixed 64px glass (+ the
- * safe-area inset) centred like `.phone-frame` — Dashboard · Requests (red count) | corner | Notifications (count) ·
- * Home, the corner exactly centred between two equal groups. Tabs toggle (nav-model); Home always goes to the task
- * list and, tapped there, closes whatever is open. The corner is the + speed dial for roles that add tasks and the
- * one × while a sheet or closable form page is open (corner-store). Task / Meeting open the dashboard's add-task sheet
- * (in place on the dashboard). The frame reserves the height (`.has-gnav`); sheets stop above the row — the add-task
- * screen too: its × is this centre button (a sub-sheet closes first, then the screen), no tab is highlighted while it
- * is up, and a tab tapped there leaves it for that tab. Profile is the avatar in the top bar.
+ * The bottom nav row of every signed-in screen (ADR 0016 addendum, prototype `#gNav` nav v4): fixed 64px glass (+ the
+ * safe-area inset) centred like `.phone-frame` — Dashboard · Requests (red count) · Attendance | corner |
+ * Notifications (count) · Folders · Home, the corner exactly centred between two equal groups of three (others:
+ * Attendance · Notifications | corner | Home). Tabs toggle (nav-model); Home always goes to the task list and, tapped
+ * there, closes whatever is open; Folders is a popover with the two Drive pages (`FoldersTab`). The corner is the +
+ * speed dial for roles that add tasks and the one × while a sheet or closable form page is open (corner-store). Task /
+ * Meeting open the dashboard's add-task sheet (in place on the dashboard). The frame reserves the height
+ * (`.has-gnav`); sheets stop above the row — the add-task screen too: its × is this centre button (a sub-sheet closes
+ * first, then the screen), no tab is highlighted while it is up, and a tab tapped there leaves it for that tab.
+ * Profile is the avatar in the top bar.
  */
 export function GlobalNav({ user, unread, openRequests }: { user: TopBarUser; unread: number; openRequests: number }) {
   const pathname = usePathname() ?? "/";
@@ -79,16 +85,20 @@ export function GlobalNav({ user, unread, openRequests }: { user: TopBarUser; un
     cornerStore.closeAll();
   };
   const tabs = (items: NavItem[]) =>
-    items.map((it) => (
-      <NavTab
-        key={it.key}
-        it={it}
-        on={it.key === shown}
-        href={navTarget(it, active, user.role)}
-        count={it.key === "REQUESTS" ? badges.requests : it.key === "NOTIFICATIONS" ? badges.unread : 0}
-        onClick={it.key === "HOME" ? onHome : undefined}
-      />
-    ));
+    items.map((it) =>
+      it.key === "FOLDERS" ? (
+        <FoldersTab key={it.key} on={it.key === shown} />
+      ) : (
+        <NavTab
+          key={it.key}
+          it={it}
+          on={it.key === shown}
+          href={navTarget(it, active, user.role)}
+          count={it.key === "REQUESTS" ? badges.requests : it.key === "NOTIFICATIONS" ? badges.unread : 0}
+          onClick={it.key === "HOME" ? onHome : undefined}
+        />
+      ),
+    );
   return (
     <NavRow
       label="Main"

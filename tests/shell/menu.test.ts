@@ -80,26 +80,22 @@ describe("admin menu counts", () => {
     expect(taskSub({ ...r.data, tasksLate: 0 })).toBe("3 open");
     const hrefs = sections.flatMap((s) => s.items.map((i) => i.href));
     for (const gone of ["/admin/invoices", "/admin/payments", "/admin/expenses", "/admin/finance", "/admin/dashboards?view=FIN"]) expect(hrefs).not.toContain(gone);
-    // the dashboards lost their action row (ADR 0016 addendum): Attendance and Inventory are tiles again
-    for (const back of ["/attendance", "/admin/inventory"]) expect(hrefs).toContain(back);
+    // Inventory stays a tile; Attendance is a bottom nav tab now (nav v4)
+    expect(hrefs).toContain("/admin/inventory");
+    expect(hrefs).not.toContain("/attendance");
   });
 
-  it("v3 tiles: four colour groups in order — Money, Clients, Team, Other", () => {
+  it("v3 tiles, nav v4: two colour groups in order — Team, Other (Money and Clients emptied and so disappeared)", () => {
     const sections = menuSections(null);
     expect(sections.map((s) => [s.title, s.tone])).toEqual([
-      ["Money", "money"],
-      ["Clients", "client"],
       ["Team", "team"],
       ["Other", "other"],
     ]);
-    // Money: Drive folders · Clients: Shared links · Team: HR, Tasks, Attendance, Inventory · Other: Settings, Sign out
+    // Team: HR, Tasks, Inventory · Other: Settings, Sign out
     expect(sections.map((s) => s.items.map((i) => [i.label, i.href]))).toEqual([
-      [["Drive folders", "/admin/drive-folders"]],
-      [["Shared links", "/admin/vault?tab=SHARED_DRIVE_LINK"]],
       [
         ["HR", "/admin/dashboards?view=HR"],
         ["Tasks", "/admin/dashboards?view=TASK"],
-        ["Attendance", "/attendance"],
         ["Inventory", "/admin/inventory"],
       ],
       [
@@ -107,18 +103,21 @@ describe("admin menu counts", () => {
         ["Sign out", "/api/auth/signout"],
       ],
     ]);
+    // no empty group is ever listed
+    expect(sections.filter((s) => !s.items.length)).toEqual([]);
     // only Sign out is red; every other tile keeps its old subtitle for its title / aria-label and search
     const items = sections.flatMap((s) => s.items);
     expect(items.filter((i) => i.danger).map((i) => i.label)).toEqual(["Sign out"]);
     expect(items.filter((i) => !i.danger && !i.sub)).toEqual([]);
-    expect(items.find((i) => i.label === "Drive folders")!.sub).toMatch(/^Monthly Drive folders/);
     // what the + speed dial adds (and its eyes list) left the menu; the pages and their ?add=1 stay
     for (const gone of ["/admin/client-kit", "/admin/clients", "/admin/people?role=EXECUTIVE", "/admin/people?role=TEAM_LEADER", "/admin/teams", "/admin/work-types"]) {
       expect(items.map((i) => i.href)).not.toContain(gone);
     }
-    // the bottom nav's tabs (Dashboard › Finance, Requests, Notifications) left it too
-    for (const gone of ["Finance", "Clients", "Requests", "Notifications"]) expect(items.map((i) => i.label)).not.toContain(gone);
-    for (const gone of ["/admin/dashboards?view=FIN", "/admin/requests", "/notifications"]) expect(items.map((i) => i.href)).not.toContain(gone);
+    // the bottom nav's tabs (Dashboard › Finance, Requests, Attendance, Notifications, Folders › Drive folders / Shared links) left it too
+    for (const gone of ["Finance", "Clients", "Requests", "Attendance", "Notifications", "Drive folders", "Shared links"]) expect(items.map((i) => i.label)).not.toContain(gone);
+    for (const gone of ["/admin/dashboards?view=FIN", "/admin/requests", "/attendance", "/notifications", "/admin/drive-folders", "/admin/vault?tab=SHARED_DRIVE_LINK"]) {
+      expect(items.map((i) => i.href)).not.toContain(gone);
+    }
   });
 
   it("long tile labels get a soft hyphen in the middle so they wrap instead of clipping", () => {
@@ -145,14 +144,15 @@ describe("admin menu counts", () => {
     const all = menuSections(null);
     expect(filterSections(all, "  ")).toBe(all);
     expect(labels(filterSections(all, "kit"))).toEqual([]);
-    // "GST pack" lives only in the Drive folders subtitle; "attendance" in HR's subtitle and the Attendance tile
-    expect(labels(filterSections(all, "gst pack"))).toEqual(["Drive folders"]);
-    expect(labels(filterSections(all, "ATTENDANCE"))).toEqual(["HR", "Attendance"]);
+    // "GST pack" left with the Drive folders tile (the nav's Folders tab); "attendance" is still in HR's subtitle
+    expect(labels(filterSections(all, "gst pack"))).toEqual([]);
+    expect(labels(filterSections(all, "ATTENDANCE"))).toEqual(["HR"]);
     expect(labels(filterSections(all, "hours available"))).toEqual(["Inventory"]);
     // the section name matches every tile in it
-    const money = filterSections(all, "money");
-    expect(money.map((s) => s.title)).toEqual(["Money"]);
-    expect(labels(money)).toEqual(["Drive folders"]);
+    const team = filterSections(all, "team");
+    expect(team.map((s) => s.title)).toEqual(["Team"]);
+    expect(labels(team)).toEqual(["HR", "Tasks", "Inventory"]);
+    expect(labels(filterSections(all, "money"))).toEqual([]);
     expect(labels(filterSections(all, "finance"))).toEqual([]);
     expect(filterSections(all, "zzz")).toEqual([]);
   });
@@ -179,7 +179,8 @@ describe("admin menu counts", () => {
     expect(r.ok && r.data.clientsWithKit).toBe(1);
     if (!r.ok) return;
     expect(kitSub(r.data)).toBe("1 of 2 clients have a kit · 1 saved login");
-    expect(menuSections(r.data).find((s) => s.title === "Clients")!.items.map((i) => i.label)).toEqual(["Shared links"]);
+    // the Clients group is gone with its last tile (Shared links moved to the nav's Folders tab)
+    expect(menuSections(r.data).find((s) => s.title === "Clients")).toBeUndefined();
   });
 
   it("ADR 0016: top-bar shortcuts (Requests and Notifications are bottom nav tabs, not tiles)", async () => {
@@ -197,6 +198,6 @@ describe("admin menu counts", () => {
   it("lists every admin destination once", () => {
     const hrefs = menuSections(null).flatMap((s) => s.items.map((i) => i.href));
     expect(new Set(hrefs).size).toBe(hrefs.length);
-    expect(hrefs).toEqual(["/admin/drive-folders", "/admin/vault?tab=SHARED_DRIVE_LINK", "/admin/dashboards?view=HR", "/admin/dashboards?view=TASK", "/attendance", "/admin/inventory", "/admin/settings", "/api/auth/signout"]);
+    expect(hrefs).toEqual(["/admin/dashboards?view=HR", "/admin/dashboards?view=TASK", "/admin/inventory", "/admin/settings", "/api/auth/signout"]);
   });
 });
