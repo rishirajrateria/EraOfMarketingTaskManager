@@ -1,0 +1,1096 @@
+// EraOfMarketing Task Manager — data model (SPEC §3)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+enum Role {
+  ADMIN
+  TEAM_LEADER
+  EXECUTIVE
+  HR
+  CA // read-only finance user
+}
+
+enum TaskType {
+  WORK
+  MEETING
+}
+
+enum TaskStatus {
+  DRAFT
+  ASSIGNED
+  STARTED
+  PAUSED
+  FINISH_REQUESTED
+  COMPLETED
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum AttachmentKind {
+  FILE
+  VOICE_NOTE
+  IMAGE
+}
+
+enum RecurrenceFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  CUSTOM
+}
+
+/// Task repeat rules (ADR 0010). Null on legacy task rules and on invoice schedules, which keep using `frequency`.
+enum RepeatFrequency {
+  DAILY
+  WEEKDAYS
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum RecurrenceTrigger {
+  ON_COMPLETE
+  ON_SCHEDULE
+}
+
+enum RequestType {
+  DOUBT
+  REVIEW
+  TIME_CHANGE
+  FIX_SELF_TASK
+  FINISH
+  LEAVE
+  APPROVED_CHANGE
+}
+
+enum RequestStatus {
+  OPEN
+  RESOLVED
+  APPROVED
+  REJECTED
+}
+
+enum VaultItemKind {
+  ASSET_DRIVE_LINK
+  CREDENTIAL
+  SHARED_DRIVE_LINK
+}
+
+enum InvoiceKind {
+  ONE_TIME
+  RECURRING
+}
+
+enum PaymentMode {
+  FULL
+  ADVANCE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  AWAITING_APPROVAL // ready; Admin must approve before anything is sent
+  SCHEDULED
+  SENT
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED // offset by a credit note
+}
+
+enum InvoiceDocType {
+  TAX_INVOICE
+  EXPORT_INVOICE
+  PROFORMA
+  CREDIT_NOTE
+}
+
+enum TaxMode {
+  CGST_SGST // intra-state
+  IGST // inter-state
+  EXPORT_LUT // zero-rated under LUT
+  NONE // proforma
+}
+
+enum BillingPlan {
+  ONE_TIME
+  RECURRING
+  PART
+}
+
+enum MonthAnchor {
+  NONE
+  START // bill on the 1st
+  END // bill on the last day
+  DAY // bill on `dayOfMonth` (1–28)
+}
+
+enum PaymentMethod {
+  CASH
+  BANK
+  UPI
+  OTHER
+}
+
+enum PartKind {
+  PERCENT
+  FIXED
+}
+
+enum PartStatus {
+  PENDING
+  ISSUED
+  PAID
+  MERGED
+  CANCELLED
+}
+
+enum PlanStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum BalanceMode {
+  DATE // balance invoice generated on balanceDueOn
+  MANUAL // Admin presses "Generate balance invoice"
+  AUTO // generated as a draft when the client's tasks are all complete; Admin reviews before sending
+}
+
+enum InvoiceUnit {
+  HOURS
+  FIXED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  LEAVE
+  HOLIDAY
+}
+
+enum LeaveStatus {
+  REQUESTED
+  HR_APPROVED
+  ADMIN_APPROVED
+  REJECTED
+}
+
+enum NotificationKind {
+  TASK_ASSIGNED
+  TASK_STARTED
+  /// Started after the scheduled start ("Arjun started it 5 min late", ADR 0017)
+  TASK_STARTED_LATE
+  TASK_PAUSED
+  TASK_RESUMED
+  FINISH_REQUESTED
+  /// Legacy (before ADR 0017): completion is TASK_COMPLETED
+  FINISH_APPROVED
+  FINISH_REJECTED
+  DOUBT_RAISED
+  DOUBT_RESOLVED
+  REVIEW_REQUESTED
+  /// Legacy (before ADR 0017): split into TASK_NOT_STARTED / TASK_PAST_END
+  TASK_OVERDUE
+  /// The scheduled start passed without a start (once per task, ADR 0017)
+  TASK_NOT_STARTED
+  /// The scheduled end passed and it isn't finished (once per task, ADR 0017)
+  TASK_PAST_END
+  /// Completed — Admin's approval or direct complete (ADR 0017)
+  TASK_COMPLETED
+  TASK_SHIFTED
+  LEAVE_REQUESTED
+  LEAVE_APPROVED
+  LEAVE_REJECTED
+  INVOICE_SENT
+  INVOICE_PAID
+  /// A part payment on an invoice (INVOICE_PAID = paid in full)
+  PAYMENT_RECEIVED
+  /// A decision, not an update: push / email reminder only, never a feed row (ADR 0017)
+  INVOICE_APPROVAL_DUE
+  WORK_ON_HOLD
+  WORK_RESUMED
+  VAULT_ACCESS_GRANTED
+  VAULT_ACCESS_EXPIRING
+  INTEGRATION_FAILED
+  TDS_THRESHOLD
+  /// A decision, not an update: push / email reminder only, never a feed row (ADR 0017)
+  PAYMENT_DUE
+  GENERIC
+}
+
+/// Payables (ADR 0009): an Expense is a bill; each payment due is an ExpenseOccurrence.
+enum ExpenseKind {
+  REGULAR
+  SALARY
+}
+
+enum ExpenseTiming {
+  PREPAID // paid before you get the service
+  POSTPAID // bill comes after the service
+  ADVANCE // paid ahead, adjusted against later work
+}
+
+enum OccurrenceStatus {
+  DUE
+  PAID
+}
+
+enum ExpenseMethod {
+  CASH
+  UPI
+  BANK
+  CARD
+  CHEQUE
+}
+
+enum IntegrationKind {
+  DRIVE_FOLDER
+  CALENDAR_EVENT
+  CHAT_SPACE
+  DRIVE_SHARE
+  CHAT_MEMBERS
+  CALENDAR_UPDATE
+  /// Meet REST API v2: open access + Gemini notes on the task's Meet space (ADR 0015).
+  MEET_CONFIG
+  GMAIL_SEND
+  SHEETS_SYNC
+}
+
+enum IntegrationStatus {
+  PENDING
+  OK
+  FAILED
+}
+
+// ---------- Auth / people ----------
+model User {
+  id                   String    @id @default(cuid())
+  googleId             String?   @unique
+  email                String    @unique
+  name                 String
+  avatar               String?
+  /// E.164 mobile (+91…) for the card's Call / WhatsApp sheet (ADR 0017)
+  phone                String?
+  role                 Role      @default(EXECUTIVE)
+  teamId               String?
+  team                 Team?     @relation("TeamMembers", fields: [teamId], references: [id])
+  teamLeaderId         String?
+  teamLeader           User?     @relation("LeaderExecutives", fields: [teamLeaderId], references: [id])
+  executives           User[]    @relation("LeaderExecutives")
+  dailyCapacityMinutes Int? // override of CompanySettings default
+  workingDays          Int[]     @default([1, 2, 3, 4, 5, 6]) // 0=Sun..6=Sat
+  active               Boolean   @default(true)
+  activatedAt          DateTime?
+  invitedAt            DateTime  @default(now())
+  notifyByEmail        Boolean   @default(false)
+  filterPrefs          Json? // persisted dashboard filters
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  ledTeams          Team[]              @relation("TeamLeader")
+  accounts          Account[]
+  sessions          Session[]
+  assignments       TaskAssignee[]
+  createdTasks      Task[]              @relation("TaskCreatedBy")
+  assignedTasks     Task[]              @relation("TaskAssignedBy")
+  raisedRequests    Request[]           @relation("RequestRaisedBy")
+  resolvedRequests  Request[]           @relation("RequestResolvedBy")
+  vaultGrants       VaultAccessGrant[]  @relation("GrantUser")
+  grantedVaultItems VaultAccessGrant[]  @relation("GrantedBy")
+  expenses          Expense[]
+  salaryBills       Expense[]           @relation("SalaryBills")
+  attendance        Attendance[]        @relation("AttendanceUser")
+  markedAttendance  Attendance[]        @relation("AttendanceMarkedBy")
+  leaves            Leave[]             @relation("LeaveUser")
+  inventory         InventorySnapshot[]
+  auditLogs         AuditLog[]
+  notifications     Notification[]
+  pushSubscriptions PushSubscription[]
+  vaultViews        VaultViewLog[]
+  attachments       TaskAttachment[]
+  /// Work types this person is best at ("✓ specialist" in Add task / Assign executive). Must belong to their team.
+  specialities      WorkType[]          @relation("UserSpecialities")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Team = Designation
+model Team {
+  id        String              @id @default(cuid())
+  name      String              @unique
+  colour    String              @default("#2563eb")
+  leaderId  String?
+  leader    User?               @relation("TeamLeader", fields: [leaderId], references: [id])
+  members   User[]              @relation("TeamMembers")
+  tasks     TaskTeam[]
+  inventory InventorySnapshot[]
+  /// Work types this team does (ADR 0008). Implicit many-to-many with WorkType.teams.
+  workTypes WorkType[]
+  active    Boolean             @default(true)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+}
+
+model Client {
+  id               String            @id @default(cuid())
+  name             String            @unique
+  businessName     String? // legal name printed on invoices (falls back to `name`)
+  contact          String?
+  email            String?
+  gstNumber        String?
+  pan              String? // PAN card, uppercase AAAAA9999A
+  address          String?
+  country          String            @default("IN") // ISO-3166 alpha-2; non-IN => Export Invoice
+  stateCode        String? // GST state code e.g. "29"; derived from GSTIN, editable for unregistered clients
+  stateName        String?
+  phone            String?
+  whatsapp         String? // E.164, e.g. +91XXXXXXXXXX
+  tdsPercent       Decimal?          @db.Decimal(5, 2)
+  currency         String            @default("INR") // ISO 4217; invoices default to it (export invoices may be in a foreign currency)
+  workOnHold       Boolean           @default(false)
+  holdInvoiceId    String?
+  holdSince        DateTime?
+  driveFolderId    String?
+  // ADR 0014: client kit in the owner's Drive — Client Kit/<client>/{Brand kit, Credentials, Work, Reports} + sheet
+  kitFolderId      String?
+  kitBrandId       String?
+  kitCredentialsId String?
+  kitSheetId       String?
+  kitWorkId        String?
+  kitReportsId     String?
+  kitCreatedAt     DateTime?
+  kitSharedWith    String? // client email given Editor access
+  kitSentAt        DateTime?
+  kitSentVia       String? // EMAIL | WHATSAPP (last send)
+  visibleInFilters Boolean           @default(false)
+  active           Boolean           @default(true)
+  tasks            Task[]
+  vaultItems       ClientVaultItem[]
+  invoices         Invoice[]
+
+  plans     InvoicePlan[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+// Admin-managed tag labels ("Add Work")
+model WorkType {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  colour      String    @default("#f59e0b")
+  active      Boolean   @default(true)
+  tasks       TaskTag[]
+  /// Teams that do this work. Empty = legacy row, available to every team (ADR 0008).
+  teams       Team[]
+  /// People who list this work type as a speciality.
+  specialists User[]    @relation("UserSpecialities")
+  createdAt   DateTime  @default(now())
+}
+
+// ---------- Tasks ----------
+model Task {
+  id                   String            @id @default(cuid())
+  title                String
+  description          String            @default("") // rich text (HTML)
+  type                 TaskType          @default(WORK)
+  clientId             String
+  client               Client            @relation(fields: [clientId], references: [id])
+  teams                TaskTeam[]
+  assignees            TaskAssignee[]
+  /// Admin's suggested executives when the task goes to a Team Leader; the Team Leader decides (ADR 0008).
+  preferredAssigneeIds String[]          @default([])
+  createdById          String
+  createdBy            User              @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  assignedById         String?
+  assignedBy           User?             @relation("TaskAssignedBy", fields: [assignedById], references: [id])
+  allocatedMinutes     Int               @default(60)
+  scheduledStart       DateTime?
+  scheduledEnd         DateTime?
+  actualStart          DateTime?
+  actualEnd            DateTime?
+  status               TaskStatus        @default(ASSIGNED)
+  statusBeforePause    TaskStatus?
+  overdue              Boolean           @default(false) // red overlay, set by scheduler
+  overdueNotifiedAt    DateTime?
+  /// ADR 0017: the one-time "Not started" / "Still not finished" notifications went out
+  notStartedNotifiedAt DateTime?
+  pastEndNotifiedAt    DateTime?
+  important           Boolean           @default(false)
+  tags                 TaskTag[]
+  priority             Priority          @default(NORMAL)
+  selfAssigned         Boolean           @default(false)
+  protected            Boolean           @default(false) // fixed: cannot be overlapped/shifted (Admin self tasks always)
+  recurrenceRuleId     String?
+  recurrenceRule       RecurrenceRule?   @relation(fields: [recurrenceRuleId], references: [id])
+  parentTaskId         String?
+  parentTask           Task?             @relation("TaskRestart", fields: [parentTaskId], references: [id])
+  children             Task[]            @relation("TaskRestart")
+  driveFolderId        String?
+  driveFolderUrl       String?
+  meetLink             String?
+  meetActive           Boolean           @default(false)
+  /// Meet REST API v2 space behind `meetLink` ("spaces/abc…"), set once the space is configured (ADR 0015).
+  meetSpaceName        String?
+  /// "Meeting notes" subfolder of the task's Drive folder; Gemini notes / transcripts are filed here (ADR 0015).
+  meetNotesFolderId    String?
+  calendarEventId      String?
+  chatSpaceId          String?
+  chatSpaceUrl         String?
+  pausedAt             DateTime?
+  pausedTotalMinutes   Int               @default(0)
+  doubtRaised          Boolean           @default(false)
+  doubtNote            String?
+  reviewRequested      Boolean           @default(false)
+  reviewNote           String?
+  /// Pills under review (ADR 0015): "date" (start date), "time" (start time), "mins" (time allotted). The red dot sits
+  /// on each flagged pill; `reviewRequested` mirrors "any field flagged".
+  reviewFields         String[]          @default([])
+  finishRequestedAt    DateTime?
+  finishRequestedById  String?
+  approvedAt           DateTime?
+  approvedById         String?
+  rejectionNote        String?
+  deletedAt            DateTime?
+  deletedById          String?
+  integrationError     String? // last failed Google step, shown as row badge
+  /// Meetings: external guests (the client's email + typed addresses), lowercased and deduped (ADR 0012).
+  /// Internal people are assignees (TaskAssignee) so they see the meeting on their dashboard.
+  guestEmails          String[]          @default([])
+  /// Meetings: Google Calendar options (reminders, guest permissions, location, busy/free, visibility, colour,
+  /// all day, time zone, Meet on/off) — validated by `meetingOptionsSchema` (ADR 0012).
+  meetingOptions       Json?
+  sessions             TaskSession[]
+  attachments          TaskAttachment[]
+  requests             Request[]
+  integrations         IntegrationJob[]
+  meetingNotes         TaskMeetingNote[]
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  @@index([clientId])
+  @@index([status])
+  @@index([scheduledStart])
+  @@index([deletedAt])
+}
+
+model TaskAssignee {
+  taskId String
+  userId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, userId])
+  @@index([userId])
+}
+
+model TaskTeam {
+  taskId String
+  teamId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, teamId])
+}
+
+model TaskTag {
+  taskId     String
+  workTypeId String
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  workType   WorkType @relation(fields: [workTypeId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, workTypeId])
+}
+
+model TaskSession {
+  id        String    @id @default(cuid())
+  taskId    String
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  @@index([taskId])
+}
+
+enum MeetingArtifactKind {
+  SMART_NOTES
+  TRANSCRIPT
+}
+
+/// A Gemini notes / transcript Google Doc filed into the task's "Meeting notes" folder (ADR 0015). One row per doc:
+/// the filing job is idempotent on (taskId, docId).
+model TaskMeetingNote {
+  id               String              @id @default(cuid())
+  taskId           String
+  task             Task                @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  kind             MeetingArtifactKind
+  conferenceRecord String
+  docId            String
+  docUrl           String
+  /// MOVED (re-parented into the folder) or SHORTCUT (a Drive shortcut when the doc could not be moved).
+  filedAs          String
+  createdAt        DateTime            @default(now())
+
+  @@unique([taskId, docId])
+}
+
+model TaskAttachment {
+  id           String         @id @default(cuid())
+  taskId       String
+  task         Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  driveFileId  String?
+  url          String?
+  name         String
+  mimeType     String?
+  kind         AttachmentKind @default(FILE)
+  durationSec  Int?
+  sizeBytes    Int?
+  data         Bytes? // local fallback storage when Drive is unavailable/mocked
+  uploadedById String?
+  uploadedBy   User?          @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime       @default(now())
+}
+
+model RecurrenceRule {
+  id            String              @id @default(cuid())
+  frequency     RecurrenceFrequency
+  interval      Int                 @default(1)
+  byWeekday     Int[]               @default([])
+  trigger       RecurrenceTrigger   @default(ON_SCHEDULE)
+  monthAnchor   MonthAnchor         @default(NONE) // monthly billing on the 1st / last day / a chosen day
+  dayOfMonth    Int? // 1–28, used when monthAnchor = DAY
+  notifyMinutes Int                 @default(540) // minutes after midnight (company tz) at which the occurrence is created and Admin notified
+  endDate       DateTime? // null = infinite
+  // ---- task repeat rules (ADR 0010); null on legacy rules, which are mapped on read ----
+  repeatFreq    RepeatFrequency?
+  monthDay      Int? // MONTHLY on a date: 1–31, 32 = last day of the month
+  nthWeek       Int? // MONTHLY on a weekday: 1–4 = first…fourth, 5 = last
+  nthWeekday    Int? // 0 = Sunday … 6 = Saturday
+  yearMonth     Int? // YEARLY: 0–11
+  yearDay       Int? // YEARLY: 1–31 (clamped to the month)
+  endAfterCount Int? // ends after N occurrences (the first included)
+  anchorDate    String? // yyyy-MM-dd (company tz) of the first occurrence; intervals count from it
+  nextRunAt     DateTime?
+  stopped       Boolean             @default(false)
+  tasks         Task[]
+  invoices      Invoice[]
+  createdAt     DateTime            @default(now())
+}
+
+model Request {
+  id             String        @id @default(cuid())
+  type           RequestType
+  taskId         String?
+  task           Task?         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  leaveId        String?
+  leave          Leave?        @relation(fields: [leaveId], references: [id], onDelete: Cascade)
+  raisedById     String
+  raisedBy       User          @relation("RequestRaisedBy", fields: [raisedById], references: [id])
+  targetRole     Role          @default(ADMIN)
+  note           String        @default("")
+  /// REVIEW / TIME_CHANGE: which pill is to be reviewed — "date" | "time" | "mins" (ADR 0015).
+  field          String?
+  payload        Json?
+  status         RequestStatus @default(OPEN)
+  resolvedById   String?
+  resolvedBy     User?         @relation("RequestResolvedBy", fields: [resolvedById], references: [id])
+  resolvedAt     DateTime?
+  resolutionNote String?
+  createdAt      DateTime      @default(now())
+
+  @@index([status, targetRole])
+}
+
+// ---------- Client vault ----------
+model ClientVaultItem {
+  id          String             @id @default(cuid())
+  clientId    String
+  client      Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  kind        VaultItemKind
+  label       String
+  url         String?
+  username    String?
+  passwordEnc String? // AES-256-GCM, base64 iv:tag:ciphertext
+  notes       String?
+  grants      VaultAccessGrant[]
+  views       VaultViewLog[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model VaultAccessGrant {
+  id                           String          @id @default(cuid())
+  vaultItemId                  String
+  vaultItem                    ClientVaultItem @relation(fields: [vaultItemId], references: [id], onDelete: Cascade)
+  userId                       String
+  user                         User            @relation("GrantUser", fields: [userId], references: [id], onDelete: Cascade)
+  grantedById                  String
+  grantedBy                    User            @relation("GrantedBy", fields: [grantedById], references: [id])
+  expiresAt                    DateTime?
+  expiresAfterFirstOpenMinutes Int?
+  firstOpenedAt                DateTime?
+  revoked                      Boolean         @default(false)
+  expiringNotifiedAt           DateTime?
+  createdAt                    DateTime        @default(now())
+
+  @@unique([vaultItemId, userId])
+}
+
+model VaultViewLog {
+  id          String          @id @default(cuid())
+  vaultItemId String
+  vaultItem   ClientVaultItem @relation(fields: [vaultItemId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  viewedAt    DateTime        @default(now())
+}
+
+// ---------- Finance ----------
+model Invoice {
+  id               String          @id @default(cuid())
+  clientId         String
+  client           Client          @relation(fields: [clientId], references: [id])
+  number           String          @unique
+  docType          InvoiceDocType  @default(TAX_INVOICE)
+  taxMode          TaxMode         @default(CGST_SGST)
+  placeOfSupply    String?
+  cgstAmount       Decimal         @default(0) @db.Decimal(12, 2)
+  sgstAmount       Decimal         @default(0) @db.Decimal(12, 2)
+  igstAmount       Decimal         @default(0) @db.Decimal(12, 2)
+  plan             BillingPlan     @default(ONE_TIME)
+  planId           String?
+  planRef          InvoicePlan?    @relation(fields: [planId], references: [id])
+  partSeq          Int?
+  description      String          @default("") // free text printed on the document
+  approvedAt       DateTime?
+  approvedById     String?
+  remindAt         DateTime? // "push forward": Admin is reminded to approve/send on this date
+  emailSentAt      DateTime?
+  whatsappSentAt   DateTime?
+  whatsappStatus   String?
+  publicToken      String?         @unique // signed public PDF link for WhatsApp media
+  proformaOfId     String?         @unique // tax invoice created from this proforma
+  proformaOf       Invoice?        @relation("ProformaConversion", fields: [proformaOfId], references: [id])
+  convertedTo      Invoice?        @relation("ProformaConversion")
+  creditNoteOfId   String? // credit notes point at the invoice they offset
+  creditNoteOf     Invoice?        @relation("CreditNotes", fields: [creditNoteOfId], references: [id])
+  creditNotes      Invoice[]       @relation("CreditNotes")
+  cancelledAt      DateTime?
+  cancelReason     String? // ADR 0009: why a sent invoice was cancelled (number stays used)
+  monthDriveFileId String? // ADR 0009: copy filed in Drive Finance/<issue month>/Sales invoices (or Cancelled invoices)
+  tdsApplicable    Boolean         @default(false) // client deducts TDS on this invoice (ADR 0006)
+  currency         String          @default("INR") // ISO 4217 code printed on the PDF; amounts are stored as entered (no FX)
+  items            InvoiceItem[]
+  subtotal         Decimal         @db.Decimal(12, 2)
+  gstPercent       Decimal         @default(18) @db.Decimal(5, 2)
+  gstAmount        Decimal         @default(0) @db.Decimal(12, 2)
+  total            Decimal         @db.Decimal(12, 2)
+  kind             InvoiceKind     @default(ONE_TIME)
+  scheduleId       String?
+  schedule         RecurrenceRule? @relation(fields: [scheduleId], references: [id])
+  paymentMode      PaymentMode     @default(FULL)
+  advancePercent   Int?
+  balanceOfId      String?         @unique // this invoice is the balance of an advance invoice
+  balanceOf        Invoice?        @relation("AdvanceBalance", fields: [balanceOfId], references: [id])
+  balanceInvoice   Invoice?        @relation("AdvanceBalance")
+  balanceDueOn     DateTime?
+  balanceMode      BalanceMode     @default(MANUAL)
+  reminderSentAt   DateTime?
+  reminderCount    Int             @default(0)
+  notes            String?
+  paymentTerms     String?
+  dueDate          DateTime?
+  sendAt           DateTime?
+  status           InvoiceStatus   @default(DRAFT)
+  pdfDriveFileId   String?
+  pdfBackendFileId String?
+  pdfData          Bytes?
+  sentAt           DateTime?
+  payments         Payment[]
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([clientId, status])
+  @@index([remindAt])
+}
+
+/// Part-payment plan: the schedule; each issued part becomes its own Invoice (own number, PDF, payments).
+model InvoicePlan {
+  id          String        @id @default(cuid())
+  clientId    String
+  client      Client        @relation(fields: [clientId], references: [id])
+  title       String
+  description String        @default("")
+  totalAmount Decimal       @db.Decimal(12, 2) // taxable total across all parts
+  gstPercent  Decimal       @default(18) @db.Decimal(5, 2)
+  status      PlanStatus    @default(ACTIVE)
+  createdById String
+  parts       InvoicePart[]
+  invoices    Invoice[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model InvoicePart {
+  id          String      @id @default(cuid())
+  planId      String
+  plan        InvoicePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  seq         Int
+  kind        PartKind    @default(PERCENT)
+  value       Decimal     @db.Decimal(12, 2) // percent or fixed amount as entered
+  amount      Decimal     @db.Decimal(12, 2) // resolved taxable amount
+  description String      @default("")
+  dueDate     DateTime
+  status      PartStatus  @default(PENDING)
+  invoiceId   String?     @unique
+  createdAt   DateTime    @default(now())
+
+  @@unique([planId, seq])
+}
+
+model InvoiceItem {
+  id          String      @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  hsnSac      String?
+  qty         Decimal     @db.Decimal(10, 2)
+  unit        InvoiceUnit @default(FIXED)
+  rate        Decimal     @db.Decimal(12, 2)
+  amount      Decimal     @db.Decimal(12, 2)
+  sortOrder   Int         @default(0)
+}
+
+model Payment {
+  id                  String        @id @default(cuid())
+  invoiceId           String
+  invoice             Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount              Decimal       @db.Decimal(12, 2)
+  receivedAt          DateTime      @default(now())
+  method              PaymentMethod @default(BANK)
+  tdsAmount           Decimal       @default(0) @db.Decimal(12, 2)
+  tdsPercent          Decimal?      @db.Decimal(5, 2)
+  notes               String?
+  reference           String?
+  receiptNumber       String?       @unique
+  receiptPdfId        String?
+  receiptBackendPdfId String?
+  receiptPdfData      Bytes?
+  receiptSentAt       DateTime?
+  createdAt           DateTime      @default(now())
+}
+
+model Expense {
+  id                   String              @id @default(cuid())
+  date                 DateTime // when the bill was added / first due (legacy: the expense date)
+  amount               Decimal             @db.Decimal(12, 2) // ONE_TIME: the bill · RECURRING: each payment · PART: total of all parts
+  category             String
+  vendor               String? // the payee (salary: the team member's name)
+  note                 String?
+  tags                 String[]            @default([])
+  /// ADR 0009: bill shape. Payments live in ExpenseOccurrence.
+  kind                 ExpenseKind         @default(REGULAR)
+  salaryUserId         String?
+  salaryUser           User?               @relation("SalaryBills", fields: [salaryUserId], references: [id])
+  timing               ExpenseTiming       @default(PREPAID)
+  plan                 BillingPlan         @default(ONE_TIME)
+  /// RECURRING only: repeat rule (zod `repeatRuleSchema` in src/server/finance/schemas.ts).
+  repeatRule           Json?
+  remindDays           Int                 @default(1)
+  vendorGstin          String?
+  occurrences          ExpenseOccurrence[]
+  /// Legacy (pre-ADR 0009) money/TDS/receipt columns: copied into one PAID occurrence by the migration; no longer written.
+  tdsApplied           Boolean             @default(false)
+  tdsPercent           Decimal?            @db.Decimal(5, 2)
+  tdsAmount            Decimal             @default(0) @db.Decimal(12, 2)
+  receiptImageDriveId  String?
+  receiptImageData     Bytes?
+  receiptImageMime     String?
+  voiceNoteDriveId     String?
+  voiceNoteData        Bytes?
+  voiceNoteDurationSec Int?
+  createdById          String
+  createdBy            User                @relation(fields: [createdById], references: [id])
+  sheetRowSyncedAt     DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  @@index([date])
+}
+
+/// One payment of a bill (ADR 0009): DUE until marked PAID; carries the payment, TDS, GST and the vendor's bill file.
+model ExpenseOccurrence {
+  id           String           @id @default(cuid())
+  expenseId    String
+  expense      Expense          @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  seq          Int
+  label        String? // "Part 1 of 2 · Advance", "Balance of …"
+  amount       Decimal          @db.Decimal(12, 2) // gross (incl. GST when the bill includes it)
+  dueDate      DateTime // start of the due day in the company timezone
+  status       OccurrenceStatus @default(DUE)
+  paidAt       DateTime?
+  method       ExpenseMethod?
+  reference    String?
+  tdsPercent   Decimal?         @db.Decimal(5, 2)
+  tdsAmount    Decimal          @default(0) @db.Decimal(12, 2)
+  gstAmount    Decimal          @default(0) @db.Decimal(12, 2)
+  gstRate      Decimal?         @db.Decimal(5, 2)
+  vendorGstin  String?
+  itcClaimable Boolean          @default(false)
+  billData     Bytes?
+  billMime     String?
+  billName     String?
+  billDriveId  String? // Drive Finance/<paid month>/Expense bills
+  itcDriveId   String? // Drive Finance/<paid month>/GST claimable
+  notifiedAt   DateTime? // payment reminder sent (once per occurrence)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([expenseId, seq])
+  @@index([status, dueDate])
+  @@index([paidAt])
+}
+
+/// Drive Finance/YYYY-MM folder + its four subfolders (ADR 0009), created on the 1st or on first use.
+model FinanceMonthFolder {
+  id          String   @id @default(cuid())
+  month       String   @unique // yyyy-MM
+  folderId    String
+  salesId     String
+  billsId     String
+  itcId       String
+  cancelledId String
+  createdAt   DateTime @default(now())
+}
+
+// ADR 0013: the Finance root folder (parent of every YYYY-MM folder) in the owner's Google Drive. One row
+// ("default"); its id is one of the only folder ids the Share sheet accepts.
+model FinanceDriveRoot {
+  id         String   @id @default("default")
+  folderId   String
+  ownerEmail String?
+  createdAt  DateTime @default(now())
+}
+
+model Attendance {
+  id         String           @id @default(cuid())
+  userId     String
+  user       User             @relation("AttendanceUser", fields: [userId], references: [id], onDelete: Cascade)
+  date       DateTime         @db.Date
+  checkIn    DateTime?
+  checkOut   DateTime?
+  status     AttendanceStatus @default(PRESENT)
+  note       String?
+  markedById String?
+  markedBy   User?            @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@unique([userId, date])
+}
+
+model Leave {
+  id                String      @id @default(cuid())
+  userId            String
+  user              User        @relation("LeaveUser", fields: [userId], references: [id], onDelete: Cascade)
+  from              DateTime    @db.Date
+  to                DateTime    @db.Date
+  reason            String      @default("")
+  status            LeaveStatus @default(REQUESTED)
+  calendarEventId   String?
+  hrApprovedById    String?
+  adminApprovedById String?
+  rejectedById      String?
+  tasksShiftedAt    DateTime?
+  requests          Request[]
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([userId, from, to])
+}
+
+model InventorySnapshot {
+  id              String   @id @default(cuid())
+  date            DateTime @db.Date
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId          String?
+  team            Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  capacityMinutes Int
+  assignedMinutes Int
+  sellableMinutes Int
+  createdAt       DateTime @default(now())
+
+  @@unique([date, userId, teamId])
+}
+
+// ---------- Company / platform ----------
+model CompanySettings {
+  id                            String     @id @default("default")
+  companyName                   String     @default("Era Of Marketing")
+  address                       String     @default("")
+  gstNumber                     String     @default("")
+  bankName                      String     @default("")
+  bankAccountName               String     @default("")
+  bankAccountNumber             String     @default("")
+  bankIfsc                      String     @default("")
+  upiId                         String     @default("")
+  logoUrl                       String?
+  logoData                      Bytes?
+  legalName                     String     @default("") // printed in "Invoice From" (falls back to companyName)
+  pan                           String     @default("")
+  iecCode                       String     @default("")
+  email                         String     @default("")
+  phone                         String     @default("")
+  website                       String     @default("")
+  hsnSacCode                    String     @default("998361")
+  bankSwift                     String     @default("")
+  bankAddress                   String     @default("")
+  signatureUrl                  String?
+  signatureData                 Bytes?
+  workStartMinutes              Int        @default(600) // 10:00
+  workEndMinutes                Int        @default(1140) // 19:00
+  lunchStartMinutes             Int        @default(810) // 13:30
+  lunchEndMinutes               Int        @default(870) // 14:30
+  workingDays                   Int[]      @default([1, 2, 3, 4, 5, 6])
+  holidays                      DateTime[] @default([]) @db.Date
+  timezone                      String     @default("Asia/Kolkata")
+  invoicePrefix                 String     @default("EOM")
+  invoiceNextNumber             Int        @default(1)
+  receiptPrefix                 String     @default("EOM-RCP")
+  receiptNextNumber             Int        @default(1)
+  invoiceTerms                  String     @default("Payment due within 15 days of invoice date.")
+  invoiceEmailTemplate          String     @default("Dear {{client}},\n\nPlease find attached invoice {{number}} for INR {{total}}, due on {{dueDate}}.\n\nRegards,\n{{company}}")
+  defaultGstPercent             Decimal    @default(18) @db.Decimal(5, 2)
+  notifyEmailDefault            Boolean    @default(false)
+  notifyChatDefault             Boolean    @default(false) // posting into task Chat spaces is opt-in (ADR 0004)
+  restartCreatesNewWorkspace    Boolean    @default(true)
+  recurrenceCreatesNewWorkspace Boolean    @default(true)
+  halfDayMinutes                Int        @default(240) // ADR 0004: half-day hours configurable in Settings
+  numberingFyKey                String     @default("") // e.g. "25-26"; invoice/receipt counters reset when the financial year changes
+  stateCode                     String     @default("") // GST state code of the company (from GSTIN); decides CGST+SGST vs IGST
+  lutNumber                     String     @default("") // printed on export invoices (0% under LUT)
+  proformaPrefix                String     @default("EOM-PRO")
+  proformaNextNumber            Int        @default(1)
+  creditNotePrefix              String     @default("EOM-CN")
+  creditNoteNextNumber          Int        @default(1)
+  invoiceWhatsappTemplate       String     @default("Hi {{client}}, invoice {{number}} for INR {{total}} is due on {{dueDate}}. PDF: {{link}} — {{company}}")
+  reminderWhatsappTemplate      String     @default("Gentle reminder from {{company}}: invoice {{number}} (INR {{balance}} outstanding) was due on {{dueDate}}. PDF: {{link}}")
+  expenseCategories             String[]   @default(["Travel", "Software", "Office", "Marketing", "Salaries", "Rent", "Utilities", "Other"]) // ADR 0004: fixed list, no free text
+  tdsThresholdAmount            Decimal    @default(20000) @db.Decimal(12, 2) // ADR 0006: per payee per financial year
+  financeEmail                  String     @default("") // ADR 0009: the monthly GST pack is emailed here
+  // ADR 0014: "Client Kit" top folder in the owner's My Drive (created once) and the four subfolder names
+  clientKitRootId               String?
+  clientKitFolders              String[]   @default(["Brand kit", "Credentials", "Work", "Reports"])
+  updatedAt                     DateTime   @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      NotificationKind @default(GENERIC)
+  title     String
+  body      String           @default("")
+  href      String?
+  taskId    String?
+  /// Invoice the update is about (payment in, sent …): tapping opens it (ADR 0017)
+  invoiceId String?
+  readAt    DateTime?
+  pushedAt  DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+}
+
+// Queue of idempotent Google side-effects with retry/backoff
+model IntegrationJob {
+  id             String            @id @default(cuid())
+  kind           IntegrationKind
+  taskId         String?
+  task           Task?             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  entityType     String?
+  entityId       String?
+  idempotencyKey String            @unique
+  payload        Json?
+  status         IntegrationStatus @default(PENDING)
+  attempts       Int               @default(0)
+  nextAttemptAt  DateTime          @default(now())
+  lastError      String?
+  result         Json?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([status, nextAttemptAt])
+}
