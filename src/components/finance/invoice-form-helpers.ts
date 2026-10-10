@@ -167,6 +167,7 @@ export function validateForm(f: InvoiceFormState): Record<string, string> {
   if (f.plan === "RECURRING" && num(f.interval) < 1) errors.recurrence = "Interval must be at least 1";
   if (f.plan === "RECURRING" && f.frequency === "MONTHLY" && f.monthAnchor === "DAY" && (num(f.dayOfMonth) < 1 || num(f.dayOfMonth) > 28)) errors.recurrence = "Pick a day between 1 and 28";
   if (f.plan !== "RECURRING" && f.remindDate && !/^\d{4}-\d{2}-\d{2}$/.test(f.remindDate)) errors.remindAt = "Pick a valid reminder date";
+  if (f.plan === "PART" && f.proforma) errors.parts = "A proforma can't be split into parts — use one time or recurring";
   if (f.plan === "PART") {
     const s = partsSummary(f.parts, taxable);
     if (!s.valid && s.error) errors.parts = s.error;

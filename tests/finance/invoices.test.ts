@@ -231,6 +231,25 @@ describe("invoicing v2", () => {
     expect((await run(new Date(after.nextRunAt!.getTime() + 1000))).cloned).toBe(0);
   });
 
+  it("a recurring proforma keeps producing proformas; any one converts into a tax invoice that is approved and sent", async () => {
+    const { createInvoice, approveAndSend, convertProforma } = await import("@/server/finance/invoices");
+    const { run } = await import("@/jobs/invoices");
+    const created = await createInvoice({ ...baseInput(seed.client.id), docType: "PROFORMA", plan: "RECURRING", recurrence: { frequency: "MONTHLY", interval: 1, monthAnchor: "END" } });
+    if (!created.ok) throw new Error(created.error);
+    expect((await approveAndSend(created.data.id, { email: true })).ok).toBe(true);
+    const rule = await testDb.recurrenceRule.findFirstOrThrow();
+    expect((await run(new Date(rule.nextRunAt!.getTime() + 1000))).cloned).toBe(1);
+    const all = await testDb.invoice.findMany({ orderBy: { createdAt: "asc" } });
+    expect(all.map((i) => [i.docType, i.taxMode])).toEqual([["PROFORMA", "NONE"], ["PROFORMA", "NONE"]]);
+    const conv = await convertProforma(all[1].id);
+    if (!conv.ok) throw new Error(conv.error);
+    const tax = await testDb.invoice.findUniqueOrThrow({ where: { id: conv.data.id } });
+    expect(tax).toMatchObject({ docType: "TAX_INVOICE", taxMode: "CGST_SGST", status: "AWAITING_APPROVAL", proformaOfId: all[1].id });
+    const sent = await approveAndSend(tax.id, { email: true });
+    expect(sent.ok).toBe(true);
+    expect(await testDb.invoice.findUniqueOrThrow({ where: { id: tax.id } })).toMatchObject({ status: "SENT", number: INV(1) });
+  });
+
   it("recurring on a chosen day (DAY anchor) at a chosen time persists dayOfMonth + notifyMinutes (ADR 0007)", async () => {
     const { createInvoice } = await import("@/server/finance/invoices");
     const bad = await createInvoice({ ...baseInput(seed.client.id), plan: "RECURRING", recurrence: { frequency: "MONTHLY", monthAnchor: "DAY" } });

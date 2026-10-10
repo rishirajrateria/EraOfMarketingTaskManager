@@ -79,7 +79,8 @@ export async function createInvoiceRecord(input: InvoiceInput, actorId: string):
 
 /** Next occurrence of a RECURRING template: same client/items/terms, tax re-resolved, AWAITING_APPROVAL. */
 export async function cloneRecurringOccurrence(template: InvoiceFull, occurrenceAt: Date, actorId: string | null): Promise<InvoiceFull> {
-  const { tax } = await loadClientTax(template.clientId);
+  // A recurring proforma keeps producing proformas; a recurring tax invoice re-resolves its tax each time.
+  const { tax } = await loadClientTax(template.clientId, template.docType === "PROFORMA" ? "PROFORMA" : null);
   return prisma.$transaction((tx) =>
     insertDocument(
       tx,

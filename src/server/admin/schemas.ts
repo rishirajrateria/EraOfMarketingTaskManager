@@ -117,10 +117,12 @@ export const updateClientSchema = clientInputSchema.extend({ id });
 export type ClientInput = z.input<typeof clientInputSchema>;
 export type UpdateClientInput = z.input<typeof updateClientSchema>;
 
-/** State is derived from the GSTIN when present (editable otherwise); WhatsApp is normalised to E.164. */
+/**
+ * The state is chosen by hand and always wins (owner request); the GSTIN prefix is only a fallback when no state was
+ * picked (e.g. imports). WhatsApp is normalised to E.164.
+ */
 export function withDerivedClientFields<T extends z.output<typeof clientInputSchema>>(input: T): T {
-  const fromGstin = stateFromGstin(input.gstNumber);
-  const state = fromGstin ?? stateByCode(input.stateCode);
+  const state = stateByCode(input.stateCode) ?? stateFromGstin(input.gstNumber);
   const india = (input.country || "IN") === "IN";
   return {
     ...input,

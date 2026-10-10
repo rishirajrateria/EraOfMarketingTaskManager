@@ -85,7 +85,7 @@ describe("admin teams / clients / work types", () => {
     expect(await testDb.client.findUniqueOrThrow({ where: { id: typed.data.id } })).toMatchObject({ stateCode: "29", stateName: "Karnataka", whatsapp: "+919876543210" });
     const upd = await actions.updateClient({ id: typed.data.id, name: "Local shop", stateCode: "29", gstNumber: "07aaaaa0000a1z5" });
     expect(upd.ok).toBe(true);
-    expect(await testDb.client.findUniqueOrThrow({ where: { id: typed.data.id } })).toMatchObject({ gstNumber: "07AAAAA0000A1Z5", stateCode: "07", stateName: "Delhi" });
+    expect(await testDb.client.findUniqueOrThrow({ where: { id: typed.data.id } })).toMatchObject({ gstNumber: "07AAAAA0000A1Z5", stateCode: "29", stateName: "Karnataka" }); // the picked state wins over the GSTIN prefix
 
     expect((await actions.createClient({ name: "Bad state", stateCode: "99x" })).ok).toBe(false);
     expect((await actions.createClient({ name: "Bad wa", whatsapp: "12" })).ok).toBe(false);

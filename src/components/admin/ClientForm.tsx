@@ -55,10 +55,12 @@ export function ClientForm({ client, busy, companyStateCode, onSubmit, onCancel,
   };
   const fromGstin = useMemo(() => stateFromGstin(v.gstNumber), [v.gstNumber]);
   const india = (v.country ?? "IN") === "IN";
-  const stateCode = fromGstin?.code ?? v.stateCode ?? "";
+  const stateCode = v.stateCode ?? "";
+  // The state is picked by hand; the GSTIN is only used to warn when the two disagree.
+  const mismatch = !!fromGstin && !!stateCode && fromGstin.code !== stateCode;
   const tax = useMemo(() => resolveTax({ companyStateCode, client: { country: v.country, stateCode: stateCode || null, gstNumber: v.gstNumber } }), [companyStateCode, v.country, stateCode, v.gstNumber]);
   const companyState = stateByCode(companyStateCode)?.name;
-  const stateHint = `${fromGstin ? "From GSTIN. " : ""}Same state as you${companyState ? ` (${companyState})` : ""} → CGST+SGST · other state → IGST`;
+  const stateHint = `Pick the client's state. Same state as you${companyState ? ` (${companyState})` : ""} → CGST+SGST · other state → IGST`;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,13 +111,22 @@ export function ClientForm({ client, busy, companyStateCode, onSubmit, onCancel,
             <input className={inputCls} type="number" min="0" max="100" step="0.01" inputMode="decimal" value={v.tdsPercent ?? ""} onChange={set("tdsPercent")} />
           </Field>
           <Field label="State" hint={stateHint}>
-            <select className={`${inputCls} disabled:opacity-70`} value={stateCode} disabled={!!fromGstin} onChange={set("stateCode")}>
-              <option value="">— unregistered / same as company —</option>
+            <select className={inputCls} value={stateCode} onChange={set("stateCode")}>
+              <option value="">— not picked —</option>
               {STATES.map((s) => (
                 <option key={s.code} value={s.code}>{s.code} · {s.name}</option>
               ))}
             </select>
           </Field>
+          {fromGstin && stateCode !== fromGstin.code ? (
+            <p className={`-mt-1 text-xs ${mismatch ? "text-amber-600" : "text-gray-500"}`}>
+              {mismatch ? "The GSTIN belongs to " : "The GSTIN suggests "}
+              {fromGstin.code} · {fromGstin.name}.{" "}
+              <button type="button" className="font-semibold underline" onClick={() => setV({ ...v, stateCode: fromGstin.code })}>
+                Use it
+              </button>
+            </p>
+          ) : null}
         </>
       ) : (
         <Field label="Currency" hint="Export invoices are printed in this currency (amounts as entered, no conversion)">

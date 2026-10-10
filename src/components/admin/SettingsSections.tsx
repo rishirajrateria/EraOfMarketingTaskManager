@@ -58,20 +58,17 @@ function TimeInput({ label, value, onChange }: { label: string; value: number; o
 
 const STATES = Object.entries(GST_STATE_CODES).map(([code, name]) => ({ code, name }));
 
-/** ADR 0007: the "Invoice From" block of every invoice. The state is filled from the GSTIN but stays editable. */
+/** ADR 0007: the "Invoice From" block of every invoice. The state is picked by hand (the GSTIN only suggests it). */
 export function CompanySection({ v, patch }: { v: SettingsValues; patch: Patch }) {
   const fromGstin = stateFromGstin(v.gstNumber);
-  const setGstin = (gstNumber: string) => {
-    const derived = stateFromGstin(gstNumber);
-    patch(derived ? { gstNumber, stateCode: derived.code } : { gstNumber });
-  };
+  const setGstin = (gstNumber: string) => patch({ gstNumber });
   return (
     <Section id="company" title="Company (printed on every invoice)">
       <Text label="Brand name" hint="Shown next to the logo and in emails" value={v.companyName} onChange={(companyName) => patch({ companyName })} />
       <Text label="Legal name" hint="Printed under “Invoice From”; blank = brand name" value={v.legalName ?? ""} onChange={(legalName) => patch({ legalName })} />
       <div className="grid grid-cols-2 gap-3">
         <Text label="GSTIN" value={v.gstNumber} onChange={setGstin} />
-        <Field label="State" hint={fromGstin ? `from GSTIN · ${fromGstin.name}` : "Decides CGST+SGST vs IGST"}>
+        <Field label="State" hint={fromGstin && fromGstin.code !== v.stateCode ? `GSTIN suggests ${fromGstin.code} · ${fromGstin.name}` : "Decides CGST+SGST vs IGST"}>
           <select className={inputCls} value={v.stateCode ?? ""} onChange={(e) => patch({ stateCode: e.target.value })}>
             <option value="">— not set —</option>
             {STATES.map((st) => (

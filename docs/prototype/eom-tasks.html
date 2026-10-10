@@ -1818,9 +1818,11 @@ function clientForm(c){
  const v=c?Object.assign({},c):{name:"",businessName:"",pan:"",email:"",phone:"",gstin:"",stateCode:S.settings.stateCode,stateName:GST_STATES[S.settings.stateCode]||"",country:"IN",tdsPercent:0};
  const taxHint=()=>v.country==="IN"?"State "+(GST_STATES[v.stateCode]||"—")+" → "+TAXL[taxFor(v)]+(v.stateCode===S.settings.stateCode?" (same state as you)":" (other state)"):"Export invoice · 0% under LUT";
  const hint=el("div",{class:"hint",style:"margin:-8px 0 12px"},taxHint());
- const stateSel=el("select",{class:"in",onchange:e=>{v.stateCode=e.target.value;v.stateName=GST_STATES[v.stateCode];hint.textContent=taxHint();}},...Object.entries(GST_STATES).map(([k,l])=>el("option",{value:k,selected:v.stateCode===k||null},k+" · "+l)));
+ const stateSel=el("select",{class:"in",onchange:e=>{v.stateCode=e.target.value;v.stateName=GST_STATES[v.stateCode];hint.textContent=taxHint();syncState();}},...Object.entries(GST_STATES).map(([k,l])=>el("option",{value:k,selected:v.stateCode===k||null},k+" · "+l)));
  const stateHint=el("div",{class:"hint"});
- const syncState=()=>{const code=(v.gstin||"").slice(0,2);if(v.gstin&&v.gstin.length>=2&&GST_STATES[code]){v.stateCode=code;v.stateName=GST_STATES[code];stateSel.value=code;stateSel.disabled=true;stateHint.textContent="Taken from the GSTIN";}else{stateSel.disabled=false;stateHint.textContent="Pick the state for an unregistered client";}hint.textContent=taxHint();};
+ /* State is picked by hand; the GSTIN only suggests it (with a one-tap "Use it" when they disagree). */
+ const syncState=()=>{const code=(v.gstin||"").slice(0,2);stateSel.disabled=false;const sug=v.gstin&&v.gstin.length>=2&&GST_STATES[code]&&code!==v.stateCode?code:null;
+  stateHint.replaceChildren(sug?el("span",{style:"color:#b45309"},"The GSTIN belongs to "+code+" · "+GST_STATES[code]+". ",el("button",{type:"button",style:"font-weight:700;text-decoration:underline;color:inherit",onclick:()=>{v.stateCode=code;v.stateName=GST_STATES[code];stateSel.value=code;syncState();hint.textContent=taxHint();}},"Use it")):"Pick the client's state");};
  const inp=(k,ph,type="text")=>el("input",{class:"in",type,value:v[k]||"",placeholder:ph,oninput:e=>{v[k]=e.target.value;if(k==="gstin")syncState();}});
  const indiaWrap=el("div");
  const country=el("select",{class:"in",onchange:e=>{v.country=e.target.value;indiaWrap.hidden=v.country!=="IN";indiaOnly.hidden=v.country!=="IN";hint.textContent=taxHint();}},...[["IN","India"],["US","United States"],["GB","United Kingdom"],["AE","UAE"],["SE","Sweden"],["SG","Singapore"],["AU","Australia"],["ZZ","Other (outside India)"]].map(([k,l])=>el("option",{value:k,selected:v.country===k||null},l)));
