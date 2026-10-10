@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Sheet } from "@/components/ui/Sheet";
-import { btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
+import { SheetButtons } from "@/components/ui/CloseX";
+import { btnPrimary, inputCls } from "@/components/ui/Field";
 
 /** Textarea prompt used for doubt / review / time-change / reject / fix-self notes. */
 export function NoteSheet({
@@ -29,7 +30,7 @@ export function NoteSheet({
   }, [open]);
   const disabled = busy || (required && text.trim().length === 0);
   return (
-    <Sheet open={open} onClose={onClose} title={title}>
+    <Sheet open={open} onClose={onClose} title={title} hideClose>
       <form
         className="space-y-3 px-4 pb-6 pt-3"
         onSubmit={(e) => {
@@ -38,14 +39,11 @@ export function NoteSheet({
         }}
       >
         <textarea autoFocus rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder} className={inputCls} maxLength={2000} />
-        <div className="flex justify-end gap-2">
-          <button type="button" className={btnSecondary} onClick={onClose}>
-            Cancel
-          </button>
+        <SheetButtons onClose={onClose}>
           <button type="submit" className={btnPrimary} disabled={disabled}>
             {submitLabel}
           </button>
-        </div>
+        </SheetButtons>
       </form>
     </Sheet>
   );

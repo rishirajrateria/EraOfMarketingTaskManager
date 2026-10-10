@@ -3,7 +3,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { AttendanceStatus } from "@prisma/client";
 import { Sheet } from "@/components/ui/Sheet";
-import { Field, btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
+import { Field, btnPrimary, inputCls } from "@/components/ui/Field";
+import { SheetButtons } from "@/components/ui/CloseX";
 import { useToast } from "@/components/ui/Toast";
 import { markAttendance } from "@/server/attendance/actions";
 import { STATUS_ORDER, STATUS_STYLE } from "@/components/attendance/status";
@@ -41,7 +42,7 @@ export function MarkAttendanceSheet({ target, onClose }: { target: MarkTarget | 
     });
 
   return (
-    <Sheet open onClose={onClose} title={`${target.userName} · ${target.date}`}>
+    <Sheet open onClose={onClose} title={`${target.userName} · ${target.date}`} hideClose>
       <div className="space-y-3 px-4 py-4">
         <div className="flex flex-wrap gap-2">
           {STATUS_ORDER.map((s) => (
@@ -66,14 +67,11 @@ export function MarkAttendanceSheet({ target, onClose }: { target: MarkTarget | 
         <Field label="Note">
           <input className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional" />
         </Field>
-        <div className="flex justify-end gap-2 pt-2">
-          <button className={btnSecondary} onClick={onClose} disabled={pending}>
-            Cancel
-          </button>
+        <SheetButtons onClose={onClose} disabled={pending} className="pt-2">
           <button className={btnPrimary} onClick={submit} disabled={pending}>
             Save
           </button>
-        </div>
+        </SheetButtons>
       </div>
     </Sheet>
   );

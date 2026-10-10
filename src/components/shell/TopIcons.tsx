@@ -54,15 +54,32 @@ export function TopIcons({
   requestsHref,
   requests,
   unread,
+  appsOnly = false,
 }: {
   user: { name: string; image: string | null; email?: string | null; role: string };
   /** null → no Requests icon (roles without an inbox). */
   requestsHref: string | null;
   requests: number;
   unread: number;
+  /** Task dashboard: only Gmail · Drive · WhatsApp (the rest live in its bottom nav row). */
+  appsOnly?: boolean;
 }) {
   const links = shortcutLinks(user.email);
   const cls = ico;
+  if (appsOnly)
+    return (
+      <div className="flex shrink-0 items-center gap-[2px]">
+        <a href={links.gmail} target="_blank" rel="noopener" aria-label="Open Gmail" title="Gmail" className={cls}>
+          <Mail size={18} strokeWidth={2.1} />
+        </a>
+        <a href={links.drive} target="_blank" rel="noopener" aria-label="Open Google Drive" title="Google Drive" className={cls}>
+          <DriveIcon />
+        </a>
+        <a href={links.whatsapp} target="_blank" rel="noopener" aria-label="Open WhatsApp" title="WhatsApp" className={cls}>
+          <WhatsAppIcon />
+        </a>
+      </div>
+    );
   return (
     <div className="flex shrink-0 items-center gap-[2px]">
       <a href={links.gmail} target="_blank" rel="noopener" aria-label="Open Gmail" title="Gmail" className={cls}>

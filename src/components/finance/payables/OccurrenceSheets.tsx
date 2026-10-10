@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ActionList, Sheet } from "@/components/ui/Sheet";
-import { Field, btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
+import { Field, btnPrimary, inputCls } from "@/components/ui/Field";
+import { SheetButtons } from "@/components/ui/CloseX";
 import { useAction } from "@/components/finance/useAction";
 import { billDetails, moveDueDate, sendGstPack, skipOccurrence, undoPaid } from "@/server/finance/payables";
 import { GstBlock, billFiles, gstPayload, useGstState } from "@/components/finance/payables/GstBlock";
@@ -35,15 +36,14 @@ export function OccurrenceSheet({ item, today, onClose, onMarkPaid, onBillDetail
 
   if (moving) {
     return (
-      <Sheet open onClose={onClose} title="New due date">
+      <Sheet open onClose={onClose} title="New due date" hideClose>
         <div className="space-y-3 px-4 py-4">
           <Field label="Due on">
             <input className={inputCls} type="date" value={due} onChange={(e) => setDue(e.target.value)} />
           </Field>
-          <div className="flex gap-2">
-            <button type="button" className={`${btnSecondary} flex-1`} onClick={() => setMoving(false)}>Cancel</button>
-            <button type="button" className={`${btnPrimary} flex-1`} onClick={() => run(() => moveDueDate(occ.id, due), () => { onClose(); return "Due date moved"; })}>Save</button>
-          </div>
+          <SheetButtons onClose={onClose}>
+            <button type="button" className={btnPrimary} onClick={() => run(() => moveDueDate(occ.id, due), () => { onClose(); return "Due date moved"; })}>Save</button>
+          </SheetButtons>
         </div>
       </Sheet>
     );
@@ -82,13 +82,12 @@ export function BillDetailsSheet({ item, onClose }: { item: Item; onClose: () =>
   const [gst, setGst] = useGstState(occ, bill.vendorGstin);
   const save = () => run(() => billDetails(occ.id, gstPayload(gst, occ.amount), billFiles(gst), gst.remove), () => { onClose(); return "Saved"; });
   return (
-    <Sheet open onClose={onClose} title={`Bill & GST · ${bill.payee}`}>
+    <Sheet open onClose={onClose} title={`Bill & GST · ${bill.payee}`} hideClose>
       <div className="space-y-3 px-4 py-4">
         <GstBlock s={gst} set={setGst} amount={occ.amount} onError={(m) => toast(m, "err")} />
-        <div className="flex gap-2 pt-1">
-          <button type="button" className={`${btnSecondary} flex-1`} onClick={onClose}>Cancel</button>
-          <button type="button" className={`${btnPrimary} flex-1`} disabled={pending} onClick={save}>{pending ? "Saving…" : "Save"}</button>
-        </div>
+        <SheetButtons onClose={onClose} className="pt-1">
+          <button type="button" className={btnPrimary} disabled={pending} onClick={save}>{pending ? "Saving…" : "Save"}</button>
+        </SheetButtons>
       </div>
     </Sheet>
   );
@@ -104,7 +103,7 @@ export function SendPackSheet({ month, claim, financeEmail, onClose }: { month: 
     run(() => sendGstPack(month, email.trim()), (d) => { onClose(); return `GST pack sent to ${d.to} · ${d.bills} bill${d.bills === 1 ? "" : "s"}`; });
   };
   return (
-    <Sheet open onClose={onClose} title={`Send ${monthLong(month)} GST pack`}>
+    <Sheet open onClose={onClose} title={`Send ${monthLong(month)} GST pack`} hideClose>
       <div className="space-y-3 px-4 py-4">
         <div className="glass-card px-3 py-2">
           <Kv k="Bills" v={`${files} attached${claim.length > files ? ` · ${claim.length - files} missing` : ""}`} />
@@ -114,10 +113,9 @@ export function SendPackSheet({ month, claim, financeEmail, onClose }: { month: 
         <Field label="Finance person's email" hint="Saved in Settings for next month">
           <input className={inputCls} type="email" placeholder="finance@yourca.in" value={email} onChange={(e) => setEmail(e.target.value)} />
         </Field>
-        <div className="flex gap-2">
-          <button type="button" className={`${btnSecondary} flex-1`} onClick={onClose}>Cancel</button>
-          <button type="button" className={`${btnPrimary} flex-1`} disabled={pending} onClick={send}>{pending ? "Sending…" : "Send"}</button>
-        </div>
+        <SheetButtons onClose={onClose}>
+          <button type="button" className={btnPrimary} disabled={pending} onClick={send}>{pending ? "Sending…" : "Send"}</button>
+        </SheetButtons>
       </div>
     </Sheet>
   );

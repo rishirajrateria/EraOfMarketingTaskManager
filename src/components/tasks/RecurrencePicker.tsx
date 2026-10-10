@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { clsx } from "@/lib/clsx";
 import { Sheet } from "@/components/ui/Sheet";
+import { SheetButtons } from "@/components/ui/CloseX";
 import { Field, btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
 import { GroupLabel, SegButton, Stepper } from "@/components/ui/Controls";
 import { NTH, WD, defaultRule, describeRule, ordinal, presetActive, repeatPresets, type RepeatFreq, type RepeatRule } from "@/server/tasks/repeat-rule";
@@ -46,7 +47,7 @@ export function RepeatSheet({ open, onClose, value, base, onDone, onClear, title
   const toggleDay = (d: number) => set({ days: r.days.includes(d) ? (r.days.length > 1 ? r.days.filter((x) => x !== d) : r.days) : [...new Set([...r.days, d])] });
 
   return (
-    <Sheet open={open} onClose={onClose} title={title}>
+    <Sheet open={open} onClose={onClose} title={title} hideClose>
       <div className="px-4 pb-5 pt-1 text-ink">
         <div className="recsum mb-3 mt-1" aria-live="polite">
           ⟳ {describeRule(r)}
@@ -162,7 +163,7 @@ export function RepeatSheet({ open, onClose, value, base, onDone, onClear, title
         ) : null}
         {r.ends === "UNTIL" ? <input type="date" aria-label="Repeat until" className={clsx(inputCls, "mt-2")} value={r.until} min={base} onChange={(e) => set({ until: e.target.value })} /> : null}
 
-        <div className="mt-4 flex gap-2.5">
+        <SheetButtons onClose={onClose} className="mt-4">
           {onClear ? (
             <button
               type="button"
@@ -174,14 +175,10 @@ export function RepeatSheet({ open, onClose, value, base, onDone, onClear, title
             >
               Don&apos;t repeat
             </button>
-          ) : (
-            <button type="button" className={clsx(btnSecondary, "flex-1")} onClick={onClose}>
-              Cancel
-            </button>
-          )}
+          ) : null}
           <button
             type="button"
-            className={clsx(btnPrimary, "flex-1")}
+            className={btnPrimary}
             disabled={r.ends === "UNTIL" && !r.until}
             onClick={() => {
               onClose();
@@ -190,7 +187,7 @@ export function RepeatSheet({ open, onClose, value, base, onDone, onClear, title
           >
             Done
           </button>
-        </div>
+        </SheetButtons>
       </div>
     </Sheet>
   );

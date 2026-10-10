@@ -4,11 +4,15 @@ import { CalendarDays } from "lucide-react";
 import { clsx } from "@/lib/clsx";
 import type { DashboardData, DashboardFilters } from "@/server/tasks/types";
 import { Sheet } from "@/components/ui/Sheet";
-import { btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
+import { SheetButtons } from "@/components/ui/CloseX";
+import { btnPrimary, inputCls } from "@/components/ui/Field";
 import { FilterStrip } from "@/components/dashboard/FilterStrip";
 import { AddSpeedDial } from "@/components/dashboard/AddSpeedDial";
+import { DashNavItems, NavRow } from "@/components/dashboard/NavRow";
 import { dayLabel } from "@/components/dashboard/summary";
 import { DockPill, FilterRow } from "@/components/ui/FilterRow";
+import type { FabItem } from "@/components/dashboard/fab-model";
+import type { TopBarUser } from "@/components/shell/TopBar";
 
 export type AddMode = "WORK" | "MEETING" | "CHOOSE";
 
@@ -41,7 +45,7 @@ function DaySheet({ open, filters, onPick, onClose }: { open: boolean; filters: 
     if (open) setDraft(filters.date ?? "");
   }, [open, filters.date]);
   return (
-    <Sheet open={open} onClose={onClose} title="Which day?">
+    <Sheet open={open} onClose={onClose} title="Which day?" hideClose>
       <div className="space-y-3 px-5 pb-6 pt-2">
         <div className="flex flex-wrap gap-2">
           <Opt on={!filters.date && !filters.quick} onClick={() => onPick(null, null)}>
@@ -61,38 +65,42 @@ function DaySheet({ open, filters, onPick, onClose }: { open: boolean; filters: 
           Or pick a date
           <input type="date" value={draft} onChange={(e) => setDraft(e.target.value)} className={clsx(inputCls, "mt-1 font-normal normal-case tracking-normal")} />
         </label>
-        <div className="flex justify-end gap-2">
-          <button type="button" className={btnSecondary} onClick={onClose}>
-            Cancel
-          </button>
+        <SheetButtons onClose={onClose}>
           <button type="button" className={btnPrimary} onClick={() => (draft ? onPick(null, draft) : onClose())}>
             Show
           </button>
-        </div>
+        </SheetButtons>
       </div>
     </Sheet>
   );
 }
 
 /**
- * Bottom zone (prototype `prow` / `.plab`, ADR 0015): the status strip, then neutral glass one-tap rows — TEAMS (TL:
- * PEOPLE, Exec: CLIENTS) and CLIENTS (Exec: WORK), each "All" + a pill per item — and the bar: 📅 date (Which day?),
- * Today, Tomorrow, Oldest on the left; one blue + on the right that opens the add speed dial (Task, Meeting, Admin
- * shortcuts — AddSpeedDial).
+ * Bottom zone (prototype `prow` / `.plab` / `#dashNav`, ADR 0015 + ADR 0016 addendum): the status strip, then neutral
+ * glass one-tap rows — TEAMS (TL: PEOPLE, Exec: CLIENTS) and CLIENTS (Exec: WORK) — then the time pills on their own
+ * row (📅 Which day? · Today · Tomorrow · Oldest), and last the 64px nav row: Dashboard · Requests · Notifications ·
+ * Profile (non-Admin: the last two) and the 52px blue + that opens the add speed dial (AddSpeedDial).
  */
 export function BottomBar({
   data,
   filters,
   onChange,
-  onAdd,
+  onPick,
   onPauseAll,
+  user,
+  unread,
+  openRequests,
 }: {
   data: DashboardData;
   filters: DashboardFilters;
   onChange: (f: DashboardFilters) => void;
-  onAdd: (mode: AddMode) => void;
+  /** A speed-dial item was chosen (useFabRunner). */
+  onPick: (it: FabItem) => void;
   /** Admin only: the strip's "⏸ all". */
   onPauseAll?: () => void;
+  user: TopBarUser;
+  unread: number;
+  openRequests: number;
 }) {
   const [dayOpen, setDayOpen] = useState(false);
   const names = dockNames(data.role);
@@ -104,25 +112,25 @@ export function BottomBar({
       <div className="bar-glass border-t border-hair pt-1">
         <FilterRow label={names.row1[1]} items={data.row1} value={filters.row1} onChange={setRow("row1")} />
         <FilterRow label={names.row2[1]} items={data.row2} value={filters.row2} onChange={setRow("row2")} />
-        <div className="flex h-14 items-center gap-1.5 pl-3 pr-2.5">
-          <div className="scrollbar-none flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
-            <DockPill on={!!filters.date} onClick={() => setDayOpen(true)} label="Pick a date">
-              <CalendarDays size={16} strokeWidth={2.25} aria-hidden />
-              {filters.date ? <span>{dayLabel(filters)}</span> : null}
-            </DockPill>
-            <DockPill on={filters.quick === "today"} onClick={() => quick("today")}>
-              Today
-            </DockPill>
-            <DockPill on={filters.quick === "tomorrow"} onClick={() => quick("tomorrow")}>
-              Tomorrow
-            </DockPill>
-            <DockPill on={filters.quick === "asc"} onClick={() => quick("asc")}>
-              Oldest
-            </DockPill>
-          </div>
-          <AddSpeedDial role={data.role} onAdd={onAdd} />
+        <div className="scrollbar-none flex h-14 items-center gap-1.5 overflow-x-auto px-3">
+          <DockPill on={!!filters.date} onClick={() => setDayOpen(true)} label="Pick a date">
+            <CalendarDays size={16} strokeWidth={2.25} aria-hidden />
+            {filters.date ? <span>{dayLabel(filters)}</span> : null}
+          </DockPill>
+          <DockPill on={filters.quick === "today"} onClick={() => quick("today")}>
+            Today
+          </DockPill>
+          <DockPill on={filters.quick === "tomorrow"} onClick={() => quick("tomorrow")}>
+            Tomorrow
+          </DockPill>
+          <DockPill on={filters.quick === "asc"} onClick={() => quick("asc")}>
+            Oldest
+          </DockPill>
         </div>
       </div>
+      <NavRow label="Dashboard" right={<AddSpeedDial role={data.role} onPick={onPick} />}>
+        <DashNavItems user={user} role={data.role} unread={unread} openRequests={openRequests} />
+      </NavRow>
       <DaySheet
         open={dayOpen}
         filters={filters}

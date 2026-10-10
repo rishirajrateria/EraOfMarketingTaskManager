@@ -2,8 +2,9 @@
 import { useEffect, useState } from "react";
 import type { DashboardData, TaskRow } from "@/server/tasks/types";
 import { Sheet } from "@/components/ui/Sheet";
+import { SheetButtons } from "@/components/ui/CloseX";
 import { Pill } from "@/components/ui/Pill";
-import { btnPrimary, btnSecondary } from "@/components/ui/Field";
+import { btnPrimary } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
 import { isSpecialist } from "@/components/tasks/add-task-helpers";
 import { firstName } from "@/components/dashboard/format";
@@ -53,7 +54,7 @@ export function AssignExecutiveSheet({
   const toggle = (id: string) => setPick((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
 
   return (
-    <Sheet open={open} onClose={onClose} title={`Assign · ${t.title}`}>
+    <Sheet open={open} onClose={onClose} title={`Assign · ${t.title}`} hideClose>
       <div className="space-y-3 px-4 py-4">
         <p className="text-xs text-gray-500">
           {t.preferredAssigneeIds.length ? `★ = Admin's preference · ✓ = specialist in ${work}. You decide.` : `Pick who does this task · ✓ = specialist in ${work}.`}
@@ -66,10 +67,7 @@ export function AssignExecutiveSheet({
           ))}
           {people.length ? null : <p className="text-xs text-gray-400">Nobody in this team yet · Menu → Add executive</p>}
         </div>
-        <div className="flex justify-end gap-2 pt-2">
-          <button type="button" className={btnSecondary} onClick={onClose}>
-            Cancel
-          </button>
+        <SheetButtons onClose={onClose} className="pt-2">
           <button
             type="button"
             className={btnPrimary}
@@ -81,7 +79,7 @@ export function AssignExecutiveSheet({
           >
             Assign
           </button>
-        </div>
+        </SheetButtons>
       </div>
     </Sheet>
   );

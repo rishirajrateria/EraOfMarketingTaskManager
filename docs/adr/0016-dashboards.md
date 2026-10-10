@@ -126,3 +126,20 @@ Reference: prototype `fabItems`, `openFab`, `.fabdim`, `.fabi`, `kitPicker`.
   kit first ("Create the kit" / "Kit incomplete · repair it" / "Kit ready · open it"), then "+ New client"
   (`/admin/clients?add=1`). Picking a client opens `/admin/client-kit/<id>`, whose Create kit / Repair / share / send
   buttons (ADR 0014) do the rest — no second create path.
+
+### Bottom nav rows and the "+ → ×" convention (prototype `#dashNav`, `renderAddNav`, `cancelX`)
+- Dashboard bottom: the time pills (📅 · Today · Tomorrow · Oldest) get their own full-width row; below it a 64px glass
+  nav row: Dashboard (`/admin/dashboards`) · Requests (`/admin/requests`, red count) · Notifications (`/notifications`,
+  count) · Profile (`/me`, blue-gradient initials) sharing the width, then the 52px blue + (speed dial; its backdrop
+  stops above this row). Team Leaders / Executives see Notifications and Profile only. On the dashboard only the top
+  bar shows just Gmail · Drive · WhatsApp (`TopBar appsOnly`); every other page keeps the full top bar.
+- Add-task bottom: the time pills row (📅 · Up next · Today · Tomorrow), then the 64px nav row: 44px Task / Meeting
+  type toggles (selected = 2px blue ring, `aria-pressed`; they replace the old Meet / Work buttons), Admin only a
+  scrolling strip of the speed dial's other items (Invoice · Expense · Exec · Work · Team · Leader · Kit, right-edge
+  fade) — tapping one closes the sheet and runs the item (`useFabRunner`) — and the 52px blue × in the + 's exact spot.
+- Sheet forms: one shared `CloseX` / `SheetButtons` (`src/components/ui/CloseX.tsx`): a plain "Cancel" that only closes
+  becomes the 52px blue rounded-16 × placed last, the primary action filling the rest (`[Save ————] [×]`); such sheets
+  pass `hideClose` so the title row has no second ✕. Applied to `FormFooter` (people, teams, work types, clients), the
+  kit picker, Which day?, note / assign / edit-task sheets, leave, attendance, inventory range, requests note, the
+  payables sheets and both repeat pickers. Destructive confirmations (Delete task, Delete bill, Keep / Not now) and
+  in-place cancels (new category, Drive share invite) keep their buttons.

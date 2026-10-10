@@ -93,7 +93,7 @@ export function WorkTypesManager({ workTypes, teams, openAdd = false }: { workTy
           {removed.map((w) => row(w, `off:${w.id}`))}
         </section>
       ) : null}
-      <Sheet open={open} onClose={close} title={editing ? "Edit work type" : "Add work type"}>
+      <Sheet open={open} onClose={close} title={editing ? "Edit work type" : "Add work type"} hideClose>
         {open ? (
           <WorkTypeForm
             key={editing?.id ?? "new"}

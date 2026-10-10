@@ -5,7 +5,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { ActionResult } from "@/lib/action-result";
 import { clsx } from "@/lib/clsx";
 import { useToast } from "@/components/ui/Toast";
-import { btnPrimary, btnSecondary } from "@/components/ui/Field";
+import { btnPrimary } from "@/components/ui/Field";
+import { SheetButtons } from "@/components/ui/CloseX";
 
 /** Shared client-side building blocks for the admin screens (list + "＋" FAB + Sheet form). */
 
@@ -193,19 +194,18 @@ export function ColourInput({ value, onChange }: { value: string; onChange: (v: 
   );
 }
 
-/** Sticky submit/cancel footer used inside form Sheets. */
+/**
+ * Sticky footer of the form Sheets: `[extra] [Save ————] [×]` — the blue × closes (the "+ → ×" convention, ADR 0016
+ * addendum). Open these sheets with `hideClose` so the title row has no second ✕.
+ */
 export function FormFooter({ busy, onCancel, submitLabel = "Save", extra }: { busy: boolean; onCancel: () => void; submitLabel?: string; extra?: React.ReactNode }) {
   return (
-    <div className="sticky bottom-0 flex items-center gap-2.5 px-4 py-3 backdrop-blur-xl">
+    <SheetButtons onClose={onCancel} disabled={busy} className="sticky bottom-0 px-4 py-3 backdrop-blur-xl">
       {extra}
-      <span className="flex-1" />
-      <button type="button" className={btnSecondary} onClick={onCancel} disabled={busy}>
-        Cancel
-      </button>
       <button type="submit" className={btnPrimary} disabled={busy}>
         {busy ? "Saving…" : submitLabel}
       </button>
-    </div>
+    </SheetButtons>
   );
 }
 

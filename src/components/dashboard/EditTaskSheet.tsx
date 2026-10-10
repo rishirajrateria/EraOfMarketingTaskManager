@@ -4,6 +4,7 @@ import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import type { DashboardData, TaskRow } from "@/server/tasks/types";
 import { updateTask } from "@/server/tasks/manage";
 import { Sheet } from "@/components/ui/Sheet";
+import { SheetButtons } from "@/components/ui/CloseX";
 import {
   Field,
   btnPrimary,
@@ -332,10 +333,7 @@ export function EditTaskSheet({
               />
             </Field>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" className={btnSecondary} onClick={onClose}>
-              Cancel
-            </button>
+          <SheetButtons onClose={onClose} className="pt-2">
             <button
               type="submit"
               className={btnPrimary}
@@ -348,7 +346,7 @@ export function EditTaskSheet({
             >
               Save
             </button>
-          </div>
+          </SheetButtons>
         </form>
       </Sheet>
       {meeting ? (

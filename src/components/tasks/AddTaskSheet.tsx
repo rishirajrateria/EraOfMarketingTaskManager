@@ -19,6 +19,7 @@ import { MeetingOptionsSheet } from "@/components/tasks/MeetingOptionsSheet";
 import { FindTimeSheet } from "@/components/tasks/FindTimeSheet";
 import { clientGuestFields, findTimeDay, guestCount, meetingShortcut, meetingTz, voiceNotesFor } from "@/components/tasks/meeting-helpers";
 import type { VoiceNote } from "@/components/tasks/VoiceRecorder";
+import type { FabItem } from "@/components/dashboard/fab-model";
 import {
   EMPTY_LOADS,
   allowedAssignees,
@@ -38,10 +39,11 @@ import {
   type TaskMode,
 } from "@/components/tasks/add-task-helpers";
 
-type Props = { open: boolean; mode: "WORK" | "MEETING" | "CHOOSE" | null; onClose: () => void; data: DashboardData };
+/** `onPick`: an Admin shortcut from the bottom icon strip (the sheet closes first, then the dashboard runs it). */
+type Props = { open: boolean; mode: "WORK" | "MEETING" | "CHOOSE" | null; onClose: () => void; data: DashboardData; onPick?: (it: FabItem) => void };
 
 /** Full-screen "after clicking +" sheet (SPEC §6). Creates a Work task or a Meeting via `createTask`. */
-export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: Props): JSX.Element | null {
+export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data, onPick }: Props): JSX.Element | null {
   const toast = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -75,7 +77,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
   // Reset everything each time the sheet opens (or the entry mode changes while open).
   useEffect(() => {
     if (!open) return;
-    // The "+" speed dial: Task opens a task, Meeting opens a meeting. Meet / Work in the bottom bar switch later.
+    // The "+" speed dial: Task opens a task, Meeting opens a meeting; the bottom Task / Meeting toggles switch later.
     const type: TaskMode = mode === "MEETING" ? "MEETING" : "WORK";
     setChosen(type);
     setForm(emptyForm(type, data.me.id, data.role));
@@ -245,6 +247,14 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
             onShortcut={setShortcut}
             onType={choose}
             onOpenSchedule={() => setScheduleOpen(true)}
+            role={data.role}
+            onPick={
+              onPick &&
+              ((it) => {
+                close();
+                onPick(it);
+              })
+            }
             onClose={close}
           />
         </div>

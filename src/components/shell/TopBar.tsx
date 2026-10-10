@@ -1,9 +1,8 @@
 "use client";
-import { useEffect, useState } from "react";
 import { Menu } from "lucide-react";
 import type { Role } from "@prisma/client";
 import { menuStore } from "@/components/shell/menu-store";
-import { useLiveEvents } from "@/components/shell/useLiveEvents";
+import { useLiveBadges } from "@/components/shell/useLiveBadges";
 import { TopIcons } from "@/components/shell/TopIcons";
 
 export type TopBarUser = { id: string; name: string; image: string | null; email?: string | null; role: Role };
@@ -11,17 +10,11 @@ export type TopBarUser = { id: string; name: string; image: string | null; email
 /**
  * The one top bar of every screen (ADR 0016, prototype `refreshTop` / `.topbar`): ☰ (Admin) | Gmail · Drive · WhatsApp |
  * Dashboards (Admin) · Requests (Admin; HR → leave inbox) · Notifications · avatar. Badges follow live events.
- * The task dashboard draws it inside its cyan summary; other pages get it in a cyan band above their title row.
+ * The task dashboard draws it inside its cyan summary with `appsOnly` — its bottom nav row carries Dashboard ·
+ * Requests · Notifications · Profile instead; other pages get the full bar in a cyan band above their title row.
  */
-export function TopBar({ user, unread, openRequests }: { user: TopBarUser; unread: number; openRequests: number }) {
-  const [badge, setBadge] = useState(unread);
-  const [reqBadge, setReqBadge] = useState(openRequests);
-  useEffect(() => setBadge(unread), [unread]);
-  useEffect(() => setReqBadge(openRequests), [openRequests]);
-  useLiveEvents((e) => {
-    if (e.type === "notification" && e.userId === user.id) setBadge((b) => b + 1);
-    if (e.type === "requests.changed") setReqBadge((b) => b + 1);
-  });
+export function TopBar({ user, unread, openRequests, appsOnly = false }: { user: TopBarUser; unread: number; openRequests: number; appsOnly?: boolean }) {
+  const badges = useLiveBadges(user.id, unread, openRequests);
   const requestsHref = user.role === "ADMIN" ? "/admin/requests" : user.role === "HR" ? "/requests/leave" : null;
   return (
     <div className="flex h-9 items-center justify-between gap-1">
@@ -32,7 +25,7 @@ export function TopBar({ user, unread, openRequests }: { user: TopBarUser; unrea
       ) : (
         <span />
       )}
-      <TopIcons user={user} requestsHref={requestsHref} requests={reqBadge} unread={badge} />
+      <TopIcons user={user} requestsHref={requestsHref} requests={badges.requests} unread={badges.unread} appsOnly={appsOnly} />
     </div>
   );
 }

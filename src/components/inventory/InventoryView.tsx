@@ -4,7 +4,8 @@ import { useState } from "react";
 import { CalendarRange } from "lucide-react";
 import type { HourlyBreakdown, InventoryResult } from "@/server/inventory/queries";
 import { INVENTORY_VIEWS, shiftRange, stripGranularity, type InventoryView } from "@/server/inventory/ranges";
-import { Field, btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
+import { Field, btnPrimary, inputCls } from "@/components/ui/Field";
+import { SheetButtons } from "@/components/ui/CloseX";
 import { Sheet } from "@/components/ui/Sheet";
 import { BarChip, BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
 import { PeriodNav, Screen } from "@/components/admin/AdminUi";
@@ -122,7 +123,7 @@ export function InventoryPanel({
           <InventoryTable inv={inv} />
         </>
       )}
-      <Sheet open={rangeSheet} onClose={() => setRangeSheet(false)} title="Custom range">
+      <Sheet open={rangeSheet} onClose={() => setRangeSheet(false)} title="Custom range" hideClose>
         <form
           className="space-y-3 px-4 py-4"
           onSubmit={(e) => {
@@ -139,14 +140,11 @@ export function InventoryPanel({
               <input type="date" className={inputCls} value={cTo} min={cFrom} onChange={(e) => setCTo(e.target.value)} aria-label="To" />
             </Field>
           </div>
-          <div className="flex justify-end gap-2">
-            <button type="button" className={btnSecondary} onClick={() => setRangeSheet(false)}>
-              Cancel
-            </button>
+          <SheetButtons onClose={() => setRangeSheet(false)}>
             <button type="submit" className={btnPrimary}>
               Go
             </button>
-          </div>
+          </SheetButtons>
         </form>
       </Sheet>
     </Screen>

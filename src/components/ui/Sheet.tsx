@@ -15,12 +15,15 @@ export function Sheet({
   children,
   full,
   title,
+  hideClose,
 }: {
   open: boolean;
   onClose: () => void;
   children: React.ReactNode;
   full?: boolean;
   title?: string;
+  /** The sheet ends with the blue × (`SheetButtons`), so the title row drops its own ✕. Escape / backdrop still close. */
+  hideClose?: boolean;
 }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -44,9 +47,11 @@ export function Sheet({
         {title ? (
           <div className={clsx("flex items-center justify-between gap-2 px-4", full ? "sticky top-0 z-10 border-b border-hair bg-sheet pb-3 pt-3 backdrop-blur-md" : "-mt-1 pb-2")}>
             <h2 className="text-[18px] font-bold tracking-[-.015em]">{title}</h2>
-            <button className="touch-target -mr-2 text-muted" onClick={onClose} aria-label="Close">
-              ✕
-            </button>
+            {hideClose ? null : (
+              <button className="touch-target -mr-2 text-muted" onClick={onClose} aria-label="Close">
+                ✕
+              </button>
+            )}
           </div>
         ) : null}
         {children}

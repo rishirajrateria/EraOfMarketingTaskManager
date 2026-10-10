@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { NEW_CLIENT_HREF, fabMenu, fabOrder, kitHint, kitHref, sortKitClients } from "@/components/dashboard/fab-model";
+import { NEW_CLIENT_HREF, dashNavItems, fabMenu, fabOrder, kitHint, kitHref, sortKitClients } from "@/components/dashboard/fab-model";
 
 /** Dashboard "+" speed dial (ADR 0016 addendum): order bottom → top, role filtering, links. */
 const keys = (role: Parameters<typeof fabMenu>[0]) => fabOrder(fabMenu(role)).map((i) => i.key);
@@ -40,9 +40,28 @@ describe("fab menu model", () => {
     });
   });
 
+  it("gives the add-task strip its short labels (prototype renderAddNav)", () => {
+    expect(fabMenu("ADMIN").more.map((i) => i.short)).toEqual(["Invoice", "Expense", "Exec", "Work", "Team", "Leader", "Kit"]);
+  });
+
   it("colours by category: money green, team yellow, client blue", () => {
     const tone = Object.fromEntries(fabOrder(fabMenu("ADMIN")).map((i) => [i.key, i.tone]));
     expect(tone).toMatchObject({ TASK: "task", MEETING: "meet", INVOICE: "money", EXPENSE: "money", EXECUTIVE: "team", WORK_TYPE: "team", TEAM: "team", TEAM_LEADER: "team", KIT: "client" });
+  });
+});
+
+describe("dashboard nav row", () => {
+  it("Admin: Dashboard · Requests · Notifications · Profile with their links", () => {
+    expect(dashNavItems("ADMIN").map((i) => [i.label, i.href])).toEqual([
+      ["Dashboard", "/admin/dashboards"],
+      ["Requests", "/admin/requests"],
+      ["Notifications", "/notifications"],
+      ["Profile", "/me"],
+    ]);
+  });
+
+  it("Team Leaders and Executives: Notifications and Profile only", () => {
+    for (const role of ["TEAM_LEADER", "EXECUTIVE"] as const) expect(dashNavItems(role).map((i) => i.key)).toEqual(["NOTIFICATIONS", "PROFILE"]);
   });
 });
 

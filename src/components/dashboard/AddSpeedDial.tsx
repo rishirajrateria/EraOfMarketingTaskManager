@@ -1,22 +1,13 @@
 "use client";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { clsx } from "@/lib/clsx";
 import type { DashboardData } from "@/server/tasks/types";
+import { blueSquare } from "@/components/ui/CloseX";
 import { MeetIcon } from "@/components/dashboard/GoogleIcons";
-import { KitPickerSheet } from "@/components/dashboard/KitPickerSheet";
-import { fabMenu, fabOrder, type FabItem, type FabTone } from "@/components/dashboard/fab-model";
+import { FAB_TONE, fabMenu, fabOrder, type FabItem } from "@/components/dashboard/fab-model";
 
-/** Icon squares — same category colours as the Admin menu tiles (money green, team yellow, clients blue). */
-const TONE: Record<FabTone, string> = {
-  task: "bg-[linear-gradient(150deg,#3b82f6,#1d4ed8)] text-white",
-  meet: "border border-hair bg-white",
-  money: "bg-[linear-gradient(150deg,#34d399,#059669)] text-white",
-  team: "bg-[linear-gradient(150deg,#fcd34d,#f59e0b)] text-[#3b2a00]",
-  client: "bg-[linear-gradient(150deg,#60a5fa,#2563eb)] text-white",
-};
 const STAGGER_MS = 18;
 const MENU_ID = "fab-menu";
 
@@ -37,7 +28,7 @@ function FabRow({ it, index, onPick }: { it: FabItem; index: number; onPick: (it
         className={clsx(
           "flex shrink-0 items-center justify-center shadow-[0_6px_16px_-8px_rgba(0,0,0,.5)] group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-[#3b82f6] group-focus-visible:outline-solid",
           it.main ? "h-[50px] w-[50px] rounded-2xl" : "h-11 w-11 rounded-[14px]",
-          TONE[it.tone],
+          FAB_TONE[it.tone],
         )}
       >
         {Icon ? <Icon size={it.main ? 22 : 20} strokeWidth={2.25} /> : <MeetIcon size={26} />}
@@ -47,15 +38,13 @@ function FabRow({ it, index, onPick }: { it: FabItem; index: number; onPick: (it
 }
 
 /**
- * The bar's single blue "+" (prototype `#addChoose` + `.fabdim`): tapping it rotates the + into × and opens a speed
- * dial stacked upward — Task nearest the thumb, Meeting, then (Admin) the create shortcuts above a thin separator.
- * The dimmed backdrop covers everything above the bar so the × stays tappable. Close on ×, backdrop, Escape (focus
- * back to +) or after choosing. Portalled to <body> and centred like `.phone-frame` (max 480px).
+ * The dashboard's 52px blue "+" (prototype `#addChoose` + `.fabdim`): tapping it rotates the + into × and opens a
+ * speed dial stacked upward — Task nearest the thumb, Meeting, then (Admin) the create shortcuts above a thin
+ * separator. The dimmed backdrop covers everything above the 64px nav row so the × stays tappable. Close on ×,
+ * backdrop, Escape (focus back to +) or after choosing. Portalled to <body> and centred like `.phone-frame`.
  */
-export function AddSpeedDial({ role, onAdd }: { role: DashboardData["role"]; onAdd: (mode: "WORK" | "MEETING") => void }) {
-  const router = useRouter();
+export function AddSpeedDial({ role, onPick }: { role: DashboardData["role"]; onPick: (it: FabItem) => void }) {
   const [open, setOpen] = useState(false);
-  const [kitOpen, setKitOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const dimRef = useRef<HTMLDivElement>(null);
@@ -78,7 +67,7 @@ export function AddSpeedDial({ role, onAdd }: { role: DashboardData["role"]; onA
       e.preventDefault();
       close(true);
     };
-    // A tap on the bar outside the + (date pills, …) also closes the menu, as in the prototype.
+    // A tap on the bottom rows outside the + (date pills, nav icons…) also closes the menu, as in the prototype.
     const onDown = (e: PointerEvent) => {
       const t = e.target as Node;
       if (!dimRef.current?.contains(t) && !btnRef.current?.contains(t)) close();
@@ -93,10 +82,7 @@ export function AddSpeedDial({ role, onAdd }: { role: DashboardData["role"]; onA
 
   const pick = (it: FabItem) => {
     close();
-    const a = it.action;
-    if (a.kind === "add") onAdd(a.mode);
-    else if (a.kind === "href") router.push(a.href);
-    else setKitOpen(true);
+    onPick(it);
   };
 
   /** Arrow keys walk the stack: Up = the item visually above (next in DOM order). */
@@ -125,16 +111,16 @@ export function AddSpeedDial({ role, onAdd }: { role: DashboardData["role"]; onA
         aria-expanded={open}
         aria-controls={open ? MENU_ID : undefined}
         onClick={() => (open ? close() : setOpen(true))}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-gradient-to-br from-[#3b82f6] to-[#1d4ed8] text-white shadow-[0_6px_16px_-6px_rgba(37,99,235,.7)]"
+        className={blueSquare}
       >
-        <Plus size={24} strokeWidth={2.75} aria-hidden className={clsx("fab-plus", open && "rotate-45")} />
+        <Plus size={26} strokeWidth={2.75} aria-hidden className={clsx("fab-plus", open && "rotate-45")} />
       </button>
       {open && mounted
         ? createPortal(
             <div
               ref={dimRef}
               onClick={onBackdrop}
-              className="fixed inset-x-0 top-0 bottom-[calc(56px+env(safe-area-inset-bottom))] z-40 mx-auto flex w-full max-w-[480px] flex-col items-end justify-end bg-[rgba(2,12,24,.42)] px-2.5 pb-2.5 backdrop-blur-[3px]"
+              className="fixed inset-x-0 top-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-40 mx-auto flex w-full max-w-[480px] flex-col items-end justify-end bg-[rgba(2,12,24,.42)] px-2.5 pb-2.5 backdrop-blur-[3px]"
             >
               <div
                 ref={menuRef}
@@ -156,7 +142,6 @@ export function AddSpeedDial({ role, onAdd }: { role: DashboardData["role"]; onA
             document.body,
           )
         : null}
-      {role === "ADMIN" ? <KitPickerSheet open={kitOpen} onClose={() => setKitOpen(false)} /> : null}
     </>
   );
 }

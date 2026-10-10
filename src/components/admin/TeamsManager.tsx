@@ -60,7 +60,7 @@ export function TeamsManager({ teams, leaders, openAdd = false }: { teams: TeamR
           }}
         />
       ))}
-      <Sheet open={open} onClose={close} title={editing ? "Edit designation" : "Add designation"}>
+      <Sheet open={open} onClose={close} title={editing ? "Edit designation" : "Add designation"} hideClose>
         {open ? (
           <TeamForm key={editing?.id ?? "new"} team={editing} leaders={leaders} busy={busy} onSubmit={submit} onCancel={close} onToggle={editing ? () => toggle(editing) : undefined} />
         ) : null}

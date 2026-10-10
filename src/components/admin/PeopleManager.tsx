@@ -128,7 +128,7 @@ export function PeopleManager({
         );
       })}
 
-      <Sheet open={open} onClose={close} title={editing ? "Edit person" : (TITLE[initialRole] ?? "Add person")}>
+      <Sheet open={open} onClose={close} title={editing ? "Edit person" : (TITLE[initialRole] ?? "Add person")} hideClose>
         {open ? (
           <>
             <PeopleForm

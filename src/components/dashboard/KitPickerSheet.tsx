@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sheet } from "@/components/ui/Sheet";
+import { SheetButtons } from "@/components/ui/CloseX";
 import { kitPickerClients } from "@/server/shell/kit-picker";
 import { NEW_CLIENT_HREF, kitHint, kitHref, sortKitClients, type KitPickerClient } from "@/components/dashboard/fab-model";
 
@@ -36,9 +37,9 @@ export function KitPickerSheet({ open, onClose }: { open: boolean; onClose: () =
   };
 
   return (
-    <Sheet open={open} onClose={onClose} title="New client kit">
+    <Sheet open={open} onClose={onClose} title="New client kit" hideClose>
       <p className="px-4 pb-2 text-[13px] leading-snug text-muted">Pick the client. The kit makes their Drive folders and a credentials sheet.</p>
-      <ul className="flex flex-col gap-2 px-4 pb-4">
+      <ul className="flex flex-col gap-2 px-4 pb-3">
         {error ? <li className="py-3 text-[13px] text-red-600 dark:text-red-400">{error}</li> : null}
         {!clients && !error ? <li className="py-3 text-[13px] text-muted">Loading clients…</li> : null}
         {clients?.map((c) => (
@@ -56,6 +57,7 @@ export function KitPickerSheet({ open, onClose }: { open: boolean; onClose: () =
           </button>
         </li>
       </ul>
+      <SheetButtons onClose={onClose} className="px-4 pb-4" />
     </Sheet>
   );
 }

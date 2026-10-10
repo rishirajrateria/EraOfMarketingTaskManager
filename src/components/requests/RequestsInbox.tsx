@@ -11,7 +11,8 @@ import { resolveRequest } from "@/server/requests/actions";
 import { dashHref, viewForTab, type RequestTab } from "@/server/dashboards/params";
 import { useToast } from "@/components/ui/Toast";
 import { Sheet } from "@/components/ui/Sheet";
-import { btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
+import { btnPrimary, inputCls } from "@/components/ui/Field";
+import { SheetButtons } from "@/components/ui/CloseX";
 import { FilterRow } from "@/components/ui/FilterRow";
 import { Screen } from "@/components/admin/AdminUi";
 import { FinanceRow, RequestHead } from "@/components/requests/RequestCard";
@@ -200,13 +201,10 @@ export function RequestsInbox({ inbox, tab, fin, showAll, tz }: { inbox: Request
           </div>
         ) : null}
       </div>
-      <Sheet open={!!note} onClose={() => setNote(null)} title={note?.action === "reject" ? "Reject finish" : "Resolve doubt"}>
+      <Sheet open={!!note} onClose={() => setNote(null)} title={note?.action === "reject" ? "Reject finish" : "Resolve doubt"} hideClose>
         <div className="space-y-3 p-4">
           <textarea className={inputCls} rows={3} placeholder="Note to the team" value={text} onChange={(e) => setText(e.target.value)} />
-          <div className="flex justify-end gap-2">
-            <button type="button" className={btnSecondary} onClick={() => setNote(null)}>
-              Cancel
-            </button>
+          <SheetButtons onClose={() => setNote(null)}>
             <button
               type="button"
               disabled={pending}
@@ -215,7 +213,7 @@ export function RequestsInbox({ inbox, tab, fin, showAll, tz }: { inbox: Request
             >
               Confirm
             </button>
-          </div>
+          </SheetButtons>
         </div>
       </Sheet>
     </Screen>
