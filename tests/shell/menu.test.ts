@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { resetDb, seedBasics, testDb } from "../helpers/db";
 import { mockSession } from "../helpers/mock-session";
-import { menuSections } from "@/components/shell/MenuTray";
+import { filterSections, menuSections, QUICK_ACTIONS } from "@/components/shell/menu-model";
+import type { MenuCounts } from "@/server/shell/menu";
 
-/** ADR 0011: the Admin menu shows live counts; only Admin can read them. */
+/** ADR 0011 (v3 tiles): the Admin menu shows live counts as tile badges; only Admin can read them. */
 const session = mockSession();
 let seed: Awaited<ReturnType<typeof seedBasics>>;
 const DAY = 86_400_000;
+const labels = (s: ReturnType<typeof menuSections>) => s.flatMap((x) => x.items.map((i) => i.label));
 
 describe("admin menu counts", () => {
   beforeEach(async () => {
@@ -42,14 +44,14 @@ describe("admin menu counts", () => {
     expect(r.data.unread).toBe(1);
     expect(r.data.teams).toEqual(["Graphic"]);
 
-    // ADR 0016: the Finance dashboard row's red badge = approvals + overdue bills
-    const dash = menuSections(r.data).find((s) => s.title === "Dashboards")!;
-    expect(dash.items.find((i) => i.label === "Finance dashboard")!.badge).toEqual({ n: 2, tone: "red" });
+    // ADR 0016: the Finance tile's red badge = approvals + overdue bills
+    const money = menuSections(r.data).find((s) => s.title === "Money")!;
+    expect(money.items.find((i) => i.label === "Finance")!.badge).toEqual({ n: 2, tone: "red" });
   });
 
-  it("ADR 0016: a Dashboards section (Finance · HR · Task · Drive folders) says what needs attention", async () => {
+  it("ADR 0016: Finance / HR / Tasks tiles carry what needs attention in their title and badge", async () => {
     const { menuCounts } = await import("@/server/shell/menu");
-    const { financeSub, hrSub, taskSub } = await import("@/components/shell/MenuTray");
+    const { financeSub, hrSub, taskSub } = await import("@/components/shell/menu-model");
     const inv = (n: string, status: string, total: number, due: number) =>
       testDb.invoice.create({ data: { number: n, clientId: seed.client.id, docType: "TAX_INVOICE", status, subtotal: total, gstAmount: 0, total, gstPercent: 0, approvedAt: new Date(), dueDate: new Date(Date.now() + due * DAY) } as never });
     await inv("EOM/26-27/0001", "SENT", 400000, -3);
@@ -71,18 +73,11 @@ describe("admin menu counts", () => {
     if (!r.ok) return;
     expect(r.data).toMatchObject({ invoicesToApprove: 1, outstanding: 422400, attendanceMarkedToday: true, presentToday: 1, onLeaveToday: 1, tasksOpen: 3, tasksLate: 1 });
     const sections = menuSections(r.data);
-    expect(sections.map((s) => s.title)).toEqual(["Dashboards", "Clients", "Team", "Account"]);
-    const dash = sections[0];
-    expect(dash.items.map((i) => [i.label, i.href])).toEqual([
-      ["Finance dashboard", "/admin/dashboards?view=FIN"],
-      ["HR dashboard", "/admin/dashboards?view=HR"],
-      ["Task dashboard", "/admin/dashboards?view=TASK"],
-      ["Monthly Drive folders", "/admin/drive-folders"],
-    ]);
-    expect(dash.items[0].sub).toBe("1 to approve · ₹4.2L outstanding");
+    const item = (label: string) => sections.flatMap((s) => s.items).find((i) => i.label === label)!;
+    expect(item("Finance")).toMatchObject({ href: "/admin/dashboards?view=FIN", sub: "1 to approve · ₹4.2L outstanding" });
     expect(financeSub({ ...r.data, invoicesToApprove: 0 })).toBe("₹4,22,400 outstanding");
-    expect(dash.items[1].sub).toBe("1 present · 1 on leave today");
-    expect(dash.items[2]).toMatchObject({ sub: "3 open · 1 late to start", badge: { n: 1, tone: "amber" } });
+    expect(item("HR")).toMatchObject({ href: "/admin/dashboards?view=HR", sub: "1 present · 1 on leave today" });
+    expect(item("Tasks")).toMatchObject({ href: "/admin/dashboards?view=TASK", sub: "3 open · 1 late to start", badge: { n: 1, tone: "amber" } });
     expect(financeSub({ ...r.data, invoicesToApprove: 0, outstanding: 0 })).toBe("Income, expense, invoices, bills");
     expect(hrSub({ ...r.data, attendanceMarkedToday: false })).toBe("Attendance, inventory, leave");
     expect(taskSub({ ...r.data, tasksLate: 0 })).toBe("3 open");
@@ -90,13 +85,90 @@ describe("admin menu counts", () => {
     for (const gone of ["/admin/invoices", "/admin/payments", "/admin/expenses", "/attendance", "/admin/inventory", "/admin/finance"]) expect(hrefs).not.toContain(gone);
   });
 
-  it("ADR 0014: Clients has one Client kit row; Attendance + Inventory have their own section and colour", async () => {
-    const { kitSub } = await import("@/components/shell/MenuTray");
+  it("v3 tiles: four colour groups in order — Money, Clients, Team, Other", () => {
     const sections = menuSections(null);
-    const byTitle = (t: string) => sections.find((s) => s.title === t)!;
-    expect(sections.map((s) => s.title)).toEqual(["Dashboards", "Clients", "Team", "Account"]);
-    expect(byTitle("Clients").items.map((i) => i.label)).toEqual(["Clients", "Client kit", "Shared drive links"]);
-    expect(byTitle("Team").items.map((i) => i.label)).toEqual(["Executives", "Team leaders", "Teams", "Work types"]);
+    expect(sections.map((s) => [s.title, s.tone])).toEqual([
+      ["Money", "money"],
+      ["Clients", "client"],
+      ["Team", "team"],
+      ["Other", "other"],
+    ]);
+    expect(sections.map((s) => s.items.map((i) => [i.label, i.href]))).toEqual([
+      [
+        ["Finance", "/admin/dashboards?view=FIN"],
+        ["Drive folders", "/admin/drive-folders"],
+      ],
+      [
+        ["Clients", "/admin/clients"],
+        ["Client kit", "/admin/client-kit"],
+        ["Shared links", "/admin/vault?tab=SHARED_DRIVE_LINK"],
+      ],
+      [
+        ["HR", "/admin/dashboards?view=HR"],
+        ["Tasks", "/admin/dashboards?view=TASK"],
+        ["Executives", "/admin/people?role=EXECUTIVE"],
+        ["Team leaders", "/admin/people?role=TEAM_LEADER"],
+        ["Teams", "/admin/teams"],
+        ["Work types", "/admin/work-types"],
+      ],
+      [
+        ["Requests", "/admin/requests"],
+        ["Notifications", "/notifications"],
+        ["Settings", "/admin/settings"],
+        ["Sign out", "/api/auth/signout"],
+      ],
+    ]);
+    // only Sign out is red; every other tile keeps its old subtitle for its title / aria-label and search
+    const items = sections.flatMap((s) => s.items);
+    expect(items.filter((i) => i.danger).map((i) => i.label)).toEqual(["Sign out"]);
+    expect(items.filter((i) => !i.danger && !i.sub)).toEqual([]);
+    expect(items.find((i) => i.label === "Drive folders")!.sub).toMatch(/^Monthly Drive folders/);
+  });
+
+  it("v3 tiles: badges — red for money and requests, amber for client kit and late tasks, soft for unread", () => {
+    const c: MenuCounts = {
+      invoicesToApprove: 2, outstanding: 0, invoicesOverdue: 0, billsOverdue: 1, billsDueWeek: 0, gstToClaimMonth: 0, clients: 5, clientsWithKit: 3,
+      credentials: 0, executives: 4, teams: ["Graphic"], workTypes: 3, requestsOpen: 6, unread: 7, company: "EOM", attendanceMarkedToday: false,
+      presentToday: 0, onLeaveToday: 0, tasksOpen: 9, tasksLate: 4,
+    };
+    const badges = Object.fromEntries(menuSections(c).flatMap((s) => s.items).filter((i) => i.badge).map((i) => [i.label, i.badge]));
+    expect(badges).toEqual({
+      Finance: { n: 3, tone: "red" },
+      "Client kit": { n: 2, tone: "amber" },
+      Tasks: { n: 4, tone: "amber" },
+      Requests: { n: 6, tone: "red" },
+      Notifications: { n: 7, tone: "soft" },
+    });
+    const calm = { ...c, invoicesToApprove: 0, billsOverdue: 0, clientsWithKit: 5, tasksLate: 0, requestsOpen: 0, unread: 0 };
+    expect(menuSections(calm).flatMap((s) => s.items).filter((i) => i.badge)).toEqual([]);
+    expect(menuSections(null).flatMap((s) => s.items).filter((i) => i.badge)).toEqual([]);
+  });
+
+  it("v3 tiles: search filters tiles by label, old subtitle and section", () => {
+    const all = menuSections(null);
+    expect(filterSections(all, "  ")).toBe(all);
+    expect(labels(filterSections(all, "kit"))).toEqual(["Client kit"]);
+    // "GST pack" lives only in the Drive folders subtitle, "attendance" only in HR's
+    expect(labels(filterSections(all, "gst pack"))).toEqual(["Drive folders"]);
+    expect(labels(filterSections(all, "ATTENDANCE"))).toEqual(["HR"]);
+    // the section name matches every tile in it
+    const money = filterSections(all, "money");
+    expect(money.map((s) => s.title)).toEqual(["Money"]);
+    expect(labels(money)).toEqual(["Finance", "Drive folders"]);
+    expect(filterSections(all, "zzz")).toEqual([]);
+  });
+
+  it("quick actions: New invoice, Add expense, Approvals (no New task / Add)", () => {
+    expect(QUICK_ACTIONS.map((a) => [a.label, a.href, a.tone])).toEqual([
+      ["New invoice", "/admin/invoices?new=1", "money"],
+      ["Add expense", "/admin/expenses/new", "money"],
+      ["Approvals", "/admin/requests?tab=FIN&fin=APPR", "red"],
+    ]);
+  });
+
+  it("ADR 0014: Clients has one Client kit tile with the kit status as its title", async () => {
+    const { kitSub } = await import("@/components/shell/menu-model");
+    const sections = menuSections(null);
     const hrefs = sections.flatMap((s) => s.items.map((i) => i.href));
     expect(hrefs).not.toContain("/admin/vault?tab=CREDENTIAL");
     expect(hrefs).not.toContain("/admin/vault?tab=ASSET_DRIVE_LINK");
@@ -110,12 +182,13 @@ describe("admin menu counts", () => {
     expect(r.ok && r.data.clientsWithKit).toBe(1);
     if (!r.ok) return;
     expect(kitSub(r.data)).toBe("1 of 2 clients have a kit · 1 saved login");
-    expect(menuSections(r.data).find((s) => s.title === "Clients")!.items[1].sub).toBe("1 of 2 clients have a kit · 1 saved login");
+    const kit = menuSections(r.data).find((s) => s.title === "Clients")!.items[1];
+    expect(kit).toMatchObject({ label: "Client kit", sub: "1 of 2 clients have a kit · 1 saved login", badge: { n: 1, tone: "amber" } });
   });
 
   it("ADR 0016: Requests opens the one inbox; top-bar shortcuts", async () => {
-    const account = menuSections(null).find((s) => s.title === "Account")!;
-    expect(account.items.find((i) => i.label === "Requests")!.href).toBe("/admin/requests");
+    const other = menuSections(null).find((s) => s.title === "Other")!;
+    expect(other.items.find((i) => i.label === "Requests")!.href).toBe("/admin/requests");
     const { shortcutLinks } = await import("@/components/shell/TopIcons");
     expect(shortcutLinks("rishi@eom.in")).toEqual({
       gmail: "https://mail.google.com/mail/?authuser=rishi%40eom.in",

@@ -7,11 +7,11 @@ import { PeopleManager } from "@/components/admin/PeopleManager";
 
 const ROLES: readonly Role[] = ASSIGNABLE_ROLES;
 
-/** Add Executive / Add Team Leader / HR (SPEC §4, §11.7). CA access is parked (ADR 0004). */
-export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ role?: string; edit?: string }> }) {
+/** Add Executive / Add Team Leader / HR (SPEC §4, §11.7). CA access is parked (ADR 0004). `?add=1` opens the invite form. */
+export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ role?: string; edit?: string; add?: string }> }) {
   const me = await requireAdminPage();
-  const { role, edit } = await searchParams;
+  const { role, edit, add } = await searchParams;
   const initialRole: Role = ROLES.includes(role as Role) ? (role as Role) : "EXECUTIVE";
   const [users, teams, leaders, workTypes] = await Promise.all([listPeople(), listTeamOptions(), listLeaderOptions(), listWorkTypeOptions()]);
-  return <PeopleManager users={users} teams={teams} leaders={leaders} workTypes={workTypes} initialRole={initialRole} workspaceDomain={env.workspaceDomain} meId={me.id} editId={edit ?? null} />;
+  return <PeopleManager users={users} teams={teams} leaders={leaders} workTypes={workTypes} initialRole={initialRole} workspaceDomain={env.workspaceDomain} meId={me.id} editId={edit ?? null} openAdd={add === "1"} />;
 }

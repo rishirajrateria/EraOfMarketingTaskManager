@@ -10,7 +10,7 @@ import { toDbDate } from "@/server/inventory/compute";
 import { APPROVED_LEAVE } from "@/server/leave/queries";
 import { unreadNotificationCount } from "@/server/notification-feed";
 
-/** Live numbers shown on the Admin menu rows (ADR 0011). Cheap counts only; read when the menu opens. */
+/** Live numbers behind the Admin menu tiles (ADR 0011 v3: badges + tile titles). Cheap counts only; read when the menu opens. */
 export type MenuCounts = {
   invoicesToApprove: number;
   outstanding: number;

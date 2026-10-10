@@ -14,10 +14,10 @@ type Values = { name: string; teamIds: string[] };
  * /admin/work-types — "Add Work" (SPEC §11.8, ADR 0008). Each work type belongs to one or more teams; in Add task,
  * picking a team shows only its work types. Listed grouped by team (a work type in several teams appears under each).
  */
-export function WorkTypesManager({ workTypes, teams }: { workTypes: WorkTypeRow[]; teams: TeamOption[] }) {
+export function WorkTypesManager({ workTypes, teams, openAdd = false }: { workTypes: WorkTypeRow[]; teams: TeamOption[]; openAdd?: boolean }) {
   const { busy, run } = useAdminAction();
   const [editing, setEditing] = useState<WorkTypeRow | null>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(openAdd); // `?add=1` opens the add form on load
   const close = () => {
     setOpen(false);
     setEditing(null);
