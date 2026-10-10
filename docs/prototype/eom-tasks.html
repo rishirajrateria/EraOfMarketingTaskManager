@@ -617,6 +617,14 @@ select.in{padding-right:10px}
 .pill.rv{box-shadow:inset 0 0 0 1.5px rgba(239,68,68,.75)}
 .rvdot{position:absolute;top:-4px;right:-4px;width:10px;height:10px;border-radius:999px;background:#ef4444;box-shadow:0 0 0 2px var(--bg)}
 .row .circle{flex-shrink:0;width:32px;height:32px}
+/* dashboard summary in the add-task capacity style */
+.sumsec{display:flex;flex-direction:column;gap:6px}
+.sumsec+.sumsec{margin-top:10px}
+.sumstrip{display:grid;grid-auto-flow:column;grid-auto-columns:calc((100% - 12px)/3);gap:6px;overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity}
+.sumstrip::-webkit-scrollbar{display:none}
+.sumc{border:0;font:inherit;text-align:left;cursor:pointer;scroll-snap-align:start}
+.sumc .capl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:none;letter-spacing:0;font-size:12.5px;font-weight:700;opacity:.95}
+.sumc.on{background:rgba(255,255,255,.85);color:#06303d;box-shadow:inset 0 0 0 2px var(--z1ring)}
 </style><div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
@@ -843,7 +851,7 @@ const role=()=>me()?me().role:null;
 const userById=id=>S.users.find(u=>u.id===id);
 const clientById=id=>S.clients.find(c=>c.id===id);
 const first=n=>n.split(" ")[0];
-const fmtMin=m=>{const h=Math.floor(m/60),mm=m%60;return mm?`${h}h ${mm}m`:`${h} Hours`.replace("1 Hours","1 Hour");};
+const fmtMin=m=>{const h=Math.floor(m/60),mm=m%60;if(!h)return `${mm}m`;return mm?`${h}h ${mm}m`:`${h} Hours`.replace("1 Hours","1 Hour");};
 const shortLabel=l=>{const w=l.trim().split(/\s+/)[0]||"";return w.length>6?w.slice(0,5):w;};
 const pillHours=m=>{const h=Math.round(m/60*10)/10;return Number.isInteger(h)?String(h):h.toFixed(1);};
 const fmtH=m=>{const h=m/60;return (Number.isInteger(h)?h:h.toFixed(1))+" Hours";};
@@ -900,14 +908,14 @@ function tog(arr,k){return arr.includes(k)?arr.filter(x=>x!==k):[...arr,k];}
 function pillGroups(){
  const r=role(),f=filtersFor();
  const ts=applyFilters(visibleTasks(),Object.assign({},f,{pill:null,colours:[],icons:[],completed:false,quick:f.quick==="asc"?null:f.quick}));
- const sum=pred=>ts.filter(pred).reduce((a,t)=>a+t.mins,0);
+ const sum=pred=>ts.filter(pred).reduce((a,t)=>a+t.mins,0);const cnt=pred=>ts.filter(pred).length;
  const keep=it=>it.minutes>0||f.pill===it.id;
- const clientsG={key:"client",label:"Clients",items:S.clients.map(c=>({id:"client:"+c.id,label:c.name,minutes:sum(t=>t.client===c.id)})).filter(keep)};
- const people=(ids,label)=>({key:"person",label,items:ids.map(id=>userById(id)).filter(Boolean).map(u=>({id:"user:"+u.id,label:first(u.name),minutes:sum(x=>x.assignees.includes(u.id))})).filter(keep)});
- const dateG={key:"date",label:"Days",items:[["Today",0],["Tom",1],["Day+2",2]].map(([l,o])=>({id:"date:"+o,label:l,minutes:sum(t=>dayOff(t.start)===o)}))};
+ const clientsG={key:"client",label:"Clients",items:S.clients.map(c=>({id:"client:"+c.id,label:c.name,minutes:sum(t=>t.client===c.id),count:cnt(t=>t.client===c.id)})).filter(keep)};
+ const people=(ids,label)=>({key:"person",label,items:ids.map(id=>userById(id)).filter(Boolean).map(u=>({id:"user:"+u.id,label:first(u.name),minutes:sum(x=>x.assignees.includes(u.id)),count:cnt(x=>x.assignees.includes(u.id))})).filter(keep)});
+ const dateG={key:"date",label:"Days",items:[["Today",0],["Tom",1],["Day+2",2]].map(([l,o])=>({id:"date:"+o,label:l,minutes:sum(t=>dayOff(t.start)===o),count:cnt(t=>dayOff(t.start)===o)}))};
  if(r==="ADMIN"){
   const team=f.row1&&f.row1.startsWith("team:")?S.teams.find(t=>t.id===f.row1.slice(5)):null;
-  return [team?people(S.users.filter(u=>u.teamId===team.id&&["TEAM_LEADER","EXECUTIVE"].includes(u.role)).map(u=>u.id),team.name+" · people"):{key:"team",label:"Teams",items:S.teams.map(t=>({id:"team:"+t.id,label:t.name,minutes:sum(x=>x.team===t.id)})).filter(keep)},clientsG];
+  return [team?people(S.users.filter(u=>u.teamId===team.id&&["TEAM_LEADER","EXECUTIVE"].includes(u.role)).map(u=>u.id),team.name+" · people"):{key:"team",label:"Teams",items:S.teams.map(t=>({id:"team:"+t.id,label:t.name,minutes:sum(x=>x.team===t.id),count:cnt(x=>x.team===t.id)})).filter(keep)},clientsG];
  }
  if(r==="TEAM_LEADER")return [people(S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===me().teamId).map(u=>u.id),"People"),clientsG];
  return [dateG,clientsG];
@@ -938,9 +946,10 @@ function renderDash(){
  // cyan columns
  const groups=pillGroups(),two=groups.length===2;
  const sub=[f.row1?dockName(f.row1):null,f.row2?dockName(f.row2):null,f.date?fmtD(f.date):f.quick==="today"?"Today":f.quick==="tomorrow"?"Tomorrow":null].filter(Boolean);
- $("#cols").replaceChildren(el("div",{class:"sumcap"},el("span",{},"Open hours"),el("span",{},sub.length?sub.join(" · "):"all tasks")),
-  el("div",{class:"sumgrid"},...groups.map(g=>el("div",{class:"sumcol",role:"group","aria-label":g.label},el("div",{class:"sumh"},g.label),
-   el("div",{class:"sumlist"},...(g.items.length?g.items.map(it=>el("button",{class:"sumrow"+(f.pill===it.id?" on":""),title:`${it.label} - ${fmtH(it.minutes)}`,onclick:()=>{f.pill=f.pill===it.id?null:it.id;save();renderDash();}},el("span",{class:"t"},it.label),el("b",{},hh(it.minutes)))):[el("div",{class:"sumnone"},"—")]))))));
+ $("#cols").replaceChildren(...groups.map((g,gi)=>el("div",{class:"sumsec",role:"group","aria-label":g.label},
+  el("div",{class:"caphd"},el("span",{class:"capnm"},g.label),gi===0?el("span",{},sub.length?sub.join(" · "):"open hours · all tasks"):el("span",{},"open hours")),
+  el("div",{class:"sumstrip"},...(g.items.length?g.items.map(it=>el("button",{class:"capc sumc"+(f.pill===it.id?" on":""),title:`${it.label}: ${hh(it.minutes)} open in ${it.count} task(s)`,onclick:()=>{f.pill=f.pill===it.id?null:it.id;save();renderDash();}},
+   el("span",{class:"capl"},it.label),el("b",{},hh(it.minutes)),el("span",{class:"capb"},it.count+" task"+(it.count===1?"":"s")))):[el("div",{class:"sumnone"},"Nothing open")])))));
  // rows
  const ts=applyFilters(visibleTasks(),f);
  $("#rows").replaceChildren(...(ts.length?ts.map(taskRow):[el("li",{class:"empty"},f.completed?"No completed tasks match.":"Nothing here. Tap + to add a task, or clear a filter below.")]));
@@ -1022,8 +1031,8 @@ function taskRow(t){
   t.parent?el("span",{class:"restartTag",title:"Restarted task"},svg(I.restart,10,3)):null,
   el("div",{class:"rtop"},el("div",{class:"title"},el("b",{},t.title),t.recurring?el("span",{style:"color:#2563eb;flex-shrink:0"},svg(I.repeat,12,2.5)):null,t.paused?el("span",{class:"pauseTag",title:"Paused"},svg(I.pause,9,0)):null,t.doubt?el("span",{class:"doubtTag",title:"Doubt raised"},"?"):null),circle),
   el("div",{class:"rline"},
-   el("div",{class:"chips"},el("span",{class:"chip"},c.name),S.teams.find(x=>x.id===t.team)?el("span",{class:"chip team"},S.teams.find(x=>x.id===t.team).name):null,t.type==="MEETING"?el("span",{class:"chip meet"},"Meeting"):null),
-   el("div",{class:"rp"},rpill(t,"date","",dateChip(t.start)),rpill(t,"mins","b",t.type==="MEETING"?"Meet · "+fmtMin(t.mins):fmtMin(t.mins)))),
+   el("div",{class:"chips"},el("span",{class:"chip"},c.name),S.teams.find(x=>x.id===t.team)?el("span",{class:"chip team"},S.teams.find(x=>x.id===t.team).name):null,null),
+   el("div",{class:"rp"},rpill(t,"date","",dateChip(t.start)),rpill(t,"mins","b"+(t.type==="MEETING"?" mt":""),(t.type==="MEETING"?"🎥 ":"")+fmtMin(t.mins)))),
   el("div",{class:"rline"},
    el("div",{class:"icons"},
     ib("Task details",I.info,()=>openDetail(t)),
