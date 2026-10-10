@@ -3,8 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Bell, Inbox, Menu } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
-import { MenuTray } from "@/components/shell/MenuTray";
-import { menuStore, useMenuOpen } from "@/components/shell/menu-store";
+import { menuStore } from "@/components/shell/menu-store";
 import { useLiveEvents } from "@/components/shell/useLiveEvents";
 import type { DashboardData } from "@/server/tasks/types";
 
@@ -26,7 +25,6 @@ function Badged({ href, label, count, children }: { href: string; label: string;
  * ☰ (Admin, opens the MenuTray) · 📥 requests (Admin) · 🔔 notifications · avatar → /me.
  */
 export function DashboardTopBar({ user, unread, openRequests }: { user: TopBarUser; unread: number; openRequests: number }) {
-  const menuOpen = useMenuOpen();
   const [badge, setBadge] = useState(unread);
   const [reqBadge, setReqBadge] = useState(openRequests);
   useEffect(() => setBadge(unread), [unread]);
@@ -58,7 +56,6 @@ export function DashboardTopBar({ user, unread, openRequests }: { user: TopBarUs
           <Avatar name={user.name} src={user.image} size={22} />
         </Link>
       </div>
-      {isAdmin ? <MenuTray open={menuOpen} onClose={() => menuStore.close()} /> : null}
     </div>
   );
 }

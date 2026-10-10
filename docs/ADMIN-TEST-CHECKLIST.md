@@ -136,3 +136,11 @@ Sign in as **Admin** from the demo chooser. Everything below is in the order a r
 - **Attendance** (HR/Admin mark cells), **Leave** (request as a demo Executive, approve as HR, then "shift tasks" as Admin).
 - **Inventory** → Day (hourly grid), Week, Month, Quarter, Year.
 - **Client vault** → add a credential, grant a Team Leader access for 10 minutes after first open, switch role and reveal it.
+
+
+## Menu (ADR 0011)
+- [ ] ☰ opens a bottom sheet; tapping outside, ✕ or Escape closes it.
+- [ ] Search filters rows (try "gst", "team"); "Nothing matches" when empty.
+- [ ] Badges: Invoices shows the number awaiting approval; Expenses shows overdue (red) or due this week (amber); Requests and Notifications show their counts.
+- [ ] Quick actions open New task, New invoice, Add expense and Add client.
+- [ ] Opening the menu from the dashboard and from any admin page shows one sheet only.

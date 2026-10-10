@@ -84,7 +84,7 @@ export function AppFrame({
         </header>
       ) : null}
       <div className="flex flex-1 flex-col">{children}</div>
-      {user.role === "ADMIN" ? <MenuTray open={menuOpen} onClose={() => menuStore.close()} /> : null}
+      {user.role === "ADMIN" ? <MenuTray open={menuOpen} onClose={() => menuStore.close()} user={{ name: user.name }} /> : null}
     </div>
   );
 }
