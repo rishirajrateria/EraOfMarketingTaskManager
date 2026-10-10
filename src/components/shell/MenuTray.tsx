@@ -3,8 +3,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  Bell, Building2, CalendarCheck, ChartLine, ChevronRight, Clock, FileText, Folder, HardDrive, Inbox, KeyRound, Layers,
-  Link2, ListChecks, LogOut, Receipt, Search, Settings, Tag, UserRoundCheck, Users, Wallet, X, type LucideIcon,
+  Bell, Building2, CalendarCheck, ChevronRight, Clock, FileText, Folder, FolderKey, HardDrive, Inbox, Layers,
+  ListChecks, LogOut, Receipt, Search, Settings, Tag, UserRoundCheck, Users, Wallet, X, type LucideIcon,
 } from "lucide-react";
 import { menuCounts, type MenuCounts } from "@/server/shell/menu";
 
@@ -13,7 +13,7 @@ import { menuCounts, type MenuCounts } from "@/server/shell/menu";
  * live status and badges, and quick actions pinned at the bottom where the thumb rests. Portalled to <body> so
  * blurred ancestors can never clip the fixed overlay.
  */
-type Tone = "money" | "client" | "team" | "acct" | "task" | "red";
+type Tone = "money" | "client" | "team" | "time" | "acct" | "task" | "red";
 type Badge = { n: number; tone: "red" | "amber" | "soft" } | null;
 type Item = { href: string; icon: LucideIcon; label: string; sub?: string; badge?: Badge; danger?: boolean };
 type Section = { title: string; tone: Tone; items: Item[] };
@@ -22,6 +22,7 @@ const TONE: Record<Tone, string> = {
   money: "bg-[linear-gradient(150deg,#10b981,#059669)]",
   client: "bg-[linear-gradient(150deg,#38bdf8,#0284c7)]",
   team: "bg-[linear-gradient(150deg,#a78bfa,#7c3aed)]",
+  time: "bg-[linear-gradient(150deg,#fbbf24,#ea580c)]", // ADR 0014: amber → orange, distinct from Team purple
   acct: "bg-[linear-gradient(150deg,#94a3b8,#64748b)]",
   task: "bg-[linear-gradient(150deg,#22d3ee,#0891b2)]",
   red: "bg-[linear-gradient(150deg,#f87171,#dc2626)]",
@@ -35,6 +36,30 @@ const BADGE = {
 const inr = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
 const badge = (n: number, tone: "red" | "amber" | "soft"): Badge => (n > 0 ? { n, tone } : null);
 
+/**
+ * ADR 0013: one "Payments & finance" row (was Payments + Finance sheet). The line says what needs attention first:
+ * "2 to approve · 1 overdue · ₹4,22,400 outstanding"; with nothing pending it falls back to the summary it opens.
+ */
+export function paymentsSub(c: MenuCounts | null): string {
+  if (!c) return "Approvals, reminders, totals, TDS, GST";
+  const parts = [
+    c.invoicesToApprove ? `${c.invoicesToApprove} to approve` : "",
+    c.invoicesOverdue ? `${c.invoicesOverdue} overdue` : "",
+    // "due" instead of "outstanding" when the line also carries an overdue count, so it fits one row at 390px
+    c.outstanding ? `${inr(c.outstanding)} ${c.invoicesOverdue && c.invoicesToApprove ? "due" : "outstanding"}` : "",
+  ].filter(Boolean);
+  if (parts.length) return parts.join(" · ");
+  return c.gstToClaimMonth ? `Nothing pending · GST to claim ${inr(c.gstToClaimMonth)}` : "Nothing pending · totals, TDS, GST";
+}
+
+/** ADR 0014: "4 of 6 clients have a kit" (+ credentials still kept in the app's vault). */
+export function kitSub(c: MenuCounts | null): string {
+  if (!c) return "Drive folders, credentials sheet, vault";
+  if (!c.clients) return "Drive folders, credentials sheet, vault";
+  const base = `${c.clientsWithKit} of ${c.clients} client${c.clients === 1 ? "" : "s"} ${c.clients === 1 ? "has" : "have"} a kit`;
+  return c.credentials ? `${base} · ${c.credentials} saved login${c.credentials === 1 ? "" : "s"}` : base;
+}
+
 export function menuSections(c: MenuCounts | null): Section[] {
   const k = (n: number | undefined) => n ?? 0;
   return [
@@ -43,7 +68,7 @@ export function menuSections(c: MenuCounts | null): Section[] {
       tone: "money",
       items: [
         { href: "/admin/invoices", icon: FileText, label: "Invoices", sub: k(c?.invoicesToApprove) ? `${c!.invoicesToApprove} waiting for your approval` : "Create, approve and send", badge: badge(k(c?.invoicesToApprove), "red") },
-        { href: "/admin/payments", icon: Wallet, label: "Payments", sub: k(c?.outstanding) ? `${inr(c!.outstanding)} outstanding` : "Nothing outstanding" },
+        { href: "/admin/payments", icon: Wallet, label: "Payments & finance", sub: paymentsSub(c), badge: badge(k(c?.invoicesOverdue), "amber") },
         {
           href: "/admin/expenses",
           icon: Receipt,
@@ -51,7 +76,6 @@ export function menuSections(c: MenuCounts | null): Section[] {
           sub: k(c?.billsOverdue) ? `${c!.billsOverdue} overdue · ${c!.billsDueWeek} due this week` : k(c?.billsDueWeek) ? `${c!.billsDueWeek} due this week` : "Bills, GST credit, TDS",
           badge: k(c?.billsOverdue) ? badge(c!.billsOverdue, "red") : badge(k(c?.billsDueWeek), "amber"),
         },
-        { href: "/admin/finance", icon: ChartLine, label: "Finance sheet", sub: k(c?.gstToClaimMonth) ? `GST to claim this month ${inr(c!.gstToClaimMonth)}` : "Totals, TDS and GST" },
         { href: "/admin/drive-folders", icon: Folder, label: "Monthly Drive folders", sub: "Invoices, bills, GST pack, cancelled" },
       ],
     },
@@ -60,8 +84,8 @@ export function menuSections(c: MenuCounts | null): Section[] {
       tone: "client",
       items: [
         { href: "/admin/clients", icon: Building2, label: "Clients", sub: `${k(c?.clients)} clients · GST, PAN, TDS` },
-        { href: "/admin/vault?tab=ASSET_DRIVE_LINK", icon: Link2, label: "Asset drive links", sub: "Brand kits and source files" },
-        { href: "/admin/vault?tab=CREDENTIAL", icon: KeyRound, label: "Credentials", sub: `${k(c?.credentials)} stored · encrypted` },
+        // ADR 0014: Asset drive links + Credentials became one "Client kit" (Drive folders + credentials sheet + vault).
+        { href: "/admin/client-kit", icon: FolderKey, label: "Client kit", sub: kitSub(c) },
         { href: "/admin/vault?tab=SHARED_DRIVE_LINK", icon: HardDrive, label: "Shared drive links", sub: "Folders shared with clients" },
       ],
     },
@@ -69,12 +93,18 @@ export function menuSections(c: MenuCounts | null): Section[] {
       title: "Team",
       tone: "team",
       items: [
-        { href: "/attendance", icon: CalendarCheck, label: "Attendance", sub: "Mark present, half day, leave" },
-        { href: "/admin/inventory", icon: Clock, label: "Inventory", sub: "Hours available vs assigned" },
         { href: "/admin/people?role=EXECUTIVE", icon: Users, label: "Executives", sub: `${k(c?.executives)} people · specialities` },
         { href: "/admin/people?role=TEAM_LEADER", icon: UserRoundCheck, label: "Team leaders", sub: "One per team" },
         { href: "/admin/teams", icon: Layers, label: "Teams", sub: c?.teams.length ? c.teams.join(", ") : "Add your first team" },
         { href: "/admin/work-types", icon: Tag, label: "Work types", sub: `${k(c?.workTypes)} types across teams` },
+      ],
+    },
+    {
+      title: "Time & attendance",
+      tone: "time",
+      items: [
+        { href: "/attendance", icon: CalendarCheck, label: "Attendance", sub: "Mark present, half day, leave" },
+        { href: "/admin/inventory", icon: Clock, label: "Inventory", sub: "Hours available vs assigned" },
       ],
     },
     {

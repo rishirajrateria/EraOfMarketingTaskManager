@@ -75,7 +75,7 @@ export async function listInvoices(f: { status?: InvoiceStatus | null; clientId?
 type DocRef = { id: string; number: string; status: InvoiceStatus };
 
 export type InvoiceDetail = InvoiceRow & {
-  client: { email: string | null; phone: string | null; whatsapp: string | null; gstNumber: string | null; tdsPercent: number | null; workOnHold: boolean; holdInvoiceId: string | null; holdSince: string | null };
+  client: { businessName: string | null; email: string | null; phone: string | null; whatsapp: string | null; gstNumber: string | null; tdsPercent: number | null; workOnHold: boolean; holdInvoiceId: string | null; holdSince: string | null };
   /** ADR 0006: the client deducts TDS on this invoice (drives the payment sheet defaults). */
   tdsApplicable: boolean;
   gstPercent: number;
@@ -118,7 +118,7 @@ export async function getInvoiceDetail(id: string): Promise<InvoiceDetail | null
   const i = await prisma.invoice.findUnique({
     where: { id },
     include: {
-      client: { select: { name: true, email: true, phone: true, whatsapp: true, gstNumber: true, tdsPercent: true, workOnHold: true, holdInvoiceId: true, holdSince: true } },
+      client: { select: { name: true, businessName: true, email: true, phone: true, whatsapp: true, gstNumber: true, tdsPercent: true, workOnHold: true, holdInvoiceId: true, holdSince: true } },
       items: { orderBy: { sortOrder: "asc" } },
       payments: { orderBy: { receivedAt: "asc" } },
       schedule: true,
@@ -135,7 +135,7 @@ export async function getInvoiceDetail(id: string): Promise<InvoiceDetail | null
   const partInvoices = i.planRef ? await prisma.invoice.findMany({ where: { planId: i.planRef.id }, select: { id: true, number: true, status: true, partSeq: true } }) : [];
   return {
     ...base,
-    client: { email: i.client.email, phone: i.client.phone, whatsapp: i.client.whatsapp, gstNumber: i.client.gstNumber, tdsPercent: i.client.tdsPercent?.toNumber() ?? null, workOnHold: i.client.workOnHold, holdInvoiceId: i.client.holdInvoiceId, holdSince: iso(i.client.holdSince) },
+    client: { businessName: i.client.businessName, email: i.client.email, phone: i.client.phone, whatsapp: i.client.whatsapp, gstNumber: i.client.gstNumber, tdsPercent: i.client.tdsPercent?.toNumber() ?? null, workOnHold: i.client.workOnHold, holdInvoiceId: i.client.holdInvoiceId, holdSince: iso(i.client.holdSince) },
     tdsApplicable: i.tdsApplicable,
     gstPercent: i.gstPercent.toNumber(),
     subtotal: i.subtotal.toNumber(),

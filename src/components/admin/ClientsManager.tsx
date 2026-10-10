@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Search } from "lucide-react";
+import { FolderKey, Plus, Search } from "lucide-react";
 import { Sheet } from "@/components/ui/Sheet";
 import { BarChip, BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
 import { EmptyState, ListRow, ScreenHeader, StatusPill, useAdminAction } from "@/components/admin/AdminUi";
@@ -12,7 +12,7 @@ import type { ClientInput } from "@/server/admin/schemas";
 
 type Filter = "ALL" | "ACTIVE" | "HOLD" | "INACTIVE";
 
-/** /admin/clients — "Add Client" (SPEC §11.1). Vault items are managed at /admin/vault. */
+/** /admin/clients — "Add Client" (SPEC §11.1). Each row links to the client kit (ADR 0014) and the vault (/admin/vault). */
 export function ClientsManager({ clients, openAdd = false, companyStateCode }: { clients: ClientRow[]; openAdd?: boolean; companyStateCode: string | null }) {
   const { busy, run } = useAdminAction();
   const [editing, setEditing] = useState<ClientRow | null>(null);
@@ -59,6 +59,7 @@ export function ClientsManager({ clients, openAdd = false, companyStateCode }: {
             trailing={
               <span className="flex items-center gap-2">
                 {c.workOnHold ? <span className="rounded-full border border-white/60 bg-red-100/70 px-2 py-0.5 text-[10px] font-semibold text-red-700 backdrop-blur-sm">On hold</span> : null}
+                <Link href={`/admin/client-kit/${c.id}`} onClick={(e) => e.stopPropagation()} className="touch-target flex items-center text-muted" aria-label="Client kit" title="Client kit (Drive folders + credentials sheet)"><FolderKey size={18} /></Link>
                 <Link href={`/admin/vault?clientId=${c.id}`} onClick={(e) => e.stopPropagation()} className="touch-target flex items-center text-lg" aria-label="Client vault" title="Client vault">🔐</Link>
                 <StatusPill active={c.active} />
               </span>

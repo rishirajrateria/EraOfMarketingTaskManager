@@ -31,20 +31,22 @@ export function availableActions(inv: InvoiceDetail) {
     credit: billed && !!inv.approvedAt && inv.status !== "CANCELLED",
     convert: inv.docType === "PROFORMA" && !inv.convertedTo && inv.status !== "CANCELLED",
     stop: !!inv.schedule && !inv.schedule.stopped,
-    delete: unapproved,
+    // ADR 0013: a proforma is not a record — deletable any time until it is converted; never cancellable.
+    delete: unapproved || (inv.docType === "PROFORMA" && !inv.convertedTo),
     cancel: billed && !!inv.approvedAt && open,
   };
 }
 
 /** Bottom action zone of the invoice detail page: primary actions in the white part, the rest as green pills. */
-export function InvoiceActions({ inv, tz, templates, tdsPercent, openTasks, nextNumber }: { inv: InvoiceDetail; tz: string; templates: Templates; tdsPercent: number | null; openTasks: number; nextNumber: string }) {
+export function InvoiceActions({ inv, tz, templates, tdsPercent, openTasks, nextNumber, autoApprove = false }: { inv: InvoiceDetail; tz: string; templates: Templates; tdsPercent: number | null; openTasks: number; nextNumber: string; autoApprove?: boolean }) {
   const { pending, run, router, toast } = useAction();
-  const [sheet, setSheet] = useState<SheetKind>(null);
+  // `?approve=1` (from the Payments & finance hub) opens the approve sheet straight away.
+  const [sheet, setSheet] = useState<SheetKind>(() => (autoApprove && availableActions(inv).approve ? "approve" : null));
   const a = availableActions(inv);
   const close = () => setSheet(null);
 
   const onDelete = () => {
-    if (!confirm("Delete this unapproved document?")) return;
+    if (!confirm(inv.docType === "PROFORMA" ? "Delete this proforma? No record is kept of proformas." : "Delete this unapproved document?")) return;
     run(
       () => deleteInvoice(inv.id),
       () => {

@@ -1,5 +1,6 @@
 import { can, currentUser } from "@/lib/rbac";
 import { loadInvoiceFull, renderInvoiceBuffer } from "@/server/finance/invoice-core";
+import { contentDisposition, invoiceFileName } from "@/server/finance/file-names";
 
 export const dynamic = "force-dynamic";
 
@@ -13,12 +14,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!inv) return new Response("Not found", { status: 404 });
   const bytes = inv.pdfData && inv.pdfData.length > 0 ? Buffer.from(inv.pdfData) : await renderInvoiceBuffer(inv);
   const download = new URL(req.url).searchParams.get("download") === "1";
-  const fileName = `${inv.number.replace(/[^\w.-]+/g, "_")}.pdf`;
+  const fileName = invoiceFileName(inv);
   return new Response(new Uint8Array(bytes), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Length": String(bytes.length),
-      "Content-Disposition": `${download ? "attachment" : "inline"}; filename="${fileName}"`,
+      "Content-Disposition": contentDisposition(download ? "attachment" : "inline", fileName),
       "Cache-Control": "private, no-store",
     },
   });

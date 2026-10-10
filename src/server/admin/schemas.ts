@@ -207,6 +207,12 @@ export const settingsInputSchema = z
     tdsThresholdAmount: z.number().min(0).max(1_000_000_000).default(20000),
     /** ADR 0009: the finance person who receives the monthly GST pack. */
     financeEmail: shortText(160).refine((v) => v === "" || z.email().safeParse(v).success, "Enter a valid finance email"),
+    /** ADR 0014: the four client kit subfolder names (Brand kit, Credentials, Work, Reports by default). */
+    clientKitFolders: z
+      .array(z.string().trim().min(1, "Folder name is required").max(60).refine((v) => !/[/\\:*?"<>|]/.test(v), 'Folder names can\'t contain / \\ : * ? " < > |'))
+      .length(4, "Give all four client kit folders a name")
+      .refine((l) => new Set(l.map((x) => x.toLowerCase())).size === l.length, "Client kit folder names must be different")
+      .optional(),
   })
   .refine((s) => s.workStartMinutes < s.workEndMinutes, { message: "Work start must be before work end", path: ["workEndMinutes"] })
   .refine((s) => s.lunchStartMinutes <= s.lunchEndMinutes, { message: "Lunch start must be before lunch end", path: ["lunchEndMinutes"] })

@@ -4,12 +4,13 @@
  */
 import { prisma } from "@/lib/db";
 import * as Drive from "@/google/drive";
+import { clientWorkFolderId } from "@/server/clients/kit-paths";
 
 export const MEETING_NOTES_FOLDER = "Meeting notes";
 
 /**
- * Where task folders live, as a Drive path under the app's root folder. The ONE place to change when task folders
- * move (e.g. to the Client kit's per-client "Work" folder): `["Clients", task.client.name, "Work"]`.
+ * Fallback location for task folders (client without a Client kit), as a Drive path under the app's root folder.
+ * Clients with a kit get their task folders inside the kit's "Work" folder instead (see taskFolderParentId).
  */
 export function taskFolderParent(task: { client: { name: string } }): string[] {
   return ["Clients", task.client.name];
@@ -38,16 +39,17 @@ async function titleTakenInDb(task: FolderTask): Promise<boolean> {
 export async function ensureTaskFolder(taskId: string): Promise<{ id: string; url: string; notesFolderId: string; created: boolean }> {
   const task = await prisma.task.findUniqueOrThrow({
     where: { id: taskId },
-    select: { id: true, title: true, clientId: true, driveFolderId: true, driveFolderUrl: true, meetNotesFolderId: true, client: { select: { name: true, driveFolderId: true } } },
+    select: { id: true, title: true, clientId: true, driveFolderId: true, driveFolderUrl: true, meetNotesFolderId: true, client: { select: { name: true, driveFolderId: true, kitFolderId: true, kitWorkId: true } } },
   });
   if (task.driveFolderId) {
     const notesFolderId = task.meetNotesFolderId ?? (await Drive.ensureFolder(MEETING_NOTES_FOLDER, task.driveFolderId)).id;
     if (!task.meetNotesFolderId) await prisma.task.update({ where: { id: task.id }, data: { meetNotesFolderId: notesFolderId } });
     return { id: task.driveFolderId, url: task.driveFolderUrl ?? Drive.folderUrl(task.driveFolderId), notesFolderId, created: false };
   }
-  const parent = await Drive.ensurePath(taskFolderParent(task));
-  const taken = (await titleTakenInDb(task)) || (await Drive.folderExists(taskFolderName(task.title, task.id, false), parent.id));
-  const folder = await Drive.ensureFolder(taskFolderName(task.title, task.id, taken), parent.id);
+  // Client kit "Work" folder when the client has a kit (ADR 0014), else Clients/<client>.
+  const parentId = clientWorkFolderId(task.client) ?? (await Drive.ensurePath(taskFolderParent(task))).id;
+  const taken = (await titleTakenInDb(task)) || (await Drive.folderExists(taskFolderName(task.title, task.id, false), parentId));
+  const folder = await Drive.ensureFolder(taskFolderName(task.title, task.id, taken), parentId);
   const notes = await Drive.ensureFolder(MEETING_NOTES_FOLDER, folder.id);
   await prisma.task.update({ where: { id: task.id }, data: { driveFolderId: folder.id, driveFolderUrl: folder.url, meetNotesFolderId: notes.id } });
   if (!task.client.driveFolderId) {

@@ -18,18 +18,22 @@ import { BillDetailsSheet, OccurrenceSheet, SendPackSheet } from "@/components/f
 import { EXPENSE_TABS, type ExpenseTab } from "@/components/finance/payables/payables-ui";
 export { EXPENSE_TABS, type ExpenseTab };
 
-type Props = { bills: BillRow[]; today: string; tab: ExpenseTab; gstMonth: string; tds: VendorTdsSummary; tdsFy: number; financeEmail: string; itcFolderUrl: string | null; canWrite: boolean };
+type Props = { bills: BillRow[]; today: string; tab: ExpenseTab; gstMonth: string; tds: VendorTdsSummary; tdsFy: number; financeEmail: string; itcFolderUrl: string | null; canWrite: boolean; payOcc?: string | null };
 type SheetState = { kind: "occ" | "pay" | "bill" | "pack"; item?: Item } | null;
 
 /**
  * Expenses = payables (ADR 0009, prototype PAGES.expenses): bills with scheduled payments. Tabs in the bottom zone —
  * To pay · Paid · GST credit · All bills · TDS by payee — with per-tab actions in the bar.
  */
-export function ExpensesView({ bills, today, tab: initialTab, gstMonth, tds, tdsFy, financeEmail, itcFolderUrl, canWrite }: Props) {
+export function ExpensesView({ bills, today, tab: initialTab, gstMonth, tds, tdsFy, financeEmail, itcFolderUrl, canWrite, payOcc = null }: Props) {
   const router = useRouter();
   const toast = useToast();
   const [tab, setTab] = useState<ExpenseTab>(initialTab);
-  const [sheet, setSheet] = useState<SheetState>(null);
+  // `?pay=<occurrence id>` (from the Payments & finance hub) opens Mark paid for that payment straight away.
+  const [sheet, setSheet] = useState<SheetState>(() => {
+    const hit = payOcc && canWrite ? allItems(bills).find((x) => x.occ.id === payOcc && x.occ.status === "DUE") : undefined;
+    return hit ? { kind: "pay", item: hit } : null;
+  });
   const items = useMemo(() => allItems(bills), [bills]);
   const due = useMemo(() => items.filter((x) => x.occ.status === "DUE").sort((a, b) => a.occ.dueKey.localeCompare(b.occ.dueKey)), [items]);
   const paid = useMemo(() => items.filter((x) => x.occ.status === "PAID").sort((a, b) => (b.occ.paidKey ?? "").localeCompare(a.occ.paidKey ?? "")), [items]);

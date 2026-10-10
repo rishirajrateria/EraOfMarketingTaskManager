@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { FULL_INCLUDE, renderInvoiceBuffer } from "@/server/finance/document-core";
+import { contentDisposition, invoiceFileName } from "@/server/finance/file-names";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
     headers: {
       "Content-Type": "application/pdf",
       "Content-Length": String(bytes.length),
-      "Content-Disposition": `inline; filename="${inv.number.replace(/[^\w.-]+/g, "_")}.pdf"`,
+      "Content-Disposition": contentDisposition("inline", invoiceFileName(inv)),
       "X-Robots-Tag": "noindex, nofollow",
       "Cache-Control": "private, no-store",
     },

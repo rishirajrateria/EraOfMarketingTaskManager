@@ -11,6 +11,7 @@ import { renderInvoicePdf } from "@/server/finance/pdf";
 import { FULL_INCLUDE, loadCompany, loadInvoiceFull, toPdfInvoice, type CompanyInfo, type InvoiceFull } from "@/server/finance/document-core";
 import { renderTemplate, storeForClientAndFinance, toBytes } from "@/server/finance/drive-store";
 import { publicInvoiceUrl } from "@/server/finance/links";
+import { invoiceFileName } from "@/server/finance/file-names";
 import { fileSalesInvoice } from "@/server/finance/month-folders";
 import { loadSettlement } from "@/server/finance/settlement";
 import { applyCreditNoteEffect } from "@/server/finance/credit-notes";
@@ -69,7 +70,7 @@ async function deliver(inv: InvoiceFull, company: CompanyInfo, pdf: Buffer, opts
           to: inv.client.email,
           subject: `${label} ${inv.number} from ${company.companyName}`,
           text: renderTemplate(opts.emailText ?? company.invoiceEmailTemplate, vars),
-          attachments: [{ filename: `${inv.number}.pdf`, mimeType: "application/pdf", data: pdf }],
+          attachments: [{ filename: invoiceFileName(inv), mimeType: "application/pdf", data: pdf }],
         });
         emailSentAt = new Date();
       } catch (e) {
@@ -102,8 +103,10 @@ export async function approveAndSendCore(id: string, opts: ApproveOptions, actor
   const inv = await approveRecord(before, actorId, now);
   const company = await loadCompany();
   const pdf = await renderInvoicePdf(toPdfInvoice(inv), inv.client, company);
-  const fileName = `${inv.number}.pdf`;
-  const { clientFileId, backendFileId } = await storeForClientAndFinance(inv.client, inv.docType === "CREDIT_NOTE" ? "CreditNotes" : "Invoices", { name: fileName, mimeType: "application/pdf", data: pdf });
+  const fileName = invoiceFileName(inv);
+  // ADR 0013: a proforma is not a finance record — only the client folder gets a copy, never Finance/*.
+  const financeSub = inv.docType === "PROFORMA" ? null : inv.docType === "CREDIT_NOTE" ? "CreditNotes" : "Invoices";
+  const { clientFileId, backendFileId } = await storeForClientAndFinance(inv.client, financeSub, { name: fileName, mimeType: "application/pdf", data: pdf });
   await prisma.invoice.update({ where: { id }, data: { pdfData: toBytes(pdf), pdfDriveFileId: clientFileId, pdfBackendFileId: backendFileId } });
   await fileSalesInvoice(inv, pdf); // ADR 0009: Finance/<issue month>/Sales invoices (once)
   if (inv.docType === "CREDIT_NOTE" && firstApproval) await applyCreditNoteEffect(inv.id, actorId);

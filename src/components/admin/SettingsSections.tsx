@@ -22,6 +22,7 @@ export const SETTINGS_SECTIONS: { id: string; label: string }[] = [
   { id: "invoicing", label: "Invoicing" },
   { id: "expenses", label: "Expenses" },
   { id: "tds", label: "TDS" },
+  { id: "client-kit", label: "Client kit" },
   { id: "notifications", label: "Notifications" },
   { id: "google", label: "Google" },
 ];
@@ -218,6 +219,22 @@ export function TdsSection({ v, patch }: { v: SettingsValues; patch: Patch }) {
       <Field label="Finance person's email" hint="The monthly GST pack (claimable expense bills) is sent here">
         <input className={inputCls} type="email" value={v.financeEmail} placeholder="finance@yourca.in" onChange={(e) => patch({ financeEmail: e.target.value })} />
       </Field>
+    </Section>
+  );
+}
+
+/** ADR 0014: names of the four folders inside each client's kit (used for new kits and repairs). */
+export function ClientKitSection({ v, patch }: { v: SettingsValues; patch: Patch }) {
+  const labels = ["Folder 1 · client uploads brand assets", "Folder 2 · holds the credentials sheet", "Folder 3 · our work for the client", "Folder 4 · reports"];
+  const names = v.clientKitFolders;
+  return (
+    <Section id="client-kit" title="Client kit folders">
+      {labels.map((label, i) => (
+        <Field key={label} label={label}>
+          <input className={inputCls} value={names[i] ?? ""} maxLength={60} onChange={(e) => patch({ clientKitFolders: names.map((n, j) => (j === i ? e.target.value : n)) })} />
+        </Field>
+      ))}
+      <p className="text-[11px] text-gray-400">Client Kit › &lt;client&gt; › these four folders. Renaming applies to new kits and repairs; existing folders keep their names in Drive.</p>
     </Section>
   );
 }

@@ -12,6 +12,11 @@ export function formatINR(n: number): string {
   return `₹${formatINRNumber(n)}`;
 }
 
+/** "₹1,23,457" — rounded to the rupee for dense tiles (ADR 0013 hub). */
+export function formatINRWhole(n: number): string {
+  return `₹${Math.round(Number.isFinite(n) ? n : 0).toLocaleString("en-IN")}`;
+}
+
 /** "INR 1,23,456.50" — for emails / WhatsApp text (plain ASCII). */
 export function formatINRPlain(n: number): string {
   return `INR ${formatINRNumber(n)}`;

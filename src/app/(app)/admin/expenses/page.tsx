@@ -10,7 +10,7 @@ import { EXPENSE_TABS, type ExpenseTab } from "@/components/finance/payables/pay
 export const dynamic = "force-dynamic";
 
 /** Expenses = payables (ADR 0009): bills, what is due, what was paid, GST credit and TDS by payee. ADMIN only. */
-export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ tab?: string; month?: string }> }) {
+export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ tab?: string; month?: string; pay?: string }> }) {
   const user = await requireFinancePage();
   const settings = await getSettings();
   const sp = await searchParams;
@@ -26,5 +26,5 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
       itcFolderUrl = null; // Drive unavailable: the Drive button is hidden
     }
   }
-  return <ExpensesView bills={bills} today={today} tab={tab} gstMonth={gstMonth} tds={tds} tdsFy={fy.onExpenses} financeEmail={settings.financeEmail} itcFolderUrl={itcFolderUrl} canWrite={user.canWrite} />;
+  return <ExpensesView bills={bills} today={today} tab={tab} gstMonth={gstMonth} tds={tds} tdsFy={fy.onExpenses} financeEmail={settings.financeEmail} itcFolderUrl={itcFolderUrl} canWrite={user.canWrite} payOcc={typeof sp.pay === "string" ? sp.pay.slice(0, 64) : null} />;
 }
