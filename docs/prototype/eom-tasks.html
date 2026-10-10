@@ -471,8 +471,41 @@ select.in{padding-right:10px}
 /* amber notes stay readable in dark mode */
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .card[style*="254,243,199"]{background:rgba(245,158,11,.14)!important;color:#fcd34d!important;border-color:rgba(245,158,11,.3)}}
 :root[data-theme="dark"] .card[style*="254,243,199"]{background:rgba(245,158,11,.14)!important;color:#fcd34d!important;border-color:rgba(245,158,11,.3)}
-</style>
-<div class="phone" id="phone">
+
+/* ===== Menu redesign: thumb-first bottom sheet ===== */
+.menu{align-items:flex-end;justify-content:center;background:rgba(2,12,24,.38);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.menu nav{display:none}
+.msheet{width:100%;max-height:92%;display:flex;flex-direction:column;background:var(--sheet);backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);border:1px solid var(--hair);border-bottom:0;border-radius:28px 28px 0 0;box-shadow:0 -24px 60px -20px rgba(0,0,0,.5);animation:mup .22s cubic-bezier(.2,.8,.2,1)}
+@keyframes mup{from{transform:translateY(24px);opacity:.4}to{transform:none;opacity:1}}
+.mgrab{width:40px;height:5px;border-radius:999px;background:var(--muted);opacity:.35;margin:10px auto 6px;flex-shrink:0}
+.mhead{display:flex;align-items:center;gap:12px;padding:6px 16px 12px;flex-shrink:0}
+.mav{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#fff;background:linear-gradient(150deg,#06b6d4,#2563eb);box-shadow:0 8px 20px -8px rgba(37,99,235,.6)}
+.mwho{flex:1;min-width:0}.mwho b{display:block;font-size:17px;letter-spacing:-.015em}.mwho small{display:block;font-size:12px;color:var(--muted)}
+.mic2{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--chip);border:1px solid var(--hair);color:var(--ink)}
+.msearch{display:flex;align-items:center;gap:8px;margin:0 16px 10px;height:44px;padding:0 14px;border-radius:14px;background:var(--input);border:1px solid var(--hair);color:var(--muted);flex-shrink:0}
+.msearch input{flex:1;min-width:0;border:0;background:transparent;outline:none;font-size:15px;color:var(--ink)}
+.mbody{flex:1;min-height:0;overflow-y:auto;padding:4px 16px 12px;overscroll-behavior:contain}
+.msec{margin-bottom:14px}
+.msec h5{margin:0 4px 8px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mcard{background:var(--glass);border:1px solid var(--hair);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+.mrow{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;text-align:left;border-bottom:1px solid var(--line);min-height:56px}
+.mrow:last-child{border-bottom:0}
+.mrow:active{background:var(--chip)}
+.mi{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff}
+.mt{flex:1;min-width:0}.mt b{display:block;font-size:15px;font-weight:600;letter-spacing:-.01em}.mt small{display:block;font-size:12px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mbadge{min-width:22px;height:22px;padding:0 7px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;flex-shrink:0}
+.mbadge.red{background:#ef4444;color:#fff}.mbadge.amber{background:rgba(245,158,11,.18);color:#b45309}.mbadge.soft{background:var(--chip);color:var(--muted);border:1px solid var(--hair)}
+.mchev{color:var(--muted);opacity:.6;flex-shrink:0}
+.mrow.danger b{color:#dc2626}
+.mquick{flex-shrink:0;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--hair);background:var(--glass)}
+.mq{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 2px;border-radius:16px;border:1px solid var(--hair);background:var(--glass-strong);box-shadow:var(--shadow);font-size:11px;font-weight:600;color:var(--ink);white-space:nowrap;min-width:0}
+.mq span{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff}
+.mempty{padding:28px 8px;text-align:center;color:var(--muted);font-size:13px}
+.t-money{background:linear-gradient(150deg,#10b981,#059669)}.t-client{background:linear-gradient(150deg,#38bdf8,#0284c7)}.t-team{background:linear-gradient(150deg,#a78bfa,#7c3aed)}.t-acct{background:linear-gradient(150deg,#94a3b8,#64748b)}.t-task{background:linear-gradient(150deg,#22d3ee,#0891b2)}.t-red{background:linear-gradient(150deg,#f87171,#dc2626)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .mbadge.amber{color:#fcd34d}}
+:root[data-theme="dark"] .mbadge.amber{color:#fcd34d}
+@media (min-width:540px){.msheet{border-radius:28px 28px 0 0}}
+</style><div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
     <div class="pf">
@@ -553,12 +586,13 @@ select.in{padding-right:10px}
 
   <!-- admin menu tray -->
   <div class="menu" id="menu" hidden>
-    <nav>
-      <button class="addc" data-go="clients:add"><span>+</span><small>Add Client (visible in filters once it has a task)</small></button>
-      <ul id="menuList"></ul>
-      <button class="addt" data-go="add">+</button>
-      <div class="foot"><button data-go="requests">Requests</button><button data-go="settings">Settings</button><button class="so" data-go="signout">Sign out</button></div>
-    </nav>
+    <div class="msheet" role="dialog" aria-label="Menu">
+      <div class="mgrab"></div>
+      <div class="mhead"><span class="mav" id="mAv">RR</span><div class="mwho"><b id="mName">Rishi</b><small id="mRole">Admin</small></div><button class="mic2" id="mSettings" aria-label="Settings"></button><button class="mic2" id="mClose" aria-label="Close"></button></div>
+      <label class="msearch"><span id="mSearchIco"></span><input id="mSearch" type="search" placeholder="Search menu" autocomplete="off"></label>
+      <div class="mbody" id="mBody"></div>
+      <div class="mquick" id="mQuick"></div>
+    </div>
   </div>
 
   <div class="dim" id="sheetDim" hidden><div class="sheet" id="sheet"></div></div>
@@ -1065,12 +1099,83 @@ $("#s-add .addbody").append(el("div",{style:"position:sticky;bottom:10px;display
 $("#addMeet").onclick=()=>openAdd("MEETING");$("#addWork").onclick=()=>openAdd("WORK");$("#addChoose").onclick=()=>openAdd("CHOOSE");
 
 /* ---------- menu ---------- */
-const MENU=[[["vault:ASSET_DRIVE_LINK","Client Assets drive Links"],["vault:CREDENTIAL","Client Credentials"],["vault:SHARED_DRIVE_LINK","Client shared drive links"]],[["expenses","expense"],["invoices","PAYMENT Creator"],["payments","Payments"],["finance","Finance sheet"],["drive","Monthly Drive folders"]],[["attendance","Attendance"],["inventory","Inventory"]],[["people:EXECUTIVE","Add executive"],["people:TEAM_LEADER","Add teamleader"]],[["worktypes","Add Work"],["teams","Add Team"]]];
-$("#menuList").replaceChildren(...MENU.map(g=>el("li",{class:"g"},el("ul",{},g.map(([go,l])=>el("li",{},el("button",{onclick:()=>{closeMenu();nav(go);}},l)))))));
+const MI={
+ invoice:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8"/>',
+ wallet:'<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
+ receipt:'<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8M12 17.5v-11"/>',
+ chart:'<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/>',
+ folder:'<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+ building:'<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/>',
+ link:'<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+ key:'<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/>',
+ drive:'<path d="M22 12H2M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11zM6 16h.01M10 16h.01"/>',
+ calcheck:'<path d="M8 2v4M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M9 16l2 2 4-4"/>',
+ clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+ users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+ lead:'<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/><path d="m12 5 .9 1.8 2 .3-1.45 1.4.35 2L12 9.55 10.2 10.5l.35-2L9.1 7.1l2-.3Z" fill="currentColor" stroke="none"/>',
+ layers:'<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65M22 12.65l-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
+ tag:'<path d="M12.59 2.59A2 2 0 0 0 11.17 2H4a2 2 0 0 0-2 2v7.17a2 2 0 0 0 .59 1.42l8.7 8.7a2.43 2.43 0 0 0 3.42 0l6.58-6.58a2.43 2.43 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>',
+ inbox:'<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+ bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+ gear:'<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+ logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
+ search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+ x:'<path d="M18 6 6 18M6 6l12 12"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ chev:'<path d="m9 18 6-6-6-6"/>',
+ task:'<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4M13 6h8M13 12h8M13 18h8"/>',
+};
+const msvg=(k,s=18,w=2)=>svg(MI[k],s,w);
+function menuModel(){
+ const r=role(),m=me();
+ const toApprove=S.invoices.filter(i=>i.status==="AWAITING_APPROVAL").length;
+ const outstanding=S.invoices.filter(i=>!["PAID","CANCELLED","AWAITING_APPROVAL"].includes(i.status)&&i.docType!=="PROFORMA"&&i.docType!=="CREDIT_NOTE").reduce((s,i)=>s+balance(i),0);
+ const occ=(typeof allOcc==="function")?allOcc():[];
+ const overdueBills=occ.filter(x=>x.o.status==="DUE"&&new Date(x.o.due)<today0()).length,dueSoon=occ.filter(x=>x.o.status==="DUE"&&dayOff(x.o.due)>=0&&dayOff(x.o.due)<=7).length;
+ const expiring=S.vault.filter(v=>v.expires&&dayOff(v.expires)<30).length;
+ const reqs=S.requests.filter(x=>x.status==="OPEN").length,unread=S.notifs.filter(n=>n.for===m.id&&!n.read).length;
+ const gst=occ.filter(x=>x.o.status==="PAID"&&x.o.itc&&dk(new Date(x.o.paidAt)).slice(0,7)===dk().slice(0,7)).reduce((s,x)=>s+(x.o.gst||0),0);
+ const B=(n,c)=>n?{n,c}:null;
+ return [
+  {h:"Money",t:"t-money",items:[
+   {go:"invoices",ic:"invoice",l:"Invoices",s:toApprove?toApprove+" waiting for your approval":"Create, approve and send",b:B(toApprove,"red")},
+   {go:"payments",ic:"wallet",l:"Payments",s:outstanding?inr(outstanding)+" outstanding":"Nothing outstanding"},
+   {go:"expenses",ic:"receipt",l:"Expenses",s:overdueBills?overdueBills+" overdue · "+dueSoon+" due this week":dueSoon?dueSoon+" due this week":"Bills, GST credit, TDS",b:overdueBills?{n:overdueBills,c:"red"}:B(dueSoon,"amber")},
+   {go:"finance",ic:"chart",l:"Finance sheet",s:gst?"GST to claim this month "+inr(gst):"Totals, TDS and GST"},
+   {go:"drive",ic:"folder",l:"Monthly Drive folders",s:"Invoices, bills, GST pack, cancelled"}]},
+  {h:"Clients",t:"t-client",items:[
+   {go:"clients",ic:"building",l:"Clients",s:S.clients.length+" clients · GST, PAN, TDS"},
+   {go:"vault:ASSET_DRIVE_LINK",ic:"link",l:"Asset drive links",s:"Brand kits and source files"},
+   {go:"vault:CREDENTIAL",ic:"key",l:"Credentials",s:expiring?expiring+" expiring soon":"Logins, encrypted",b:B(expiring,"amber")},
+   {go:"vault:SHARED_DRIVE_LINK",ic:"drive",l:"Shared drive links",s:"Folders shared with clients"}]},
+  {h:"Team",t:"t-team",items:[
+   {go:"attendance",ic:"calcheck",l:"Attendance",s:"Mark present, half day, leave"},
+   {go:"inventory",ic:"clock",l:"Inventory",s:"Hours available vs assigned"},
+   {go:"people:EXECUTIVE",ic:"users",l:"Executives",s:S.users.filter(u=>u.role==="EXECUTIVE").length+" people · specialities"},
+   {go:"people:TEAM_LEADER",ic:"lead",l:"Team leaders",s:"One per team"},
+   {go:"teams",ic:"layers",l:"Teams",s:S.teams.map(t=>t.name).join(", ")},
+   {go:"worktypes",ic:"tag",l:"Work types",s:S.workTypes.length+" types across teams"}]},
+  {h:"Account",t:"t-acct",items:[
+   {go:"requests",ic:"inbox",l:"Requests",s:reqs?reqs+" open":"Review, time change, leave",b:B(reqs,"red")},
+   {go:"notifications",ic:"bell",l:"Notifications",s:unread?unread+" unread":"All caught up",b:B(unread,"soft")},
+   {go:"settings",ic:"gear",l:"Settings",s:"Company, bank, invoice, TDS"},
+   {go:"signout",ic:"logout",l:"Sign out",danger:true}]},
+ ];
+}
+function renderMenu(){
+ const m=me(),q=($("#mSearch").value||"").trim().toLowerCase();
+ $("#mAv").textContent=m.name.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();$("#mName").textContent=m.name;$("#mRole").textContent={ADMIN:"Admin",TEAM_LEADER:"Team Leader",EXECUTIVE:"Executive",HR:"HR"}[m.role]+" · "+S.settings.company;
+ const secs=menuModel().map(sec=>({...sec,items:sec.items.filter(it=>!q||(it.l+" "+(it.s||"")+" "+sec.h).toLowerCase().includes(q))})).filter(sec=>sec.items.length);
+ $("#mBody").replaceChildren(...(secs.length?secs.map(sec=>el("div",{class:"msec"},el("h5",{},sec.h),el("div",{class:"mcard"},...sec.items.map(it=>el("button",{class:"mrow"+(it.danger?" danger":""),onclick:()=>{closeMenu();nav(it.go);}},
+   el("span",{class:"mi "+(it.danger?"t-red":sec.t)},msvg(it.ic,18)),el("span",{class:"mt"},el("b",{},it.l),it.s?el("small",{},it.s):null),it.b?el("span",{class:"mbadge "+it.b.c},String(it.b.n)):null,it.danger?null:el("span",{class:"mchev"},msvg("chev",16))))))):[el("div",{class:"mempty"},"Nothing matches “"+q+"”")]));
+}
+$("#mQuick").replaceChildren(...[["task","t-task","New task",()=>nav("add")],["invoice","t-money","New invoice",()=>{nav("invoices");openWizard();}],["receipt","t-money","Add expense",()=>{nav("expenses");billEditor();}],["building","t-client","Add client",()=>nav("clients:add")]].map(([ic,t,l,fn])=>el("button",{class:"mq",onclick:()=>{closeMenu();fn();}},el("span",{class:t},msvg(ic,20)),l)));
+$("#mSearchIco").replaceChildren(msvg("search",16));$("#mClose").replaceChildren(msvg("x",18));$("#mSettings").replaceChildren(msvg("gear",18));
+$("#mClose").onclick=()=>closeMenu();$("#mSettings").onclick=()=>{closeMenu();nav("settings");};
+$("#mSearch").oninput=renderMenu;
 const menuEl=$("#menu");
-function openMenu(){menuEl.hidden=false;}function closeMenu(){menuEl.hidden=true;}
+function openMenu(){$("#mSearch").value="";renderMenu();menuEl.hidden=false;$("#mBody").scrollTop=0;}function closeMenu(){menuEl.hidden=true;}
 menuEl.addEventListener("click",e=>{if(e.target===menuEl)closeMenu();});
-menuEl.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{closeMenu();nav(b.dataset.go);});
 $("#menuBtn").onclick=openMenu;$("#pgMenu").onclick=()=>{if(role()==="ADMIN")openMenu();else nav("dash");};
 $("#reqBtn").onclick=()=>nav("requests");$("#notifBtn").onclick=()=>nav("notifications");$("#meBtn").onclick=()=>nav("me");
 $("#demoChip").onclick=()=>{S.me=null;save();show("login");};
