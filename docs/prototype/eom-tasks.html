@@ -724,6 +724,13 @@ select.in{padding-right:10px}
 .dbtiles .tile small{font-size:10px;letter-spacing:.05em}
 .dbtiles .tile b{font-size:16px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
 .dbtiles .tile .tsub{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* top bar: apps (Gmail, Drive, WhatsApp) | dashboards, requests, notifications, profile */
+.topbar .r{gap:2px!important}
+.topbar .ico{width:34px;height:34px;border-radius:10px;color:var(--z1icon)}
+.topbar .ico:active,.topbar a.ico:hover,.topbar button.ico:hover{background:rgba(255,255,255,.18)}
+.topbar .ico svg{width:18px;height:18px}
+.tsep{width:1px;height:20px;background:currentColor;opacity:.3;margin:0 4px;color:var(--z1icon)}
+.demotab{position:fixed;left:0;top:42%;z-index:40;writing-mode:vertical-rl;padding:6px 2px;border-radius:0 8px 8px 0;border:1px solid rgba(255,255,255,.35);border-left:0;background:rgba(6,48,61,.55);color:#fff;font-size:9.5px;font-weight:700;letter-spacing:.04em;opacity:.8;backdrop-filter:blur(8px)}
 </style><div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
@@ -739,12 +746,14 @@ select.in{padding-right:10px}
     </div>
   </section>
 
+  <button class="demotab" id="demoChip" title="Demo: switch role">Demo ⇄</button>
   <!-- dashboard -->
   <section class="screen" id="s-dash" hidden>
     <div class="cyan">
       <div class="topbar">
-        <div style="display:flex;align-items:center;gap:8px"><button class="ico" id="menuBtn" aria-label="Menu"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><button class="ico" id="dbBtn" aria-label="Dashboards" title="Dashboards"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15v2M11 11v6M15 7v10M19 12v5"/></svg></button><button class="demo" id="demoChip">Demo · switch</button></div>
+        <div style="display:flex;align-items:center;gap:8px"><button class="ico" id="menuBtn" aria-label="Menu"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>
         <div class="r">
+          <a class="ico app" id="appMail" href="https://mail.google.com/" target="_blank" rel="noopener" aria-label="Open Gmail" title="Gmail"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg></a><a class="ico app" id="appDrive" href="https://drive.google.com/" target="_blank" rel="noopener" aria-label="Open Google Drive" title="Google Drive"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 3h7l6 10.5-3.5 6h-12L2.5 13.5z"/><path d="M8.5 3 15 14.5h6.5M2.5 13.5 9 3M6 19.5l3.5-6h12"/></svg></a><a class="ico app" id="appWa" href="https://wa.me/" target="_blank" rel="noopener" aria-label="Open WhatsApp" title="WhatsApp"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l1.6-4.6A8.5 8.5 0 1 1 7.7 19.5z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1-1.5-2-1-1 .8a3.5 3.5 0 0 1-2-2l.8-1-1-2z"/></svg></a><span class="tsep" aria-hidden="true"></span><button class="ico" id="dbBtn" aria-label="Dashboards" title="Dashboards"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15v2M11 11v6M15 7v10M19 12v5"/></svg></button>
           <button class="ico" id="reqBtn" aria-label="Requests"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/></svg><span class="badge" id="reqBadge" hidden>0</span></button>
           <button class="ico" id="notifBtn" aria-label="Notifications"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="badge" id="notifBadge" hidden>0</span></button>
           <button class="ico" id="meBtn" aria-label="Profile"><span class="avatar" id="meAv">RR</span></button>
@@ -1037,7 +1046,7 @@ function applyFilters(ts,f){
 function renderDash(){
  const r=role(),m=me(),f=filtersFor();if(r==="ADMIN")expenseTick();
  $("#meAv").textContent=m.name.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();
- $("#menuBtn").style.visibility=r==="ADMIN"?"visible":"hidden";$("#dbBtn").hidden=r!=="ADMIN";
+ $("#menuBtn").style.visibility=r==="ADMIN"?"visible":"hidden";$("#dbBtn").hidden=r!=="ADMIN";{const q="?authuser="+encodeURIComponent(m.email||"");$("#appMail").href="https://mail.google.com/mail/"+q;$("#appDrive").href="https://drive.google.com/drive/"+q;}
  $("#reqBtn").hidden=r!=="ADMIN";
  const openReq=S.requests.filter(x=>x.status==="OPEN").length,unread=S.notifs.filter(n=>n.for===m.id&&!n.read).length;
  $("#reqBadge").hidden=!openReq;$("#reqBadge").textContent=openReq;
