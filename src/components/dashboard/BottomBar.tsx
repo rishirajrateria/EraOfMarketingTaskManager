@@ -1,12 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { CalendarDays, Plus } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import { clsx } from "@/lib/clsx";
 import type { DashboardData, DashboardFilters } from "@/server/tasks/types";
 import { Sheet } from "@/components/ui/Sheet";
 import { btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
 import { FilterStrip } from "@/components/dashboard/FilterStrip";
-import { MeetIcon } from "@/components/dashboard/GoogleIcons";
+import { AddSpeedDial } from "@/components/dashboard/AddSpeedDial";
 import { dayLabel } from "@/components/dashboard/summary";
 import { DockPill, FilterRow } from "@/components/ui/FilterRow";
 
@@ -77,7 +77,8 @@ function DaySheet({ open, filters, onPick, onClose }: { open: boolean; filters: 
 /**
  * Bottom zone (prototype `prow` / `.plab`, ADR 0015): the status strip, then neutral glass one-tap rows — TEAMS (TL:
  * PEOPLE, Exec: CLIENTS) and CLIENTS (Exec: WORK), each "All" + a pill per item — and the bar: 📅 date (Which day?),
- * Today, Tomorrow, Oldest on the left; the Meet icon (add a meeting) and a blue + (add a task) on the right.
+ * Today, Tomorrow, Oldest on the left; one blue + on the right that opens the add speed dial (Task, Meeting, Admin
+ * shortcuts — AddSpeedDial).
  */
 export function BottomBar({
   data,
@@ -119,18 +120,7 @@ export function BottomBar({
               Oldest
             </DockPill>
           </div>
-          <button type="button" aria-label="Schedule a meeting" title="Meeting" onClick={() => onAdd("MEETING")} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-            <MeetIcon size={22} />
-          </button>
-          <button
-            type="button"
-            aria-label="Add task"
-            title="Add task"
-            onClick={() => onAdd("WORK")}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-gradient-to-br from-[#3b82f6] to-[#1d4ed8] text-white shadow-[0_6px_16px_-6px_rgba(37,99,235,.7)]"
-          >
-            <Plus size={24} strokeWidth={2.75} />
-          </button>
+          <AddSpeedDial role={data.role} onAdd={onAdd} />
         </div>
       </div>
       <DaySheet

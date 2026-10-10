@@ -75,7 +75,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
   // Reset everything each time the sheet opens (or the entry mode changes while open).
   useEffect(() => {
     if (!open) return;
-    // "+" and "Work" open a task; the Meet icon opens a meeting. Meet / Work in the bottom bar switch later.
+    // The "+" speed dial: Task opens a task, Meeting opens a meeting. Meet / Work in the bottom bar switch later.
     const type: TaskMode = mode === "MEETING" ? "MEETING" : "WORK";
     setChosen(type);
     setForm(emptyForm(type, data.me.id, data.role));

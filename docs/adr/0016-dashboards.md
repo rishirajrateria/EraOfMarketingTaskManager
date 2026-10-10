@@ -108,3 +108,21 @@ leave) · Inventory · **Attendance**; Tasks Requests (open work requests) · Ta
 - Notifications that link to `/requests` keep working through the redirect.
 - Expense numbers are company-wide; a per-client cost view would need bills tagged with clients (not planned).
 - HR "booked" counts open work tasks (as the Inventory page does), so a past period shows little booked time.
+
+## Addendum (2026-10-10) — one "+" speed dial on the task dashboard bar
+Reference: prototype `fabItems`, `openFab`, `.fabdim`, `.fabi`, `kitPicker`.
+- The bar's Google Meet button and blue + merge into one blue + (`AddSpeedDial`, `aria-haspopup="menu"`,
+  `aria-expanded`). Tapping it rotates the + 45° into × and opens a `role="menu"` stack growing upward, right-aligned:
+  each row = glass-strong label chip + 44px gradient square (Task / Meeting 50px). Bottom → top: **Task** (add-task
+  sheet, WORK) · **Meeting** (add-task sheet, MEETING) · separator · Admin only: Invoice (`/admin/invoices?new=1`) ·
+  Expense (`/admin/expenses/new`) · Executive / Team leader (`/admin/people?role=…&add=1`) · Work type · Team
+  (`?add=1`) · Client kit. Team Leaders and Executives see Task and Meeting only. Colours follow the menu tiles.
+- The model is pure data (`src/components/dashboard/fab-model.ts`, tested): order, role filter, links.
+- Backdrop = dim + 3px blur over everything above the 56px bar (portalled, centred like `.phone-frame`), so the ×
+  stays tappable. Closes on ×, backdrop, a tap elsewhere on the bar, Escape (focus back to +) and after choosing.
+  Focus lands on Task; ↑/↓/Home/End walk the stack. Items fade/rise 8px with an 18ms stagger; none with
+  `prefers-reduced-motion`.
+- Client kit opens "New client kit": active clients from `kitPickerClients()` (Admin only), clients without a complete
+  kit first ("Create the kit" / "Kit incomplete · repair it" / "Kit ready · open it"), then "+ New client"
+  (`/admin/clients?add=1`). Picking a client opens `/admin/client-kit/<id>`, whose Create kit / Repair / share / send
+  buttons (ADR 0014) do the rest — no second create path.

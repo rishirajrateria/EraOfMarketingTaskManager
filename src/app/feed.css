@@ -34,3 +34,15 @@
 @media (prefers-reduced-motion: reduce) {
   .task-card.task-flash { animation: none; outline: 3px solid var(--n-blue); outline-offset: -3px; }
 }
+
+/* Dashboard "+" speed dial (ADR 0016 addendum): items rise 8px and fade in, staggered by an inline animation-delay. */
+@keyframes fab-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.fab-in { animation: fab-in 180ms ease-out both; }
+.fab-plus { transition: transform 180ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .fab-in { animation: none; }
+  .fab-plus { transition: none; }
+}
