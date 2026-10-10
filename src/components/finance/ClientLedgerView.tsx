@@ -66,7 +66,7 @@ export function ClientLedgerView({ ledger, tz, onHold }: { ledger: ClientLedger;
       </div>
       <BottomZone
         left={
-          <button type="button" onClick={() => router.push("/admin/payments")} className="touch-target flex items-center gap-0.5 pl-1 text-[12px] font-medium text-white" aria-label="Back">
+          <button type="button" onClick={() => (window.history.length > 1 ? router.back() : router.push("/admin/payments"))} className="touch-target flex items-center gap-0.5 pl-1 text-[12px] font-medium text-white" aria-label="Back">
             <ChevronLeft size={16} /> Back
           </button>
         }

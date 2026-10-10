@@ -35,7 +35,7 @@ async function setFields(taskId: string, fields: ReviewField[], note?: string | 
 function changed(taskId: string) {
   void publishTaskChanged(taskId);
   bus.publish({ type: "requests.changed" });
-  safeRevalidate("/dashboard", "/requests");
+  safeRevalidate("/dashboard", "/admin/requests");
 }
 
 /**
@@ -57,7 +57,7 @@ export async function requestPillReview(taskId: string, rawField: string, rawNot
     await setFields(t.id, fields, user.role === "ADMIN" ? undefined : note || null);
     if (user.role !== "ADMIN") {
       await prisma.request.create({ data: { type: "REVIEW", field, taskId: t.id, raisedById: user.id, targetRole: "ADMIN", note } });
-      await notify({ userIds: await adminIds(), kind: "REVIEW_REQUESTED", title: `Review the ${REVIEW_FIELD_NAME[field]}: ${t.title}`, body: note, href: "/requests", taskId: t.id });
+      await notify({ userIds: await adminIds(), kind: "REVIEW_REQUESTED", title: `Review the ${REVIEW_FIELD_NAME[field]}: ${t.title}`, body: note, href: "/admin/requests", taskId: t.id });
     }
     await audit(user.id, user.role === "ADMIN" ? "task.flag_review" : "task.request_review", "Task", t.id, { reviewFields: current }, { reviewFields: fields, field, note });
     changed(t.id);

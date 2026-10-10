@@ -21,7 +21,7 @@ import { fromDbDate, toDbDate } from "@/server/inventory/compute";
 import { shiftTasksForLeave, tasksAffectedByLeave } from "@/server/scheduling/shift";
 import { APPROVED_LEAVE, type LeaveChangePayload } from "@/server/leave/queries";
 
-const LEAVE_PATHS = ["/leave", "/requests/leave", "/attendance", "/admin/inventory", "/dashboard", "/requests"];
+const LEAVE_PATHS = ["/leave", "/requests/leave", "/attendance", "/admin/inventory", "/dashboard", "/admin/requests"];
 
 const dateKeySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected yyyy-MM-dd");
 const rangeSchema = z

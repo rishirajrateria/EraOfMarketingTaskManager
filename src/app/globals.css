@@ -41,6 +41,8 @@
   --color-ontime: var(--ontime);
   --color-late: var(--late);
   --color-doubt: var(--doubt);
+  --color-s-inc: var(--s-inc);
+  --color-s-exp: var(--s-exp);
 }
 
 :root {
@@ -104,6 +106,10 @@
   --doubt: #7c3aed;
   --recsum: #0369a1;
   --dim: rgba(2, 12, 24, 0.35);
+  /* ADR 0016 dashboards: income / expense series (validated pair, light), recessive chart grid */
+  --s-inc: #2a78d6;
+  --s-exp: #eb6834;
+  --grid: rgba(15, 40, 70, 0.12);
   /* legacy names kept for older screens */
   --glass-bg: var(--glass);
   --glass-bg-strong: var(--glass-strong);
@@ -163,6 +169,9 @@
     --doubt: #c4b5fd;
     --recsum: #7dd3fc;
     --dim: rgba(2, 12, 24, 0.55);
+    --s-inc: #3987e5;
+    --s-exp: #d95926;
+    --grid: rgba(255, 255, 255, 0.12);
     /* older screens use Tailwind greys for text: invert the scale so they stay readable */
     --color-gray-50: #101926;
     --color-gray-100: #162130;
@@ -176,6 +185,12 @@
     --color-gray-900: #e8f1f8;
     color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --s-inc: #3987e5;
+  --s-exp: #d95926;
+  --grid: rgba(255, 255, 255, 0.12);
 }
 
 html,

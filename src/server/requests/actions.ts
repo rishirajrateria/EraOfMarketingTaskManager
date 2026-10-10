@@ -38,7 +38,7 @@ export async function resolveRequest(id: string, status: "RESOLVED" | "APPROVED"
     await notify({ userIds: [r.raisedById], kind: "GENERIC", title: `Your ${r.type.toLowerCase().replace("_", " ")} request was ${status.toLowerCase()}`, body: note, href: r.taskId ? `/dashboard?task=${r.taskId}` : "/leave", taskId: r.taskId ?? undefined, chat: false });
     if (r.taskId) void publishTaskChanged(r.taskId);
     bus.publish({ type: "requests.changed" });
-    safeRevalidate("/requests", "/dashboard");
+    safeRevalidate("/admin/requests", "/dashboard");
     return undefined;
   });
 }

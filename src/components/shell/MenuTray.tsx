@@ -3,10 +3,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  Bell, Building2, CalendarCheck, ChevronRight, Clock, FileText, Folder, FolderKey, HardDrive, Inbox, Layers,
-  ListChecks, LogOut, Receipt, Search, Settings, Tag, UserRoundCheck, Users, Wallet, X, type LucideIcon,
+  BarChart3, Bell, Building2, CalendarCheck, ChevronRight, FileText, Folder, FolderKey, HardDrive, Inbox, Layers,
+  ListChecks, LogOut, Receipt, Search, Settings, Tag, UserRoundCheck, Users, X, type LucideIcon,
 } from "lucide-react";
 import { menuCounts, type MenuCounts } from "@/server/shell/menu";
+import { inrShort } from "@/components/dashboards/format";
 
 /**
  * Admin menu (ADR 0011): a thumb-first bottom sheet. Search on top, grouped glass sections with icons, a one-line
@@ -15,7 +16,7 @@ import { menuCounts, type MenuCounts } from "@/server/shell/menu";
  */
 type Tone = "money" | "client" | "team" | "time" | "acct" | "task" | "red";
 type Badge = { n: number; tone: "red" | "amber" | "soft" } | null;
-type Item = { href: string; icon: LucideIcon; label: string; sub?: string; badge?: Badge; danger?: boolean };
+type Item = { href: string; icon: LucideIcon; label: string; sub?: string; badge?: Badge; danger?: boolean; tone?: Tone };
 type Section = { title: string; tone: Tone; items: Item[] };
 
 const TONE: Record<Tone, string> = {
@@ -37,19 +38,25 @@ const inr = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
 const badge = (n: number, tone: "red" | "amber" | "soft"): Badge => (n > 0 ? { n, tone } : null);
 
 /**
- * ADR 0013: one "Payments & finance" row (was Payments + Finance sheet). The line says what needs attention first:
- * "2 to approve · 1 overdue · ₹4,22,400 outstanding"; with nothing pending it falls back to the summary it opens.
+ * ADR 0016 menu: the Dashboards section replaced Invoices / Payments & finance / Expenses and Time & attendance (the
+ * dashboards' buttons and links reach them). Each row says what needs attention.
  */
-export function paymentsSub(c: MenuCounts | null): string {
-  if (!c) return "Approvals, reminders, totals, TDS, GST";
-  const parts = [
-    c.invoicesToApprove ? `${c.invoicesToApprove} to approve` : "",
-    c.invoicesOverdue ? `${c.invoicesOverdue} overdue` : "",
-    // "due" instead of "outstanding" when the line also carries an overdue count, so it fits one row at 390px
-    c.outstanding ? `${inr(c.outstanding)} ${c.invoicesOverdue && c.invoicesToApprove ? "due" : "outstanding"}` : "",
-  ].filter(Boolean);
-  if (parts.length) return parts.join(" · ");
-  return c.gstToClaimMonth ? `Nothing pending · GST to claim ${inr(c.gstToClaimMonth)}` : "Nothing pending · totals, TDS, GST";
+export function financeSub(c: MenuCounts | null): string {
+  if (!c) return "Income, expense, invoices, bills";
+  // compact rupees next to an approval count so the line fits one row at 390px
+  const owed = c.invoicesToApprove ? inrShort(c.outstanding) : inr(c.outstanding);
+  const parts = [c.invoicesToApprove ? `${c.invoicesToApprove} to approve` : "", c.outstanding ? `${owed} outstanding` : ""].filter(Boolean);
+  return parts.length ? parts.join(" · ") : "Income, expense, invoices, bills";
+}
+
+export function hrSub(c: MenuCounts | null): string {
+  if (!c || !c.attendanceMarkedToday) return "Attendance, inventory, leave";
+  return `${c.presentToday} present · ${c.onLeaveToday} on leave today`;
+}
+
+export function taskSub(c: MenuCounts | null): string {
+  if (!c) return "Open tasks, hours, on time";
+  return `${c.tasksOpen} open${c.tasksLate ? ` · ${c.tasksLate} late to start` : ""}`;
 }
 
 /** ADR 0014: "4 of 6 clients have a kit" (+ credentials still kept in the app's vault). */
@@ -64,18 +71,12 @@ export function menuSections(c: MenuCounts | null): Section[] {
   const k = (n: number | undefined) => n ?? 0;
   return [
     {
-      title: "Money",
+      title: "Dashboards",
       tone: "money",
       items: [
-        { href: "/admin/invoices", icon: FileText, label: "Invoices", sub: k(c?.invoicesToApprove) ? `${c!.invoicesToApprove} waiting for your approval` : "Create, approve and send", badge: badge(k(c?.invoicesToApprove), "red") },
-        { href: "/admin/payments", icon: Wallet, label: "Payments & finance", sub: paymentsSub(c), badge: badge(k(c?.invoicesOverdue), "amber") },
-        {
-          href: "/admin/expenses",
-          icon: Receipt,
-          label: "Expenses",
-          sub: k(c?.billsOverdue) ? `${c!.billsOverdue} overdue · ${c!.billsDueWeek} due this week` : k(c?.billsDueWeek) ? `${c!.billsDueWeek} due this week` : "Bills, GST credit, TDS",
-          badge: k(c?.billsOverdue) ? badge(c!.billsOverdue, "red") : badge(k(c?.billsDueWeek), "amber"),
-        },
+        { href: "/admin/dashboards?view=FIN", icon: BarChart3, label: "Finance dashboard", sub: financeSub(c), badge: badge(k(c?.invoicesToApprove) + k(c?.billsOverdue), "red") },
+        { href: "/admin/dashboards?view=HR", icon: CalendarCheck, label: "HR dashboard", sub: hrSub(c), tone: "time" },
+        { href: "/admin/dashboards?view=TASK", icon: ListChecks, label: "Task dashboard", sub: taskSub(c), badge: badge(k(c?.tasksLate), "amber"), tone: "task" },
         { href: "/admin/drive-folders", icon: Folder, label: "Monthly Drive folders", sub: "Invoices, bills, GST pack, cancelled" },
       ],
     },
@@ -100,18 +101,10 @@ export function menuSections(c: MenuCounts | null): Section[] {
       ],
     },
     {
-      title: "Time & attendance",
-      tone: "time",
-      items: [
-        { href: "/attendance", icon: CalendarCheck, label: "Attendance", sub: "Mark present, half day, leave" },
-        { href: "/admin/inventory", icon: Clock, label: "Inventory", sub: "Hours available vs assigned" },
-      ],
-    },
-    {
       title: "Account",
       tone: "acct",
       items: [
-        { href: "/requests", icon: Inbox, label: "Requests", sub: k(c?.requestsOpen) ? `${c!.requestsOpen} open` : "Review, time change, leave", badge: badge(k(c?.requestsOpen), "red") },
+        { href: "/admin/requests", icon: Inbox, label: "Requests", sub: k(c?.requestsOpen) ? `${c!.requestsOpen} open` : "Finance, work and leave in one inbox", badge: badge(k(c?.requestsOpen), "red") },
         { href: "/notifications", icon: Bell, label: "Notifications", sub: k(c?.unread) ? `${c!.unread} unread` : "All caught up", badge: badge(k(c?.unread), "soft") },
         { href: "/admin/settings", icon: Settings, label: "Settings", sub: "Company, bank, invoice, TDS" },
         { href: "/api/auth/signout", icon: LogOut, label: "Sign out", danger: true },
@@ -121,10 +114,10 @@ export function menuSections(c: MenuCounts | null): Section[] {
 }
 
 const QUICK: { href: string; icon: LucideIcon; label: string; tone: Tone }[] = [
-  { href: "/dashboard?add=CHOOSE", icon: ListChecks, label: "New task", tone: "task" },
   { href: "/admin/invoices?new=1", icon: FileText, label: "New invoice", tone: "money" },
   { href: "/admin/expenses/new", icon: Receipt, label: "Add expense", tone: "money" },
-  { href: "/admin/clients?add=1", icon: Building2, label: "Add client", tone: "client" },
+  { href: "/admin/requests?tab=FIN&fin=APPR", icon: Inbox, label: "Approvals", tone: "red" },
+  { href: "/dashboard?add=CHOOSE", icon: ListChecks, label: "New task", tone: "task" },
 ];
 
 /** Flat list kept for other consumers (tests, sitemaps). */
@@ -203,7 +196,7 @@ export function MenuTray({ open, onClose, user }: { open: boolean; onClose: () =
                       onClick={onClose}
                       className="flex min-h-14 items-center gap-3 border-b border-line px-3.5 py-2.5 last:border-b-0 active:bg-chip"
                     >
-                      <span className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] text-white ${TONE[it.danger ? "red" : s.tone]}`}>
+                      <span className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] text-white ${TONE[it.danger ? "red" : (it.tone ?? s.tone)]}`}>
                         <Icon size={18} strokeWidth={2} />
                       </span>
                       <span className="min-w-0 flex-1">

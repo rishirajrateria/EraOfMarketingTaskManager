@@ -1,61 +1,9 @@
 "use client";
-import Link from "next/link";
-import { useEffect, useState } from "react";
-import { Bell, Inbox, Menu } from "lucide-react";
-import { Avatar } from "@/components/ui/Avatar";
-import { menuStore } from "@/components/shell/menu-store";
-import { useLiveEvents } from "@/components/shell/useLiveEvents";
-import type { DashboardData } from "@/server/tasks/types";
+import { TopBar, type TopBarUser } from "@/components/shell/TopBar";
 
-export type TopBarUser = { id: string; name: string; image: string | null; role: DashboardData["role"] };
+export type { TopBarUser };
 
-function Badged({ href, label, count, children }: { href: string; label: string; count: number; children: React.ReactNode }) {
-  return (
-    <Link href={href} aria-label={label} title={label} className="relative flex h-9 w-7 items-center justify-center text-z1icon">
-      {children}
-      {count > 0 ? (
-        <span className="absolute -right-1 top-0 min-w-[14px] rounded-full bg-red-500 px-1 text-center text-[9px] font-bold leading-[14px] text-white">{count}</span>
-      ) : null}
-    </Link>
-  );
-}
-
-/**
- * Slim 26px overlay row at the top of the cyan area (replaces the app header on /dashboard):
- * ☰ (Admin, opens the MenuTray) · 📥 requests (Admin) · 🔔 notifications · avatar → /me.
- */
+/** The shared top bar (ADR 0016) inside the dashboard's cyan summary. */
 export function DashboardTopBar({ user, unread, openRequests }: { user: TopBarUser; unread: number; openRequests: number }) {
-  const [badge, setBadge] = useState(unread);
-  const [reqBadge, setReqBadge] = useState(openRequests);
-  useEffect(() => setBadge(unread), [unread]);
-  useEffect(() => setReqBadge(openRequests), [openRequests]);
-  useLiveEvents((e) => {
-    if (e.type === "notification" && e.userId === user.id) setBadge((b) => b + 1);
-    if (e.type === "requests.changed") setReqBadge((b) => b + 1);
-  });
-  const isAdmin = user.role === "ADMIN";
-  return (
-    <div className="flex h-9 items-center justify-between">
-      {isAdmin ? (
-        <button type="button" aria-label="Menu" onClick={() => menuStore.open()} className="-ml-1 flex h-9 w-8 items-center justify-center text-z1icon">
-          <Menu size={17} strokeWidth={2.5} />
-        </button>
-      ) : (
-        <span />
-      )}
-      <div className="flex items-center gap-2.5">
-        {isAdmin ? (
-          <Badged href="/requests" label="Requests" count={reqBadge}>
-            <Inbox size={15} strokeWidth={2.25} />
-          </Badged>
-        ) : null}
-        <Badged href="/notifications" label="Notifications" count={badge}>
-          <Bell size={15} strokeWidth={2.25} />
-        </Badged>
-        <Link href="/me" aria-label="Profile" className="flex items-center rounded-full opacity-95 shadow-[0_0_0_2px_rgba(255,255,255,.35)]">
-          <Avatar name={user.name} src={user.image} size={22} />
-        </Link>
-      </div>
-    </div>
-  );
+  return <TopBar user={user} unread={unread} openRequests={openRequests} />;
 }

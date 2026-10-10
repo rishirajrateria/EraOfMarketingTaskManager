@@ -24,7 +24,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       filters={normaliseFilters(prefs?.filterPrefs)}
       initialTaskId={sp.task ?? null}
       showCompleted={sp.completed === "1" || sp.completed === "true"}
-      user={{ id: user.id, name: user.name ?? "", image: user.image ?? null, role: data.role }}
+      user={{ id: user.id, name: user.name ?? "", image: user.image ?? null, email: user.email ?? null, role: data.role }}
       unread={unread}
       openRequests={openRequests}
     />

@@ -8,6 +8,7 @@ import { btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
 import { FilterStrip } from "@/components/dashboard/FilterStrip";
 import { MeetIcon } from "@/components/dashboard/GoogleIcons";
 import { dayLabel } from "@/components/dashboard/summary";
+import { DockPill, FilterRow } from "@/components/ui/FilterRow";
 
 export type AddMode = "WORK" | "MEETING" | "CHOOSE";
 
@@ -30,44 +31,6 @@ function Opt({ on, onClick, children }: { on: boolean; onClick: () => void; chil
     >
       {children}
     </button>
-  );
-}
-
-/** A one-tap filter pill (prototype `.dk`): 32px, single line; dark filled when on. */
-function DockPill({ on, onClick, label, children }: { on: boolean; onClick: () => void; label?: string; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={on}
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      className={clsx(
-        "no-select flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-[12px] border px-2.5 text-[12.5px] font-semibold",
-        on ? "border-transparent bg-primary text-primary-ink" : "glass-chip border-hair text-ink",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-/** A filter row: small uppercase muted label, "All", then one pill per item — scrolls sideways, never wraps. */
-function FilterRow({ label, items, value, onChange }: { label: string; items: { id: string; label: string }[]; value: string | null; onChange: (id: string | null) => void }) {
-  return (
-    <div className="flex h-[42px] items-center" role="group" aria-label={label}>
-      <span className="w-[78px] shrink-0 pl-3 text-[10.5px] font-extrabold uppercase tracking-[.07em] text-muted">{label}</span>
-      <div className="scrollbar-none flex h-full min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pr-3">
-        <DockPill on={value === null} onClick={() => onChange(null)}>
-          All
-        </DockPill>
-        {items.map((it) => (
-          <DockPill key={it.id} on={value === it.id} onClick={() => onChange(value === it.id ? null : it.id)}>
-            {it.label}
-          </DockPill>
-        ))}
-      </div>
-    </div>
   );
 }
 

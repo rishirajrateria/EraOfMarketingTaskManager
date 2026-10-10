@@ -28,7 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           Demo ⇄
         </a>
       ) : null}
-      <AppFrame user={{ id: user.id, name: user.name ?? "", role: user.role, image: user.image ?? null }} unread={unread} openRequests={openRequests}>
+      <AppFrame user={{ id: user.id, name: user.name ?? "", role: user.role, image: user.image ?? null, email: user.email ?? null }} unread={unread} openRequests={openRequests}>
         {children}
       </AppFrame>
     </ToastProvider>

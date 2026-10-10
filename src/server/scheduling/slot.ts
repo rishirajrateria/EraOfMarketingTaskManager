@@ -97,7 +97,9 @@ export async function proposeSlot(
   opts: BusyOptions & { from?: Date; horizonDays?: number },
 ): Promise<SlotProposal | null> {
   const cfg = await workingConfig();
-  const from = opts.from ?? new Date();
+  // Slots start on a whole minute: "now" carries seconds, which would leak into scheduledStart and recurrences.
+  const raw = opts.from ?? new Date();
+  const from = new Date(Math.ceil(raw.getTime() / 60_000) * 60_000);
   const horizon = addDays(from, opts.horizonDays ?? 60);
   const hard: Interval[] = [];
   const soft: { id: string; start: Date; end: Date }[] = [];

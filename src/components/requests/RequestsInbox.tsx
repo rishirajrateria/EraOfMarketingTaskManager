@@ -1,39 +1,59 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import type { RequestItem } from "@/server/requests/queries";
+import type { RequestInbox } from "@/server/requests/inbox";
+import { FINANCE_GROUPS, FINANCE_GROUP_LABEL, groupOfKind, inboxCounts, type FinanceGroup } from "@/server/requests/areas";
 import { approveFinish, rejectFinish, resolveDoubt } from "@/server/tasks/lifecycle";
 import { setTaskProtected } from "@/server/tasks/manage";
-import { REVIEW_FIELD_NAME, isReviewField } from "@/server/tasks/review-fields";
 import { resolveRequest } from "@/server/requests/actions";
+import { dashHref, viewForTab, type RequestTab } from "@/server/dashboards/params";
 import { useToast } from "@/components/ui/Toast";
 import { Sheet } from "@/components/ui/Sheet";
 import { btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
-import { BarChip, BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
-import { Screen, ScreenHeader } from "@/components/admin/AdminUi";
-import { fmtDateTime } from "@/lib/time";
+import { FilterRow } from "@/components/ui/FilterRow";
+import { Screen } from "@/components/admin/AdminUi";
+import { FinanceRow, RequestHead } from "@/components/requests/RequestCard";
+import { clsx } from "@/lib/clsx";
 
-const LABEL: Record<string, string> = {
-  FINISH: "Finish request",
-  DOUBT: "Doubt",
-  REVIEW: "Review request",
-  TIME_CHANGE: "Time-change request",
-  FIX_SELF_TASK: "Fix self-assigned task",
-  LEAVE: "Leave request",
-  APPROVED_CHANGE: "Change to approved item",
-};
+/**
+ * Admin's one requests inbox (ADR 0016, prototype `PAGES.requests`): tabs All · Finance · Work · HR in the bottom zone
+ * (?tab=), finance items from the hub's "Needs you" (approve sheet, overdue invoice, Mark paid), work requests (finish,
+ * doubt, review incl. per-pill review, time change, fix) and HR (leave). Bottom actions: Task list · Dashboards (the
+ * dashboard view that matches the tab).
+ */
+const small = "inline-flex h-9 items-center justify-center rounded-xl px-3 text-[13px] font-semibold";
+const pri = `${small} bg-primary text-primary-ink disabled:opacity-45`;
+const sec = `${small} border border-hair bg-chip text-ink disabled:opacity-45`;
+const sectionHead = "px-4 pb-1.5 pt-3 text-[11px] font-bold uppercase tracking-[.08em] text-muted";
+const card = "mx-3 overflow-hidden rounded-[18px] border border-hair bg-glass shadow-[var(--shadow)]";
 
-const TYPES = ["ALL", "FINISH", "DOUBT", "REVIEW", "TIME_CHANGE", "FIX_SELF_TASK", "APPROVED_CHANGE"];
+type Note = { action: "reject" | "resolve"; taskId: string };
 
-export function RequestsInbox({ items, showAll, tz }: { items: RequestItem[]; showAll: boolean; tz: string }) {
-  const [type, setType] = useState("ALL");
-  const [note, setNote] = useState<{ id: string; action: "reject" | "resolve"; taskId: string | null; type: string } | null>(null);
+export function RequestsInbox({ inbox, tab, fin, showAll, tz }: { inbox: RequestInbox; tab: RequestTab; fin: FinanceGroup | null; showAll: boolean; tz: string }) {
+  const [note, setNote] = useState<Note | null>(null);
   const [text, setText] = useState("");
   const [pending, start] = useTransition();
+  const [navPending, startNav] = useTransition();
+  const [shown, setShown] = useOptimistic({ tab, fin });
+  const shownTab = shown.tab;
   const toast = useToast();
   const router = useRouter();
-  const visible = items.filter((r) => type === "ALL" || r.type === type);
+
+  const href = (t: RequestTab, all = showAll, f: FinanceGroup | null = null) => {
+    const q = new URLSearchParams();
+    if (t !== "ALL") q.set("tab", t);
+    if (t === "FIN" && f) q.set("fin", f);
+    if (all) q.set("all", "1");
+    const s = q.toString();
+    return `/admin/requests${s ? `?${s}` : ""}`;
+  };
+  const pick = (t: RequestTab, f: FinanceGroup | null) =>
+    startNav(() => {
+      setShown({ tab: t, fin: f });
+      router.replace(href(t, showAll, f), { scroll: false });
+    });
 
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>) =>
     start(async () => {
@@ -44,101 +64,157 @@ export function RequestsInbox({ items, showAll, tz }: { items: RequestItem[]; sh
       router.refresh();
     });
 
-  const openCount = items.filter((r) => r.status === "OPEN").length;
+  const open = (rows: RequestItem[]) => rows.filter((r) => r.status === "OPEN");
+  const counts = inboxCounts(inbox);
+  const showFin = shownTab === "ALL" || shownTab === "FIN";
+  const finItems = shownTab === "FIN" && shown.fin ? inbox.finance.filter((f) => groupOfKind(f.kind) === shown.fin) : inbox.finance;
+  const rows = shownTab === "WORK" ? inbox.work : shownTab === "HR" ? inbox.hr : shownTab === "ALL" ? [...inbox.work, ...inbox.hr].sort((a, b) => b.createdAt.localeCompare(a.createdAt)) : [];
+  const openRows = open(rows);
+  const handled = rows.filter((r) => r.status !== "OPEN");
+  const nothing = (!showFin || finItems.length === 0) && openRows.length === 0;
+
+  const actions = (r: RequestItem) => {
+    if (r.status !== "OPEN") return null;
+    const t = r.task;
+    return (
+      <div className="mt-2 flex flex-wrap gap-2">
+        {r.type === "FINISH" && t ? (
+          <>
+            <button disabled={pending} className={pri} onClick={() => run(() => approveFinish(t.id))}>Approve</button>
+            <button disabled={pending} className={sec} onClick={() => setNote({ action: "reject", taskId: t.id })}>Reject…</button>
+          </>
+        ) : null}
+        {r.type === "DOUBT" && t ? (
+          <>
+            <button disabled={pending} className={pri} onClick={() => setNote({ action: "resolve", taskId: t.id })}>Unflag…</button>
+            <Link href={`/dashboard?task=${t.id}`} className={sec}>Open task</Link>
+          </>
+        ) : null}
+        {(r.type === "REVIEW" || r.type === "TIME_CHANGE") && t ? (
+          <>
+            <Link href={`/dashboard?task=${t.id}&edit=1`} className={pri}>Edit task</Link>
+            <button disabled={pending} className={sec} onClick={() => run(() => resolveRequest(r.id, "RESOLVED"))}>Mark resolved</button>
+          </>
+        ) : null}
+        {r.type === "FIX_SELF_TASK" && t ? (
+          <>
+            <button disabled={pending} className={pri} onClick={() => run(() => setTaskProtected(t.id, true))}>Protect task</button>
+            <button disabled={pending} className={sec} onClick={() => run(() => resolveRequest(r.id, "REJECTED"))}>Decline</button>
+          </>
+        ) : null}
+        {r.type === "APPROVED_CHANGE" || r.type === "LEAVE" ? (
+          <Link href={r.leave ? `/requests/leave?leaveId=${r.leave.id}` : "/requests/leave"} className={pri}>Open leave</Link>
+        ) : null}
+      </div>
+    );
+  };
+  const list = (items: RequestItem[]) => (
+    <ul className={card}>
+      {items.map((r) => (
+        <li key={r.id} className={clsx("border-b border-line px-3.5 py-3 last:border-b-0", r.status !== "OPEN" && "opacity-70")}>
+          <RequestHead r={r} tz={tz} />
+          {actions(r)}
+        </li>
+      ))}
+    </ul>
+  );
+
+  const label = (t: string, n: number) => (n ? `${t} · ${n}` : t);
   const zone = (
-    <BottomZone
-      menu
-      rows={
-        <ZoneRow label="Request type">
-          {TYPES.map((t) => (
-            <ZonePill key={t} active={type === t} onClick={() => setType(t)}>
-              {t === "ALL" ? "All" : LABEL[t]}
-            </ZonePill>
-          ))}
-        </ZoneRow>
-      }
-      right={
-        <BarChip active={showAll} label={showAll ? "Show open requests only" : "Show resolved requests too"} onClick={() => router.push(showAll ? "/requests" : "/requests?all=1")}>
-          {showAll ? "Open only" : "Show resolved"}
-        </BarChip>
-      }
-    />
+    <section className="zone-top bar-glass sticky bottom-0 z-20 shrink-0 border-t border-hair pb-[env(safe-area-inset-bottom)] pt-1" aria-label="Requests">
+      <FilterRow
+        dense
+        all={false}
+        label="Inbox"
+        value={shownTab}
+        onChange={(t) => t && pick(t as RequestTab, null)}
+        items={[
+          { id: "ALL", label: "All" },
+          { id: "FIN", label: label("Finance", counts.FIN) },
+          { id: "WORK", label: label("Work", counts.WORK) },
+          { id: "HR", label: label("HR", counts.HR) },
+        ]}
+      />
+      {shownTab === "FIN" ? (
+        <FilterRow
+          dense
+          label="Finance"
+          value={shown.fin}
+          onChange={(f) => pick("FIN", f as FinanceGroup | null)}
+          items={FINANCE_GROUPS.map((g) => ({ id: g, label: label(FINANCE_GROUP_LABEL[g], counts[g]) }))}
+        />
+      ) : null}
+      <div className="grid h-[60px] grid-cols-2 items-center gap-2 px-3">
+        <Link href="/dashboard" className="glass-chip flex h-11 items-center justify-center rounded-[14px] border border-hair text-[14px] font-semibold text-ink">
+          Task list
+        </Link>
+        <Link
+          href={dashHref({ view: viewForTab(shownTab), fin: "ALL", team: null, client: null, period: "MONTH" })}
+          className="flex h-11 items-center justify-center rounded-[14px] bg-gradient-to-br from-[#3b82f6] to-[#1d4ed8] text-[14px] font-semibold text-white shadow-[0_6px_16px_-6px_rgba(37,99,235,.7)]"
+        >
+          Dashboards
+        </Link>
+      </div>
+    </section>
   );
 
   return (
-    <Screen header={<ScreenHeader title="Requests" subtitle={`${openCount} open · ${visible.length} shown${showAll ? " (incl. resolved)" : ""}`} />} zone={zone} className="bg-white/55 backdrop-blur-md">
-      {visible.length === 0 ? <p className="p-6 text-center text-sm text-gray-500">Inbox is empty.</p> : null}
-      <ul className="divide-y divide-white/60">
-        {visible.map((r) => (
-          <li key={r.id} className="px-4 py-3">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="text-xs font-semibold uppercase text-brand-blue">
-                  {LABEL[r.type] ?? r.type}
-                  {r.field && isReviewField(r.field) ? ` · ${REVIEW_FIELD_NAME[r.field]}` : ""}
-                </div>
-                {r.task ? (
-                  <Link href={`/dashboard?task=${r.task.id}`} className="block truncate text-sm font-medium">
-                    {r.task.title} <span className="text-gray-400">· {r.task.client}</span>
-                  </Link>
-                ) : r.leave ? (
-                  <Link href={`/requests/leave?leaveId=${r.leave.id}`} className="block text-sm font-medium">
-                    {r.leave.userName}: {r.leave.from.slice(0, 10)} → {r.leave.to.slice(0, 10)}
-                  </Link>
-                ) : null}
-                {r.note ? <div className="mt-0.5 text-xs text-gray-700">“{r.note}”</div> : null}
-                <div className="mt-0.5 text-[11px] text-gray-400">
-                  {r.raisedBy.name} · {fmtDateTime(new Date(r.createdAt), tz)} · {r.status}
-                </div>
-              </div>
-            </div>
-            {r.status === "OPEN" ? (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {r.type === "FINISH" && r.task ? (
-                  <>
-                    <button disabled={pending} className={btnPrimary} onClick={() => run(() => approveFinish(r.task!.id))}>Approve</button>
-                    <button disabled={pending} className={btnSecondary} onClick={() => setNote({ id: r.id, action: "reject", taskId: r.task!.id, type: r.type })}>Reject…</button>
-                  </>
-                ) : null}
-                {r.type === "DOUBT" && r.task ? (
-                  <>
-                    <button disabled={pending} className={btnPrimary} onClick={() => setNote({ id: r.id, action: "resolve", taskId: r.task!.id, type: r.type })}>Unflag…</button>
-                    {r.task ? <Link href={`/dashboard?task=${r.task.id}`} className={btnSecondary}>Open task</Link> : null}
-                  </>
-                ) : null}
-                {(r.type === "REVIEW" || r.type === "TIME_CHANGE") && r.task ? (
-                  <>
-                    <Link href={`/dashboard?task=${r.task.id}&edit=1`} className={btnPrimary}>Edit task</Link>
-                    <button disabled={pending} className={btnSecondary} onClick={() => run(() => resolveRequest(r.id, "RESOLVED"))}>Mark resolved</button>
-                  </>
-                ) : null}
-                {r.type === "FIX_SELF_TASK" && r.task ? (
-                  <>
-                    <button disabled={pending} className={btnPrimary} onClick={() => run(() => setTaskProtected(r.task!.id, true))}>Protect task</button>
-                    <button disabled={pending} className={btnSecondary} onClick={() => run(() => resolveRequest(r.id, "REJECTED"))}>Decline</button>
-                  </>
-                ) : null}
-                {r.type === "APPROVED_CHANGE" || r.type === "LEAVE" ? (
-                  <Link href={r.leave ? `/requests/leave?leaveId=${r.leave.id}` : "/requests/leave"} className={btnPrimary}>Open leave</Link>
-                ) : null}
-              </div>
-            ) : null}
-          </li>
-        ))}
-      </ul>
+    <Screen zone={zone}>
+      <div aria-busy={navPending} className={clsx("pb-4 transition-opacity", navPending && "opacity-55")}>
+        {showFin && finItems.length ? (
+          <>
+            <h2 className={sectionHead}>
+              {shownTab === "FIN" && shown.fin ? FINANCE_GROUP_LABEL[shown.fin] : "Finance"} · {finItems.length}
+            </h2>
+            <ul className={card}>
+              {finItems.map((f) => (
+                <FinanceRow key={`${f.kind}-${f.id}`} item={f} />
+              ))}
+            </ul>
+          </>
+        ) : null}
+        {shownTab === "FIN" && finItems.length === 0 ? (
+          <p className="px-6 py-10 text-center text-[13px] text-muted">
+            {shown.fin === "APPR" ? "Nothing waiting for your approval." : shown.fin === "PAY" ? "No client payments overdue." : shown.fin === "EXP" ? "No bills overdue or due this week." : "No finance approvals or reminders."}
+          </p>
+        ) : null}
+        {shownTab !== "FIN" && openRows.length ? (
+          <>
+            <h2 className={sectionHead}>{shownTab === "HR" ? "Leave" : shownTab === "WORK" ? "Work" : "Work & HR"} · {openRows.length} open</h2>
+            {list(openRows)}
+          </>
+        ) : null}
+        {shownTab !== "FIN" && nothing ? <p className="px-6 py-10 text-center text-[13px] text-muted">{shownTab === "HR" ? "No leave requests." : shownTab === "WORK" ? "No work requests." : "Inbox zero."}</p> : null}
+        {shownTab !== "FIN" && showAll && handled.length ? (
+          <>
+            <h2 className={sectionHead}>Handled</h2>
+            {list(handled)}
+          </>
+        ) : null}
+        {shownTab !== "FIN" ? (
+          <div className="px-4 pt-3 text-center">
+            <Link href={href(shownTab, !showAll)} replace scroll={false} className="text-[12.5px] font-semibold text-muted underline underline-offset-2">
+              {showAll ? "Hide handled requests" : "Show handled requests"}
+            </Link>
+          </div>
+        ) : null}
+      </div>
       <Sheet open={!!note} onClose={() => setNote(null)} title={note?.action === "reject" ? "Reject finish" : "Resolve doubt"}>
         <div className="space-y-3 p-4">
           <textarea className={inputCls} rows={3} placeholder="Note to the team" value={text} onChange={(e) => setText(e.target.value)} />
-          <button
-            disabled={pending}
-            className={btnPrimary}
-            onClick={() => {
-              if (!note?.taskId) return;
-              run(() => (note.action === "reject" ? rejectFinish(note.taskId!, text) : resolveDoubt(note.taskId!, text)));
-            }}
-          >
-            Confirm
-          </button>
+          <div className="flex justify-end gap-2">
+            <button type="button" className={btnSecondary} onClick={() => setNote(null)}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              className={btnPrimary}
+              onClick={() => note && run(() => (note.action === "reject" ? rejectFinish(note.taskId, text) : resolveDoubt(note.taskId, text)))}
+            >
+              Confirm
+            </button>
+          </div>
         </div>
       </Sheet>
     </Screen>

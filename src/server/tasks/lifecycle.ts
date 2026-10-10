@@ -28,7 +28,7 @@ async function loadTask(user: SessionUser, taskId: string) {
 
 function done(taskId: string) {
   void publishTaskChanged(taskId);
-  safeRevalidate("/dashboard", "/requests");
+  safeRevalidate("/dashboard", "/admin/requests");
 }
 
 /** Long-press → Start (Admin / Team Leader). */

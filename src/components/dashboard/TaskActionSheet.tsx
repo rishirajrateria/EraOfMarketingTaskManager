@@ -83,7 +83,7 @@ export function TaskActionSheet({
     if (canAssign) items.push(assignItem);
     if (canTransition(s, "RESTART")) items.push({ label: "Restart", onClick: act("restart"), hint: "duplicate as new" });
     if (t.doubtRaised) items.push({ label: "Resolve doubt", onClick: act("resolve_doubt"), hint: "unflag" });
-    items.push({ label: "Open request", onClick: () => { onClose(); router.push("/requests"); }, hint: t.reviewRequested || t.doubtRaised || s === "FINISH_REQUESTED" ? "pending" : undefined });
+    items.push({ label: "Open request", onClick: () => { onClose(); router.push("/admin/requests"); }, hint: t.reviewRequested || t.doubtRaised || s === "FINISH_REQUESTED" ? "pending" : undefined });
     if (t.integrationError) items.push({ label: "Retry integrations", onClick: act("retry"), hint: "Google" });
     items.push({ label: "Delete", onClick: act("delete"), danger: true });
   } else if (role === "TEAM_LEADER") {

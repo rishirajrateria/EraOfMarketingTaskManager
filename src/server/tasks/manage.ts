@@ -102,7 +102,7 @@ export async function updateTask(raw: unknown): Promise<ActionResult<undefined>>
     void import("@/google/queue").then((q) => q.processPending()).catch(() => undefined);
     void publishTaskChanged(t.id);
     bus.publish({ type: "requests.changed" });
-    safeRevalidate("/dashboard", "/requests");
+    safeRevalidate("/dashboard", "/admin/requests");
     return undefined;
   });
 }
@@ -160,7 +160,7 @@ export async function setTaskProtected(taskId: string, value: boolean): Promise<
     await audit(user.id, "task.protect", "Task", taskId, null, { protected: value });
     void publishTaskChanged(taskId);
     bus.publish({ type: "requests.changed" });
-    safeRevalidate("/dashboard", "/requests");
+    safeRevalidate("/dashboard", "/admin/requests");
     return undefined;
   });
 }
@@ -208,7 +208,7 @@ export async function deleteTask(taskId: string): Promise<ActionResult<{ warning
     });
     await audit(user.id, "task.delete", "Task", taskId, t, teardown);
     bus.publish({ type: "task.deleted", taskId });
-    safeRevalidate("/dashboard", "/requests");
+    safeRevalidate("/dashboard", "/admin/requests");
     return { warnings: teardown.warnings };
   });
 }

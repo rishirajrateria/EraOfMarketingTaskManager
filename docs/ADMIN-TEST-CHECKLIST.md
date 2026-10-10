@@ -211,6 +211,38 @@ Sign in as **Admin** from the demo chooser. Everything below is in the order a r
 ## Menu (ADR 0011)
 - [ ] ☰ opens a bottom sheet; tapping outside, ✕ or Escape closes it.
 - [ ] Search filters rows (try "gst", "team"); "Nothing matches" when empty.
-- [ ] Badges: Invoices shows the number awaiting approval; Expenses shows overdue (red) or due this week (amber); Requests and Notifications show their counts.
-- [ ] Quick actions open New task, New invoice, Add expense and Add client.
+- [ ] Badges (ADR 0016): Finance dashboard = approvals + overdue bills (red); Task dashboard = late to start (amber); Requests and Notifications show their counts.
+- [ ] Quick actions open New invoice, Add expense, Approvals (Requests › Finance › Approvals) and New task.
 - [ ] Opening the menu from the dashboard and from any admin page shows one sheet only.
+
+## Dashboards, requests, top bar (ADR 0016)
+Sign in as Admin (demo: second button). Check at 390px (and the top bar at 360px), light and dark; no sideways scroll.
+
+### Top bar (every screen)
+- [ ] Left → right: ☰ | Gmail · Drive · WhatsApp | divider | Dashboards · Requests · 🔔 · avatar. Gmail / Drive open a new tab on the signed-in account (`authuser=`), WhatsApp opens wa.me.
+- [ ] On the task dashboard it sits in the cyan summary; on every other page (clients, requests, notifications, profile, attendance, inventory, dashboards) it is a cyan band with rounded bottom corners, with the back arrow + page title under it and no second ☰.
+- [ ] As Team Leader / Executive: no ☰, no Dashboards, no Requests; shortcuts, 🔔 and avatar remain. As HR: the inbox icon opens the leave inbox.
+
+### Menu
+- [ ] Sections: Dashboards (Finance dashboard · HR dashboard · Task dashboard · Monthly Drive folders), Clients, Team, Account. No Invoices / Payments & finance / Expenses / Attendance / Inventory rows (old URLs still open).
+- [ ] Finance row "n to approve · ₹x outstanding"; HR row "x present · y on leave today" once today is marked; Task row "n open · m late to start".
+
+### Dashboards (`/admin/dashboards`)
+- [ ] Bar-chart icon and the menu rows open it; the URL carries view / fin / team / client / period, and Back returns to the previous filters.
+- [ ] Bottom rows: VIEW Finance · HR · Tasks; SHOW (Finance) Overview · Income · Expense; TEAMS (HR, Tasks) and CLIENTS (Finance, Tasks) with All; WHEN This month · Last month · 3 months · This FY (from 1 April). Caption: period left, team / client or "everyone" right.
+- [ ] Finance Overview: six tiles; "Income vs expense" for 6 months with legend, ₹ axis, mid line; hover or tap a month → tooltip with income, expense, net; "Top clients · received" — tap a client to filter (tap again clears). Pills: Invoices › Payments › Expenses › Drive folders ›.
+- [ ] Income: Received, Invoiced, TDS cut, Outstanding, Overdue, To approve; Received by client; Still owed (with "₹x overdue"). Proformas and credit notes don't count. Pills Invoices › Payments ›.
+- [ ] Expense: Spent, To pay, Overdue bills, GST to claim, TDS deducted, Bills paid; Spent by category; Next bills → Pay opens Mark paid. Pills Expenses › Drive folders ›. No CLIENTS row.
+- [ ] With a client picked on Overview, Spent / Net / To pay / GST show "—  not per client" and the chart is hidden.
+- [ ] Empty period: "Nothing received in this period", "No expenses paid in this period", "Nothing due".
+- [ ] HR: Present x / n today, On leave today, Free to assign (x of y h booked); each person with today's pill, a capacity bar (amber > 70 %, red > 90 %), "Team · booked · free · days off"; tap → Inventory. TEAMS filters.
+- [ ] Tasks: Open tasks (h booked), Late to start, Paused, Doubts, Completed (period), On time %; stacked bar in card colours with legend; Open hours by team / client — tap filters.
+- [ ] Action bar: Finance Requests (red count) · + Invoice · + Expense; HR Requests · Inventory · Attendance; Tasks Requests · Task list · + Task (opens the add sheet).
+- [ ] While a filter loads, the old numbers stay dimmed ("Updating…" in the caption).
+- [ ] Team Leader / Executive / HR opening `/admin/dashboards` are sent away.
+
+### Requests (`/admin/requests`)
+- [ ] The inbox icon and ☰ → Requests open it; old `/requests` links land here (HR → leave inbox).
+- [ ] Tabs All · Finance n · Work n · HR n. Finance: approvals (→ approve sheet), client invoices "n days late" (→ invoice), bills overdue (red) or due this week (→ Mark paid); second row All · Approvals · Payments · Expenses filters them.
+- [ ] Work: finish, doubt, review (with the pill: "Review request · Start time"), time change, fix requests with their actions. HR: leave requests and changes to approved leave → Open leave.
+- [ ] "Show handled requests" adds resolved ones. Bottom: Task list · Dashboards (Finance / Tasks / HR view matching the tab).
