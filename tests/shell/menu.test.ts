@@ -47,6 +47,31 @@ describe("admin menu counts", () => {
     expect(money.items.find((i) => i.label === "Expenses")!.sub).toBe("1 overdue · 1 due this week");
   });
 
+  it("ADR 0013: one 'Payments & finance' row says what needs attention (no separate Finance sheet)", async () => {
+    const { menuCounts } = await import("@/server/shell/menu");
+    const { paymentsSub } = await import("@/components/shell/MenuTray");
+    const inv = (n: string, status: string, total: number, due: number) =>
+      testDb.invoice.create({ data: { number: n, clientId: seed.client.id, docType: "TAX_INVOICE", status, subtotal: total, gstAmount: 0, total, gstPercent: 0, approvedAt: new Date(), dueDate: new Date(Date.now() + due * DAY) } as never });
+    await inv("EOM/26-27/0001", "SENT", 400000, -3); // overdue
+    await inv("EOM/26-27/0002", "SENT", 22400, 10);
+    await testDb.invoice.create({ data: { number: "DRAFT-a", clientId: seed.client.id, status: "AWAITING_APPROVAL", subtotal: 1, gstAmount: 0, total: 1, gstPercent: 0 } as never });
+    await testDb.invoice.create({ data: { number: "DRAFT-b", clientId: seed.client.id, docType: "PROFORMA", status: "AWAITING_APPROVAL", subtotal: 1, gstAmount: 0, total: 1, gstPercent: 0 } as never });
+    await testDb.invoice.create({ data: { number: "EOM-PRO/26-27/0001", clientId: seed.client.id, docType: "PROFORMA", status: "SENT", subtotal: 99999, gstAmount: 0, total: 99999, gstPercent: 0, approvedAt: new Date() } as never });
+    session.set({ id: seed.admin.id, role: "ADMIN" });
+    const r = await menuCounts();
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.data).toMatchObject({ invoicesToApprove: 2, invoicesOverdue: 1, outstanding: 422400 });
+    const money = menuSections(r.data).find((s) => s.title === "Money")!;
+    const row = money.items.find((i) => i.href === "/admin/payments")!;
+    expect(row.label).toBe("Payments & finance");
+    expect(row.sub).toBe("2 to approve · 1 overdue · ₹4,22,400 outstanding");
+    expect(row.badge).toEqual({ n: 1, tone: "amber" });
+    expect(money.items.map((i) => i.label)).toEqual(["Invoices", "Payments & finance", "Expenses", "Monthly Drive folders"]);
+    expect(paymentsSub({ ...r.data, invoicesToApprove: 0, invoicesOverdue: 0, outstanding: 0, gstToClaimMonth: 0 })).toBe("Nothing pending · totals, TDS, GST");
+    expect(menuSections(null).flatMap((s) => s.items.map((i) => i.href))).not.toContain("/admin/finance");
+  });
+
   it("lists every admin destination once", () => {
     const hrefs = menuSections(null).flatMap((s) => s.items.map((i) => i.href));
     expect(new Set(hrefs).size).toBe(hrefs.length);

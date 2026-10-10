@@ -10,6 +10,8 @@ import { wrap, type ActionResult } from "@/lib/action-result";
 export type MenuCounts = {
   invoicesToApprove: number;
   outstanding: number;
+  /** Client invoices past their due date with money still owed (ADR 0013 hub "Needs you"). */
+  invoicesOverdue: number;
   billsOverdue: number;
   billsDueWeek: number;
   gstToClaimMonth: number;
@@ -38,7 +40,7 @@ export async function menuCounts(): Promise<ActionResult<MenuCounts>> {
       prisma.invoice.count({ where: { status: "AWAITING_APPROVAL" } }),
       prisma.invoice.findMany({
         where: { status: { in: ["SENT", "PARTIALLY_PAID", "OVERDUE"] }, docType: { in: ["TAX_INVOICE", "EXPORT_INVOICE"] } },
-        select: { total: true, ...SETTLEMENT_INCLUDE },
+        select: { total: true, status: true, dueDate: true, ...SETTLEMENT_INCLUDE },
       }),
       prisma.expenseOccurrence.count({ where: { status: "DUE", dueDate: { lt: today } } }),
       prisma.expenseOccurrence.count({ where: { status: "DUE", dueDate: { gte: today, lt: new Date(today.getTime() + 8 * DAY) } } }),
@@ -51,9 +53,11 @@ export async function menuCounts(): Promise<ActionResult<MenuCounts>> {
       prisma.request.count({ where: { status: "OPEN", targetRole: "ADMIN" } }),
       prisma.notification.count({ where: { userId: user.id, readAt: null } }),
     ]);
+    const owed = open.map((i) => ({ i, balance: settleInvoice(i).balance })).filter((x) => x.balance > 0);
     return {
       invoicesToApprove: toApprove,
-      outstanding: Math.round(open.reduce((s, i) => s + settleInvoice(i).balance, 0)),
+      outstanding: Math.round(owed.reduce((s, x) => s + x.balance, 0)),
+      invoicesOverdue: owed.filter((x) => x.i.status === "OVERDUE" || (x.i.dueDate && x.i.dueDate < now)).length,
       billsOverdue: overdue,
       billsDueWeek: dueWeek,
       gstToClaimMonth: Math.round(Number(gst._sum.gstAmount ?? 0)),

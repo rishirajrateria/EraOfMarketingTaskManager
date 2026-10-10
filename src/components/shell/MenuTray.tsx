@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  Bell, Building2, CalendarCheck, ChartLine, ChevronRight, Clock, FileText, Folder, HardDrive, Inbox, KeyRound, Layers,
+  Bell, Building2, CalendarCheck, ChevronRight, Clock, FileText, Folder, HardDrive, Inbox, KeyRound, Layers,
   Link2, ListChecks, LogOut, Receipt, Search, Settings, Tag, UserRoundCheck, Users, Wallet, X, type LucideIcon,
 } from "lucide-react";
 import { menuCounts, type MenuCounts } from "@/server/shell/menu";
@@ -35,6 +35,21 @@ const BADGE = {
 const inr = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
 const badge = (n: number, tone: "red" | "amber" | "soft"): Badge => (n > 0 ? { n, tone } : null);
 
+/**
+ * ADR 0013: one "Payments & finance" row (was Payments + Finance sheet). The line says what needs attention first:
+ * "2 to approve · 1 overdue · ₹4,22,400 outstanding"; with nothing pending it falls back to the summary it opens.
+ */
+export function paymentsSub(c: MenuCounts | null): string {
+  if (!c) return "Approvals, reminders, totals, TDS, GST";
+  const parts = [
+    c.invoicesToApprove ? `${c.invoicesToApprove} to approve` : "",
+    c.invoicesOverdue ? `${c.invoicesOverdue} overdue` : "",
+    c.outstanding ? `${inr(c.outstanding)} outstanding` : "",
+  ].filter(Boolean);
+  if (parts.length) return parts.join(" · ");
+  return c.gstToClaimMonth ? `Nothing pending · GST to claim ${inr(c.gstToClaimMonth)}` : "Nothing pending · totals, TDS, GST";
+}
+
 export function menuSections(c: MenuCounts | null): Section[] {
   const k = (n: number | undefined) => n ?? 0;
   return [
@@ -43,7 +58,7 @@ export function menuSections(c: MenuCounts | null): Section[] {
       tone: "money",
       items: [
         { href: "/admin/invoices", icon: FileText, label: "Invoices", sub: k(c?.invoicesToApprove) ? `${c!.invoicesToApprove} waiting for your approval` : "Create, approve and send", badge: badge(k(c?.invoicesToApprove), "red") },
-        { href: "/admin/payments", icon: Wallet, label: "Payments", sub: k(c?.outstanding) ? `${inr(c!.outstanding)} outstanding` : "Nothing outstanding" },
+        { href: "/admin/payments", icon: Wallet, label: "Payments & finance", sub: paymentsSub(c), badge: badge(k(c?.invoicesOverdue), "amber") },
         {
           href: "/admin/expenses",
           icon: Receipt,
@@ -51,7 +66,6 @@ export function menuSections(c: MenuCounts | null): Section[] {
           sub: k(c?.billsOverdue) ? `${c!.billsOverdue} overdue · ${c!.billsDueWeek} due this week` : k(c?.billsDueWeek) ? `${c!.billsDueWeek} due this week` : "Bills, GST credit, TDS",
           badge: k(c?.billsOverdue) ? badge(c!.billsOverdue, "red") : badge(k(c?.billsDueWeek), "amber"),
         },
-        { href: "/admin/finance", icon: ChartLine, label: "Finance sheet", sub: k(c?.gstToClaimMonth) ? `GST to claim this month ${inr(c!.gstToClaimMonth)}` : "Totals, TDS and GST" },
         { href: "/admin/drive-folders", icon: Folder, label: "Monthly Drive folders", sub: "Invoices, bills, GST pack, cancelled" },
       ],
     },
