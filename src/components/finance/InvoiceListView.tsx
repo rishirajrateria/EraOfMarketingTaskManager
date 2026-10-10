@@ -7,6 +7,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { BarChip, BarIcon, BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
 import { formatINR, formatMoney } from "@/server/finance/money";
 import type { InvoiceRow } from "@/server/finance/queries";
+import { useFromAdd } from "@/components/dashboard/useFromAdd";
 import { InvoiceWizard } from "@/components/finance/InvoiceWizard";
 import type { ClientOpt } from "@/components/finance/wizard/types";
 import { DOC_LABEL, DOC_TONE, STATUS_LABEL, STATUS_TONE, chipCls, docNumber, fmtDay } from "@/components/finance/finance-ui";
@@ -18,6 +19,12 @@ type Props = { rows: InvoiceRow[]; tab: InvoiceTab; clients: ClientOpt[]; compan
 export function InvoiceListView({ rows, tab, clients, companyStateCode, defaultGst, defaultTerms, canWrite, tz, openNew = false, holdClientIds }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(openNew);
+  // Opened from the dashboard "+" (`from=add`): the × goes back to the dashboard.
+  const back = useFromAdd();
+  const cancelNew = () => {
+    setOpen(false);
+    back.done();
+  };
   const tiles = useMemo(() => listTiles(rows), [rows]);
   const shown = filterRows(rows, tab);
   const onHold = new Set(holdClientIds);
@@ -87,8 +94,8 @@ export function InvoiceListView({ rows, tab, clients, companyStateCode, defaultG
           </>
         }
       />
-      <Sheet open={open} onClose={() => setOpen(false)} full>
-        {open ? <InvoiceWizard clients={clients} companyStateCode={companyStateCode} defaults={{ gstPercent: defaultGst, paymentTerms: defaultTerms }} onClose={() => setOpen(false)} /> : null}
+      <Sheet open={open} onClose={cancelNew} full>
+        {open ? <InvoiceWizard clients={clients} companyStateCode={companyStateCode} defaults={{ gstPercent: defaultGst, paymentTerms: defaultTerms }} onClose={() => setOpen(false)} onCancel={cancelNew} /> : null}
       </Sheet>
     </div>
   );

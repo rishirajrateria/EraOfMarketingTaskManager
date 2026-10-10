@@ -1,4 +1,5 @@
 "use client";
+import { useFromAdd } from "@/components/dashboard/useFromAdd";
 import { useState } from "react";
 import { Sheet } from "@/components/ui/Sheet";
 import { Field, inputCls, btnDanger, btnSecondary } from "@/components/ui/Field";
@@ -18,9 +19,11 @@ export function WorkTypesManager({ workTypes, teams, openAdd = false }: { workTy
   const { busy, run } = useAdminAction();
   const [editing, setEditing] = useState<WorkTypeRow | null>(null);
   const [open, setOpen] = useState(openAdd); // `?add=1` opens the add form on load
+  const back = useFromAdd(); // opened from the dashboard "+": closing or saving returns there
   const close = () => {
     setOpen(false);
     setEditing(null);
+    back.done();
   };
 
   const submit = async (values: Values) => {

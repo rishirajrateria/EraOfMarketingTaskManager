@@ -2,7 +2,9 @@
 import { useState } from "react";
 import { BarChip, BottomZone } from "@/components/ui/BottomZone";
 import { Sheet } from "@/components/ui/Sheet";
-import { Field, btnDanger, btnSecondary, inputCls } from "@/components/ui/Field";
+import { Field, btnDanger, btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
+import { SheetButtons } from "@/components/ui/CloseX";
+import { useFromAdd } from "@/components/dashboard/useFromAdd";
 import { SegButton } from "@/components/ui/Controls";
 import { ScreenHeader } from "@/components/admin/AdminUi";
 import { useAction } from "@/components/finance/useAction";
@@ -33,6 +35,7 @@ const SALARY_RULE = (first: string): RepeatRule => ({ freq: "MONTHLY", interval:
 /** Add / edit a bill (prototype `billEditor`): a page, not a sheet. The schedule freezes once a payment is recorded. */
 export function BillEditor({ bill, categories: initialCats, staff, payees, today }: Props) {
   const { pending, run, router, toast } = useAction();
+  const back = useFromAdd();
   const isNew = !bill;
   const hasPaid = !!bill?.occurrences.some((o) => o.status === "PAID");
   const nextDue = bill?.occurrences.find((o) => o.status === "DUE");
@@ -182,16 +185,21 @@ export function BillEditor({ bill, categories: initialCats, staff, payees, today
         <div className="mt-3"><Field label="Note"><input className={inputCls} placeholder="What is it for?" value={note} onChange={(e) => setNote(e.target.value)} /></Field></div>
         <datalist id="payees">{payees.map((p) => <option key={p} value={p} />)}</datalist>
       </div>
-      <BottomZone
-        left={
-          isNew ? (
-            <button type="button" className="text-[13px] font-medium text-white" onClick={() => router.push("/admin/expenses")}>Cancel</button>
-          ) : (
-            <button type="button" className="text-[13px] font-semibold text-white" onClick={() => setConfirmDelete(true)}>Delete</button>
-          )
-        }
-        right={<BarChip onClick={pending ? undefined : save} label="Save" className="font-semibold">{pending ? "Saving…" : "Save"}</BarChip>}
-      />
+      {isNew ? (
+        // New expense: [Save ———] [×]; the × goes back to the dashboard when the "+" opened it (`from=add`).
+        <BottomZone
+          actions={
+            <SheetButtons onClose={() => back.done(() => router.push("/admin/expenses"))}>
+              <button type="button" className={btnPrimary} disabled={pending} onClick={save}>{pending ? "Saving…" : "Save"}</button>
+            </SheetButtons>
+          }
+        />
+      ) : (
+        <BottomZone
+          left={<button type="button" className="text-[13px] font-semibold text-white" onClick={() => setConfirmDelete(true)}>Delete</button>}
+          right={<BarChip onClick={pending ? undefined : save} label="Save" className="font-semibold">{pending ? "Saving…" : "Save"}</BarChip>}
+        />
+      )}
       {picker ? <RepeatPicker init={rule} baseKey={first} title="Repeat this payment" onClose={() => setPicker(false)} onDone={(r) => { setRule(r); setPicker(false); }} /> : null}
       {confirmDelete && bill ? (
         <Sheet open onClose={() => setConfirmDelete(false)} title="Delete this bill?">

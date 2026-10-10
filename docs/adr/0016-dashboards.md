@@ -141,5 +141,12 @@ Reference: prototype `fabItems`, `openFab`, `.fabdim`, `.fabi`, `kitPicker`.
   becomes the 52px blue rounded-16 × placed last, the primary action filling the rest (`[Save ————] [×]`); such sheets
   pass `hideClose` so the title row has no second ✕. Applied to `FormFooter` (people, teams, work types, clients), the
   kit picker, Which day?, note / assign / edit-task sheets, leave, attendance, inventory range, requests note, the
-  payables sheets and both repeat pickers. Destructive confirmations (Delete task, Delete bill, Keep / Not now) and
-  in-place cancels (new category, Drive share invite) keep their buttons.
+  payables sheets (incl. new expense category) and both repeat pickers. Destructive confirmations (Delete task, Delete bill, Keep / Not now) and
+  the Drive share invite's in-place cancel keep their buttons.
+- Everything the + opens closes with that × and returns to the dashboard (prototype `pageX`). Speed-dial / strip links
+  carry `from=add` (`/admin/invoices?new=1&from=add`, `/admin/expenses/new?from=add`, `/admin/people?…&add=1&from=add`,
+  `/admin/work-types|teams?add=1&from=add`, and the kit picker's `/admin/clients?add=1&from=add`); `useFromAdd()` then
+  sends ×, Escape, backdrop and a successful save back to `/dashboard` (`router.replace`). Opened any other way the
+  screens behave as before. New invoice wizard: `[Next ———][×]` on step 1, `[Back][Next ———][×]` after (the header ✕
+  is gone; a saved invoice still opens its detail page); new expense: `[Save ———][×]` (editing keeps Delete · Save);
+  `BottomZone actions` renders such a button row in place of the green / glass bar.

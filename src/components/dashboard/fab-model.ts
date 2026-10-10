@@ -22,14 +22,18 @@ const MAIN: FabItem[] = [
   { key: "MEETING", label: "Meeting", short: "Meeting", tone: "meet", icon: null, main: true, action: { kind: "add", mode: "MEETING" } },
 ];
 
-/** Same routes as the Admin menu's quick actions and the admin screens' `?add=1` deep links. */
+/** `from=add`: closing the opened form (blue ×) or finishing it comes back to the dashboard (useFromAdd). */
+export const FROM_ADD_PARAM = "from";
+export const FROM_ADD_VALUE = "add";
+
+/** Same routes as the Admin menu's quick actions and the admin screens' `?add=1` deep links, plus `from=add`. */
 const ADMIN_MORE: FabItem[] = [
-  { key: "INVOICE", label: "Invoice", short: "Invoice", tone: "money", icon: FileText, action: { kind: "href", href: "/admin/invoices?new=1" } },
-  { key: "EXPENSE", label: "Expense", short: "Expense", tone: "money", icon: Receipt, action: { kind: "href", href: "/admin/expenses/new" } },
-  { key: "EXECUTIVE", label: "Executive", short: "Exec", tone: "team", icon: UserRound, action: { kind: "href", href: "/admin/people?role=EXECUTIVE&add=1" } },
-  { key: "WORK_TYPE", label: "Work type", short: "Work", tone: "team", icon: Tag, action: { kind: "href", href: "/admin/work-types?add=1" } },
-  { key: "TEAM", label: "Team", short: "Team", tone: "team", icon: Layers, action: { kind: "href", href: "/admin/teams?add=1" } },
-  { key: "TEAM_LEADER", label: "Team leader", short: "Leader", tone: "team", icon: UserRoundCheck, action: { kind: "href", href: "/admin/people?role=TEAM_LEADER&add=1" } },
+  { key: "INVOICE", label: "Invoice", short: "Invoice", tone: "money", icon: FileText, action: { kind: "href", href: "/admin/invoices?new=1&from=add" } },
+  { key: "EXPENSE", label: "Expense", short: "Expense", tone: "money", icon: Receipt, action: { kind: "href", href: "/admin/expenses/new?from=add" } },
+  { key: "EXECUTIVE", label: "Executive", short: "Exec", tone: "team", icon: UserRound, action: { kind: "href", href: "/admin/people?role=EXECUTIVE&add=1&from=add" } },
+  { key: "WORK_TYPE", label: "Work type", short: "Work", tone: "team", icon: Tag, action: { kind: "href", href: "/admin/work-types?add=1&from=add" } },
+  { key: "TEAM", label: "Team", short: "Team", tone: "team", icon: Layers, action: { kind: "href", href: "/admin/teams?add=1&from=add" } },
+  { key: "TEAM_LEADER", label: "Team leader", short: "Leader", tone: "team", icon: UserRoundCheck, action: { kind: "href", href: "/admin/people?role=TEAM_LEADER&add=1&from=add" } },
   { key: "KIT", label: "Client kit", short: "Kit", tone: "client", icon: KeyRound, action: { kind: "kit" } },
 ];
 
@@ -54,7 +58,7 @@ export const FAB_TONE: Record<FabTone, string> = {
 
 export type KitPickerClient = { id: string; name: string; ready: boolean; partial: boolean };
 
-export const NEW_CLIENT_HREF = "/admin/clients?add=1";
+export const NEW_CLIENT_HREF = "/admin/clients?add=1&from=add";
 /** The client's kit page: Create kit when there is none, Repair when partial, share / send when ready. */
 export const kitHref = (clientId: string) => `/admin/client-kit/${encodeURIComponent(clientId)}`;
 

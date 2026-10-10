@@ -1,4 +1,5 @@
 "use client";
+import { useFromAdd } from "@/components/dashboard/useFromAdd";
 import { useState } from "react";
 import type { Role } from "@prisma/client";
 import { Sheet } from "@/components/ui/Sheet";
@@ -49,9 +50,11 @@ export function PeopleManager({
   const [editing, setEditing] = useState<PersonRow | null>(() => users.find((u) => u.id === editId) ?? null);
   const [open, setOpen] = useState(() => !!editing || openAdd);
   const [filter, setFilter] = useState<Role | null>(null);
+  const back = useFromAdd(); // opened from the dashboard "+": closing or saving returns there
   const close = () => {
     setOpen(false);
     setEditing(null);
+    back.done();
   };
 
   const submit = async (values: PeopleFormValues) => {

@@ -200,7 +200,7 @@ export function ColourInput({ value, onChange }: { value: string; onChange: (v: 
  */
 export function FormFooter({ busy, onCancel, submitLabel = "Save", extra }: { busy: boolean; onCancel: () => void; submitLabel?: string; extra?: React.ReactNode }) {
   return (
-    <SheetButtons onClose={onCancel} disabled={busy} className="sticky bottom-0 px-4 py-3 backdrop-blur-xl">
+    <SheetButtons onClose={onCancel} disabled={busy} className="sticky bottom-0 -mx-4 px-4 py-3 backdrop-blur-xl">
       {extra}
       <button type="submit" className={btnPrimary} disabled={busy}>
         {busy ? "Saving…" : submitLabel}

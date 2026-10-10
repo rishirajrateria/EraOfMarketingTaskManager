@@ -1,4 +1,5 @@
 "use client";
+import { useFromAdd } from "@/components/dashboard/useFromAdd";
 import { useState } from "react";
 import Link from "next/link";
 import { FolderKey, Plus, Search } from "lucide-react";
@@ -20,9 +21,11 @@ export function ClientsManager({ clients, openAdd = false, editId = null, compan
   const [open, setOpen] = useState(() => openAdd || !!editing);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("ALL");
+  const back = useFromAdd(); // opened from the dashboard "+" (New client kit → + New client): closing or saving returns there
   const close = () => {
     setOpen(false);
     setEditing(null);
+    back.done();
   };
 
   const submit = async (values: ClientInput) => {

@@ -1,8 +1,10 @@
 "use client";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Search, X } from "lucide-react";
-import { BarChip, BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
+import { ChevronLeft, Search } from "lucide-react";
+import { BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
+import { SheetButtons } from "@/components/ui/CloseX";
+import { btnPrimary, btnSecondary } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
 import { createInvoice, updateDraftInvoice, type UpdateDraftResult } from "@/server/finance/invoices";
 import { dateKeyLocal } from "@/components/finance/finance-ui";
@@ -23,13 +25,15 @@ type Props = {
   companyStateCode: string | null;
   defaults: { gstPercent: number; paymentTerms: string };
   onClose: () => void;
+  /** The blue × (defaults to `onClose`); opened from the dashboard "+" it returns there. */
+  onCancel?: () => void;
   /** "Edit draft": opens at the Amount step pre-filled; "Save changes" calls `updateDraftInvoice`, then `onSaved`. */
   edit?: WizardEdit | null;
   onSaved?: (res: UpdateDraftResult) => void;
 };
 
 /** "+ New invoice" / "Edit draft": four thumb-reach steps inside a full-screen Sheet; saves as AWAITING_APPROVAL (never sends). */
-export function InvoiceWizard({ clients, companyStateCode, defaults, onClose, edit = null, onSaved }: Props) {
+export function InvoiceWizard({ clients, companyStateCode, defaults, onClose, onCancel, edit = null, onSaved }: Props) {
   const router = useRouter();
   const toast = useToast();
   const [pending, start] = useTransition();
@@ -127,7 +131,6 @@ export function InvoiceWizard({ clients, companyStateCode, defaults, onClose, ed
           <div className="text-[11px] uppercase opacity-80">{edit ? `Step ${step} of 4 · ${TITLES[step - 1]}` : `New invoice · step ${step} of 4`}</div>
           <h2 className="text-base font-semibold">{edit ? "Edit draft" : TITLES[step - 1]}</h2>
         </div>
-        <button type="button" className="touch-target" onClick={onClose} aria-label="Close"><X size={20} /></button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {step === 1 ? <StepClient {...stepProps} query={query} /> : null}
@@ -146,30 +149,24 @@ export function InvoiceWizard({ clients, companyStateCode, defaults, onClose, ed
           ) : undefined
         }
         rows={rows}
-        left={
-          <>
+        actions={
+          // Step 1: [Next ———] [×]; later: [Back] [Next ———] [×] — the "+ → ×" convention (ADR 0016 addendum).
+          <SheetButtons onClose={onCancel ?? onClose}>
             {step > 1 ? (
-              <button type="button" onClick={() => setStep((s) => s - 1)} className="touch-target flex items-center gap-0.5 pl-1 text-[12px] font-medium text-white" aria-label="Back">
-                <ChevronLeft size={16} /> Back
+              <button type="button" onClick={() => setStep((s) => s - 1)} className={btnSecondary}>
+                <ChevronLeft size={16} aria-hidden /> Back
+              </button>
+            ) : null}
+            {step < 4 ? (
+              <button type="button" onClick={next} className={btnPrimary}>
+                Next
               </button>
             ) : (
-              <span className="w-2" />
+              <button type="button" onClick={save} disabled={pending} title={edit ? undefined : "Saved as awaiting approval — never sent"} className={btnPrimary}>
+                {pending ? "Saving…" : edit ? "Save changes" : "Save for approval"}
+              </button>
             )}
-            <span className="ml-auto flex items-center gap-1.5 pr-1" aria-label={`Step ${step} of 4`}>
-              {[1, 2, 3, 4].map((s) => (
-                <span key={s} className={`h-2 w-2 rounded-full ${s === step ? "bg-white" : s < step ? "bg-white/70" : "bg-white/30"}`} />
-              ))}
-            </span>
-          </>
-        }
-        right={
-          step < 4 ? (
-            <BarChip onClick={next} label="Next" className="font-semibold">Next →</BarChip>
-          ) : (
-            <BarChip onClick={save} label={edit ? "Save changes" : "Save (awaiting approval)"} className={`font-semibold ${pending ? "opacity-60" : ""}`}>
-              {pending ? "Saving…" : edit ? "Save changes" : "Save (awaiting approval)"}
-            </BarChip>
-          )
+          </SheetButtons>
         }
       />
     </div>

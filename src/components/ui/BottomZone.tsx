@@ -75,8 +75,11 @@ export function BottomZone({
   left,
   right,
   menu = true,
+  actions,
   className,
 }: {
+  /** a form's button row (`SheetButtons`: `[Back] [Next ———] [×]`) in place of the green / glass bar */
+  actions?: React.ReactNode;
   /** optional white strip above the green area (like the dashboard filter strip) */
   strip?: React.ReactNode;
   /** green pill rows (each should be a <ZoneRow>) */
@@ -93,19 +96,23 @@ export function BottomZone({
     <div className={clsx("zone-top sticky bottom-0 z-20 shrink-0 pb-[env(safe-area-inset-bottom)]", className)}>
       {strip ? <div className="strip-glass flex h-11 items-center gap-1.5 px-3">{strip}</div> : null}
       {rows ? <div className="bg-green-area">{rows}</div> : null}
-      <div className="flex h-14 items-stretch">
-        <div className="scrollbar-none flex min-w-0 flex-[62] items-center gap-2 overflow-x-auto bg-green-bar pr-2">
-          {menu ? (
-            <BarIcon label="Menu" onClick={() => menuStore.open()}>
-              <Menu size={22} />
-            </BarIcon>
-          ) : (
-            <span className="w-2.5" />
-          )}
-          {left}
+      {actions ? (
+        <div className="bar-glass border-t border-hair px-3 pb-3 pt-2">{actions}</div>
+      ) : (
+        <div className="flex h-14 items-stretch">
+          <div className="scrollbar-none flex min-w-0 flex-[62] items-center gap-2 overflow-x-auto bg-green-bar pr-2">
+            {menu ? (
+              <BarIcon label="Menu" onClick={() => menuStore.open()}>
+                <Menu size={22} />
+              </BarIcon>
+            ) : (
+              <span className="w-2.5" />
+            )}
+            {left}
+          </div>
+          <div className="bar-glass flex flex-[38] items-center justify-evenly gap-1 px-1">{right}</div>
         </div>
-        <div className="bar-glass flex flex-[38] items-center justify-evenly gap-1 px-1">{right}</div>
-      </div>
+      )}
     </div>
   );
 }

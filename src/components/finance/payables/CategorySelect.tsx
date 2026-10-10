@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { Sheet } from "@/components/ui/Sheet";
-import { Field, btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
+import { Field, btnPrimary, inputCls } from "@/components/ui/Field";
+import { SheetButtons } from "@/components/ui/CloseX";
 import { useAction } from "@/components/finance/useAction";
 import { addExpenseCategory } from "@/server/finance/payables";
 
@@ -33,15 +34,14 @@ export function CategorySelect({ value, categories, onChange, onCategories }: { 
       </select>
       <button type="button" className="glass-chip h-10 shrink-0 rounded-full px-3 text-xs font-medium" onClick={() => setAdding(true)}>+ New</button>
       {adding ? (
-        <Sheet open onClose={() => setAdding(false)} title="New category">
+        <Sheet open onClose={() => setAdding(false)} title="New category" hideClose>
           <div className="space-y-3 px-4 py-4">
             <Field label="Name" hint="Added to the list in Settings">
               <input className={inputCls} placeholder="e.g. Equipment" value={name} autoFocus onChange={(e) => setName(e.target.value)} />
             </Field>
-            <div className="flex gap-2">
-              <button type="button" className={`${btnSecondary} flex-1`} onClick={() => setAdding(false)}>Cancel</button>
-              <button type="button" className={`${btnPrimary} flex-1`} disabled={pending} onClick={add}>Add</button>
-            </div>
+            <SheetButtons onClose={() => setAdding(false)}>
+              <button type="button" className={btnPrimary} disabled={pending} onClick={add}>Add</button>
+            </SheetButtons>
           </div>
         </Sheet>
       ) : null}

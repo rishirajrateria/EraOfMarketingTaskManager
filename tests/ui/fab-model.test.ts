@@ -30,12 +30,12 @@ describe("fab menu model", () => {
   it("links Admin shortcuts to the existing create screens, Client kit to the picker", () => {
     const links = Object.fromEntries(fabMenu("ADMIN").more.map((i) => [i.key, i.action.kind === "href" ? i.action.href : i.action.kind]));
     expect(links).toEqual({
-      INVOICE: "/admin/invoices?new=1",
-      EXPENSE: "/admin/expenses/new",
-      EXECUTIVE: "/admin/people?role=EXECUTIVE&add=1",
-      WORK_TYPE: "/admin/work-types?add=1",
-      TEAM: "/admin/teams?add=1",
-      TEAM_LEADER: "/admin/people?role=TEAM_LEADER&add=1",
+      INVOICE: "/admin/invoices?new=1&from=add",
+      EXPENSE: "/admin/expenses/new?from=add",
+      EXECUTIVE: "/admin/people?role=EXECUTIVE&add=1&from=add",
+      WORK_TYPE: "/admin/work-types?add=1&from=add",
+      TEAM: "/admin/teams?add=1&from=add",
+      TEAM_LEADER: "/admin/people?role=TEAM_LEADER&add=1&from=add",
       KIT: "kit",
     });
   });
@@ -80,6 +80,6 @@ describe("client kit picker helpers", () => {
 
   it("goes to the client's kit page, or adds a client", () => {
     expect(kitHref("ck123")).toBe("/admin/client-kit/ck123");
-    expect(NEW_CLIENT_HREF).toBe("/admin/clients?add=1");
+    expect(NEW_CLIENT_HREF).toBe("/admin/clients?add=1&from=add");
   });
 });
