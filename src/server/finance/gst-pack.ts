@@ -95,6 +95,7 @@ export async function sendGstPackCore(month: string, emailRaw: string, actorId: 
     subject: `GST credit pack · ${pack.label} · ${company}`,
     text: packSummaryText(pack, company),
     attachments: [{ filename: pack.fileName, mimeType: "application/zip", data: pack.zip }],
+    sender: "finance",
   });
   await audit(actorId, "finance.gst_pack_send", "GstPack", pack.month, undefined, { to, bills: pack.rows.length, attached: pack.attached, gst: pack.gstTotal });
   return { to, bills: pack.rows.length, attached: pack.attached, missing: pack.missing, gstTotal: pack.gstTotal };

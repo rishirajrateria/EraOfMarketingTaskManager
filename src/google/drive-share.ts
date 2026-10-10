@@ -15,9 +15,14 @@ export type DrivePermission = {
   emailAddress: string | null;
   displayName: string | null;
   domain: string | null;
+  /**
+   * Whether this access comes from a parent folder (Drive `permissionDetails[].inherited`): true = only inherited,
+   * false = set on this file, null = Drive did not say (My Drive often omits the details). Mock rows are always direct.
+   */
+  inherited: boolean | null;
 };
 
-const FIELDS = "permissions(id,type,role,emailAddress,displayName,domain,deleted)";
+const FIELDS = "permissions(id,type,role,emailAddress,displayName,domain,deleted,permissionDetails(inherited))";
 
 // ---------- mock store (on globalThis so every route bundle in `next dev` sees the same permissions) ----------
 const g = globalThis as { __eomDriveShareMock?: Map<string, DrivePermission[]> };
@@ -29,7 +34,7 @@ export const mockShareNotifications: { fileId: string; to: string; role: ShareRo
 function mockPerms(fileId: string, owner: string | null): DrivePermission[] {
   let list = mockStore.get(fileId);
   if (!list) {
-    list = owner ? [{ id: "owner", type: "user", role: "owner", emailAddress: owner, displayName: null, domain: null }] : [];
+    list = owner ? [{ id: "owner", type: "user", role: "owner", emailAddress: owner, displayName: null, domain: null, inherited: false }] : [];
     mockStore.set(fileId, list);
   }
   return list;
@@ -41,7 +46,18 @@ export function resetMockSharing() {
   mockSeq = 0;
 }
 
-function toPermission(p: { id?: string | null; type?: string | null; role?: string | null; emailAddress?: string | null; displayName?: string | null; domain?: string | null }): DrivePermission {
+type RawPermission = {
+  id?: string | null;
+  type?: string | null;
+  role?: string | null;
+  emailAddress?: string | null;
+  displayName?: string | null;
+  domain?: string | null;
+  permissionDetails?: { inherited?: boolean | null }[] | null;
+};
+
+function toPermission(p: RawPermission): DrivePermission {
+  const details = p.permissionDetails ?? [];
   return {
     id: p.id ?? "",
     type: (p.type ?? "user") as DrivePermission["type"],
@@ -49,6 +65,7 @@ function toPermission(p: { id?: string | null; type?: string | null; role?: stri
     emailAddress: p.emailAddress?.toLowerCase() ?? null,
     displayName: p.displayName ?? null,
     domain: p.domain ?? null,
+    inherited: details.length ? details.every((d) => d.inherited === true) : null,
   };
 }
 
@@ -79,7 +96,7 @@ export async function addPeople(fileId: string, emails: string[], role: ShareRol
         continue;
       }
       if (existing) existing.role = role;
-      else list.push({ id: `perm_${++mockSeq}`, type: "user", role, emailAddress: email, displayName: null, domain: null });
+      else list.push({ id: `perm_${++mockSeq}`, type: "user", role, emailAddress: email, displayName: null, domain: null, inherited: false });
       if (opts.notify) mockShareNotifications.push({ fileId, to: email, role, message: opts.message ?? null });
       result.added.push(email);
       continue;
@@ -136,7 +153,7 @@ export async function setLinkSharing(fileId: string, access: "restricted" | Shar
     return;
   }
   if (isMock()) {
-    mockPerms(fileId, owner).push({ id: "anyoneWithLink", type: "anyone", role: access, emailAddress: null, displayName: null, domain: null });
+    mockPerms(fileId, owner).push({ id: "anyoneWithLink", type: "anyone", role: access, emailAddress: null, displayName: null, domain: null, inherited: false });
     return;
   }
   await withRetry(() => drive().permissions.create({ fileId, requestBody: { type: "anyone", role: access, allowFileDiscovery: false }, supportsAllDrives: true, fields: "id" }));

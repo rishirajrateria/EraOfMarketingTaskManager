@@ -29,7 +29,7 @@ export function PeopleManager({
   leaders,
   workTypes,
   initialRole,
-  workspaceDomain,
+  workspaceDomains,
   meId,
   editId = null,
   openAdd = false,
@@ -39,7 +39,7 @@ export function PeopleManager({
   leaders: LeaderOption[];
   workTypes: WorkTypeOption[];
   initialRole: Role;
-  workspaceDomain: string;
+  workspaceDomains: string[];
   meId: string;
   /** `?edit=<id>` (the card's "Add number", ADR 0017): open that person's form straight away. */
   editId?: string | null;
@@ -141,7 +141,7 @@ export function PeopleManager({
               teams={teams}
               leaders={leaders}
               workTypes={workTypes}
-              workspaceDomain={workspaceDomain}
+              workspaceDomains={workspaceDomains}
               busy={busy}
               onSubmit={submit}
               onCancel={close}

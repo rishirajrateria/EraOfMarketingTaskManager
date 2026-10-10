@@ -25,7 +25,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <div className="glass mx-6 w-full rounded-3xl px-8 py-10 text-center text-gray-900">
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-[#1e63d6] to-[#22c3e6] text-4xl font-black text-white shadow-lg">E</div>
         <h1 className="text-2xl font-bold">EraOfMarketing Tasks</h1>
-        <p className="mt-2 text-sm text-gray-600">Sign in with your {env.workspaceDomain || "company"} Google account.</p>
+        <p className="mt-2 text-sm text-gray-600">Sign in with your {env.workspaceDomains.length ? env.workspaceDomains.join(" or ") : "company"} Google account.</p>
         {error ? <p className="mt-4 rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-700">{error}</p> : null}
         <form
           className="mt-8"

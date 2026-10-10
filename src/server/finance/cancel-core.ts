@@ -110,7 +110,7 @@ export async function cancelInvoiceCore(id: string, opts: CancelOptions, actorId
     if (!inv.client.email) errors.push("Client has no email on file");
     else {
       try {
-        await sendMail({ to: inv.client.email, subject: `Invoice ${inv.number} cancelled · ${company.companyName}`, text, attachments: pdf ? [{ filename: fileName, mimeType: "application/pdf", data: pdf }] : [] });
+        await sendMail({ to: inv.client.email, subject: `Invoice ${inv.number} cancelled · ${company.companyName}`, text, attachments: pdf ? [{ filename: fileName, mimeType: "application/pdf", data: pdf }] : [], sender: "finance" });
         emailed = true;
       } catch (e) {
         errors.push(`Email failed: ${e instanceof Error ? e.message : String(e)}`);

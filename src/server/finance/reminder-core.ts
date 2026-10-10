@@ -39,6 +39,7 @@ export async function sendReminderCore(id: string, actorId: string | null): Prom
         subject: `Reminder: invoice ${inv.number} from ${company.companyName}`,
         text: renderTemplate(REMINDER_TEMPLATE, vars),
         attachments: [{ filename: invoiceFileName(inv), mimeType: "application/pdf", data: pdf }],
+        sender: "finance",
       });
       emailed = true;
     } catch (e) {

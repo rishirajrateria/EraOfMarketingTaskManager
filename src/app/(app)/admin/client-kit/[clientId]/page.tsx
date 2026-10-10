@@ -8,7 +8,7 @@ import { fmtDate } from "@/lib/time";
 import { Screen, ScreenHeader } from "@/components/admin/AdminUi";
 import { BarIcon, BottomZone } from "@/components/ui/BottomZone";
 import { CreateKitButton, SendKitButtons, kitBtn } from "@/components/clients/KitActions";
-import { ShareFolderButton } from "@/components/finance/drive/DriveShareSheet";
+import { KitShareButton } from "@/components/clients/KitShareSheet";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +49,7 @@ export default async function ClientKitDetailPage({ params }: { params: Promise<
       <div className="flex flex-wrap items-center gap-1.5 px-4 pt-2">
         {r.ready && r.folderId && r.urls && r.messages ? (
           <>
-            <ShareFolderButton folderId={r.folderId} title={`Client kit › ${r.displayName}`} />
+            <KitShareButton clientId={r.clientId} scopes={r.shareScopes} displayName={r.displayName} />
             <a href={r.urls.folder} target="_blank" rel="noreferrer" className={kitBtn}><ExternalLink size={13} /> Open</a>
             <SendKitButtons contact={{ clientId: r.clientId, name: r.displayName, email: r.email, whatsapp: r.whatsapp, messages: r.messages }} />
             <CreateKitButton clientId={r.clientId} repair />

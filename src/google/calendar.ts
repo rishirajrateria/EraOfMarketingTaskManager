@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { calendar, calendarAs, isMock, mockId, withRetry } from "@/google/client";
+import { asWorkspaceUser, calendar, calendarAs, isMock, mockId, withRetry } from "@/google/client";
 import type { MeetingOptions } from "@/server/tasks/schema";
 import { DEFAULT_TZ } from "@/lib/time";
 import { eventTimes, meetConferenceRequest, optionFields, toCalendarEventBody } from "@/google/event-body";
@@ -147,17 +147,21 @@ const LEAVE_WORDS = /\b(leave|out of office|ooo|vacation|pto|off)\b/i;
  */
 export async function listLeaveEvents(email: string, from: Date, to: Date): Promise<OutOfOfficeEvent[]> {
   if (isMock()) return [];
-  const res = await withRetry(() =>
-    calendarAs(email).events.list({
-      calendarId: "primary",
-      timeMin: from.toISOString(),
-      timeMax: to.toISOString(),
-      singleEvents: true,
-      maxResults: 250,
-      orderBy: "startTime",
-    }),
-  );
-  const items = res.data.items ?? [];
+  // A user outside the delegated Workspace (e.g. the admin on a separate Workspace, ADR 0018) can't be impersonated:
+  // skip them (logged once) rather than failing the sync.
+  const items = await asWorkspaceUser(email, [], async () => {
+    const res = await withRetry(() =>
+      calendarAs(email).events.list({
+        calendarId: "primary",
+        timeMin: from.toISOString(),
+        timeMax: to.toISOString(),
+        singleEvents: true,
+        maxResults: 250,
+        orderBy: "startTime",
+      }),
+    );
+    return res.data.items ?? [];
+  });
   return items
     .filter((e) => e.status !== "cancelled" && (e.eventType === "outOfOffice" || LEAVE_WORDS.test(e.summary ?? "")))
     .map((e) => ({
