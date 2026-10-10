@@ -784,6 +784,24 @@ select.in{padding-right:10px}
 .rp .pill.od{color:#dc2626;font-weight:700}.rp .pill.ok{color:#16a34a;font-weight:700}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .rp .pill.od{color:#f87171}:root:not([data-theme="light"]) .rp .pill.ok{color:#4ade80}}
 :root[data-theme="dark"] .rp .pill.od{color:#f87171}:root[data-theme="dark"] .rp .pill.ok{color:#4ade80}
+/* menu v3: square icon tiles, colour by category — money green, clients blue, team yellow, other purple */
+.t-money{background:linear-gradient(150deg,#34d399,#059669)!important}
+.t-client{background:linear-gradient(150deg,#60a5fa,#2563eb)!important}
+.t-team{background:linear-gradient(150deg,#fcd34d,#f59e0b)!important;color:#3b2a00!important}
+.t-acct{background:linear-gradient(150deg,#c4b5fd,#7c3aed)!important}
+.msec h5{display:flex;align-items:center;gap:6px}
+.msec h5::before{content:"";width:8px;height:8px;border-radius:3px;background:inherit}
+.msec h5.t-money,.msec h5.t-client,.msec h5.t-team,.msec h5.t-acct{background:none!important;color:var(--muted)!important}
+.msec h5.t-money::before{background:#10b981}.msec h5.t-client::before{background:#3b82f6}.msec h5.t-team::before{background:#f59e0b}.msec h5.t-acct::before{background:#8b5cf6}
+.mgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.mtile{position:relative;height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:8px 4px;border-radius:18px;border:1px solid var(--hair);background:var(--glass);box-shadow:var(--shadow);color:var(--ink);font:inherit;cursor:pointer;min-width:0}
+.mtile:active{transform:scale(.97)}
+.mtile .mi{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;color:#fff;box-shadow:0 6px 14px -8px rgba(0,0,0,.5)}
+.mtile .ml{font-size:12px;font-weight:600;line-height:1.2;min-height:2.4em;display:flex!important;align-items:flex-start;justify-content:center;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.mtile .mbadge{position:absolute;top:6px;right:6px;margin:0;box-shadow:0 0 0 2px var(--bg)}
+.mtile .mbadge.amber{background:#ea580c!important;color:#fff!important}.mtile .mbadge.soft{background:#2563eb!important;color:#fff!important}
+.mtile.danger .ml{color:#dc2626}
+@media (max-width:360px){.mgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 </style><div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
@@ -1559,21 +1577,21 @@ function menuModel(){
  const gst=occ.filter(x=>x.o.status==="PAID"&&x.o.itc&&dk(new Date(x.o.paidAt)).slice(0,7)===dk().slice(0,7)).reduce((s,x)=>s+(x.o.gst||0),0);
  const B=(n,c)=>n?{n,c}:null;
  return [
-  {h:"Dashboards",t:"t-money",items:[
-   {go:"insights:FIN",ic:"chart",l:"Finance dashboard",s:[toApprove?toApprove+" to approve":null,outstanding?inr(outstanding)+" outstanding":null].filter(Boolean).join(" · ")||"Income, expense, invoices, bills",b:B(toApprove+overdueBills,"red")},
-   {go:"insights:HR",ic:"calcheck",l:"HR dashboard",s:(()=>{const t=S.attendance[dk()]||{};const st=S.users.filter(u=>["TEAM_LEADER","EXECUTIVE"].includes(u.role));const p=st.filter(u=>t[u.id]==="P"||t[u.id]==="HD").length,l=st.filter(u=>t[u.id]==="L").length;return Object.keys(t).length?p+" present · "+l+" on leave today":"Attendance, inventory, leave";})()},
-   {go:"insights:TASK",ic:"task",l:"Task dashboard",s:(()=>{const o=S.tasks.filter(t=>t.status!=="COMPLETED");const late=o.filter(t=>rowColour(t)==="red").length;return o.length+" open"+(late?" · "+late+" late to start":"");})(),b:B(S.tasks.filter(t=>t.status!=="COMPLETED"&&rowColour(t)==="red").length,"amber")},
-   {go:"drive",ic:"folder",l:"Monthly Drive folders",s:"Invoices, bills, GST pack, cancelled"}]},
+  {h:"Money",t:"t-money",items:[
+   {go:"insights:FIN",ic:"chart",l:"Finance",s:[toApprove?toApprove+" to approve":null,outstanding?inr(outstanding)+" outstanding":null].filter(Boolean).join(" · ")||"Income, expense, invoices, bills",b:B(toApprove+overdueBills,"red")},
+   {go:"drive",ic:"folder",l:"Drive folders",s:"Invoices, bills, GST pack, cancelled"}]},
   {h:"Clients",t:"t-client",items:[
    {go:"clients",ic:"building",l:"Clients",s:S.clients.length+" clients · GST, PAN, TDS"},
    {go:"kit",ic:"key",l:"Client kit",s:(()=>{const k=S.clients.filter(c=>c.kit).length;return k+" of "+S.clients.length+" have a kit"+(expiring?" · "+expiring+" expiring":" · Drive, logins");})(),b:B(expiring,"amber")},
-   {go:"vault:SHARED_DRIVE_LINK",ic:"drive",l:"Shared drive links",s:"Folders shared with clients"}]},
+   {go:"vault:SHARED_DRIVE_LINK",ic:"drive",l:"Shared links",s:"Folders shared with clients"}]},
   {h:"Team",t:"t-team",items:[
+   {go:"insights:HR",ic:"calcheck",l:"HR",s:(()=>{const t=S.attendance[dk()]||{};const st=S.users.filter(u=>["TEAM_LEADER","EXECUTIVE"].includes(u.role));const p=st.filter(u=>t[u.id]==="P"||t[u.id]==="HD").length,l=st.filter(u=>t[u.id]==="L").length;return Object.keys(t).length?p+" present · "+l+" on leave today":"Attendance, inventory, leave";})()},
+   {go:"insights:TASK",ic:"task",l:"Tasks",s:(()=>{const o=S.tasks.filter(t=>t.status!=="COMPLETED");const late=o.filter(t=>rowColour(t)==="red").length;return o.length+" open"+(late?" · "+late+" late to start":"");})(),b:B(S.tasks.filter(t=>t.status!=="COMPLETED"&&rowColour(t)==="red").length,"amber")},
    {go:"people:EXECUTIVE",ic:"users",l:"Executives",s:S.users.filter(u=>u.role==="EXECUTIVE").length+" people · specialities"},
    {go:"people:TEAM_LEADER",ic:"lead",l:"Team leaders",s:"One per team"},
    {go:"teams",ic:"layers",l:"Teams",s:S.teams.map(t=>t.name).join(", ")},
    {go:"worktypes",ic:"tag",l:"Work types",s:S.workTypes.length+" types across teams"}]},
-  {h:"Account",t:"t-acct",items:[
+  {h:"Other",t:"t-acct",items:[
    {go:"requests",ic:"inbox",l:"Requests",s:reqs?reqs+" open":"Review, time change, leave",b:B(reqs,"red")},
    {go:"notifications",ic:"bell",l:"Notifications",s:unread?unread+" unread":"All caught up",b:B(unread,"soft")},
    {go:"settings",ic:"gear",l:"Settings",s:"Company, bank, invoice, TDS"},
@@ -1584,10 +1602,10 @@ function renderMenu(){
  const m=me(),q=($("#mSearch").value||"").trim().toLowerCase();
  $("#mAv").textContent=m.name.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();$("#mName").textContent=m.name;$("#mRole").textContent={ADMIN:"Admin",TEAM_LEADER:"Team Leader",EXECUTIVE:"Executive",HR:"HR"}[m.role]+" · "+S.settings.company;
  const secs=menuModel().map(sec=>({...sec,items:sec.items.filter(it=>!q||(it.l+" "+(it.s||"")+" "+sec.h).toLowerCase().includes(q))})).filter(sec=>sec.items.length);
- $("#mBody").replaceChildren(...(secs.length?secs.map(sec=>el("div",{class:"msec"},el("h5",{},sec.h),el("div",{class:"mcard"},...sec.items.map(it=>el("button",{class:"mrow"+(it.danger?" danger":""),onclick:()=>{closeMenu();nav(it.go);}},
-   el("span",{class:"mi "+(it.danger?"t-red":sec.t)},msvg(it.ic,18)),el("span",{class:"mt"},el("b",{},it.l),it.s?el("small",{},it.s):null),it.b?el("span",{class:"mbadge "+it.b.c},String(it.b.n)):null,it.danger?null:el("span",{class:"mchev"},msvg("chev",16))))))):[el("div",{class:"mempty"},"Nothing matches “"+q+"”")]));
+ $("#mBody").replaceChildren(...(secs.length?secs.map(sec=>el("div",{class:"msec"},el("h5",{class:sec.t},sec.h),el("div",{class:"mgrid"},...sec.items.map(it=>el("button",{class:"mtile"+(it.danger?" danger":""),title:it.s||it.l,"aria-label":it.l+(it.s?" — "+it.s:""),onclick:()=>{closeMenu();nav(it.go);}},
+   el("span",{class:"mi "+(it.danger?"t-red":sec.t)},msvg(it.ic,22)),el("span",{class:"ml"},it.l),it.b?el("span",{class:"mbadge "+it.b.c},String(it.b.n)):null))))):[el("div",{class:"mempty"},"Nothing matches “"+q+"”")]));
 }
-$("#mQuick").replaceChildren(...[["invoice","t-money","New invoice",()=>{nav("invoices");openWizard();}],["receipt","t-money","Add expense",()=>{nav("expenses");billEditor();}],["inbox","t-red","Approvals",()=>{reqTab="FIN";reqFin="APPR";nav("requests");}],["task","t-task","New task",()=>nav("add")]].map(([ic,t,l,fn])=>el("button",{class:"mq",onclick:()=>{closeMenu();fn();}},el("span",{class:t},msvg(ic,20)),l)));
+$("#mQuick").replaceChildren(...[["invoice","t-money","New invoice",()=>{nav("invoices");openWizard();}],["receipt","t-money","Add expense",()=>{nav("expenses");billEditor();}],["inbox","t-red","Approvals",()=>{reqTab="FIN";reqFin="APPR";nav("requests");}],["plus","t-acct","Add",()=>addSheet()]].map(([ic,t,l,fn])=>el("button",{class:"mq",onclick:()=>{closeMenu();fn();}},el("span",{class:t},msvg(ic,20)),l)));
 $("#mSearchIco").replaceChildren(msvg("search",16));$("#mClose").replaceChildren(msvg("x",18));$("#mSettings").replaceChildren(msvg("gear",18));
 $("#mClose").onclick=()=>closeMenu();$("#mSettings").onclick=()=>{closeMenu();nav("settings");};
 $("#mSearch").oninput=renderMenu;
@@ -2349,7 +2367,11 @@ function workForm(w){
   el("div",{class:"btnrow"},w?el("button",{class:"btn ghost",style:"color:#dc2626",onclick:()=>{S.workTypes=S.workTypes.filter(x=>x!==w);save();closeSheet();PAGES.worktypes();toast("Work type removed");}},"Remove"):el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),
    el("button",{class:"btn",onclick:()=>{if(!n.value.trim())return toast("Name is required","err");if(!teams.length)return toast("Pick at least one team","err");if(w){w.name=n.value.trim();w.teams=teams;}else S.workTypes.push({id:uid(),name:n.value.trim(),teams});save();closeSheet();PAGES.worktypes();toast(w?"Saved":"Work type added");}},"Save")));
 }
-PAGES.teams=function(){page("Teams",[...S.teams.map(t=>el("div",{class:"item",style:"cursor:default"},el("div",{class:"m"},el("b",{},t.name),el("small",{},(S.users.filter(u=>u.teamId===t.id).map(u=>first(u.name)).join(", ")||"nobody yet")+" · work: "+(S.workTypes.filter(w=>(w.teams||[]).includes(t.id)).map(w=>w.name).join(", ")||"none"))),el("div",{class:"amt"},S.tasks.filter(x=>x.team===t.id&&x.status!=="COMPLETED").length+" open")))],[zoneActions(el("button",{class:"btn blue",onclick:()=>{const n=el("input",{class:"in",placeholder:"e.g. Video"});openSheet("Add team",field("Name",n),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>{if(!n.value.trim())return;S.teams.push({id:uid(),name:n.value.trim()});save();closeSheet();PAGES.teams();}},"Add")));}},"+ Add team"))]);};
+function teamForm(){const n=el("input",{class:"in",placeholder:"e.g. Video"});openSheet("Add team",field("Name",n),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>{if(!n.value.trim())return toast("Name is required","err");S.teams.push({id:uid(),name:n.value.trim()});save();closeSheet();nav("teams");toast("Team added");}},"Add")));}
+/* Menu quick action "Add": one place to add work types, people, teams and clients. */
+function addSheet(){const it=(ic,cls,l,hint,fn)=>({label:l,hint,onClick:()=>{closeSheet();fn();}});
+ openSheet("Add",actionList([it(0,0,"Work","A work type, linked to one or more teams",()=>{nav("worktypes");workForm();}),it(0,0,"Executive","Invite by Google Workspace email",()=>{nav("people:EXECUTIVE");personForm("EXECUTIVE");}),it(0,0,"Team leader","One per team",()=>{nav("people:TEAM_LEADER");personForm("TEAM_LEADER");}),it(0,0,"Team","e.g. Graphic, Social, Video",()=>{nav("teams");teamForm();}),it(0,0,"Client","GST, PAN, state, contact",()=>nav("clients:add"))]));}
+PAGES.teams=function(){page("Teams",[...S.teams.map(t=>el("div",{class:"item",style:"cursor:default"},el("div",{class:"m"},el("b",{},t.name),el("small",{},(S.users.filter(u=>u.teamId===t.id).map(u=>first(u.name)).join(", ")||"nobody yet")+" · work: "+(S.workTypes.filter(w=>(w.teams||[]).includes(t.id)).map(w=>w.name).join(", ")||"none"))),el("div",{class:"amt"},S.tasks.filter(x=>x.team===t.id&&x.status!=="COMPLETED").length+" open")))],[zoneActions(el("button",{class:"btn blue",onclick:()=>teamForm()},"+ Add team"))]);};
 
 /* Google-Drive-style share sheet for a month folder (Drive API permissions in the real app). */
 const DROLES=[["reader","Viewer"],["commenter","Commenter"],["writer","Editor"]];
