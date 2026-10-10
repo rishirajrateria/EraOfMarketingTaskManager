@@ -89,6 +89,25 @@ export async function busyFor(userId: string, from: Date, to: Date, opts: BusyOp
 
 export type SlotProposal = { start: Date; end: Date; chunks: Interval[]; displaced: string[] };
 
+/** Slots start on a whole minute: "now" carries seconds, which would leak into scheduledStart and recurrences. */
+export const ceilToMinute = (d: Date) => new Date(Math.ceil(d.getTime() / 60_000) * 60_000);
+
+export type BusyTimeline = { hard: Interval[]; soft: { id: string; start: Date; end: Date }[]; off: Set<string> };
+
+/** Everyone's busy blocks (hard + soft) and leave days over [from, to], merged: a slot must suit all of them. */
+export async function collectBusy(assigneeIds: string[], from: Date, to: Date, opts: BusyOptions, tz: string): Promise<BusyTimeline> {
+  const hard: Interval[] = [];
+  const soft: BusyTimeline["soft"] = [];
+  const off = new Set<string>();
+  for (const id of assigneeIds) {
+    const b = await busyFor(id, from, to, opts);
+    hard.push(...b.hard);
+    soft.push(...b.soft);
+    for (const k of await leaveDayKeys(id, from, to, tz)) off.add(k);
+  }
+  return { hard, soft, off };
+}
+
 /**
  * Propose the next available slot for `minutes` of work for all assignees (intersection: one slot where
  * every assignee is free). Self-assigned soft blocks of subordinates may be overlapped by a superior.
@@ -96,26 +115,18 @@ export type SlotProposal = { start: Date; end: Date; chunks: Interval[]; displac
 export async function proposeSlot(
   assigneeIds: string[],
   minutes: number,
-  opts: BusyOptions & { from?: Date; horizonDays?: number },
+  /** `allowSplit` (default true): false = one contiguous gap of the full length (see `findSlot`). */
+  opts: BusyOptions & { from?: Date; horizonDays?: number; allowSplit?: boolean },
 ): Promise<SlotProposal | null> {
   const cfg = await workingConfig();
-  // Slots start on a whole minute: "now" carries seconds, which would leak into scheduledStart and recurrences.
-  const raw = opts.from ?? new Date();
-  const from = new Date(Math.ceil(raw.getTime() / 60_000) * 60_000);
+  const from = ceilToMinute(opts.from ?? new Date());
   const horizon = addDays(from, opts.horizonDays ?? 60);
-  const hard: Interval[] = [];
-  const soft: { id: string; start: Date; end: Date }[] = [];
-  const off = new Set<string>();
-  for (const id of assigneeIds) {
-    const b = await busyFor(id, from, horizon, opts);
-    hard.push(...b.hard);
-    soft.push(...b.soft);
-    for (const k of await leaveDayKeys(id, from, horizon, cfg.timezone)) off.add(k);
-  }
+  const { hard, soft, off } = await collectBusy(assigneeIds, from, horizon, opts, cfg.timezone);
   // First try honouring soft blocks too; if nothing fits within the horizon, overlap soft blocks.
-  const strict = findSlot(from, minutes, cfg, [...hard, ...soft], { extraOff: off, maxDays: opts.horizonDays ?? 60 });
+  const findOpts = { extraOff: off, maxDays: opts.horizonDays ?? 60, allowSplit: opts.allowSplit };
+  const strict = findSlot(from, minutes, cfg, [...hard, ...soft], findOpts);
   if (strict) return { ...strict, displaced: [] };
-  const loose = findSlot(from, minutes, cfg, hard, { extraOff: off, maxDays: opts.horizonDays ?? 60 });
+  const loose = findSlot(from, minutes, cfg, hard, findOpts);
   if (!loose) return null;
   const displaced = soft.filter((s) => s.start < loose.end && s.end > loose.start).map((s) => s.id);
   return { ...loose, displaced };

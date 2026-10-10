@@ -2,9 +2,9 @@
 import { CalendarDays, ListTodo } from "lucide-react";
 import { clsx } from "@/lib/clsx";
 import type { DashboardData } from "@/server/tasks/types";
-import { shortcutStart, type AddTaskForm, type TaskMode } from "@/components/tasks/add-task-helpers";
+import { isDateOnly, shortcutStart, type AddTaskForm, type TaskMode } from "@/components/tasks/add-task-helpers";
 import { isShortcutDay } from "@/components/tasks/meeting-helpers";
-import { detailsCaption } from "@/components/tasks/details-caption";
+import { detailsCaption, whenCaption, type SlotPreview } from "@/components/tasks/details-caption";
 import { AddTaskGreenRows, TagPill } from "@/components/tasks/AddTaskRows";
 import { MeetIcon } from "@/components/dashboard/GoogleIcons";
 import { MinimisableTray } from "@/components/dashboard/FilterTray";
@@ -48,26 +48,39 @@ export function TypeSwitch({ type, onType, disabled }: { type: TaskMode | null; 
   );
 }
 
-/** 📅 When should it start? · Up next · Today · Tomorrow — the tray's lowest row, nearest the thumb. */
-function TimeRow({ form, type, tz, onShortcut, onOpenSchedule }: { form: AddTaskForm; type: TaskMode | null; tz: string; onShortcut: (kind: Shortcut) => void; onOpenSchedule: () => void }) {
-  // Meetings: Today / Tomorrow mark the chosen day (the START row sets the time); tasks: the shortcut's exact start.
+/**
+ * 📅 When should it start? · Up next · Today · Tomorrow — the tray's lowest row, nearest the thumb. Today / Tomorrow (and
+ * a date picked without a time) mean "the next free time on that day"; the resolved time shows in a line under the pills
+ * once the server's preview is in (ADR 0010 addendum).
+ */
+function TimeRow({ form, type, tz, preview, onShortcut, onOpenSchedule }: { form: AddTaskForm; type: TaskMode | null; tz: string; preview?: SlotPreview | null; onShortcut: (kind: Shortcut) => void; onOpenSchedule: () => void }) {
+  // Meetings: Today / Tomorrow mark the chosen day (the START row sets the time); tasks: the shortcut's day, no time.
   const startIs = (kind: "tomorrow" | "today") =>
     type === "MEETING" ? isShortcutDay(kind, form.scheduledStart, new Date(), tz) : !!form.scheduledStart && form.scheduledStart === shortcutStart(kind, new Date(), tz);
+  const dayOnly = isDateOnly(form.scheduledStart) && !(type === "MEETING" && form.meeting?.allDay);
   return (
-    <div className="scrollbar-none flex h-14 items-center gap-1.5 overflow-x-auto px-3 text-ink" role="group" aria-label="Start">
-      <button type="button" onClick={onOpenSchedule} aria-label="When should it start?" title="When should it start?" className="flex h-8 w-7 shrink-0 items-center justify-center">
-        <CalendarDays size={22} aria-hidden />
-      </button>
-      <TagPill active={!form.scheduledStart} onClick={() => onShortcut("upnext")}>
-        Up next
-      </TagPill>
-      <TagPill active={startIs("today")} onClick={() => onShortcut("today")}>
-        Today
-      </TagPill>
-      <TagPill active={startIs("tomorrow")} onClick={() => onShortcut("tomorrow")}>
-        Tomorrow
-      </TagPill>
-    </div>
+    <>
+      <div className="scrollbar-none flex h-14 items-center gap-1.5 overflow-x-auto px-3 text-ink" role="group" aria-label="Start">
+        <button type="button" onClick={onOpenSchedule} aria-label="When should it start?" title="When should it start?" className="flex h-8 w-7 shrink-0 items-center justify-center">
+          <CalendarDays size={22} aria-hidden />
+        </button>
+        <TagPill active={!form.scheduledStart} onClick={() => onShortcut("upnext")}>
+          Up next
+        </TagPill>
+        <TagPill active={startIs("today")} onClick={() => onShortcut("today")}>
+          Today
+        </TagPill>
+        <TagPill active={startIs("tomorrow")} onClick={() => onShortcut("tomorrow")}>
+          Tomorrow
+        </TagPill>
+      </div>
+      {dayOnly ? (
+        <p data-slot-preview className={clsx("-mt-2 truncate px-3 pb-2 text-[12px]", preview?.error ? "text-red-600" : "text-muted")} aria-live="polite">
+          {whenCaption(form, new Date(), tz, preview)}
+          {preview?.day?.requestedDay === form.scheduledStart ? "" : "…"}
+        </p>
+      ) : null}
+    </>
   );
 }
 
@@ -83,6 +96,7 @@ export function AddTaskTray({
   data,
   type,
   tz,
+  preview,
   onShortcut,
   onOpenSchedule,
 }: {
@@ -92,14 +106,16 @@ export function AddTaskTray({
   type: TaskMode | null;
   /** The zone starts are picked in (the meeting's own for meetings). */
   tz: string;
+  /** The server's next free time for a date-only start (debounced `previewSlot`), null while unknown. */
+  preview?: SlotPreview | null;
   onShortcut: (kind: Shortcut) => void;
   onOpenSchedule: () => void;
 }) {
   return (
-    <MinimisableTray kind="details" userId={data.me.id} label={detailsCaption(form, data, new Date(), tz)}>
+    <MinimisableTray kind="details" userId={data.me.id} label={detailsCaption(form, data, new Date(), tz, preview)}>
       <div className="strip-glass pt-1">
         <AddTaskGreenRows form={form} patch={patch} data={data} />
-        <TimeRow form={form} type={type} tz={tz} onShortcut={onShortcut} onOpenSchedule={onOpenSchedule} />
+        <TimeRow form={form} type={type} tz={tz} preview={preview} onShortcut={onShortcut} onOpenSchedule={onOpenSchedule} />
       </div>
     </MinimisableTray>
   );

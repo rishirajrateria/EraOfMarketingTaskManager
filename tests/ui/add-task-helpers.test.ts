@@ -9,14 +9,16 @@ import {
   fromDatetimeLocal,
   HOUR_PRESETS,
   hoursToMinutes,
+  isDateOnly,
   repeatBaseDay,
+  scheduleValue,
   shortcutStart,
   stepHours,
   toDatetimeLocal,
   toTaskInput,
   validateForm,
 } from "@/components/tasks/add-task-helpers";
-import { taskInputSchema } from "@/server/tasks/schema";
+import { taskInputSchema, taskUpdateSchema } from "@/server/tasks/schema";
 import { defaultRule, repeatPresets } from "@/server/tasks/repeat-rule";
 import type { DashboardData } from "@/server/tasks/types";
 
@@ -87,11 +89,36 @@ describe("datetime helpers", () => {
     const parsed = taskInputSchema.safeParse({ title: "x", clientId: "c", assigneeIds: ["a"], scheduledStart: iso });
     expect(parsed.success).toBe(true);
   });
-  it("shortcutStart: tomorrow 10:00 and today's next full hour", () => {
+  it("shortcutStart: Today / Tomorrow are the day only (next free time on that day), in the company tz", () => {
     const now = new Date("2026-09-12T04:20:00Z"); // 09:50 IST
-    expect(shortcutStart("tomorrow", now, TZ)).toBe("2026-09-13T10:00");
-    expect(shortcutStart("today", now, TZ)).toBe("2026-09-12T10:00");
-    expect(shortcutStart("today", new Date("2026-09-12T17:45:00Z"), TZ)).toBe("2026-09-13T00:00"); // 23:15 IST → midnight
+    expect(shortcutStart("tomorrow", now, TZ)).toBe("2026-09-13");
+    expect(shortcutStart("today", now, TZ)).toBe("2026-09-12");
+    expect(shortcutStart("today", new Date("2026-09-12T17:45:00Z"), TZ)).toBe("2026-09-12"); // 23:15 IST: still the 12th (no "next hour" roll-over)
+    expect(shortcutStart("today", new Date("2026-09-12T19:00:00Z"), TZ)).toBe("2026-09-13"); // 00:30 IST on the 13th
+    expect(shortcutStart("today", new Date("2026-09-12T19:00:00Z"), "UTC")).toBe("2026-09-12");
+    expect(isDateOnly(shortcutStart("tomorrow", now, TZ))).toBe(true);
+  });
+  it("isDateOnly: a real yyyy-MM-dd only", () => {
+    expect(isDateOnly("2026-10-23")).toBe(true);
+    expect(isDateOnly("2026-10-23T10:00")).toBe(false);
+    expect(isDateOnly("")).toBe(false);
+    expect(isDateOnly(null)).toBe(false);
+    expect(isDateOnly("2026-02-30")).toBe(false);
+    expect(isDateOnly("2026-13-01")).toBe(false);
+  });
+  it("scheduleValue: the time is optional — blank means the next free time on that day", () => {
+    expect(scheduleValue("2026-10-23", "")).toBe("2026-10-23");
+    expect(scheduleValue("2026-10-23", "14:00")).toBe("2026-10-23T14:00");
+  });
+  it("taskInputSchema accepts a date-only start and an ISO start, rejects a bare datetime-local and a fake date", () => {
+    const base = { title: "x", clientId: "c", assigneeIds: ["a"] };
+    expect(taskInputSchema.safeParse({ ...base, scheduledStart: "2026-10-23" }).success).toBe(true);
+    expect(taskInputSchema.safeParse({ ...base, scheduledStart: "2026-10-23T14:00:00+05:30" }).success).toBe(true);
+    expect(taskInputSchema.safeParse({ ...base, scheduledStart: null }).success).toBe(true);
+    expect(taskInputSchema.safeParse({ ...base, scheduledStart: "2026-10-23T14:00" }).success).toBe(false);
+    expect(taskInputSchema.safeParse({ ...base, scheduledStart: "2026-02-30" }).success).toBe(false);
+    expect(taskInputSchema.safeParse({ ...base, scheduledEnd: "2026-10-23" }).success).toBe(false); // only the start may be a day
+    expect(taskUpdateSchema.safeParse({ id: "t", scheduledStart: "2026-10-23" }).success).toBe(true);
   });
   it("hoursToMinutes", () => {
     expect(hoursToMinutes("1.5")).toBe(90);
@@ -112,6 +139,25 @@ describe("toTaskInput / validateForm", () => {
     const payload = toTaskInput(form, TZ);
     expect(payload).toMatchObject({ title: "Brief", allocatedMinutes: 150, scheduledStart: null, scheduledEnd: null, recurrence: null, tagIds: ["w1"] });
     expect(taskInputSchema.safeParse(payload).success).toBe(true);
+  });
+  it("a day with no time goes through as a date-only start (the server picks the next free time on that day)", () => {
+    const form = { ...emptyForm("WORK", "ex1"), title: "t", clientId: "c1", tagIds: ["w1"], scheduledStart: "2026-10-23" };
+    const payload = toTaskInput(form, TZ);
+    expect(payload.scheduledStart).toBe("2026-10-23");
+    expect(payload.scheduledEnd).toBeNull();
+    expect(taskInputSchema.safeParse(payload).success).toBe(true);
+    // Today / Tomorrow produce the same shape
+    expect(toTaskInput({ ...form, scheduledStart: shortcutStart("tomorrow", new Date("2026-09-12T04:20:00Z"), TZ) }, TZ).scheduledStart).toBe("2026-09-13");
+    // an explicit time is still an ISO instant with the zone offset
+    expect(toTaskInput({ ...form, scheduledStart: "2026-10-23T14:00" }, TZ).scheduledStart).toBe("2026-10-23T14:00:00+05:30");
+  });
+  it("all-day meetings turn a date-only start into that day's midnight in the meeting zone", () => {
+    const m = emptyForm("MEETING", "ex1");
+    const form = { ...m, title: "Offsite", clientId: "c1", scheduledStart: "2026-10-23", meeting: { ...m.meeting, allDay: true } };
+    expect(toTaskInput(form, TZ).scheduledStart).toBe("2026-10-23T00:00:00+05:30");
+    expect(toTaskInput({ ...form, meeting: { ...form.meeting, timeZone: "America/New_York" } }, TZ).scheduledStart).toBe("2026-10-23T00:00:00-04:00");
+    // a timed meeting keeps the day only (the server finds the next free time for organiser + attendees)
+    expect(toTaskInput({ ...form, meeting: { ...m.meeting, allDay: false } }, TZ).scheduledStart).toBe("2026-10-23");
   });
   it("meetings drop tags but keep the repeat rule; the start comes from the calendar icon / shortcuts", () => {
     const form = {

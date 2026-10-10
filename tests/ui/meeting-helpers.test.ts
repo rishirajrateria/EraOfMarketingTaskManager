@@ -68,7 +68,8 @@ describe("picking the start", () => {
   it("Tom / today change only the day once a time is picked; else they act as for tasks", () => {
     expect(meetingShortcut("tomorrow", "2026-10-12T16:00", NOW, TZ)).toBe("2026-10-13T16:00");
     expect(meetingShortcut("today", "2026-10-20T09:30", NOW, TZ)).toBe("2026-10-12T09:30");
-    expect(meetingShortcut("tomorrow", "", NOW, TZ)).toBe("2026-10-13T10:00");
+    expect(meetingShortcut("tomorrow", "", NOW, TZ)).toBe("2026-10-13"); // no time yet → the day only (next free time)
+    expect(meetingShortcut("today", "2026-10-20", NOW, TZ)).toBe("2026-10-12"); // a date-only day stays date-only
     expect(isShortcutDay("tomorrow", "2026-10-13T16:00", NOW, TZ)).toBe(true);
     expect(isShortcutDay("today", "2026-10-13T16:00", NOW, TZ)).toBe(false);
     expect(isShortcutDay("today", "", NOW, TZ)).toBe(false);

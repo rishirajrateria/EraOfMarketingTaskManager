@@ -43,6 +43,8 @@ const isTimeZone = (tz: string) => {
     return false;
   }
 };
+/** An IANA zone ("" = the company time zone): a meeting's zone, also the zone a date-only start is read in. */
+export const timeZoneInput = z.string().max(64).refine(isTimeZone, "Unknown time zone");
 
 /** Meeting → Google Calendar event options (ADR 0012). Every field has a default so older / partial payloads parse. */
 export const meetingOptionsSchema = z.object({
@@ -60,7 +62,7 @@ export const meetingOptionsSchema = z.object({
   colorId: z.enum(["", ...GOOGLE_COLOR_IDS]).default(""),
   allDay: z.boolean().default(false),
   /** IANA zone the start time is interpreted in; "" = company settings time zone. */
-  timeZone: z.string().max(64).refine(isTimeZone, "Unknown time zone").default(""),
+  timeZone: timeZoneInput.default(""),
   withMeet: z.boolean().default(true),
 });
 export type MeetingOptions = z.infer<typeof meetingOptionsSchema>;
@@ -78,6 +80,23 @@ export const guestEmailsSchema = z
 const ids = (max: number) => z.array(z.string()).max(max);
 const isoOrNull = z.string().datetime({ offset: true }).nullable();
 
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** A date-only start before today (in the zone the day is read in) is refused — by the sheet and by the server alike. */
+export const PAST_DAY_MESSAGE = "That day has passed — pick today or later";
+/** "2026-10-23": a date with no time — the start is "the next free time on that day" (ADR 0010 addendum). */
+export const isDateOnly = (s: string | null | undefined): s is string => !!s && DATE_ONLY_RE.test(s) && isRealDay(s);
+/** A yyyy-MM-dd that exists on the calendar (rejects 2026-02-30 and month 13). */
+function isRealDay(s: string): boolean {
+  const [y, m, d] = s.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+}
+/**
+ * `scheduledStart` input: an ISO instant ("2026-10-23T14:00:00+05:30" — explicit), a date only ("2026-10-23" — the next
+ * free time on that day, resolved by the server before saving) or null (the next free slot from now).
+ */
+const startInput = z.union([z.string().datetime({ offset: true }), z.string().regex(DATE_ONLY_RE).refine(isRealDay, "Unknown date")]).nullable();
+
 /** Field rules shared by create and update (no defaults here: zod 4 applies defaults even under `.partial()`). */
 const taskFields = {
   type: z.enum(["WORK", "MEETING"]),
@@ -90,7 +109,7 @@ const taskFields = {
   /** Work type(s) — the add-task WORK row picks exactly one; required for WORK tasks. */
   tagIds: ids(20),
   allocatedMinutes: z.number().int().min(5).max(24 * 60 * 30),
-  scheduledStart: isoOrNull,
+  scheduledStart: startInput,
   scheduledEnd: isoOrNull,
   important: z.boolean(),
   priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]),
@@ -111,7 +130,7 @@ export const taskInputSchema = z.object({
   /** Admin's suggested executives (must be executives of the chosen teams); the Team Leader decides. */
   preferredAssigneeIds: ids(50).default([]),
   allocatedMinutes: taskFields.allocatedMinutes.default(60),
-  scheduledStart: isoOrNull.default(null),
+  scheduledStart: startInput.default(null),
   scheduledEnd: isoOrNull.default(null),
   important: taskFields.important.default(false),
   priority: taskFields.priority.default("NORMAL"),

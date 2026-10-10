@@ -1,10 +1,12 @@
 import { addDays, differenceInCalendarDays } from "date-fns";
 import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
-import { DEFAULT_TZ, dateKey, zonedDayAt } from "@/lib/time";
+import { DEFAULT_TZ, dateKey } from "@/lib/time";
 import type { DashboardData } from "@/server/tasks/types";
 import type { RepeatRule } from "@/server/tasks/repeat-rule";
-import type { MeetingOptions } from "@/server/tasks/schema";
+import { isDateOnly, type MeetingOptions } from "@/server/tasks/schema";
 import { defaultMeetingOptions, normaliseEmails } from "@/server/tasks/meeting";
+
+export { isDateOnly };
 
 /** Pure helpers for the Add-task sheet (SPEC §6). No React, no server access — unit-tested in tests/ui. */
 
@@ -26,7 +28,11 @@ export type AddTaskForm = {
   preferredAssigneeIds: string[];
   /** "How long": hours in 15-minute steps (min ¼h). */
   hours: number;
-  /** datetime-local value (company tz) set from the calendar icon / Tom / today; "" = next free slot (upnext). */
+  /**
+   * The start, in the zone it is picked in (company tz; meetings: the meeting zone): "" = the next free slot from now
+   * (Up next); "yyyy-MM-dd" = a day with no time — the next free time on that day (Today / Tomorrow, the calendar
+   * icon with the time left blank); "yyyy-MM-ddTHH:mm" = an explicit start (the time filled in, the START pills).
+   */
   scheduledStart: string;
   important: boolean;
   priority: "LOW" | "NORMAL" | "HIGH" | "URGENT";
@@ -156,11 +162,17 @@ export function defaultTeamIds(data: Pick<DashboardData, "people" | "teams" | "m
   return out;
 }
 
-/** Bottom-bar date shortcuts: Tom = tomorrow 10:00, Today = next full hour (company tz). Returns a datetime-local value. */
+/**
+ * Bottom-bar day shortcuts: Today / Tomorrow (in `tz`) with no time — the server puts the task at the next free time on
+ * that day (ADR 0010 addendum). Returns a date-only value ("yyyy-MM-dd").
+ */
 export function shortcutStart(kind: "tomorrow" | "today", now = new Date(), tz = DEFAULT_TZ): string {
-  if (kind === "tomorrow") return toDatetimeLocal(zonedDayAt(addDays(now, 1), 10 * 60, tz), tz);
-  const local = toZonedTime(now, tz);
-  return toDatetimeLocal(zonedDayAt(now, (local.getHours() + 1) * 60, tz), tz);
+  return dateKey(kind === "tomorrow" ? addDays(now, 1) : now, tz);
+}
+
+/** "When should it start?" → form value: the date with the time when one is typed, else the date only (next free). */
+export function scheduleValue(date: string, time: string): string {
+  return time ? `${date}T${time}` : date;
 }
 
 /** "Thu 12 Sep 10:00am – 2:00pm" or "Thu 12 Sep 10:00am – Fri 13 Sep 2:00pm (spans 2 days)". */
@@ -181,7 +193,8 @@ export function toTaskInput(form: AddTaskForm, tz = DEFAULT_TZ) {
   const zone = meeting ? form.meeting?.timeZone || tz : tz;
   const allDay = meeting && !!form.meeting?.allDay;
   const allDayKey = /^\d{4}-\d{2}-\d{2}/.test(form.scheduledStart) ? form.scheduledStart.slice(0, 10) : dateKey(new Date(), zone);
-  const scheduledStart = fromDatetimeLocal(allDay ? `${allDayKey}T00:00` : form.scheduledStart, zone);
+  // A date only goes through as is: the server resolves it to the next free time on that day (ADR 0010 addendum).
+  const scheduledStart = allDay ? fromDatetimeLocal(`${allDayKey}T00:00`, zone) : isDateOnly(form.scheduledStart) ? form.scheduledStart : fromDatetimeLocal(form.scheduledStart, zone);
   return {
     type: form.type,
     title: form.title.trim(),

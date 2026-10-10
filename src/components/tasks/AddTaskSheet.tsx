@@ -7,12 +7,13 @@ import { addTaskStore } from "@/components/shell/add-task-store";
 import { useToast } from "@/components/ui/Toast";
 import type { DashboardData } from "@/server/tasks/types";
 import { describeRule } from "@/server/tasks/repeat-rule";
-import { addTaskInventory, createTask } from "@/server/tasks/create";
+import { addTaskInventory, createTask, previewSlot } from "@/server/tasks/create";
 import { uploadAttachment } from "@/server/tasks/manage";
 import { AddTaskHeader } from "@/components/tasks/AddTaskHeader";
 import { AddTaskBody } from "@/components/tasks/AddTaskBody";
 import { AddTaskTray, TypeSwitch, type Shortcut } from "@/components/tasks/AddTaskTray";
 import { AssigneeSheet, ScheduleSheet } from "@/components/tasks/AddTaskDetails";
+import { dayFallbackToast, type SlotPreview } from "@/components/tasks/details-caption";
 import { RepeatSheet } from "@/components/tasks/RecurrencePicker";
 import { MeetingGuestsSheet } from "@/components/tasks/MeetingGuestsSheet";
 import { MeetingOptionsSheet } from "@/components/tasks/MeetingOptionsSheet";
@@ -26,6 +27,7 @@ import {
   emptyForm,
   hoursToMinutes,
   headerTeamIds,
+  isDateOnly,
   parseAddParam,
   repeatBaseDay,
   shortcutStart,
@@ -138,9 +140,36 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
 
   const assignees = useMemo(() => allowedAssignees(data, chosen ?? "WORK"), [data, chosen]);
   const meeting = chosen === "MEETING";
-  const subSheetOpen = scheduleOpen || assigneesOpen || repeatOpen || optionsOpen || findOpen;
+
   // Meetings: the start is chosen and shown in the meeting's time zone (Options → Time zone).
   const zone = meeting ? meetingTz(form, data.tz) : data.tz;
+
+  // A day with no time ("2026-10-23", from Today / Tomorrow or the calendar icon): ask the server for the next free time
+  // on that day for the people the task lands on (debounced 300ms) so the tray can show "Fri 23 Oct - next free 11:30 am".
+  // The day is read in `zone` (meetings: their own), like the server does on Save; a refusal shows in place of the time.
+  const [preview, setPreview] = useState<SlotPreview | null>(null);
+  const previewDay = isDateOnly(form.scheduledStart) && !(meeting && form.meeting?.allDay) ? form.scheduledStart : "";
+  const previewIds = effectiveAssignees({ ...form, type: chosen ?? "WORK" }, data).join(",");
+  const previewMinutes = hoursToMinutes(form.hours);
+  useEffect(() => {
+    setPreview(null);
+    if (!open || !previewDay || !previewIds) return;
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      const res = await previewSlot(previewIds.split(","), previewMinutes, chosen ?? "WORK", previewDay, meeting ? zone : null).catch(() => null);
+      if (cancelled) return;
+      const day = { requestedDay: previewDay };
+      if (!res) setPreview({ day, error: "Could not check that day" });
+      else if (!res.ok) setPreview({ day, error: res.error });
+      else if (!res.data) setPreview({ day, error: "No free time in the next 60 days" });
+      else setPreview(res.data);
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [open, previewDay, previewIds, previewMinutes, chosen, meeting, zone]);
+  const subSheetOpen = scheduleOpen || assigneesOpen || repeatOpen || optionsOpen || findOpen;
 
   const choose = (type: TaskMode) => {
     if (type === chosen) return;
@@ -200,7 +229,10 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
         setErrors(errorsFromMessage(res.error));
         return;
       }
-      toast(meeting ? "Meeting scheduled" : "Task created");
+      // A date-only start that did not fit on that day: say where it went instead of a plain "Task created".
+      const fallback = dayFallbackToast(res.data, zone);
+      if (fallback) toast(fallback, "ok", { ms: 6000 });
+      else toast(meeting ? "Meeting scheduled" : "Task created");
       await uploadAll(res.data.taskId);
       voiceNotes.forEach((n) => URL.revokeObjectURL(n.url));
       close();
@@ -257,7 +289,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
             onToast={(m) => toast(m)}
             formError={formError}
           />
-          <AddTaskTray form={liveForm} patch={patch} data={data} type={chosen} tz={zone} onShortcut={setShortcut} onOpenSchedule={() => setScheduleOpen(true)} />
+          <AddTaskTray form={liveForm} patch={patch} data={data} type={chosen} tz={zone} preview={preview} onShortcut={setShortcut} onOpenSchedule={() => setScheduleOpen(true)} />
         </div>
       </Sheet>
       <ScheduleSheet open={scheduleOpen} onClose={() => setScheduleOpen(false)} value={form.scheduledStart} tz={zone} onSet={(scheduledStart) => patch({ scheduledStart })} onError={(m) => toast(m, "err")} />
