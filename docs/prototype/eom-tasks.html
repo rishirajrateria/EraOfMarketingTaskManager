@@ -497,7 +497,7 @@ select.in{padding-right:10px}
 .mbadge.red{background:#ef4444;color:#fff}.mbadge.amber{background:rgba(245,158,11,.18);color:#b45309}.mbadge.soft{background:var(--chip);color:var(--muted);border:1px solid var(--hair)}
 .mchev{color:var(--muted);opacity:.6;flex-shrink:0}
 .mrow.danger b{color:#dc2626}
-.mquick{flex-shrink:0;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--hair);background:var(--glass)}
+.mquick{flex-shrink:0;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--hair);background:var(--glass)}
 .mq{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 2px;border-radius:16px;border:1px solid var(--hair);background:var(--glass-strong);box-shadow:var(--shadow);font-size:11px;font-weight:600;color:var(--ink);white-space:nowrap;min-width:0}
 .mq span{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff}
 .mempty{padding:28px 8px;text-align:center;color:var(--muted);font-size:13px}
@@ -802,7 +802,23 @@ select.in{padding-right:10px}
 .mtile .mbadge.amber{background:#ea580c!important;color:#fff!important}.mtile .mbadge.soft{background:#2563eb!important;color:#fff!important}
 .mtile.danger .ml{color:#dc2626}
 @media (max-width:360px){.mgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-</style><div class="phone" id="phone">
+/* + speed dial on the dashboard: Task nearest the thumb, Meeting next, then the rest */
+.fabdim{position:absolute;inset:0 0 calc(56px + env(safe-area-inset-bottom,0px)) 0;z-index:28;background:rgba(2,12,24,.42);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end;padding:0 10px 10px}
+.fabdim[hidden]{display:none!important}
+.fabstack{display:flex;flex-direction:column-reverse;align-items:flex-end;gap:8px;max-height:100%;overflow-y:auto;padding-top:12px}
+.fabi{display:flex;align-items:center;gap:10px;border:0;background:none;padding:0;cursor:pointer;font:inherit;animation:fabin .18s ease-out both}
+.fabi b{font-size:13px;font-weight:600;color:var(--ink);background:var(--glass-strong);border:1px solid var(--hair);box-shadow:var(--shadow);padding:7px 12px;border-radius:12px;white-space:nowrap}
+.fabi .ic{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 6px 16px -8px rgba(0,0,0,.5);flex:none}
+.fabi .ic.t-task{background:linear-gradient(150deg,#3b82f6,#1d4ed8)}
+.fabi .ic.meet{background:#fff;border:1px solid var(--hair)}
+.fabi.main b{font-weight:700}.fabi.main .ic{width:50px;height:50px;border-radius:16px}
+.fabi:focus-visible{outline:none}.fabi:focus-visible .ic{outline:2px solid #3b82f6;outline-offset:2px}
+.fabsep{width:44px;height:1px;background:rgba(255,255,255,.35);margin:2px 0}
+@keyframes fabin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+#s-dash .bar .w #addChoose svg{transition:transform .18s}
+.fabon #s-dash .bar .w #addChoose svg{transform:rotate(45deg)}
+</style>
+<div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
     <div class="pf">
@@ -839,8 +855,7 @@ select.in{padding-right:10px}
       <div class="bar">
         <div class="g" id="barg"></div>
         <div class="w">
-          <button class="sq" id="addMeet" aria-label="Schedule a meeting"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h5v5H3z" fill="#00832D"/><path d="M3 11h7v5H5a2 2 0 0 1-2-2z" fill="#0066DA"/><path d="M10 6h5v5h-5z" fill="#2684FC"/><path d="M10 11h5v5h-5z" fill="#00AC47"/><path d="M15 6h.5a1.5 1.5 0 0 1 1.5 1.5V11h-2z" fill="#FFBA00"/><path d="M15 11h2v3.5a1.5 1.5 0 0 1-1.5 1.5H15z" fill="#00AC47"/><path d="M17 10.2 21 7v8l-4-3.2z" fill="#00AC47"/></svg></button>
-          <button class="sq" id="addChoose" aria-label="Add task"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+          <button class="sq" id="addChoose" aria-label="Add" aria-haspopup="menu" aria-expanded="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
         </div>
       </div>
     </div>
@@ -895,6 +910,7 @@ select.in{padding-right:10px}
     </div>
   </div>
 
+  <div class="fabdim" id="fab" hidden><div class="fabstack" id="fabStack" role="menu" aria-label="Add"></div></div>
   <div class="dim" id="sheetDim" hidden><div class="sheet" id="sheet"></div></div>
   <div class="toast" id="toast" hidden></div>
 </div>
@@ -1536,7 +1552,7 @@ $("#tTitle").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();saveTask();}};
 // save button lives in the header tiles area? No: the real app saves from the title row ✓ — add a floating save
 const saveBtn=el("button",{class:"btn",style:"flex:none;height:40px;border-radius:999px;padding:0 22px;box-shadow:0 8px 24px rgba(0,0,0,.2);pointer-events:auto",onclick:saveTask},"Save");
 $("#s-add .addbody").append(el("div",{style:"position:sticky;bottom:10px;display:flex;justify-content:flex-end;margin-top:12px;pointer-events:none"},saveBtn));
-$("#dbBtn").onclick=()=>nav("insights");$("#addMeet").onclick=()=>openAdd("MEETING");$("#addChoose").onclick=()=>openAdd("CHOOSE");
+$("#dbBtn").onclick=()=>nav("insights");$("#addChoose").onclick=()=>toggleFab();
 
 /* ---------- menu ---------- */
 const MI={
@@ -1551,6 +1567,7 @@ const MI={
  drive:'<path d="M22 12H2M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11zM6 16h.01M10 16h.01"/>',
  calcheck:'<path d="M8 2v4M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M9 16l2 2 4-4"/>',
  clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+ user:'<circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/>',
  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
  lead:'<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/><path d="m12 5 .9 1.8 2 .3-1.45 1.4.35 2L12 9.55 10.2 10.5l.35-2L9.1 7.1l2-.3Z" fill="currentColor" stroke="none"/>',
  layers:'<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65M22 12.65l-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
@@ -1605,7 +1622,7 @@ function renderMenu(){
  $("#mBody").replaceChildren(...(secs.length?secs.map(sec=>el("div",{class:"msec"},el("h5",{class:sec.t},sec.h),el("div",{class:"mgrid"},...sec.items.map(it=>el("button",{class:"mtile"+(it.danger?" danger":""),title:it.s||it.l,"aria-label":it.l+(it.s?" — "+it.s:""),onclick:()=>{closeMenu();nav(it.go);}},
    el("span",{class:"mi "+(it.danger?"t-red":sec.t)},msvg(it.ic,22)),el("span",{class:"ml"},it.l),it.b?el("span",{class:"mbadge "+it.b.c},String(it.b.n)):null))))):[el("div",{class:"mempty"},"Nothing matches “"+q+"”")]));
 }
-$("#mQuick").replaceChildren(...[["invoice","t-money","New invoice",()=>{nav("invoices");openWizard();}],["receipt","t-money","Add expense",()=>{nav("expenses");billEditor();}],["inbox","t-red","Approvals",()=>{reqTab="FIN";reqFin="APPR";nav("requests");}],["plus","t-acct","Add",()=>addSheet()]].map(([ic,t,l,fn])=>el("button",{class:"mq",onclick:()=>{closeMenu();fn();}},el("span",{class:t},msvg(ic,20)),l)));
+$("#mQuick").replaceChildren(...[["invoice","t-money","New invoice",()=>{nav("invoices");openWizard();}],["receipt","t-money","Add expense",()=>{nav("expenses");billEditor();}],["inbox","t-red","Approvals",()=>{reqTab="FIN";reqFin="APPR";nav("requests");}]].map(([ic,t,l,fn])=>el("button",{class:"mq",onclick:()=>{closeMenu();fn();}},el("span",{class:t},msvg(ic,20)),l)));
 $("#mSearchIco").replaceChildren(msvg("search",16));$("#mClose").replaceChildren(msvg("x",18));$("#mSettings").replaceChildren(msvg("gear",18));
 $("#mClose").onclick=()=>closeMenu();$("#mSettings").onclick=()=>{closeMenu();nav("settings");};
 $("#mSearch").oninput=renderMenu;
@@ -1749,6 +1766,44 @@ function findTimeSheet(){
   el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Close")));
 }
 $("#tGuests").onclick=guestsSheet;$("#tOpts").onclick=optionsSheet;
+
+/* ---------- + speed dial (dashboard): Task nearest the thumb, Meeting next, then the rest (Admin) ---------- */
+const MEET_ICON=$("#tMeet svg").outerHTML;
+function fabItems(){
+ const it=(k,l,cls,ic,fn,main)=>({k,l,cls,ic,fn,main});
+ const out=[it("TASK","Task","t-task","task",()=>openAdd("CHOOSE"),1),it("MEETING","Meeting","meet",null,()=>openAdd("MEETING"),1)];
+ if(role()==="ADMIN")out.push(
+  it("INVOICE","Invoice","t-money","invoice",()=>{nav("invoices");openWizard();}),
+  it("EXPENSE","Expense","t-money","receipt",()=>{nav("expenses");billEditor();}),
+  it("EXECUTIVE","Executive","t-team","user",()=>{nav("people:EXECUTIVE");personForm("EXECUTIVE");}),
+  it("WORK","Work type","t-team","tag",()=>{nav("worktypes");workForm();}),
+  it("TEAM","Team","t-team","layers",()=>{nav("teams");teamForm();}),
+  it("TEAM_LEADER","Team leader","t-team","lead",()=>{nav("people:TEAM_LEADER");personForm("TEAM_LEADER");}),
+  it("KIT","Client kit","t-client","key",()=>kitPicker()));
+ return out;
+}
+function openFab(){
+ const items=fabItems();const nodes=[];
+ items.forEach((x,i)=>{
+  if(i===2)nodes.push(el("div",{class:"fabsep"}));
+  const ic=el("span",{class:"ic "+x.cls});if(x.ic)ic.append(msvg(x.ic,x.main?22:20));else ic.innerHTML=MEET_ICON;
+  nodes.push(el("button",{class:"fabi"+(x.main?" main":""),role:"menuitem","data-add":x.k,style:"animation-delay:"+(i*18)+"ms",onclick:()=>{closeFab();x.fn();}},el("b",{},x.l),ic));
+ });
+ $("#fabStack").replaceChildren(...nodes);$("#fab").hidden=false;document.body.classList.add("fabon");$("#addChoose").setAttribute("aria-expanded","true");
+ $("#fabStack [data-add=TASK]").focus();
+}
+function closeFab(){if($("#fab").hidden)return;$("#fab").hidden=true;document.body.classList.remove("fabon");$("#addChoose").setAttribute("aria-expanded","false");}
+function toggleFab(){$("#fab").hidden?openFab():closeFab();}
+$("#fab").onclick=e=>{if(e.target===$("#fab")||e.target===$("#fabStack"))closeFab();};
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#fab").hidden){closeFab();$("#addChoose").focus();}});
+document.addEventListener("click",e=>{if(!$("#fab").hidden&&!e.target.closest("#fab,#addChoose"))closeFab();},true);
+/* New client kit: pick the client (clients without a kit first). */
+function kitPicker(){
+ const list=[...S.clients].sort((a,b)=>(!!a.kit)-(!!b.kit));
+ openSheet("New client kit",el("p",{class:"pre",style:"margin:0 0 8px"},"Pick the client. The kit makes their Drive folders and a credentials sheet."),
+  actionList([...list.map(c=>({label:kitWho(c),hint:c.kit?"Kit ready · open it":"Create the kit",onClick:()=>{closeSheet();nav("kit");c.kit?PAGES.kit(c.id):kitCreate(c);}})),
+   {label:"+ New client",hint:"Add the client first, then make the kit",onClick:()=>{closeSheet();nav("clients:add");}}]));
+}
 /* ---------- finance helpers ---------- */
 const PAGES={};
 const taxFor=c=>c.country!=="IN"?"EXPORT_LUT":c.stateCode===S.settings.stateCode?"CGST_SGST":"IGST";
@@ -2368,9 +2423,6 @@ function workForm(w){
    el("button",{class:"btn",onclick:()=>{if(!n.value.trim())return toast("Name is required","err");if(!teams.length)return toast("Pick at least one team","err");if(w){w.name=n.value.trim();w.teams=teams;}else S.workTypes.push({id:uid(),name:n.value.trim(),teams});save();closeSheet();PAGES.worktypes();toast(w?"Saved":"Work type added");}},"Save")));
 }
 function teamForm(){const n=el("input",{class:"in",placeholder:"e.g. Video"});openSheet("Add team",field("Name",n),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>{if(!n.value.trim())return toast("Name is required","err");S.teams.push({id:uid(),name:n.value.trim()});save();closeSheet();nav("teams");toast("Team added");}},"Add")));}
-/* Menu quick action "Add": one place to add work types, people, teams and clients. */
-function addSheet(){const it=(ic,cls,l,hint,fn)=>({label:l,hint,onClick:()=>{closeSheet();fn();}});
- openSheet("Add",actionList([it(0,0,"Work","A work type, linked to one or more teams",()=>{nav("worktypes");workForm();}),it(0,0,"Executive","Invite by Google Workspace email",()=>{nav("people:EXECUTIVE");personForm("EXECUTIVE");}),it(0,0,"Team leader","One per team",()=>{nav("people:TEAM_LEADER");personForm("TEAM_LEADER");}),it(0,0,"Team","e.g. Graphic, Social, Video",()=>{nav("teams");teamForm();}),it(0,0,"Client","GST, PAN, state, contact",()=>nav("clients:add"))]));}
 PAGES.teams=function(){page("Teams",[...S.teams.map(t=>el("div",{class:"item",style:"cursor:default"},el("div",{class:"m"},el("b",{},t.name),el("small",{},(S.users.filter(u=>u.teamId===t.id).map(u=>first(u.name)).join(", ")||"nobody yet")+" · work: "+(S.workTypes.filter(w=>(w.teams||[]).includes(t.id)).map(w=>w.name).join(", ")||"none"))),el("div",{class:"amt"},S.tasks.filter(x=>x.team===t.id&&x.status!=="COMPLETED").length+" open")))],[zoneActions(el("button",{class:"btn blue",onclick:()=>teamForm()},"+ Add team"))]);};
 
 /* Google-Drive-style share sheet for a month folder (Drive API permissions in the real app). */
