@@ -574,6 +574,32 @@ select.in{padding-right:10px}
 .doubtTag{flex-shrink:0;display:inline-grid;place-items:center;width:18px;height:18px;border-radius:999px;background:#f59e0b;color:#111;font-size:12px;font-weight:900}
 /* The next-slot line and the "Goes to / Inviting" summary card are not shown (owner request). */
 #tSlot,#tAssignWrap{display:none!important}
+/* ---- dashboard summary (compact) + neutral bottom dock ---- */
+.cols{display:block!important;margin-top:4px}
+.sumcap{display:flex;justify-content:space-between;gap:8px;font-size:11px;letter-spacing:.04em;color:var(--z1ink);opacity:.85;padding:0 2px 6px}
+.sumcap span:first-child{font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.sumcap span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sumgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.sumcol{min-width:0;display:flex;flex-direction:column;gap:4px}
+.sumh{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--z1ink);opacity:.75;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sumlist{display:flex;flex-direction:column;gap:4px;max-height:136px;overflow-y:auto;scrollbar-width:none}
+.sumlist::-webkit-scrollbar{display:none}
+.sumrow{flex-shrink:0;height:30px;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 10px;border-radius:10px;border:1px solid rgba(255,255,255,.28);background:var(--z1pill);color:var(--z1ink);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;font-variant-numeric:tabular-nums;text-align:left}
+.sumrow .t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sumrow b{flex-shrink:0;font-weight:800}
+.sumrow.on{background:var(--z1pill-on);color:#06303d;box-shadow:inset 0 0 0 2px var(--z1ring)}
+.sumnone{padding:4px;color:var(--z1ink);opacity:.6;font-size:12px}
+.cyan{padding-bottom:12px!important}
+#s-dash .greenarea{display:none}
+#s-dash .bar{height:56px;background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-top:1px solid var(--hair)}
+#s-dash .bar .g{flex:1;background:transparent!important;color:var(--ink);padding:0 4px 0 12px;gap:6px}
+#s-dash .bar .w{flex:none;border-left:0;background:transparent;padding:0 10px 0 4px;gap:6px}
+#s-dash .bar .w #addChoose{background:linear-gradient(150deg,#3b82f6,#1d4ed8);color:#fff;border-radius:14px;box-shadow:0 6px 16px -6px rgba(37,99,235,.7)}
+.dk{flex-shrink:0;height:34px;display:inline-flex;align-items:center;gap:5px;padding:0 10px;border-radius:12px;border:1px solid var(--hair);background:var(--chip);color:var(--ink);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;max-width:118px}
+.dk span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dk i{font-style:normal;opacity:.6;font-size:11px}
+.dk.on{background:var(--ink);color:var(--bg);border-color:transparent}
+.dk.on i.x{opacity:.9;font-size:15px;line-height:1;padding-left:2px}
 </style><div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
@@ -852,18 +878,21 @@ function visibleTasks(){
 }
 function filtersFor(){S.filters[S.me]=S.filters[S.me]||{pill:null,row1:null,row2:null,quick:null,date:null,completed:false,colours:[],icons:[]};return S.filters[S.me];}
 function tog(arr,k){return arr.includes(k)?arr.filter(x=>x!==k):[...arr,k];}
+/* Top summary: open hours grouped by team and client (TL: people + client; Exec: date + client).
+   It follows the filters chosen in the bottom dock (team/person, client/work, day). */
 function pillGroups(){
- const r=role(),ts=visibleTasks().filter(t=>t.status!=="COMPLETED");
- const sum=(pred)=>ts.filter(pred).reduce((a,t)=>a+t.mins,0);
- const clientsG={key:"client",label:"Client",items:S.clients.filter(c=>ts.some(t=>t.client===c.id)).map(c=>({id:"client:"+c.id,label:c.name,minutes:sum(t=>t.client===c.id)}))};
- const dateG={key:"date",label:"Date",items:[["Today",0],["Tom",1],["Day+2",2]].map(([l,o])=>({id:"date:"+o,label:l,minutes:sum(t=>dayOff(t.start)===o)}))};
- if(r==="ADMIN")return [
-  {key:"team",label:"Team",items:S.teams.map(t=>({id:"team:"+t.id,label:t.name,minutes:sum(x=>x.team===t.id)}))},
-  {key:"person",label:"Person",items:S.users.filter(u=>["TEAM_LEADER","EXECUTIVE"].includes(u.role)).map(u=>({id:"user:"+u.id,label:first(u.name),minutes:sum(x=>x.assignees.includes(u.id))}))},
-  clientsG];
- if(r==="TEAM_LEADER")return [
-  {key:"exec",label:"Executive",items:S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===me().teamId).map(u=>({id:"user:"+u.id,label:first(u.name),minutes:sum(x=>x.assignees.includes(u.id))}))},
-  dateG,clientsG];
+ const r=role(),f=filtersFor();
+ const ts=applyFilters(visibleTasks(),Object.assign({},f,{pill:null,colours:[],icons:[],completed:false,quick:f.quick==="asc"?null:f.quick}));
+ const sum=pred=>ts.filter(pred).reduce((a,t)=>a+t.mins,0);
+ const keep=it=>it.minutes>0||f.pill===it.id;
+ const clientsG={key:"client",label:"Clients",items:S.clients.map(c=>({id:"client:"+c.id,label:c.name,minutes:sum(t=>t.client===c.id)})).filter(keep)};
+ const people=(ids,label)=>({key:"person",label,items:ids.map(id=>userById(id)).filter(Boolean).map(u=>({id:"user:"+u.id,label:first(u.name),minutes:sum(x=>x.assignees.includes(u.id))})).filter(keep)});
+ const dateG={key:"date",label:"Days",items:[["Today",0],["Tom",1],["Day+2",2]].map(([l,o])=>({id:"date:"+o,label:l,minutes:sum(t=>dayOff(t.start)===o)}))};
+ if(r==="ADMIN"){
+  const team=f.row1&&f.row1.startsWith("team:")?S.teams.find(t=>t.id===f.row1.slice(5)):null;
+  return [team?people(S.users.filter(u=>u.teamId===team.id&&["TEAM_LEADER","EXECUTIVE"].includes(u.role)).map(u=>u.id),team.name+" · people"):{key:"team",label:"Teams",items:S.teams.map(t=>({id:"team:"+t.id,label:t.name,minutes:sum(x=>x.team===t.id)})).filter(keep)},clientsG];
+ }
+ if(r==="TEAM_LEADER")return [people(S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===me().teamId).map(u=>u.id),"People"),clientsG];
  return [dateG,clientsG];
 }
 function matchPill(t,p){if(!p)return true;const [k,v]=p.split(":");if(k==="team")return t.team===v;if(k==="user")return t.assignees.includes(v);if(k==="client")return t.client===v;if(k==="date")return dayOff(t.start)===Number(v);return true;}
@@ -891,8 +920,10 @@ function renderDash(){
  $("#notifBadge").hidden=!unread;$("#notifBadge").textContent=unread;
  // cyan columns
  const groups=pillGroups(),two=groups.length===2;
- $("#cols").replaceChildren(...groups.map((g,i)=>el("div",{class:"col"+(two?(i===1?" end":" start"):""),role:"group","aria-label":g.label},
-  g.items.length?g.items.map(it=>el("button",{class:"cpill"+(f.pill===it.id?" on":""),title:`${it.label} - ${fmtH(it.minutes)}`,onclick:()=>{f.pill=f.pill===it.id?null:it.id;save();renderDash();}},el("span",{class:"t"},shortLabel(it.label)),el("span",{class:"h"},"- "+pillHours(it.minutes)))):el("span",{style:"padding:0 4px;font-size:12px;font-weight:600;color:rgba(255,255,255,.7)"},"—"))));
+ const sub=[f.row1?dockName(f.row1):null,f.row2?dockName(f.row2):null,f.date?fmtD(f.date):f.quick==="today"?"Today":f.quick==="tomorrow"?"Tomorrow":null].filter(Boolean);
+ $("#cols").replaceChildren(el("div",{class:"sumcap"},el("span",{},"Open hours"),el("span",{},sub.length?sub.join(" · "):"all tasks")),
+  el("div",{class:"sumgrid"},...groups.map(g=>el("div",{class:"sumcol",role:"group","aria-label":g.label},el("div",{class:"sumh"},g.label),
+   el("div",{class:"sumlist"},...(g.items.length?g.items.map(it=>el("button",{class:"sumrow"+(f.pill===it.id?" on":""),title:`${it.label} - ${fmtH(it.minutes)}`,onclick:()=>{f.pill=f.pill===it.id?null:it.id;save();renderDash();}},el("span",{class:"t"},it.label),el("b",{},hh(it.minutes)))):[el("div",{class:"sumnone"},"—")]))))));
  // rows
  const ts=applyFilters(visibleTasks(),f);
  $("#rows").replaceChildren(...(ts.length?ts.map(taskRow):[el("li",{class:"empty"},f.completed?"No completed tasks match.":"Nothing here. Tap + to add a task, or clear a filter below.")]));
@@ -903,19 +934,27 @@ function renderDash(){
   el("button",{class:"itog"+(f.icons.includes("recurring")?" on":""),title:"Recurring tasks",onclick:()=>{f.icons=tog(f.icons,"recurring");save();renderDash();}},svg(I.repeat,15,2.5)),
   ...[["red","#F8CACA","Not started · start time passed"],["yellow","#F6E7B4","Paused"],["green","#CBEFCB","Started"]].map(([k,hex,l])=>el("button",{class:"sw"+(f.colours.includes(k)?" on":""),style:"background:"+hex,title:l,"aria-label":l,onclick:()=>{f.colours=tog(f.colours,k);save();renderDash();}})),
   el("button",{class:"rdbtn"+(f.icons.includes("review")?" on":""),title:"Review requested",onclick:()=>{f.icons=tog(f.icons,"review");save();renderDash();}},el("i")));
- // green rows
+ // bottom dock: Team / Client / Day pickers (neutral glass, one row) + Meet and + buttons
  const vis=visibleTasks();
  const row1=r==="ADMIN"?S.teams.map(t=>({id:"team:"+t.id,label:t.name})):r==="TEAM_LEADER"?S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===m.teamId).map(u=>({id:"user:"+u.id,label:first(u.name)})):S.clients.filter(c=>vis.some(t=>t.client===c.id)).map(c=>({id:"client:"+c.id,label:c.name}));
  const row2=r==="EXECUTIVE"?workFor([m.teamId]).map(w=>({id:"work:"+w.id,label:w.name})):S.clients.filter(c=>vis.some(t=>t.client===c.id)).map(c=>({id:"client:"+c.id,label:c.name}));
- const prow=(host,items,key)=>host.replaceChildren(el("button",{class:"gp"+(f[key]===null?" on":""),onclick:()=>{f[key]=null;save();renderDash();}},"All"),...items.map(it=>el("button",{class:"gp"+(f[key]===it.id?" on":""),onclick:()=>{f[key]=f[key]===it.id?null:it.id;save();renderDash();}},it.label)));
- prow($("#prow1"),row1,"row1");prow($("#prow2"),row2,"row2");
- const quick=q=>{f.quick=f.quick===q?null:q;save();renderDash();};
+ const n1=r==="ADMIN"?["Team","Teams"]:r==="TEAM_LEADER"?["Person","People"]:["Client","Clients"];
+ const n2=r==="EXECUTIVE"?["Work","Work"]:["Client","Clients"];
+ const pick=(title,items,key,allLabel)=>openSheet(title,el("div",{class:"seg",style:"margin:0 0 12px;flex-wrap:wrap"},el("button",{class:f[key]===null?"on":"",onclick:()=>{f[key]=null;f.pill=null;save();closeSheet();renderDash();}},"All "+allLabel.toLowerCase()),...items.map(it=>el("button",{class:f[key]===it.id?"on":"",onclick:()=>{f[key]=it.id;f.pill=null;save();closeSheet();renderDash();}},it.label))));
+ const chip=(label,active,on,clear)=>el("button",{class:"dk"+(active?" on":""),onclick:on},el("span",{},label),active&&clear?el("i",{class:"x","aria-label":"Clear",onclick:e=>{e.stopPropagation();clear();}},"×"):el("i",{},"▾"));
+ const dayLabel=f.date?fmtD(f.date):f.quick==="today"?"Today":f.quick==="tomorrow"?"Tom":"Day";
  $("#barg").replaceChildren(
-  el("button",{style:"display:flex;align-items:center;gap:4px;height:32px;flex-shrink:0;color:#fff",title:"Pick a date",onclick:openDatePicker},svg(I.cal,20,2.25),f.date?el("span",{style:"font-size:11px;font-weight:600"},fmtD(f.date)):null),
-  el("button",{class:"gp"+(f.quick==="asc"?" on":""),onclick:()=>quick("asc")},"Ascending"),
-  el("button",{class:"gp"+(f.quick==="tomorrow"?" on":""),onclick:()=>quick("tomorrow")},"tomorrow"),
-  el("button",{class:"gp"+(f.quick==="today"?" on":""),onclick:()=>quick("today")},"today"));
+  chip(f.row1?dockName(f.row1):n1[1],!!f.row1,()=>pick(n1[0],row1,"row1",n1[1]),()=>{f.row1=null;f.pill=null;save();renderDash();}),
+  chip(f.row2?dockName(f.row2):n2[1],!!f.row2,()=>pick(n2[0],row2,"row2",n2[1]),()=>{f.row2=null;f.pill=null;save();renderDash();}),
+  chip(dayLabel+(f.quick==="asc"?" · ↑":""),!!(f.date||f.quick),daySheet,()=>{f.date=null;f.quick=null;save();renderDash();}));
+ $("#prow1").replaceChildren();$("#prow2").replaceChildren();
 }
+const hh=m=>{const h=m/60;return (Number.isInteger(h)?h:h.toFixed(1))+"h";};
+function dockName(id){const [k,v]=id.split(":");if(k==="team")return (S.teams.find(t=>t.id===v)||{}).name||"Team";if(k==="user")return first((userById(v)||{name:"?"}).name);if(k==="client")return (clientById(v)||{}).name||"Client";if(k==="work")return (S.workTypes.find(w=>w.id===v)||{}).name||"Work";return id;}
+function daySheet(){const f=filtersFor();const inp=el("input",{class:"in",type:"date",value:f.date||""});
+ const set=(q,d)=>{f.quick=q;f.date=d;f.pill=null;save();closeSheet();renderDash();};
+ openSheet("Which day?",el("div",{class:"seg",style:"margin:0 0 12px"},el("button",{class:!f.date&&!f.quick?"on":"",onclick:()=>set(null,null)},"Any day"),el("button",{class:f.quick==="today"?"on":"",onclick:()=>set("today",null)},"Today"),el("button",{class:f.quick==="tomorrow"?"on":"",onclick:()=>set("tomorrow",null)},"Tomorrow"),el("button",{class:f.quick==="asc"?"on":"",onclick:()=>set("asc",null)},"Oldest first")),
+  field("Or pick a date",inp),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>inp.value?set(null,inp.value):closeSheet()},"Show")));}
 function openDatePicker(){
  const f=filtersFor();const inp=el("input",{class:"in",type:"date",value:f.date||""});
  openSheet("Show one day",field("Date",inp),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{f.date=null;save();closeSheet();renderDash();}},"Clear"),el("button",{class:"btn",onclick:()=>{f.date=inp.value||null;save();closeSheet();renderDash();}},"Apply")));
