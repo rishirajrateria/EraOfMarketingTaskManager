@@ -13,5 +13,5 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
   const { role, edit, add } = await searchParams;
   const initialRole: Role = ROLES.includes(role as Role) ? (role as Role) : "EXECUTIVE";
   const [users, teams, leaders, workTypes] = await Promise.all([listPeople(), listTeamOptions(), listLeaderOptions(), listWorkTypeOptions()]);
-  return <PeopleManager users={users} teams={teams} leaders={leaders} workTypes={workTypes} initialRole={initialRole} workspaceDomain={env.workspaceDomain} meId={me.id} editId={edit ?? null} openAdd={add === "1"} />;
+  return <PeopleManager users={users} teams={teams} leaders={leaders} workTypes={workTypes} initialRole={initialRole} workspaceDomains={env.workspaceDomains} meId={me.id} editId={edit ?? null} openAdd={add === "1"} />;
 }

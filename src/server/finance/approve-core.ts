@@ -71,6 +71,7 @@ async function deliver(inv: InvoiceFull, company: CompanyInfo, pdf: Buffer, opts
           subject: `${label} ${inv.number} from ${company.companyName}`,
           text: renderTemplate(opts.emailText ?? company.invoiceEmailTemplate, vars),
           attachments: [{ filename: invoiceFileName(inv), mimeType: "application/pdf", data: pdf }],
+          sender: "finance", // invoices, proformas and credit notes go out from the finance mailbox (ADR 0018)
         });
         emailSentAt = new Date();
       } catch (e) {

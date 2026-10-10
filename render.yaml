@@ -44,6 +44,8 @@ services:
         sync: false
       - key: GOOGLE_IMPERSONATE_USER
         sync: false
+      - key: GOOGLE_FINANCE_SENDER
+        sync: false
       - key: NEXT_PUBLIC_VAPID_PUBLIC_KEY
         sync: false
       - key: VAPID_PRIVATE_KEY

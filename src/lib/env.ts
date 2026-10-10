@@ -1,5 +1,13 @@
+import { parseDomains } from "@/lib/domains";
+
+/** GOOGLE_WORKSPACE_DOMAIN may list several domains ("theeraofmarketing.com,eraofmarketing.com"); GOOGLE_WORKSPACE_DOMAINS is an alias. */
+const workspaceDomains = parseDomains(process.env.GOOGLE_WORKSPACE_DOMAIN, process.env.GOOGLE_WORKSPACE_DOMAINS);
+
 export const env = {
-  workspaceDomain: process.env.GOOGLE_WORKSPACE_DOMAIN ?? "",
+  /** Allowed sign-in / invite domains; the first is the staff domain (ADR 0018). Empty = any domain. */
+  workspaceDomains,
+  /** Back-compat: the first (staff) domain, or "". */
+  workspaceDomain: workspaceDomains[0] ?? "",
   bootstrapAdmins: (process.env.BOOTSTRAP_ADMIN_EMAILS ?? "")
     .split(",")
     .map((s) => s.trim().toLowerCase())
@@ -16,5 +24,7 @@ export const env = {
   financeSheetId: process.env.GOOGLE_FINANCE_SHEET_ID ?? "",
   expensesSheetId: process.env.GOOGLE_EXPENSES_SHEET_ID ?? "",
   impersonateUser: process.env.GOOGLE_IMPERSONATE_USER ?? "",
+  /** Mailbox finance mail is sent from (invoices, receipts, reminders, …); falls back to impersonateUser (ADR 0018). */
+  financeSender: (process.env.GOOGLE_FINANCE_SENDER ?? "").trim().toLowerCase(),
   serviceAccountKeyB64: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_BASE64 ?? "",
 };

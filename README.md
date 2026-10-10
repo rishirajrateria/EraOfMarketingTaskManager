@@ -78,10 +78,11 @@ apply migrations to it once with `DATABASE_URL=<test url> npx prisma migrate dep
 | `DATABASE_URL` | Postgres connection (Neon/Supabase/local) |
 | `AUTH_SECRET`, `AUTH_URL` | NextAuth secret (`openssl rand -base64 32`) and public URL |
 | `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` | OAuth client (Web application) |
-| `GOOGLE_WORKSPACE_DOMAIN` | Only this domain may sign in (`hd` param + server check) |
-| `BOOTSTRAP_ADMIN_EMAILS` | Comma-separated emails auto-created as ADMIN on first sign-in |
+| `GOOGLE_WORKSPACE_DOMAIN` | Domain(s) that may sign in and be invited, comma-separated, staff domain first (e.g. `theeraofmarketing.com,eraofmarketing.com`). `hd` is sent only when one domain is listed. `GOOGLE_WORKSPACE_DOMAINS` is an alias (ADR 0018) |
+| `BOOTSTRAP_ADMIN_EMAILS` | Comma-separated emails auto-created as ADMIN on first sign-in (allowed even outside the domains) |
 | `GOOGLE_SERVICE_ACCOUNT_KEY_BASE64` | Service-account JSON key, base64 (`base64 -w0 key.json`) |
-| `GOOGLE_IMPERSONATE_USER` | Workspace user the service account acts as (owner of folders/events/spaces) |
+| `GOOGLE_IMPERSONATE_USER` | Workspace user the service account acts as (owner of folders/events/spaces; sender of non-finance mail) |
+| `GOOGLE_FINANCE_SENDER` | Mailbox finance mail is sent from: invoices, proformas, credit notes, cancellations, receipts, payment reminders, GST pack (e.g. `finance@theeraofmarketing.com`). Must be in the delegated Workspace. Falls back to `GOOGLE_IMPERSONATE_USER` (ADR 0018) |
 | `GOOGLE_DRIVE_ROOT_FOLDER_ID` | Optional parent folder for `Clients/` and `Finance/` |
 | `GOOGLE_FINANCE_SHEET_ID`, `GOOGLE_EXPENSES_SHEET_ID` | Sheets for two-way finance sync (auto-created if empty; copy the id back) |
 | `GOOGLE_MOCK` | `true` = no Google calls (dev/CI) |
@@ -127,6 +128,12 @@ apply migrations to it once with `DATABASE_URL=<test url> npx prisma migrate dep
 6. **Google Chat app** — in the Chat API configuration page, configure the app (name, avatar), *Enable interactive
    features* off, visibility: your Workspace domain. Spaces are created via `spaces.setup` by the impersonated user.
 7. Set `GOOGLE_IMPERSONATE_USER` to a real Workspace user (e.g. `ops@company.com`) and `GOOGLE_MOCK=false`.
+8. **Finance mailbox and a second domain (ADR 0018)** — `GOOGLE_FINANCE_SENDER` must be a real mailbox (user, not a
+   group or alias) in the same Workspace as the service account's delegation; the `gmail.send` scope above already
+   covers it. If the admin's domain is a separate Google Workspace, set the OAuth consent screen to *External* (an
+   *Internal* app only admits the project's own Workspace) and list both domains in `GOOGLE_WORKSPACE_DOMAIN`. That
+   admin is then an external user for Google calls: invites, Calendar attendance and email work; their own calendar is
+   not read for leave sync, and Chat / Drive sharing with them depends on the Workspace's external-sharing settings.
 
 ## Deployment
 

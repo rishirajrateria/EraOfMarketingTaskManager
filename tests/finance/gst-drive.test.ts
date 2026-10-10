@@ -120,7 +120,7 @@ describe("GST, bills and monthly Drive folders", () => {
     expect(sent.ok && sent.data).toMatchObject({ to: "ca@books.in", bills: 2, attached: 1, missing: 1, gstTotal: 2400 });
     expect((await testDb.companySettings.findUniqueOrThrow({ where: { id: "default" } })).financeEmail).toBe("ca@books.in");
     const mail = (await import("@/google/gmail")).sentMailDetails.at(-1)!;
-    expect(mail).toMatchObject({ to: "ca@books.in", subject: "GST credit pack · October 2026 · Era Of Marketing" });
+    expect(mail).toMatchObject({ to: "ca@books.in", subject: "GST credit pack · October 2026 · Era Of Marketing", sender: "finance" }); // ADR 0018
     expect(mail.attachments).toEqual([{ filename: "GST-pack-2026-10.zip", mimeType: "application/zip", size: pack.zip.length }]);
     expect(mail.text).toContain("Claimable bills: 2 (1 attached, 1 missing)");
     expect(mail.text).toContain("GST to claim: ₹2,400");

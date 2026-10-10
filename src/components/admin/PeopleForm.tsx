@@ -5,6 +5,7 @@ import { Field, inputCls } from "@/components/ui/Field";
 import { FormFooter, PillPicker, WeekdayPicker, hoursToMinutes, minutesToHours } from "@/components/admin/AdminUi";
 import type { LeaderOption, PersonRow, TeamOption, WorkTypeOption } from "@/server/admin/queries";
 import type { UserInput } from "@/server/admin/schemas";
+import { domainHint } from "@/lib/domains";
 
 /** Assignable roles. CA access is parked (ADR 0004) — not offered here and rejected by the server. */
 export const ROLE_OPTIONS: { value: Role; label: string; hint?: string }[] = [
@@ -41,7 +42,7 @@ export function PeopleForm({
   teams,
   leaders,
   workTypes,
-  workspaceDomain,
+  workspaceDomains,
   busy,
   onSubmit,
   onCancel,
@@ -51,7 +52,7 @@ export function PeopleForm({
   teams: TeamOption[];
   leaders: LeaderOption[];
   workTypes: WorkTypeOption[];
-  workspaceDomain: string;
+  workspaceDomains: string[];
   busy: boolean;
   onSubmit: (values: PeopleFormValues) => void;
   onCancel: () => void;
@@ -69,7 +70,8 @@ export function PeopleForm({
   const isExec = v.role === "EXECUTIVE";
   const hasSpeciality = isExec || v.role === "TEAM_LEADER";
   const specialityOptions = workTypesForTeam(workTypes, teamOf(v));
-  const emailHint = workspaceDomain ? `Must end with @${workspaceDomain}` : undefined;
+  const emailHint = domainHint(workspaceDomains);
+  const staffDomain = workspaceDomains[0]; // first listed = staff domain (ADR 0018)
   const isLegacyCa = v.role === "CA";
   const roleHint = isLegacyCa ? "CA access is parked — choose another role to keep this person" : ROLE_OPTIONS.find((r) => r.value === v.role)?.hint;
 
@@ -82,7 +84,7 @@ export function PeopleForm({
       }}
     >
       <Field label="Workspace email" hint={emailHint}>
-        <input className={inputCls} type="email" required autoComplete="off" value={v.email} onChange={(e) => patch({ email: e.target.value })} placeholder={workspaceDomain ? `name@${workspaceDomain}` : "name@company.com"} />
+        <input className={inputCls} type="email" required autoComplete="off" value={v.email} onChange={(e) => patch({ email: e.target.value })} placeholder={staffDomain ? `name@${staffDomain}` : "name@company.com"} />
       </Field>
       <Field label="Name">
         <input className={inputCls} required value={v.name} onChange={(e) => patch({ name: e.target.value })} />
