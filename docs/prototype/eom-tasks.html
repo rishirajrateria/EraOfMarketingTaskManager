@@ -1261,7 +1261,8 @@ const t12=hm=>{const [h,mm]=hm.split(":").map(Number);const ap=h>=12?"pm":"am";c
 const addMin=(hm,min)=>{const [h,mm]=hm.split(":").map(Number);const t=h*60+mm+min;return String(Math.floor(t/60)%24).padStart(2,"0")+":"+String(t%60).padStart(2,"0");};
 function meetingGuests(){
  const r=role(),m=me();
- const fromTeams=S.users.filter(u=>["TEAM_LEADER","EXECUTIVE"].includes(u.role)&&(r==="ADMIN"?AF.teams:[]).includes(u.teamId));
+ // A team invite goes to that team's Team Leader only; anyone else is added by hand.
+ const fromTeams=S.users.filter(u=>u.role==="TEAM_LEADER"&&(r==="ADMIN"?AF.teams:[]).includes(u.teamId));
  const picked=[...(r==="TEAM_LEADER"?AF.assignees:[]),...AF.people].map(userById).filter(Boolean);
  const internal=[...new Map([...fromTeams,...picked].filter(u=>u.id!==m.id).map(u=>[u.id,u])).values()];
  const c=AF.client?clientById(AF.client):null;const ext=[];
@@ -1274,6 +1275,7 @@ function meetingExtras(){
  document.querySelector("#s-add .voice").hidden=mt;
  $("#tGuests").hidden=!mt;$("#tOpts").hidden=!mt;
  const rs=$("#tRowStart");rs.hidden=!mt||AF.mo.allDay;
+ $("#tImportant").hidden=mt;if(mt){$("#tProtect").hidden=true;AF.important=false;AF.protect=false;}
  if(!mt)return;
  const G=meetingGuests(),n=G.internal.length+G.external.length;
  $("#tGuests").replaceChildren("👥 Guests",el("span",{class:"gbadge"},String(n)));
@@ -1297,7 +1299,7 @@ function meetingExtras(){
  $("#tSlot").textContent=AF.mo.allDay?`📅 ${day} · all day · ${n} guest${n===1?"":"s"}`:`📅 ${day}${AF.date?" "+t12(AF.time)+"–"+t12(addMin(AF.time,Math.round(AF.hours*60))):""} · ${dl(AF.hours)} · ${n} guest${n===1?"":"s"}`+(AF.mo.tz!==(S.settings.tz||"Asia/Kolkata")?" · "+AF.mo.tz:"");
  const aw=$("#tAssignWrap");aw.hidden=false;
  aw.replaceChildren(...[el("div",{},el("b",{},"Invites"),el("span",{class:"pre"}," · sent by Google Calendar"+(AF.mo.meet?" with a Meet link":""))),
-  el("div",{style:"margin-top:4px"},G.internal.length?"Team: "+G.internal.map(u=>first(u.name)).join(", "):el("span",{class:"pre"},r==="ADMIN"?"Tap teams in INVITE to invite everyone in them":"Tap people in EXEC to invite them")),
+  el("div",{style:"margin-top:4px"},G.internal.length?"Invited: "+G.internal.map(u=>first(u.name)).join(", "):el("span",{class:"pre"},r==="ADMIN"?"Tap a team in INVITE to invite its Team Leader":"Tap people in EXEC to invite them")),
   el("div",{style:"margin-top:2px"},G.external.length?"Guests: "+G.external.map(g=>g.email).join(", "):el("span",{class:"pre"},"No outside guests")),
   G.client&&!G.client.email?el("div",{class:"pre",style:"color:#b45309"},G.client.name+" has no email — add one in Clients"):null].filter(Boolean));
 }
@@ -1310,18 +1312,18 @@ function guestsSheet(){
   const add=()=>{const parts=inp.value.split(/[\s,;]+/).map(s=>s.trim().toLowerCase()).filter(Boolean);const bad=parts.filter(s=>!EMAIL_RE.test(s));for(const s of parts)if(EMAIL_RE.test(s)&&!AF.guests.includes(s))AF.guests.push(s);if(bad.length)toast("Not an email: "+bad.join(", "),"err");inp.value="";draw();renderAdd();setTimeout(()=>body.querySelector("input")?.focus(),0);};
   inp.onkeydown=e=>{if(e.key==="Enter"||e.key===","){e.preventDefault();add();}};inp.onpaste=()=>setTimeout(add,0);
   const staff=S.users.filter(u=>u.id!==m.id&&u.role!=="ADMIN"||u.role==="ADMIN"&&u.id!==m.id);
-  body.replaceChildren(
+  body.replaceChildren(...[
    el("div",{style:"display:flex;gap:8px"},inp,el("button",{class:"btn",style:"flex:none;width:64px",onclick:add},"Add")),
    G.client?el("div",{class:"gsub"},"From client · "+G.client.name):null,
    G.client?el("div",{class:"gchips"},G.client.email?(AF.noClientEmail?el("button",{class:"pill",onclick:()=>{AF.noClientEmail=false;draw();renderAdd();}},"+ "+G.client.email):chip(G.client.email,()=>{AF.noClientEmail=true;draw();renderAdd();})):el("span",{class:"pre",style:"color:#b45309"},"No email on this client — add one in Clients")):null,
    G.fromTeams.length?el("div",{class:"gsub"},"From teams · "+S.teams.filter(t=>AF.teams.includes(t.id)).map(t=>t.name).join(", ")):null,
-   G.fromTeams.length?el("div",{class:"gchips"},...G.fromTeams.map(u=>chip(u.name,null))):null,
+   G.fromTeams.length?el("div",{class:"gchips"},...G.fromTeams.map(u=>chip(u.name+" · Team leader",null))):null,
    el("div",{class:"gsub"},"Your people"),
-   el("div",{class:"seg",style:"margin:6px 0 12px"},...staff.map(u=>el("button",{class:AF.people.includes(u.id)||G.fromTeams.some(x=>x.id===u.id)?"on":"",onclick:()=>{if(G.fromTeams.some(x=>x.id===u.id))return toast(first(u.name)+" is invited through their team");AF.people=tog(AF.people,u.id);draw();renderAdd();}},first(u.name)))),
+   el("div",{class:"seg",style:"margin:6px 0 12px"},...staff.map(u=>el("button",{class:AF.people.includes(u.id)||G.fromTeams.some(x=>x.id===u.id)?"on":"",onclick:()=>{if(G.fromTeams.some(x=>x.id===u.id))return toast(first(u.name)+" is invited as the team's Team Leader");AF.people=tog(AF.people,u.id);draw();renderAdd();}},first(u.name)))),
    AF.guests.length?el("div",{class:"gsub"},"Other guests"):null,
    AF.guests.length?el("div",{class:"gchips"},...AF.guests.map(g=>chip(g,()=>{AF.guests=AF.guests.filter(x=>x!==g);draw();renderAdd();}))):null,
    el("p",{class:"pre",style:"margin:4px 0 8px"},"Google Calendar emails everyone the invite with the Meet link. Outside guests need no account here."),
-   el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{closeSheet();findTimeSheet();}},"Find a time"),el("button",{class:"btn",onclick:closeSheet},"Done")));
+   el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{closeSheet();findTimeSheet();}},"Find a time"),el("button",{class:"btn",onclick:closeSheet},"Done"))].filter(Boolean));
  };
  draw();openSheet("Guests",body);
 }
