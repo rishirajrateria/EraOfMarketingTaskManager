@@ -505,6 +505,26 @@ select.in{padding-right:10px}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .mbadge.amber{color:#fcd34d}}
 :root[data-theme="dark"] .mbadge.amber{color:#fcd34d}
 @media (min-width:540px){.msheet{border-radius:28px 28px 0 0}}
+
+/* meetings */
+.gchips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 12px}
+.gchip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 6px 0 12px;border-radius:999px;background:var(--chip);border:1px solid var(--hair);font-size:12.5px;max-width:100%}
+.gchip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gchip button{width:22px;height:22px;border-radius:999px;display:flex;align-items:center;justify-content:center;opacity:.7}
+.gsub{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:10px 0 2px}
+.rem{display:grid;grid-template-columns:128px 58px 1fr 32px;gap:6px;margin-bottom:8px;align-items:center}
+.rem .in{height:40px;padding:0 10px;font-size:14px}
+.swatches{display:flex;flex-wrap:wrap;gap:8px}
+.swatches button{width:28px;height:28px;border-radius:999px;border:2px solid transparent}
+.swatches button.on{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--ink)}
+.tl{position:relative;height:26px;border-radius:8px;background:var(--chip);border:1px solid var(--hair);overflow:hidden;margin:4px 0 10px}
+.tl i{position:absolute;top:0;bottom:0;background:rgba(100,116,139,.55)}
+.tl b{position:absolute;top:0;bottom:0;background:rgba(14,165,233,.35);border-left:2px solid #0ea5e9;border-right:2px solid #0ea5e9}
+.tlh{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:-6px;margin-bottom:8px}
+.gbadge{display:inline-flex;min-width:18px;height:18px;border-radius:999px;background:#0ea5e9;color:#fff;font-size:10.5px;font-weight:700;align-items:center;justify-content:center;padding:0 5px;margin-left:4px}
+#tRowStart{overflow:hidden}
+.tstrip{display:flex;align-items:center;gap:8px;overflow-x:auto;min-width:0;flex:1;scrollbar-width:none;height:100%}
+.tstrip::-webkit-scrollbar{display:none}
 </style><div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
@@ -558,6 +578,8 @@ select.in{padding-right:10px}
         <button class="pill" id="tImportant">★ Important</button>
         <button class="pill" id="tRecur">⟳ Recurring</button>
         <button class="pill" id="tProtect">🔒 Protected</button>
+        <button class="pill" id="tGuests" hidden>👥 Guests</button>
+        <button class="pill" id="tOpts" hidden>⚙ Options</button>
       </div>
       <div class="hrs" id="tHrs"></div><input id="tHours" type="hidden" value="2">
       <div hidden><input id="tDate" type="date"><input id="tTime" type="time" value="10:00"></div>
@@ -565,7 +587,7 @@ select.in{padding-right:10px}
       <div class="slot" id="tSlot"></div>
       <div id="tAssignWrap" class="card" style="margin:12px 0 0;padding:10px 12px;font-size:12.5px"></div>
     </div>
-    <div class="greenarea" style="flex-shrink:0"><div class="wrow" id="tRowPref"></div><div class="wrow" id="tRowWork"></div><div class="wrow" id="tRow1"></div><div class="wrow" id="tRow2"></div></div>
+    <div class="greenarea" style="flex-shrink:0"><div class="wrow" id="tRowPref"></div><div class="wrow" id="tRowWork"></div><div class="wrow" id="tRow1"></div><div class="wrow" id="tRow2"></div><div class="wrow" id="tRowStart" hidden></div></div>
     <div class="bar" style="flex-shrink:0">
       <div class="g" id="tBarG"></div>
       <div class="w">
@@ -925,7 +947,7 @@ function openDetail(t,attach){
  openSheet(t.title,
   el("div",{style:"display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"},el("span",{class:"chip"},c.name),el("span",{class:"chip me"},t.assignees.map(id=>first(userById(id).name)).join(", ")),el("span",{class:"chip"},t.type==="MEETING"?"Meeting":S.workTypes.find(w=>w.id===t.work)?.name||"Work"),el("span",{class:"chip"},t.status.replace("_"," ").toLowerCase())),
   t.desc?el("p",{style:"font-size:13px;margin:0 0 10px"},t.desc):null,
-  el("div",{class:"card",style:"margin:0 0 10px"},kv("Allocated",fmtMin(t.mins)),kv("Scheduled",fmtDY(t.start)+" · "+fmtT(t.start)+" – "+fmtT(t.end)),kv("Actual",t.actualStart?fmtT(t.actualStart)+" – "+(t.actualEnd?fmtT(t.actualEnd):"…"):"not started"),kv("Created by",userById(t.createdBy).name),kv("Team",S.teams.find(x=>x.id===t.team)?.name||"—"),t.recurring?kv("Repeats",t.recurText||"yes"):null),
+  el("div",{class:"card",style:"margin:0 0 10px"},kv("Allocated",fmtMin(t.mins)),kv("Scheduled",fmtDY(t.start)+" · "+fmtT(t.start)+" – "+fmtT(t.end)),kv("Actual",t.actualStart?fmtT(t.actualStart)+" – "+(t.actualEnd?fmtT(t.actualEnd):"…"):"not started"),kv("Created by",userById(t.createdBy).name),kv("Team",S.teams.find(x=>x.id===t.team)?.name||"—"),t.recurring?kv("Repeats",t.recurText||"yes"):null,t.type==="MEETING"&&t.guests&&t.guests.length?kv("Guests",t.guests.join(", ")):null,t.mo&&t.mo.location?kv("Location",t.mo.location):null),
   el("div",{class:"card",style:"margin:0 0 10px"+(attach?";box-shadow:0 0 0 2px var(--blue)":"")},el("h4",{},"Attachments"),t.voice?el("div",{style:"display:flex;align-items:center;gap:8px;font-size:13px"},svg(I.mic,18),"Voice note · 0:42",el("button",{class:"pill",style:"margin-left:auto",onclick:()=>toast("Plays the voice note")},"Play")):el("div",{class:"pre"},"No voice notes. Drive folder holds files.")),
   el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Close"),el("button",{class:"btn",onclick:()=>{closeSheet();openActions(t);}},"Actions")));
 }
@@ -935,6 +957,9 @@ function openAdd(mode,edit){
  const m=me(),r=role();
  AF={notes:edit&&edit.voice?[{secs:42,url:null}]:[],rec:edit?.rec||null,prefs:edit?[...(edit.prefs||[])]:[],edit:edit||null,type:mode==="CHOOSE"?null:mode,title:edit?edit.title:"",desc:edit?edit.desc:"",hours:edit?edit.mins/60:2,work:edit?edit.work:S.workTypes[0].id,client:edit?edit.client:"",teams:edit?[edit.team]:[],assignees:edit?[...edit.assignees]:[],date:edit?dk(new Date(edit.start)):"",time:edit?fmtTimeInput(edit.start):"10:00",important:!!edit?.important,recurring:!!edit?.recurring,recur:"WEEKLY",voice:!!edit?.voice,protect:!!edit?.protected,shortcut:edit?null:"upnext"};
  if(r==="EXECUTIVE")AF.assignees=[m.id];
+ AF.guests=edit?[...(edit.guests||[])]:[];AF.people=edit?(edit.type==="MEETING"?[...edit.assignees]:[]):[];AF.noClientEmail=false;
+ AF.mo=edit?.mo?JSON.parse(JSON.stringify(edit.mo)):{meet:true,reminders:[{m:"popup",n:10,u:"minutes"}],modify:false,invite:true,see:true,location:"",busy:true,vis:"default",color:"",allDay:false,tz:S.settings.tz||"Asia/Kolkata"};
+ if(mode==="MEETING"&&!edit)AF.hours=0.5;
  show("add");renderAdd();
  if(mode==="CHOOSE")typeChooser();
 }
@@ -992,6 +1017,7 @@ function renderAdd(){
  $("#tMeet").className="sq"+(AF.type==="MEETING"?" on":"");
  $("#tWorkBtn").style.boxShadow=AF.type==="WORK"?"0 0 0 1px rgba(0,0,0,.6)":"";
  $("#tTypeDot").style.background=AF.type==="MEETING"?"#00AC47":"#2563eb";
+ meetingExtras();
 }
 const fmtSecs=s=>Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
 const MIC={on:false,secs:0,t:null,mr:null,chunks:[]};
@@ -1068,22 +1094,22 @@ function saveTask(){
  AF.title=$("#tTitle").value.trim();AF.desc=$("#tDesc").value;AF.hours=Number($("#tHours").value)||1;AF.date=$("#tDate").value;AF.time=$("#tTime").value||"10:00";
  if(!AF.type){typeChooser();return;}
  if(!AF.title)return toast("Give it a title","err");
- if(r==="ADMIN"&&!AF.teams.length)return toast("Pick a team in the green area","err");
+ if(AF.type!=="MEETING"&&r==="ADMIN"&&!AF.teams.length)return toast("Pick a team in the green area","err");
  if(AF.type!=="MEETING"&&!workFor(r==="ADMIN"?AF.teams:[m.teamId]).some(w=>w.id===AF.work))return toast("Pick a work type in the green area","err");
  if(!AF.client)return toast("Pick a client in the green area","err");
  if(clientById(AF.client).onHold)return toast("Work for this client is on hold until payment","err");
- let assignees=r==="ADMIN"?S.users.filter(u=>u.role==="TEAM_LEADER"&&AF.teams.includes(u.teamId)).map(u=>u.id):AF.assignees.length?AF.assignees:(r==="EXECUTIVE"?[m.id]:S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===m.teamId).map(u=>u.id));
+ let assignees=AF.type==="MEETING"?[...new Set([m.id,...meetingGuests().internal.map(u=>u.id)])]:r==="ADMIN"?S.users.filter(u=>u.role==="TEAM_LEADER"&&AF.teams.includes(u.teamId)).map(u=>u.id):AF.assignees.length?AF.assignees:(r==="EXECUTIVE"?[m.id]:S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===m.teamId).map(u=>u.id));
  if(!assignees.length)return toast("That team has no Team Leader yet (Menu → Add teamleader)","err");
- let start;if(AF.date){start=new Date(AF.date+"T"+AF.time+":00");}else{start=new Date();start.setMinutes(0,0,0);start.setHours(start.getHours()+1);}
- const end=new Date(start.getTime()+AF.hours*3600000);
+ let start;if(AF.date){start=new Date(AF.date+"T"+(AF.type==="MEETING"&&AF.mo.allDay?"00:00":AF.time)+":00");}else{start=new Date();start.setMinutes(0,0,0);start.setHours(start.getHours()+1);}
+ const end=AF.type==="MEETING"&&AF.mo.allDay?new Date(start.getTime()+DAY):new Date(start.getTime()+AF.hours*3600000);
  const team=AF.teams[0]||userById(assignees[0])?.teamId||m.teamId||"t1";
- const base={title:AF.title,desc:AF.desc,client:AF.client,assignees,mins:Math.round(AF.hours*60),start:start.toISOString(),end:end.toISOString(),type:AF.type,work:AF.work,team,prefs:r==="ADMIN"?[...AF.prefs]:(AF.edit?.prefs||[]),important:AF.important,recurring:AF.recurring,rec:AF.recurring?AF.rec:null,recurText:AF.recurring&&AF.rec?recurText(AF.rec):"",voice:AF.notes.length>0,protected:AF.protect,meet:AF.type==="MEETING"};
+ const base={title:AF.title,desc:AF.desc,client:AF.client,assignees,mins:Math.round(AF.hours*60),start:start.toISOString(),end:end.toISOString(),type:AF.type,work:AF.work,team,prefs:r==="ADMIN"?[...AF.prefs]:(AF.edit?.prefs||[]),important:AF.important,recurring:AF.recurring,rec:AF.recurring?AF.rec:null,recurText:AF.recurring&&AF.rec?recurText(AF.rec):"",voice:AF.type!=="MEETING"&&AF.notes.length>0,guests:AF.type==="MEETING"?meetingGuests().external.map(g=>g.email):[],mo:AF.type==="MEETING"?JSON.parse(JSON.stringify(AF.mo)):null,protected:AF.protect,meet:AF.type==="MEETING"&&AF.mo.meet};
  if(AF.edit){Object.assign(AF.edit,base);toast("Task updated");}
- else{S.tasks.unshift(Object.assign({id:uid(),status:"NOT_STARTED",paused:false,doubt:false,review:false,parent:false,createdBy:m.id,actualStart:null,actualEnd:null},base));assignees.filter(id=>id!==m.id).forEach(id=>notify(id,`New ${AF.type==="MEETING"?"meeting":"task"} from ${first(m.name)}: ${AF.title}`+(r==="ADMIN"&&AF.prefs.length?` · prefers ${AF.prefs.map(x=>first(userById(x).name)).join(", ")} — assign it from the task`:"")));toast(AF.type==="MEETING"?"Meeting scheduled · Calendar + Meet link queued":"Task added · Drive folder + Chat space queued");}
+ else{S.tasks.unshift(Object.assign({id:uid(),status:"NOT_STARTED",paused:false,doubt:false,review:false,parent:false,createdBy:m.id,actualStart:null,actualEnd:null},base));assignees.filter(id=>id!==m.id).forEach(id=>notify(id,`New ${AF.type==="MEETING"?"meeting":"task"} from ${first(m.name)}: ${AF.title}`+(r==="ADMIN"&&AF.prefs.length?` · prefers ${AF.prefs.map(x=>first(userById(x).name)).join(", ")} — assign it from the task`:"")));toast(AF.type==="MEETING"?"Meeting scheduled · "+(meetingGuests().internal.length+meetingGuests().external.length)+" invites sent by Google Calendar":"Task added · Drive folder + Chat space queued");}
  save();show("dash");renderDash();
 }
 $("#tClose").onclick=()=>{show("dash");renderDash();};
-$("#tMeet").onclick=()=>{AF.type="MEETING";renderAdd();};
+$("#tMeet").onclick=()=>{if(AF.type!=="MEETING"&&AF.hours>2)AF.hours=0.5;AF.type="MEETING";renderAdd();};
 $("#tWorkBtn").onclick=()=>{AF.type="WORK";renderAdd();};
 $("#tType").onclick=typeChooser;
 $("#tImportant").onclick=()=>{AF.important=!AF.important;renderAdd();};
@@ -1191,6 +1217,124 @@ function nav(go){
 function page(title,body,zone){$("#pgTitle").textContent=title;$("#pgBody").replaceChildren(...body.flat().filter(Boolean));$("#pgZone").replaceChildren(...(zone||[]).filter(Boolean));$("#pgZone").hidden=!zone||!zone.length;}
 function zoneTabs(items,active,on){return el("div",{class:"r1"},...items.map(([k,l])=>el("button",{class:"gp"+(active===k?" on":""),style:"height:30px;font-size:12px;background:"+(active===k?"#111":"var(--chip)")+";color:"+(active===k?"#fff":"var(--ink)"),onclick:()=>on(k)},l)));}
 function zoneActions(...btns){return el("div",{class:"r2"},...btns);}
+
+/* ---------- meetings: guests, start time, Google Calendar options ---------- */
+const EMAIL_RE=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const GCOLORS=[["1","#7986cb","Lavender"],["2","#33b679","Sage"],["3","#8e24aa","Grape"],["4","#e67c73","Flamingo"],["5","#f6bf26","Banana"],["6","#f4511e","Tangerine"],["7","#039be5","Peacock"],["8","#616161","Graphite"],["9","#3f51b5","Blueberry"],["10","#0b8043","Basil"],["11","#d50000","Tomato"]];
+const TZS=["Asia/Kolkata","Asia/Dubai","Asia/Singapore","Europe/London","Europe/Stockholm","America/New_York","America/Los_Angeles","Australia/Sydney"];
+const t12=hm=>{const [h,mm]=hm.split(":").map(Number);const ap=h>=12?"pm":"am";const hh=h%12||12;return hh+(mm?":"+String(mm).padStart(2,"0"):"")+" "+ap;};
+const addMin=(hm,min)=>{const [h,mm]=hm.split(":").map(Number);const t=h*60+mm+min;return String(Math.floor(t/60)%24).padStart(2,"0")+":"+String(t%60).padStart(2,"0");};
+function meetingGuests(){
+ const r=role(),m=me();
+ const fromTeams=S.users.filter(u=>["TEAM_LEADER","EXECUTIVE"].includes(u.role)&&(r==="ADMIN"?AF.teams:[]).includes(u.teamId));
+ const picked=[...(r==="TEAM_LEADER"?AF.assignees:[]),...AF.people].map(userById).filter(Boolean);
+ const internal=[...new Map([...fromTeams,...picked].filter(u=>u.id!==m.id).map(u=>[u.id,u])).values()];
+ const c=AF.client?clientById(AF.client):null;const ext=[];
+ if(c&&c.email&&!AF.noClientEmail)ext.push({email:c.email.toLowerCase(),src:"client",name:c.name});
+ for(const g of AF.guests)if(!ext.some(x=>x.email===g))ext.push({email:g,src:"typed"});
+ return {internal,external:ext,fromTeams,client:c};
+}
+function meetingExtras(){
+ const mt=AF.type==="MEETING",r=role();
+ document.querySelector("#s-add .voice").hidden=mt;
+ $("#tGuests").hidden=!mt;$("#tOpts").hidden=!mt;
+ const rs=$("#tRowStart");rs.hidden=!mt||AF.mo.allDay;
+ if(!mt)return;
+ const G=meetingGuests(),n=G.internal.length+G.external.length;
+ $("#tGuests").replaceChildren("👥 Guests",el("span",{class:"gbadge"},String(n)));
+ $("#tOpts").textContent="⚙ Options"+(AF.mo.meet?"":" · no Meet");
+ // duration
+ const DP=[0.25,0.5,0.75,1,1.5,2],dl=h=>h<1?Math.round(h*60)+"m":h===1.5?"1½h":(Number.isInteger(h)?h:h.toFixed(2))+"h";
+ $("#tHrs").hidden=AF.mo.allDay;
+ $("#tHrs").replaceChildren(el("span",{class:"lab"},"Duration"),...DP.map(h=>el("button",{class:"pill"+(AF.hours===h?" on":""),onclick:()=>{AF.hours=h;renderAdd();}},dl(h))),
+  el("div",{class:"step"},el("button",{"aria-label":"less",onclick:()=>{AF.hours=Math.max(0.25,Math.round((AF.hours-0.25)*4)/4);renderAdd();}},"−"),el("b",{},dl(AF.hours)),el("button",{"aria-label":"more",onclick:()=>{AF.hours=Math.round((AF.hours+0.25)*4)/4;renderAdd();}},"+")));
+ // rows: team = invite teams, no prefer/work
+ $("#tRowPref").hidden=true;$("#tRowWork").hidden=true;
+ if(r==="ADMIN"){const row1=$("#tRow1");row1.querySelector(".lbl").textContent="Invite";}
+ // start row
+ const times=[];for(let t=9*60;t<=20*60;t+=30)times.push(String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0"));
+ const pickTime=hm=>{AF.time=hm;if(!AF.date){const now=new Date(),[h,mm]=hm.split(":").map(Number);const ahead=h*60+mm>now.getHours()*60+now.getMinutes();AF.date=dk(new Date(Date.now()+(ahead?0:DAY)));AF.shortcut=ahead?"today":"tomorrow";}renderAdd();};
+ const cust=el("input",{type:"time",value:AF.time||"10:00",style:"position:absolute;opacity:0;pointer-events:none;width:1px;height:1px"});cust.onchange=()=>cust.value&&pickTime(cust.value);
+ const strip=el("div",{class:"tstrip"});rs.replaceChildren(el("span",{class:"lbl"},"Start"),strip);strip.replaceChildren(...times.map(hm=>el("button",{class:"gpk"+(AF.date&&AF.time===hm?" on":""),onclick:()=>pickTime(hm)},t12(hm))),el("button",{class:"gpk"+(AF.date&&!times.includes(AF.time)?" on":""),onclick:()=>{try{cust.showPicker();}catch(e){const v=window.prompt?null:null;cust.focus();}}},AF.date&&!times.includes(AF.time)?t12(AF.time):"Custom…"),cust);
+ setTimeout(()=>{const on=strip.querySelector(".gpk.on");if(on&&on.offsetLeft+on.offsetWidth>strip.clientWidth)strip.scrollLeft=on.offsetLeft-strip.clientWidth/2+on.offsetWidth/2;},0);
+ // summary line + card
+ const day=AF.date?fmtDY(AF.date):"Next free slot";
+ $("#tSlot").textContent=AF.mo.allDay?`📅 ${day} · all day · ${n} guest${n===1?"":"s"}`:`📅 ${day}${AF.date?" "+t12(AF.time)+"–"+t12(addMin(AF.time,Math.round(AF.hours*60))):""} · ${dl(AF.hours)} · ${n} guest${n===1?"":"s"}`+(AF.mo.tz!==(S.settings.tz||"Asia/Kolkata")?" · "+AF.mo.tz:"");
+ const aw=$("#tAssignWrap");aw.hidden=false;
+ aw.replaceChildren(...[el("div",{},el("b",{},"Invites"),el("span",{class:"pre"}," · sent by Google Calendar"+(AF.mo.meet?" with a Meet link":""))),
+  el("div",{style:"margin-top:4px"},G.internal.length?"Team: "+G.internal.map(u=>first(u.name)).join(", "):el("span",{class:"pre"},r==="ADMIN"?"Tap teams in INVITE to invite everyone in them":"Tap people in EXEC to invite them")),
+  el("div",{style:"margin-top:2px"},G.external.length?"Guests: "+G.external.map(g=>g.email).join(", "):el("span",{class:"pre"},"No outside guests")),
+  G.client&&!G.client.email?el("div",{class:"pre",style:"color:#b45309"},G.client.name+" has no email — add one in Clients"):null].filter(Boolean));
+}
+function guestsSheet(){
+ const m=me();const body=el("div");
+ const draw=()=>{
+  const G=meetingGuests();
+  const chip=(label,onX)=>el("span",{class:"gchip"},el("span",{},label),onX?el("button",{"aria-label":"Remove",onclick:onX},msvg("x",14)):null);
+  const inp=el("input",{class:"in",type:"email",placeholder:"Add guests · email, then Enter",autocomplete:"off"});
+  const add=()=>{const parts=inp.value.split(/[\s,;]+/).map(s=>s.trim().toLowerCase()).filter(Boolean);const bad=parts.filter(s=>!EMAIL_RE.test(s));for(const s of parts)if(EMAIL_RE.test(s)&&!AF.guests.includes(s))AF.guests.push(s);if(bad.length)toast("Not an email: "+bad.join(", "),"err");inp.value="";draw();renderAdd();setTimeout(()=>body.querySelector("input")?.focus(),0);};
+  inp.onkeydown=e=>{if(e.key==="Enter"||e.key===","){e.preventDefault();add();}};inp.onpaste=()=>setTimeout(add,0);
+  const staff=S.users.filter(u=>u.id!==m.id&&u.role!=="ADMIN"||u.role==="ADMIN"&&u.id!==m.id);
+  body.replaceChildren(
+   el("div",{style:"display:flex;gap:8px"},inp,el("button",{class:"btn",style:"flex:none;width:64px",onclick:add},"Add")),
+   G.client?el("div",{class:"gsub"},"From client · "+G.client.name):null,
+   G.client?el("div",{class:"gchips"},G.client.email?(AF.noClientEmail?el("button",{class:"pill",onclick:()=>{AF.noClientEmail=false;draw();renderAdd();}},"+ "+G.client.email):chip(G.client.email,()=>{AF.noClientEmail=true;draw();renderAdd();})):el("span",{class:"pre",style:"color:#b45309"},"No email on this client — add one in Clients")):null,
+   G.fromTeams.length?el("div",{class:"gsub"},"From teams · "+S.teams.filter(t=>AF.teams.includes(t.id)).map(t=>t.name).join(", ")):null,
+   G.fromTeams.length?el("div",{class:"gchips"},...G.fromTeams.map(u=>chip(u.name,null))):null,
+   el("div",{class:"gsub"},"Your people"),
+   el("div",{class:"seg",style:"margin:6px 0 12px"},...staff.map(u=>el("button",{class:AF.people.includes(u.id)||G.fromTeams.some(x=>x.id===u.id)?"on":"",onclick:()=>{if(G.fromTeams.some(x=>x.id===u.id))return toast(first(u.name)+" is invited through their team");AF.people=tog(AF.people,u.id);draw();renderAdd();}},first(u.name)))),
+   AF.guests.length?el("div",{class:"gsub"},"Other guests"):null,
+   AF.guests.length?el("div",{class:"gchips"},...AF.guests.map(g=>chip(g,()=>{AF.guests=AF.guests.filter(x=>x!==g);draw();renderAdd();}))):null,
+   el("p",{class:"pre",style:"margin:4px 0 8px"},"Google Calendar emails everyone the invite with the Meet link. Outside guests need no account here."),
+   el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{closeSheet();findTimeSheet();}},"Find a time"),el("button",{class:"btn",onclick:closeSheet},"Done")));
+ };
+ draw();openSheet("Guests",body);
+}
+function optionsSheet(){
+ const o=AF.mo;const body=el("div");
+ const sec=t=>el("div",{class:"gsub",style:"margin-top:14px"},t);
+ const chk=(k,label,sub)=>el("label",{class:"check"},el("input",{type:"checkbox",checked:o[k]||null,onchange:e=>{o[k]=e.target.checked;draw();renderAdd();}}),el("div",{},el("b",{},label),sub?el("small",{},sub):null));
+ const draw=()=>{
+  body.replaceChildren(
+   chk("meet","Add Google Meet video call","A Meet link is created with the event"),
+   chk("allDay","All day","No start time; blocks the whole day"),
+   sec("Notifications"),
+   ...o.reminders.map((rm,i)=>el("div",{class:"rem"},
+     el("select",{class:"in",onchange:e=>{rm.m=e.target.value;}},el("option",{value:"popup",selected:rm.m==="popup"||null},"Notification"),el("option",{value:"email",selected:rm.m==="email"||null},"Email")),
+     el("input",{class:"in",type:"number",min:"0",value:rm.n,oninput:e=>{rm.n=Math.max(0,Number(e.target.value)||0);}}),
+     el("select",{class:"in",onchange:e=>{rm.u=e.target.value;}},...["minutes","hours","days","weeks"].map(u=>el("option",{value:u,selected:rm.u===u||null},u))),
+     el("button",{class:"mic2",style:"width:32px;height:32px","aria-label":"Remove",onclick:()=>{o.reminders.splice(i,1);draw();}},msvg("x",14)))),
+   o.reminders.length<5?el("button",{class:"pill",onclick:()=>{o.reminders.push({m:"popup",n:30,u:"minutes"});draw();}},"+ Add notification"):el("div",{class:"pre"},"Google allows up to 5 notifications"),
+   sec("Guest permissions"),chk("modify","Modify event"),chk("invite","Invite others"),chk("see","See guest list"),
+   el("div",{style:"height:10px"}),
+   field("Location",el("input",{class:"in",placeholder:"Office, address or leave empty",value:o.location,oninput:e=>{o.location=e.target.value;}})),
+   el("div",{style:"display:grid;grid-template-columns:1fr 1fr;gap:8px"},
+    field("Show as",el("select",{class:"in",onchange:e=>{o.busy=e.target.value==="busy";}},el("option",{value:"busy",selected:o.busy||null},"Busy"),el("option",{value:"free",selected:!o.busy||null},"Free"))),
+    field("Visibility",el("select",{class:"in",onchange:e=>{o.vis=e.target.value;}},...[["default","Default"],["public","Public"],["private","Private"]].map(([k,l])=>el("option",{value:k,selected:o.vis===k||null},l))))),
+   field("Time zone",el("select",{class:"in",onchange:e=>{o.tz=e.target.value;renderAdd();}},...[...new Set([o.tz,...TZS])].map(z=>el("option",{value:z,selected:o.tz===z||null},z.replace("_"," ")))),"The start time is in this time zone"),
+   field("Colour",el("div",{class:"swatches"},el("button",{class:o.color===""?"on":"",title:"Calendar colour",style:"background:conic-gradient(#7986cb,#33b679,#f6bf26,#e67c73,#7986cb)",onclick:()=>{o.color="";draw();}}),...GCOLORS.map(([id,hex,name])=>el("button",{class:o.color===id?"on":"",title:name,style:"background:"+hex,onclick:()=>{o.color=id;draw();}})))),
+   el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{closeSheet();findTimeSheet();}},"Find a time"),el("button",{class:"btn",onclick:()=>{closeSheet();renderAdd();}},"Done")));
+ };
+ draw();openSheet("Meeting options",body);
+}
+function findTimeSheet(){
+ const G=meetingGuests(),people=[me(),...G.internal];const day=AF.date||dk(new Date(Date.now()+DAY));const dur=Math.round(AF.hours*60);
+ const S0=8*60,E0=21*60,span=E0-S0;const mins=iso=>{const d=new Date(iso);return d.getHours()*60+d.getMinutes();};
+ const busyOf=u=>S.tasks.filter(t=>t.status!=="COMPLETED"&&t.assignees.includes(u.id)&&dk(new Date(t.start))===day).map(t=>[Math.max(S0,mins(t.start)),Math.min(E0,mins(t.end)),t.title]).filter(b=>b[1]>b[0]);
+ const all=people.flatMap(busyOf).sort((a,b)=>a[0]-b[0]);
+ const sug=[];const nowM=day===dk()?new Date().getHours()*60+new Date().getMinutes():0;
+ for(let t=Math.max(9*60,Math.ceil(nowM/30)*30);t+dur<=20*60&&sug.length<3;t+=30)if(!all.some(b=>t<b[1]&&t+dur>b[0]))sug.push(t);
+ const hm=t=>String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0");
+ const cur=AF.date===day&&AF.time?mins(day+"T"+AF.time+":00"):null;
+ openSheet("Find a time · "+fmtDY(day+"T10:00:00"),
+  el("p",{class:"pre",style:"margin:0 0 10px"},"Busy times of your team on this day (08:00–21:00). Outside guests aren't checked."),
+  ...people.map(u=>el("div",{},el("div",{style:"font-size:12.5px;font-weight:600"},u.name+(u.id===me().id?" (you)":"")),el("div",{class:"tl"},...busyOf(u).map(b=>el("i",{title:b[2],style:`left:${(b[0]-S0)/span*100}%;width:${(b[1]-b[0])/span*100}%`})),cur!==null?el("b",{style:`left:${(cur-S0)/span*100}%;width:${dur/span*100}%`}):null))),
+  el("div",{class:"tlh"},...["8","11","2","5","9"].map(h=>el("span",{},h))),
+  el("div",{class:"gsub"},"Everyone is free at"),
+  sug.length?el("div",{class:"seg",style:"margin:6px 0 4px"},...sug.map(t=>el("button",{onclick:()=>{AF.date=day;AF.time=hm(t);AF.shortcut=null;closeSheet();renderAdd();toast("Start set to "+t12(hm(t)));}},t12(hm(t))+"–"+t12(hm(t+dur))))):el("p",{class:"pre"},"No common free slot of "+dur+" min. Try another day with the calendar icon."),
+  el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Close")));
+}
+$("#tGuests").onclick=guestsSheet;$("#tOpts").onclick=optionsSheet;
 /* ---------- finance helpers ---------- */
 const PAGES={};
 const taxFor=c=>c.country!=="IN"?"EXPORT_LUT":c.stateCode===S.settings.stateCode?"CGST_SGST":"IGST";
