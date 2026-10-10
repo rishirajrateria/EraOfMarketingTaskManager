@@ -564,6 +564,10 @@ select.in{padding-right:10px}
 .ksheet th{position:sticky;top:0;background:var(--chip);font-weight:800;text-align:left;padding:8px;white-space:nowrap;border-bottom:1px solid var(--hair)}
 .ksheet td{padding:7px 8px;border-bottom:1px solid var(--hair);white-space:nowrap}
 .ksheet tr.kex td{color:var(--muted);font-style:italic}
+.rpills .pill.ok{color:#16a34a;font-weight:700}.rpills .pill.od{color:#dc2626;font-weight:700}
+.chip.team{color:#7c3aed}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .chip.team{color:#c4b5fd}:root:not([data-theme="light"]) .rpills .pill.ok{color:#4ade80}:root:not([data-theme="light"]) .rpills .pill.od{color:#f87171}}
+:root[data-theme="dark"] .chip.team{color:#c4b5fd}:root[data-theme="dark"] .rpills .pill.ok{color:#4ade80}:root[data-theme="dark"] .rpills .pill.od{color:#f87171}
 </style><div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
@@ -809,7 +813,10 @@ const payeeKey=s=>(s||"").trim().toLowerCase();
 const payeeFyTotal=(payee,ref=new Date(),exclOcc=null)=>S.expenses.filter(e=>e.kind!=="SALARY"&&payeeKey(e.payee)===payeeKey(payee)).flatMap(e=>e.occ).filter(o=>o!==exclOcc&&o.status==="PAID"&&inFY(o.paidAt,ref)).reduce((s,o)=>s+o.amount,0);
 const inr=n=>"₹"+Math.round(n).toLocaleString("en-IN");
 const dayOff=iso=>Math.round((new Date(iso).setHours(0,0,0,0)-today0().getTime())/DAY);
-const dateChip=iso=>{const o=dayOff(iso);return o===0?"Today":o===1?"Tom":o===-1?"Yest":fmtD(iso);};
+/* Cards always show the real date (never Today/Tom). */
+const dateChip=iso=>fmtD(iso);
+/* Actual-time pill: green when started on time / finished inside the slot, red when started late or running past the end. */
+const actualTone=t=>{if(!t.actualStart)return "";const late=new Date(t.actualStart)>new Date(t.start);if(t.status==="COMPLETED")return t.actualEnd&&new Date(t.actualEnd)<=new Date(t.end)?"ok":"od";if(new Date()>new Date(t.end))return "od";return late?"od":"ok";};
 const rowColour=t=>t.status==="COMPLETED"?"grey":t.doubt?"yellow":(t.status!=="COMPLETED"&&new Date(t.end)<new Date()&&t.status!=="FINISH_REQUESTED")?"red":t.status==="STARTED"?"green":"white";
 const toastEl=$("#toast");let toastT=null;
 function toast(msg,kind){toastEl.textContent=msg;toastEl.className="toast"+(kind==="err"?" err":"");toastEl.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>toastEl.hidden=true,2200);}
@@ -908,7 +915,6 @@ function openDatePicker(){
 }
 function taskRow(t){
  const r=role(),m=me(),c=clientById(t.client),col=rowColour(t),od=col==="red";
- const assignee=t.assignees.includes(m.id)?"me":(t.assignees.map(id=>first(userById(id).name)).join(", ")||"—");
  const ib=(label,icon,on,dis)=>el("button",{title:label,"aria-label":label,disabled:dis||null,onclick:e=>{e.stopPropagation();on();}},svg(icon,20));
  const circle=(()=>{
   if(t.status==="COMPLETED")return el("button",{class:"circle",title:"Restart",onclick:e=>{e.stopPropagation();restartTask(t);}},svg(I.restart,15,2.5));
@@ -922,21 +928,21 @@ function taskRow(t){
   onclick:()=>{if(!long)openDetail(t);},oncontextmenu:e=>e.preventDefault()},
   t.parent?el("span",{class:"restartTag",title:"Restarted task"},svg(I.restart,10,3)):null,
   el("div",{class:"title"},el("b",{},t.title),t.important?svg(I.star,12,2):null,t.recurring?el("span",{style:"color:#2563eb;flex-shrink:0"},svg(I.repeat,12,2.5)):null,t.paused?el("span",{class:"pauseTag",title:"Paused"},svg(I.pause,9,0)):null,
-   r==="TEAM_LEADER"?el("span",{class:"names"},t.assignees.length===1&&t.assignees[0]===m.id?svg(I.user,14,0):t.assignees.map(id=>first(userById(id).name).toLowerCase()).join(", ")):null),
+   null),
   el("div",{class:"body"},
    el("div",{class:"left"},
-    el("div",{class:"chips"},el("span",{class:"chip"},c.name),el("span",{class:"chip me"},assignee),(t.prefs&&t.prefs.length&&t.assignees.every(id=>userById(id)?.role==="TEAM_LEADER"))?el("span",{class:"chip",style:"color:#b45309",title:"Admin preference — Team Leader decides"},"pref: "+t.prefs.map(id=>first(userById(id).name).toLowerCase()).join(", ")):null,t.type==="MEETING"?el("span",{class:"chip meet"},"Meeting"):null),
+    el("div",{class:"chips"},el("span",{class:"chip"},c.name),S.teams.find(x=>x.id===t.team)?el("span",{class:"chip team"},S.teams.find(x=>x.id===t.team).name):null,t.type==="MEETING"?el("span",{class:"chip meet"},"Meeting"):null),
     el("div",{class:"icons"},
      ib("Task details",I.info,()=>openDetail(t)),
-     ib("Drive folder",I.folder,()=>toast("Opens the task's Drive folder"),t.type==="MEETING"),
-     ib("Google Meet",I.video,()=>toast("Opens the Meet link"),!t.meet||t.status==="COMPLETED"),
-     ib("Chat space",I.chat,()=>toast("Opens the Chat space"),t.type==="MEETING"),
+     ib("Drive folder",I.folder,()=>driveInfo(t)),
+     ib("Google Meet",I.video,()=>toast("Joins meet.google.com/"+meetCode(t)+" · anyone with the link can join")),
+     ib("Chat space",I.chat,()=>toast("Opens the task's Google Chat space")),
      ib("Calendar",I.cal,()=>toast("Opens Google Calendar on "+fmtD(t.start))),
      t.voice?ib("Voice notes",I.mic,()=>openDetail(t,true)):null)),
    el("div",{class:"rpills"},
     el("span",{class:"pill b"},t.type==="MEETING"?"Meet":fmtMin(t.mins),t.review?el("i",{class:"reddot tl",title:"Review requested"}):null),
     el("span",{class:"pill"+(od?" od":"")},fmtT(t.start)+" – "+fmtT(t.end)),
-    t.actualStart?el("span",{class:"pill dim"},fmtT(t.actualStart)+" – "+(t.actualEnd?fmtT(t.actualEnd):"…")):null,
+    t.actualStart?el("span",{class:"pill "+(actualTone(t)||"dim")},fmtT(t.actualStart)+" – "+(t.actualEnd?fmtT(t.actualEnd):"…")):null,
     el("span",{class:"pill"},dateChip(t.start),t.doubt&&t.review?el("i",{class:"reddot tr"}):null)),
    circle));
  return li;
@@ -965,7 +971,7 @@ function openActions(t){
  if(t.status==="COMPLETED"&&r!=="EXECUTIVE")items.push({label:"Restart",hint:"Creates a fresh copy linked to this one",onClick:()=>{closeSheet();restartTask(t);}});
  items.push({label:"Details",onClick:()=>{closeSheet();openDetail(t);}});
  if(r!=="EXECUTIVE")items.push({label:"Edit",onClick:()=>{closeSheet();openAdd(t.type,t);}});
- if(r==="ADMIN")items.push({label:"Delete",danger:true,hint:"Also removes Calendar event and Chat space in the real app",onClick:()=>{closeSheet();openSheet("Delete “"+t.title+"”?",el("p",{style:"font-size:13px;color:var(--muted);margin:0 0 10px"},"This cannot be undone."),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Keep"),el("button",{class:"btn red",onclick:()=>{S.tasks=S.tasks.filter(x=>x.id!==t.id);save();closeSheet();renderDash();toast("Task deleted");}},"Delete")));}});
+ if(r==="ADMIN")items.push({label:"Delete",danger:true,hint:"Removes the task with its Meet link, Drive folder and Chat space",onClick:()=>{closeSheet();openSheet("Delete “"+t.title+"”?",el("div",{class:"card",style:"margin:0 0 10px"},...["Task details and voice notes","Google Meet link (stops working)","Drive folder, incl. Meeting notes","Google Chat space","Calendar event"].map(x=>el("div",{class:"kv"},el("span",{},"🗑 "+x)))),el("p",{style:"font-size:13px;color:var(--muted);margin:0 0 10px"},"Everything above is removed for everyone. This cannot be undone."),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Keep"),el("button",{class:"btn red",onclick:()=>{S.tasks=S.tasks.filter(x=>x.id!==t.id);save();closeSheet();renderDash();toast("Task deleted · Meet link, Drive folder and Chat space removed");}},"Delete everything")));}});
  openSheet(t.title,actionList(items));
 }
 function assignSheet(t){
@@ -979,13 +985,18 @@ function noteSheet(title,t,apply){
  const ta=el("textarea",{class:"in",placeholder:"Write a short note…"});
  openSheet(title+" · "+t.title,field("Note",ta),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>{if(!ta.value.trim())return toast("A note is required","err");apply(ta.value.trim());save();closeSheet();renderDash();toast("Sent");}},"Send")));
 }
+const meetCode=t=>{let h=0;for(const ch of t.id)h=(h*31+ch.charCodeAt(0))>>>0;const a="abcdefghijkmnopqrstuvwxyz";const g=n=>Array.from({length:n},(_,i)=>a[(h>>(i*3))%a.length]).join("");return g(3)+"-"+g(4)+"-"+g(3);};
+function driveInfo(t){const c=clientById(t.client);const base=c.kit?"Client Kit › "+(c.businessName||c.name)+" › Work":"Clients › "+c.name;const notes=(t.notes||[]);
+ openSheet("Drive · "+t.title,el("div",{class:"card",style:"margin:0 0 10px"},el("div",{class:"kv"},el("span",{class:"pre"},base+" › "+t.title)),el("div",{class:"kv"},el("span",{},"📁 Meeting notes"),el("span",{class:"num"},(t.type==="MEETING"?1:0)+" by Gemini")),el("div",{class:"kv"},el("span",{},"📄 Files"),el("span",{class:"num"},"shared with the team"))),
+  el("p",{class:"pre",style:"margin:0 0 10px"},"Every call on this task's Meet link is noted by Gemini; the notes land in “Meeting notes” here automatically."),
+  el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Close"),el("button",{class:"btn blue",onclick:()=>toast("Opens the folder in Drive")},"Open in Drive")));}
 function openDetail(t,attach){
  const c=clientById(t.client);
  const kv=(k,v)=>el("div",{class:"kv"},el("span",{},k),el("span",{class:"num"},v));
  openSheet(t.title,
-  el("div",{style:"display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"},el("span",{class:"chip"},c.name),el("span",{class:"chip me"},t.assignees.map(id=>first(userById(id).name)).join(", ")),el("span",{class:"chip"},t.type==="MEETING"?"Meeting":S.workTypes.find(w=>w.id===t.work)?.name||"Work"),el("span",{class:"chip"},t.status.replace("_"," ").toLowerCase())),
+  el("div",{style:"display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"},el("span",{class:"chip"},c.name),el("span",{class:"chip"},t.type==="MEETING"?"Meeting":S.workTypes.find(w=>w.id===t.work)?.name||"Work"),el("span",{class:"chip"},t.status.replace("_"," ").toLowerCase())),
   t.desc?el("p",{style:"font-size:13px;margin:0 0 10px"},t.desc):null,
-  el("div",{class:"card",style:"margin:0 0 10px"},kv("Allocated",fmtMin(t.mins)),kv("Scheduled",fmtDY(t.start)+" · "+fmtT(t.start)+" – "+fmtT(t.end)),kv("Actual",t.actualStart?fmtT(t.actualStart)+" – "+(t.actualEnd?fmtT(t.actualEnd):"…"):"not started"),kv("Created by",userById(t.createdBy).name),kv("Team",S.teams.find(x=>x.id===t.team)?.name||"—"),t.recurring?kv("Repeats",t.recurText||"yes"):null,t.type==="MEETING"&&t.guests&&t.guests.length?kv("Guests",t.guests.join(", ")):null,t.mo&&t.mo.location?kv("Location",t.mo.location):null),
+  el("div",{class:"card",style:"margin:0 0 10px"},kv("Allocated",fmtMin(t.mins)),kv("Scheduled",fmtDY(t.start)+" · "+fmtT(t.start)+" – "+fmtT(t.end)),kv("Actual",t.actualStart?fmtT(t.actualStart)+" – "+(t.actualEnd?fmtT(t.actualEnd):"…"):"not started"),kv("Created by",userById(t.createdBy).name),kv("Team",S.teams.find(x=>x.id===t.team)?.name||"—"),kv("Assigned to",t.assignees.map(id=>userById(id)).filter(Boolean).map(u=>u.name+(u.role==="TEAM_LEADER"?" (TL)":"")).join(", ")||"—"),t.prefs&&t.prefs.length?kv("Your preference",t.prefs.map(id=>first(userById(id).name)).join(", ")):null,t.recurring?kv("Repeats",t.recurText||"yes"):null,t.type==="MEETING"&&t.guests&&t.guests.length?kv("Guests",t.guests.join(", ")):null,t.mo&&t.mo.location?kv("Location",t.mo.location):null),
   el("div",{class:"card",style:"margin:0 0 10px"+(attach?";box-shadow:0 0 0 2px var(--blue)":"")},el("h4",{},"Attachments"),t.voice?el("div",{style:"display:flex;align-items:center;gap:8px;font-size:13px"},svg(I.mic,18),"Voice note · 0:42",el("button",{class:"pill",style:"margin-left:auto",onclick:()=>toast("Plays the voice note")},"Play")):el("div",{class:"pre"},"No voice notes. Drive folder holds files.")),
   el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Close"),el("button",{class:"btn",onclick:()=>{closeSheet();openActions(t);}},"Actions")));
 }
