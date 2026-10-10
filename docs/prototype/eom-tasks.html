@@ -769,6 +769,21 @@ select.in{padding-right:10px}
 .crow.off{opacity:1}.crow.off .m{opacity:.55}
 .cav.mail{background:linear-gradient(150deg,#f87171,#dc2626)}
 .rline .icons button{width:30px!important;height:32px!important}
+/* time pill: tap shows actual start / finish */
+.rp .pill.hasact{padding-right:16px}
+.rp .pill.hasact::after{content:"";position:absolute;right:7px;top:50%;width:5px;height:5px;margin-top:-2.5px;border-radius:999px;background:currentColor}
+.row{overflow:visible!important}
+.tpop{position:absolute;z-index:6;min-width:210px;padding:10px 12px;border-radius:14px;background:var(--bg);border:1px solid var(--hair);box-shadow:0 12px 30px -10px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+.tpr{display:grid;grid-template-columns:78px 1fr;column-gap:8px;align-items:baseline}
+.tpr span{color:var(--muted)}.tpr b{font-variant-numeric:tabular-nums}
+.tpr small{grid-column:2;font-size:11.5px;color:var(--muted)}.tpr small.od{color:#dc2626}.tpr small.ok{color:#16a34a}
+/* 7 icons + time pill fit at 390px */
+.rline .icons{flex:1 1 auto;min-width:0;display:flex;max-width:210px}
+.rline .icons button{flex:1 1 0;width:auto!important;min-width:20px;max-width:30px;padding:0}
+.rline .icons svg{width:18px;height:18px}
+.rp .pill.od{color:#dc2626;font-weight:700}.rp .pill.ok{color:#16a34a;font-weight:700}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .rp .pill.od{color:#f87171}:root:not([data-theme="light"]) .rp .pill.ok{color:#4ade80}}
+:root[data-theme="dark"] .rp .pill.od{color:#f87171}:root[data-theme="dark"] .rp .pill.ok{color:#4ade80}
 </style><div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
@@ -1181,7 +1196,22 @@ function rpill(t,field,cls,text){
  return el("span",{class:"pill "+cls+(has?" rv":""),title:has?"Review requested on the "+RVF[field]:"Hold or right-click to request a review of the "+RVF[field],
   onpointerdown:e=>{e.stopPropagation();plong=false;pt=setTimeout(()=>{plong=true;pillMenu(t,field);},450);},onpointerup:e=>{e.stopPropagation();clearTimeout(pt);},onpointerleave:()=>clearTimeout(pt),onpointercancel:()=>clearTimeout(pt),
   oncontextmenu:e=>{e.preventDefault();e.stopPropagation();clearTimeout(pt);pillMenu(t,field);},
-  onclick:e=>{if(plong){e.stopPropagation();plong=false;}}},text,has?el("i",{class:"rvdot","aria-label":"Review requested"}):null);
+  onclick:e=>{if(plong){e.stopPropagation();plong=false;return;}if(field==="time"){e.stopPropagation();timePop(t,e.currentTarget);}}},text,has?el("i",{class:"rvdot","aria-label":"Review requested"}):null);
+}
+/* Tap the scheduled time → a small bubble with the actual start / finish (no extra row on the card). */
+function timePop(t,anchor){
+ document.querySelectorAll(".tpop").forEach(x=>{x.closest(".row")&&(x.closest(".row").style.zIndex="");x.remove();});
+ const mins=(a,b)=>Math.round((new Date(a)-new Date(b))/60000);
+ const rel=m=>m===0?"on time":Math.abs(m)+" min "+(m>0?"late":"early");
+ const lines=[["Scheduled",fmtT(t.start)+" – "+fmtT(t.end),""]];
+ if(t.actualStart){const ls=mins(t.actualStart,t.start);lines.push(["Started",fmtT(t.actualStart),rel(ls),ls>0?"od":"ok"]);}
+ else lines.push(["Started","not yet",new Date(t.start)<new Date()?"start time passed":"",new Date(t.start)<new Date()?"od":""]);
+ if(t.actualEnd){const le=mins(t.actualEnd,t.end);lines.push([t.status==="COMPLETED"?"Finished":"Done (their side)",fmtT(t.actualEnd),rel(le),le>0?"od":"ok"]);}
+ else if(t.actualStart)lines.push(["Finished","still running",new Date(t.end)<new Date()?"past end time":"",new Date(t.end)<new Date()?"od":""]);
+ const box=el("div",{class:"tpop",role:"dialog","aria-label":"Actual time"},...lines.map(([k,v,n,c])=>el("div",{class:"tpr"},el("span",{},k),el("b",{},v),n?el("small",{class:c||""},n):null)));
+ const row=anchor.closest(".row");row.appendChild(box);row.style.position="relative";row.style.zIndex="20";
+ const r=anchor.getBoundingClientRect(),rr=row.getBoundingClientRect();box.style.top=(r.bottom-rr.top+6)+"px";box.style.right=(rr.right-r.right)+"px";
+ setTimeout(()=>document.addEventListener("click",function off(ev){if(!box.contains(ev.target)){box.remove();row.style.zIndex="";document.removeEventListener("click",off,true);}},true),0);
 }
 function pillMenu(t,field){
  const r=role(),has=rvOf(t).includes(field),name=RVF[field];
@@ -1231,8 +1261,7 @@ function taskRow(t){
     ib("WhatsApp",I.wa,()=>contactSheet(t,"wa")),
     ib("Email",I.mail,()=>contactSheet(t,"mail")),
     t.voice?ib("Voice notes",I.mic,()=>openDetail(t,true)):null),
-   el("div",{class:"rp"},rpill(t,"time",od?"od":"",fmtT(t.start)+" – "+fmtT(t.end)))),
-  t.actualStart?el("div",{class:"rline end"},el("span",{class:"pill act "+(actualTone(t)||"dim"),title:"Actual start – finish"},"▶ "+fmtT(t.actualStart)+" – "+(t.actualEnd?fmtT(t.actualEnd):"…"))):null);
+   el("div",{class:"rp"},rpill(t,"time",(od?"od":t.actualStart?(actualTone(t)||""):"")+(t.actualStart?" hasact":""),fmtT(t.start)+" – "+fmtT(t.end)))));
  return li;
 }
 /* ---------- lifecycle ---------- */
