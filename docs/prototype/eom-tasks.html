@@ -895,6 +895,22 @@ select.in{padding-right:10px}
 #addNav .nfix{grid-column:1;grid-row:1;justify-self:start}
 #addNav #tClose{grid-column:2;grid-row:1}
 #addNav .nl{grid-column:3;grid-row:1}
+/* client tasks + tracker preview */
+.chip.forclient{background:linear-gradient(150deg,#60a5fa,#2563eb);color:#fff;border-color:transparent}
+.tyb.client.on svg{color:#2563eb}
+.row.portal{cursor:default}.row.portal .rline{margin-top:6px}
+/* nav v4: 3 + 3 tabs around the +; long labels wrap; Folders popover */
+.nv .nlab{white-space:normal;line-height:1.05;font-size:9.5px;max-width:100%;text-align:center;letter-spacing:-.01em;overflow-wrap:anywhere}
+.nv{min-width:0;padding:0 1px;position:relative}
+.navpop{position:absolute;bottom:62px;left:50%;transform:translateX(-50%);min-width:190px;padding:6px;border-radius:16px;background:var(--bg);border:1px solid var(--hair);box-shadow:0 14px 34px -14px rgba(0,0,0,.6);z-index:31;display:flex;flex-direction:column;gap:2px;animation:navpopin .16s ease-out both}
+@keyframes navpopin{from{opacity:0}to{opacity:1}}
+.navpop button{display:grid;grid-template-columns:30px 1fr;grid-template-rows:auto auto;column-gap:10px;align-items:center;text-align:left;padding:8px 10px;border:0;border-radius:12px;background:transparent;color:var(--ink);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.navpop button:hover,.navpop button:focus-visible{background:var(--chip);outline:none}
+.navpop .pi{grid-row:1/3;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#fff}
+.navpop small{grid-column:2;font-size:11px;font-weight:500;color:var(--muted)}
+/* deadline-only tasks */
+.rp .pill.dl{opacity:.85;font-weight:600}
+#tBarG .gpk.dl.on{background:linear-gradient(150deg,#f59e0b,#d97706);color:#fff}
 /* filter tray minimise tab */
 .traytog{position:absolute;left:50%;top:-12px;transform:translateX(-50%);z-index:3;height:24px;min-width:44px;padding:0 10px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:999px;border:1px solid var(--hair);background:var(--glass-strong);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:var(--shadow);color:var(--ink);font:inherit;font-size:12px;font-weight:600;cursor:pointer;max-width:calc(100% - 32px)}
 .traytog span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -941,7 +957,7 @@ select.in{padding-right:10px}
   <section class="screen" id="s-dash" hidden>
     <div class="cyan">
       <div class="topbar">
-        <div style="display:flex;align-items:center;gap:8px"><button class="ico" id="menuBtn" aria-label="Menu"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>
+        <div style="display:flex;align-items:center;gap:8px"><button class="ico" id="settingsBtn" aria-label="Settings" title="Settings"></button><button class="ico" id="signoutBtn" aria-label="Sign out" title="Sign out"></button></div>
         <div class="r">
           <a class="ico app" id="appMail" href="https://mail.google.com/" target="_blank" rel="noopener" aria-label="Open Gmail" title="Gmail"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg></a><a class="ico app" id="appDrive" href="https://drive.google.com/" target="_blank" rel="noopener" aria-label="Open Google Drive" title="Google Drive"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 3h7l6 10.5-3.5 6h-12L2.5 13.5z"/><path d="M8.5 3 15 14.5h6.5M2.5 13.5 9 3M6 19.5l3.5-6h12"/></svg></a><a class="ico app" id="appWa" href="https://wa.me/" target="_blank" rel="noopener" aria-label="Open WhatsApp" title="WhatsApp"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l1.6-4.6A8.5 8.5 0 1 1 7.7 19.5z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1-1.5-2-1-1 .8a3.5 3.5 0 0 1-2-2l.8-1-1-2z"/></svg></a><span class="tsep" aria-hidden="true"></span><button class="ico" id="dbBtn" aria-label="Dashboards" title="Dashboards"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15v2M11 11v6M15 7v10M19 12v5"/></svg></button>
           <button class="ico" id="reqBtn" aria-label="Requests"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/></svg><span class="badge" id="reqBadge" hidden>0</span></button>
@@ -966,7 +982,7 @@ select.in{padding-right:10px}
   <section class="screen" id="s-add" hidden>
     <div class="addhdr" id="addLoads"></div>
     <div class="grow addbody">
-      <div class="typeseg" role="group" aria-label="Type"><button class="tyb" id="tWorkBtn"></button><button class="tyb meet" id="tMeet"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h5v5H3z" fill="#00832D"/><path d="M3 11h7v5H5a2 2 0 0 1-2-2z" fill="#0066DA"/><path d="M10 6h5v5h-5z" fill="#2684FC"/><path d="M10 11h5v5h-5z" fill="#00AC47"/><path d="M15 6h.5a1.5 1.5 0 0 1 1.5 1.5V11h-2z" fill="#FFBA00"/><path d="M15 11h2v3.5a1.5 1.5 0 0 1-1.5 1.5H15z" fill="#00AC47"/><path d="M17 10.2 21 7v8l-4-3.2z" fill="#00AC47"/></svg><span>Meeting</span></button></div>
+      <div class="typeseg" role="group" aria-label="Type"><button class="tyb" id="tWorkBtn"></button><button class="tyb client" id="tClientBtn" hidden></button><button class="tyb meet" id="tMeet"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h5v5H3z" fill="#00832D"/><path d="M3 11h7v5H5a2 2 0 0 1-2-2z" fill="#0066DA"/><path d="M10 6h5v5h-5z" fill="#2684FC"/><path d="M10 11h5v5h-5z" fill="#00AC47"/><path d="M15 6h.5a1.5 1.5 0 0 1 1.5 1.5V11h-2z" fill="#FFBA00"/><path d="M15 11h2v3.5a1.5 1.5 0 0 1-1.5 1.5H15z" fill="#00AC47"/><path d="M17 10.2 21 7v8l-4-3.2z" fill="#00AC47"/></svg><span>Meeting</span></button></div>
       <textarea class="ta" id="tTitle" rows="1" placeholder="Task title"></textarea>
       <textarea class="ta desc" id="tDesc" placeholder="Describe the work. Rich text, links and dictation in the real app."></textarea>
       <div class="mini">
@@ -999,17 +1015,6 @@ select.in{padding-right:10px}
     <div class="bz" id="pgZone"></div>
     <div class="peek" id="peek" hidden></div>
   </section>
-
-  <!-- admin menu tray -->
-  <div class="menu" id="menu" hidden>
-    <div class="msheet" role="dialog" aria-label="Menu">
-      <div class="mgrab"></div>
-      <div class="mhead"><span class="mav" id="mAv">RR</span><div class="mwho"><b id="mName">Rishi</b><small id="mRole">Admin</small></div><button class="mic2" id="mSettings" aria-label="Settings"></button><button class="mic2" id="mClose" aria-label="Close"></button></div>
-      <label class="msearch"><span id="mSearchIco"></span><input id="mSearch" type="search" placeholder="Search menu" autocomplete="off"></label>
-      <div class="mbody" id="mBody"></div>
-      <div class="mquick" id="mQuick"></div>
-    </div>
-  </div>
 
   <div class="navrow" id="gNav" hidden><div class="nl" id="dashNavL"></div><button class="sq" id="addChoose" aria-label="Add" aria-haspopup="menu" aria-expanded="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button><div class="nl" id="dashNavR"></div></div>
   <div class="fabdim" id="fab" hidden><div class="fabstack" id="fabStack" role="menu" aria-label="Add"></div></div>
@@ -1262,7 +1267,7 @@ function applyFilters(ts,f){
 function refreshTop(){
  const r=role(),m=me();if(!m)return;
  $("#meAv").textContent=m.name.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();
- $("#menuBtn").style.visibility=r==="ADMIN"?"visible":"hidden";$("#dbBtn").hidden=r!=="ADMIN";{const q="?authuser="+encodeURIComponent(m.email||"");$("#appMail").href="https://mail.google.com/mail/"+q;$("#appDrive").href="https://drive.google.com/drive/"+q;}
+ $("#settingsBtn").hidden=r!=="ADMIN";$("#dbBtn").hidden=r!=="ADMIN";{const q="?authuser="+encodeURIComponent(m.email||"");$("#appMail").href="https://mail.google.com/mail/"+q;$("#appDrive").href="https://drive.google.com/drive/"+q;}
  $("#reqBtn").hidden=r!=="ADMIN";
  const openReq=S.requests.filter(x=>x.status==="OPEN").length,unread=S.notifs.filter(n=>n.for===m.id&&!n.read).length;
  $("#reqBadge").hidden=!openReq;$("#reqBadge").textContent=openReq;
@@ -1349,11 +1354,11 @@ function timePop(t,anchor){
  document.querySelectorAll(".tpop").forEach(x=>{x.closest(".row")&&(x.closest(".row").style.zIndex="");x.remove();});
  const mins=(a,b)=>Math.round((new Date(a)-new Date(b))/60000);
  const rel=m=>m===0?"on time":Math.abs(m)+" min "+(m>0?"late":"early");
- const lines=[["Scheduled",fmtT(t.start)+" – "+fmtT(t.end),""]];
+ const lines=[t.deadline?["Deadline",fmtD(t.start)+" · by end of day",""]:["Scheduled",fmtT(t.start)+" – "+fmtT(t.end),""]];
  if(t.actualStart){const ls=mins(t.actualStart,t.start);lines.push(["Started",fmtT(t.actualStart),rel(ls),ls>0?"od":"ok"]);}
- else lines.push(["Started","not yet",new Date(t.start)<new Date()?"start time passed":"",new Date(t.start)<new Date()?"od":""]);
+ else lines.push(["Started","not yet",new Date(t.start)<new Date()?(t.deadline?"deadline passed":"start time passed"):"",new Date(t.start)<new Date()?"od":""]);
  if(t.actualEnd){const le=mins(t.actualEnd,t.end);lines.push([t.status==="COMPLETED"?"Finished":"Done (their side)",fmtT(t.actualEnd),rel(le),le>0?"od":"ok"]);}
- else if(t.actualStart)lines.push(["Finished","still running",new Date(t.end)<new Date()?"past end time":"",new Date(t.end)<new Date()?"od":""]);
+ else if(t.actualStart)lines.push(["Finished","still running",new Date(t.end)<new Date()?(t.deadline?"past the deadline":"past end time"):"",new Date(t.end)<new Date()?"od":""]);
  const box=el("div",{class:"tpop",role:"dialog","aria-label":"Actual time"},...lines.map(([k,v,n,c])=>el("div",{class:"tpr"},el("span",{},k),el("b",{},v),n?el("small",{class:c||""},n):null)));
  const row=anchor.closest(".row");row.appendChild(box);row.style.position="relative";row.style.zIndex="20";
  const r=anchor.getBoundingClientRect(),rr=row.getBoundingClientRect();box.style.top=(r.bottom-rr.top+6)+"px";box.style.right=(rr.right-r.right)+"px";
@@ -1395,8 +1400,8 @@ function taskRow(t){
   
   el("div",{class:"rtop"},el("div",{class:"title"},el("b",{},t.title),t.recurring?el("span",{style:"color:#2563eb;flex-shrink:0"},svg(I.repeat,12,2.5)):null,t.paused?el("span",{class:"pauseTag",title:"Paused"},svg(I.pause,9,0)):null,t.doubt?el("span",{class:"doubtTag",title:"Doubt raised"},"?"):null),circle),
   el("div",{class:"rline"},
-   el("div",{class:"chips"},el("span",{class:"chip"},c.name),S.teams.find(x=>x.id===t.team)?el("span",{class:"chip team"},S.teams.find(x=>x.id===t.team).name):null,null),
-   el("div",{class:"rp"},rpill(t,"date","",dateChip(t.start)),rpill(t,"mins","b"+(t.type==="MEETING"?" mt":""),(t.type==="MEETING"?"🎥 ":"")+fmtMin(t.mins)))),
+   el("div",{class:"chips"},el("span",{class:"chip"},c.name),t.forClient?el("span",{class:"chip forclient"},"For client"):S.teams.find(x=>x.id===t.team)?el("span",{class:"chip team"},S.teams.find(x=>x.id===t.team).name):null,null),
+   el("div",{class:"rp"},rpill(t,"date",t.deadline&&od?"od":"",(t.deadline?"Due ":"")+dateChip(t.start)),rpill(t,"mins","b"+(t.type==="MEETING"?" mt":"")+(t.deadline?" dl":""),t.deadline?"Deadline":(t.type==="MEETING"?"🎥 ":"")+fmtMin(t.mins)))),
   el("div",{class:"rline"},
    el("div",{class:"icons"},
     ib("Task details",I.info,()=>openDetail(t)),
@@ -1407,7 +1412,9 @@ function taskRow(t){
     ib("WhatsApp",I.wa,()=>contactSheet(t,"wa")),
     ib("Email",I.mail,()=>contactSheet(t,"mail")),
     t.voice?ib("Voice notes",I.mic,()=>openDetail(t,true)):null),
-   el("div",{class:"rp"},rpill(t,"time",(od?"od":t.actualStart?(actualTone(t)||""):"")+(t.actualStart?" hasact":""),fmtT(t.start)+" – "+fmtT(t.end)))));
+   el("div",{class:"rp"},rpill(t,"time",(od?"od":t.actualStart?(actualTone(t)||""):"")+(t.actualStart?" hasact":""),t.deadline?"by end of day":fmtT(t.start)+" – "+fmtT(t.end)))));
+ /* client tasks: no Drive folder, Meet link or Chat space — the client sees them on their tracking link */
+ if(t.forClient)li.querySelectorAll(".icons button").forEach(b=>{if(/drive|meet|chat/i.test(b.getAttribute("aria-label")||""))b.remove();});
  return li;
 }
 /* ---------- lifecycle ---------- */
@@ -1499,8 +1506,9 @@ function openDetail(t,attach){
 let AF=null; // form
 function openAdd(mode,edit){
  const m=me(),r=role();
- AF={notes:edit&&edit.voice?[{secs:42,url:null}]:[],rec:edit?.rec||null,prefs:edit?[...(edit.prefs||[])]:[],edit:edit||null,type:mode==="MEETING"?"MEETING":"WORK",title:edit?edit.title:"",desc:edit?edit.desc:"",hours:edit?edit.mins/60:2,work:edit?edit.work:S.workTypes[0].id,client:edit?edit.client:"",teams:edit?[edit.team]:[],assignees:edit?[...edit.assignees]:[],date:edit?dk(new Date(edit.start)):"",time:edit?fmtTimeInput(edit.start):"10:00",important:!!edit?.important,recurring:!!edit?.recurring,recur:"WEEKLY",voice:!!edit?.voice,protect:!!edit?.protected,shortcut:edit?null:"upnext"};
+ AF={notes:edit&&edit.voice?[{secs:42,url:null}]:[],rec:edit?.rec||null,prefs:edit?[...(edit.prefs||[])]:[],edit:edit||null,type:mode==="MEETING"?"MEETING":mode==="CLIENT"?"CLIENT":"WORK",title:edit?edit.title:"",desc:edit?edit.desc:"",hours:edit?edit.mins/60:2,work:edit?edit.work:S.workTypes[0].id,client:edit?edit.client:"",teams:edit?[edit.team]:[],assignees:edit?[...edit.assignees]:[],date:edit?dk(new Date(edit.start)):"",time:edit?fmtTimeInput(edit.start):"",important:!!edit?.important,recurring:!!edit?.recurring,recur:"WEEKLY",voice:!!edit?.voice,protect:!!edit?.protected,shortcut:edit?null:"upnext"};
  if(r==="EXECUTIVE")AF.assignees=[m.id];
+ AF.deadline=!!(edit&&edit.deadline)||AF.type==="CLIENT";if(AF.deadline){AF.time="";}
  AF.guests=edit?[...(edit.guests||[])]:[];AF.people=edit?(edit.type==="MEETING"?[...edit.assignees]:[]):[];AF.noClientEmail=false;
  AF.mo=edit?.mo?JSON.parse(JSON.stringify(edit.mo)):{meet:true,reminders:[{m:"popup",n:10,u:"minutes"}],modify:false,invite:true,see:true,location:"",busy:true,vis:"default",color:"",allDay:false,tz:S.settings.tz||"Asia/Kolkata"};
  if(mode==="MEETING"&&!edit)AF.hours=0.5;
@@ -1524,10 +1532,11 @@ function renderAdd(){
  {const H=$("#addLoads");if(!L){H.hidden=true;H.replaceChildren();}else{H.hidden=false;const fh=v=>(v>=10||Number.isInteger(v)?Math.round(v):v.toFixed(1))+"h";
   H.replaceChildren(el("div",{class:"caphd"},el("span",{class:"capnm"},L.name),el("span",{},L.people+" people · left / booked")),
    el("div",{class:"capgrid"},...[["today","Today"],["tomorrow","Tom"],["week","Week"],["month","Month"]].map(([k,l])=>el("div",{class:"capc"+(L[k].left<=0?" full":""),title:`${l}: ${fh(L[k].left)} free to assign · ${fh(L[k].booked)} booked in ${L[k].count} task(s)`},el("span",{class:"capl"},l),el("b",{},fh(L[k].left),el("small",{}," left")),el("span",{class:"capb"},fh(L[k].booked)+" booked")))));}}
- $("#tTitle").value=AF.title;$("#tTitle").placeholder=AF.type==="MEETING"?"Meeting title":"Task title";
+ $("#tTitle").value=AF.title;$("#tTitle").placeholder=AF.type==="MEETING"?"Meeting title":AF.type==="CLIENT"?"What do you need from the client?":"Task title";
+ $("#tClientBtn").hidden=r!=="ADMIN";if(!$("#tClientBtn").childElementCount)$("#tClientBtn").replaceChildren(msvg("building",18,2.2),el("span",{},"For client"));$("#tClientBtn").className="tyb client"+(AF.type==="CLIENT"?" on":"");$("#tClientBtn").setAttribute("aria-pressed",String(AF.type==="CLIENT"));
  $("#tDesc").value=AF.desc;$("#tHours").value=AF.hours;
  const HP=[0.5,1,2,3,4,6,8];const hl=h=>h===0.5?"½h":(Number.isInteger(h)?h:h.toFixed(2).replace(/0$/,""))+"h";
- $("#tHrs").replaceChildren(el("span",{class:"lab"},"How long"),...HP.map(h=>el("button",{class:"pill"+(AF.hours===h?" on":""),onclick:()=>{AF.hours=h;renderAdd();}},hl(h))),
+ $("#tHrs").hidden=!!AF.deadline;$("#tHrs").replaceChildren(el("span",{class:"lab"},"How long"),...HP.map(h=>el("button",{class:"pill"+(AF.hours===h?" on":""),onclick:()=>{AF.hours=h;renderAdd();}},hl(h))),
   el("div",{class:"step"},el("button",{"aria-label":"less",onclick:()=>{AF.hours=Math.max(0.25,Math.round((AF.hours-0.25)*4)/4);renderAdd();}},"−"),el("b",{},hl(AF.hours)),el("button",{"aria-label":"more",onclick:()=>{AF.hours=Math.round((AF.hours+0.25)*4)/4;renderAdd();}},"+")));
  $("#tNotes").replaceChildren(...(MIC.on?[el("div",{style:"font-size:13px;font-weight:700;color:#dc2626"},"● Recording "+fmtSecs(MIC.secs)+" · tap to stop")]:AF.notes.length?AF.notes.map((n,i)=>el("div",{class:"vn"},el("span",{},"🎙 "+fmtSecs(n.secs)),el("span",{class:"bars"}),n.url?el("button",{class:"pill",onclick:()=>{try{new Audio(n.url).play();}catch(e){}}},"▶"):null,el("button",{class:"pill",onclick:()=>{AF.notes.splice(i,1);renderAdd();}},"✕"))):[el("div",{style:"font-size:13px;color:var(--muted)"},el("b",{style:"color:var(--ink)"},"Voice note"),el("br"),"Tap the mic to record, tap again to stop")]));
  $("#tMic").className="micbtn"+(MIC.on?" rec":"");
@@ -1537,8 +1546,8 @@ function renderAdd(){
  // slot preview + who gets it
  const tlsOf=ids=>S.users.filter(u=>u.role==="TEAM_LEADER"&&ids.includes(u.teamId));
  const people=r==="ADMIN"?(AF.teams.length?tlsOf(AF.teams).map(u=>first(u.name)).join(", "):"pick a team"):AF.assignees.length?AF.assignees.map(id=>id===m.id?"me":first(userById(id).name)).join(", "):(r==="EXECUTIVE"?"me":"whole team");
- $("#tSlot").textContent=(AF.date?`📅 ${fmtDY(AF.date)} at ${AF.time}`:`📅 Next free slot: ${nextSlot()}`)+` · ${hl(AF.hours)}`+(people==="pick a team"?"":` · for ${people}`)+" · change with the calendar icon below";
- const aw=$("#tAssignWrap");aw.hidden=r==="EXECUTIVE";
+ $("#tSlot").textContent=AF.type==="CLIENT"?(`⏰ Needed by ${AF.date?fmtDY(AF.date):"— pick a date"} · from ${AF.client?(clientById(AF.client)||{}).name:"the client (pick one below)"} · shows on their tracking link`):AF.deadline?(`⏰ Due ${AF.date?fmtDY(AF.date):"— pick a date"} · no time blocked`+(people==="pick a team"?"":` · for ${people}`)+" · change with the Deadline pill below"):((AF.date?(AF.time?`📅 ${fmtDY(AF.date)} at ${t12(AF.time)}`:(()=>{const f=dayFreeSlot(AF.date,plannedAssignees(),AF.hours);return `📅 ${fmtDY(AF.date)} · next free: ${t12(f.hm)}`+(f.full?" (day is full · after the last task)":"");})()):`📅 Next free slot: ${nextSlot()}`)+` · ${hl(AF.hours)}`+(people==="pick a team"?"":` · for ${people}`)+" · change with the calendar icon below");
+ const aw=$("#tAssignWrap");aw.hidden=r==="EXECUTIVE"||AF.type==="CLIENT";
  if(r==="ADMIN"){
   if(!AF.teams.length)aw.replaceChildren(el("b",{},"Pick a team below."),el("div",{class:"pre"},"The task goes to that team's Team Leader. Then tap executives to say who you'd prefer; the Team Leader makes the final call."));
   else{const tls=tlsOf(AF.teams);aw.replaceChildren(el("div",{},"Goes to ",el("b",{},tls.map(u=>first(u.name)+" (TL, "+S.teams.find(t=>t.id===u.teamId).name+")").join(", ")||"— no Team Leader in this team yet")),el("div",{style:"margin-top:4px"},AF.prefs.length?["Your preference: ",el("b",{},AF.prefs.map(id=>first(userById(id).name)).join(", ")),el("span",{class:"pre"}," · the Team Leader decides")]:el("span",{class:"pre"},"No executive preference · tap names in the PREFER row")),(()=>{const w=S.workTypes.find(x=>x.id===AF.work);const sp=S.users.filter(u=>u.role==="EXECUTIVE"&&AF.teams.includes(u.teamId)&&skilled(u,AF.work));return w&&AF.type!=="MEETING"?el("div",{class:"pre",style:"margin-top:4px"},"✓ "+w.name+" specialists: "+(sp.map(u=>first(u.name)).join(", ")||"none yet")):null;})());}
@@ -1551,19 +1560,22 @@ function renderAdd(){
   rowPref.replaceChildren(...[lbl("Prefer"),el("button",{class:"gpk"+(!AF.prefs.length?" on":""),onclick:()=>{AF.prefs=[];renderAdd();}},"No preference"),...ex.map(e=>el("button",{class:"gpk pref"+(AF.prefs.includes(e.id)?" on":""),onclick:()=>{AF.prefs=tog(AF.prefs,e.id);renderAdd();}},(AF.prefs.includes(e.id)?"★ ":"")+first(e.name)+(skilled(e,AF.work)?" ✓":""))),ex.length?null:el("span",{class:"lbl",style:"text-transform:none"},"no executives in this team yet")].filter(Boolean));}
  else if(r==="TEAM_LEADER"){const ex=S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===m.teamId);row1.hidden=false;rowPref.hidden=true;row1.replaceChildren(lbl("Exec"),el("button",{class:"gpk"+(AF.assignees.includes(m.id)?" on":""),onclick:()=>{AF.assignees=tog(AF.assignees,m.id);renderAdd();}},"me"),...ex.sort((a,b)=>skilled(b,AF.work)-skilled(a,AF.work)).map(e=>el("button",{class:"gpk"+(AF.assignees.includes(e.id)?" on":""),onclick:()=>{AF.assignees=tog(AF.assignees,e.id);renderAdd();}},first(e.name)+(skilled(e,AF.work)?" ✓":""))));}
  else{row1.hidden=true;rowPref.hidden=true;}
- rowWork.hidden=AF.type==="MEETING"||(r==="ADMIN"&&!AF.teams.length);
+ rowWork.hidden=AF.type==="MEETING"||AF.type==="CLIENT"||(r==="ADMIN"&&!AF.teams.length);
+ if(AF.type==="CLIENT"){row1.hidden=true;rowPref.hidden=true;}
  const wTeams=r==="ADMIN"?AF.teams:[m.teamId];const wl=workFor(wTeams);
  if(wl.length&&!wl.some(w=>w.id===AF.work))AF.work=wl[0].id;
  rowWork.replaceChildren(...[lbl("Work"),...(wl.length?wl.map(w=>el("button",{class:"gpk"+(AF.work===w.id?" on":""),onclick:()=>{AF.work=w.id;renderAdd();}},w.name)):[el("span",{class:"lbl",style:"text-transform:none;font-weight:500"},"no work types for this team · Menu → Add Work")])]);
  row2.replaceChildren(lbl("Client"),...S.clients.filter(c=>!c.onHold||r==="ADMIN").map(c=>el("button",{class:"gpk"+(AF.client===c.id?" on":""),onclick:()=>{AF.client=AF.client===c.id?"":c.id;renderAdd();}},c.name+(c.onHold?" ⏸":""))));
- const sc=k=>{AF.shortcut=k;if(k==="upnext"){AF.date="";}else{AF.date=dk(new Date(Date.now()+(k==="tomorrow"?DAY:0)));AF.time="10:00";}renderAdd();};
- $("#tBarG").replaceChildren(el("button",{style:"display:flex;align-items:center;height:32px;width:28px;justify-content:center;color:#fff;flex-shrink:0",onclick:scheduleSheet},svg(I.cal,22,2)),
-  el("button",{class:"gpk"+(!AF.date?" on":""),onclick:()=>sc("upnext")},"Up next"),el("button",{class:"gpk"+(AF.date&&AF.shortcut==="today"?" on":""),onclick:()=>sc("today")},"Today"),el("button",{class:"gpk"+(AF.date&&AF.shortcut==="tomorrow"?" on":""),onclick:()=>sc("tomorrow")},"Tomorrow"));
+ const leaveDeadline=()=>{if(AF.deadline){AF.deadline=false;if(!AF.hours)AF.hours=2;}};
+ const sc=k=>{leaveDeadline();AF.shortcut=k;if(k==="upnext"){AF.date="";AF.time="";}else{AF.date=dk(new Date(Date.now()+(k==="tomorrow"?DAY:0)));AF.time="";}renderAdd();};
+ $("#tBarG").replaceChildren(el("button",{style:"display:flex;align-items:center;height:32px;width:28px;justify-content:center;color:#fff;flex-shrink:0",onclick:()=>AF.type==="CLIENT"?deadlineSheet():scheduleSheet()},svg(I.cal,22,2)),
+  ...(AF.type==="CLIENT"?[]:[el("button",{class:"gpk"+(!AF.date&&!AF.deadline?" on":""),onclick:()=>sc("upnext")},"Up next"),el("button",{class:"gpk"+(AF.date&&AF.shortcut==="today"?" on":""),onclick:()=>sc("today")},"Today"),el("button",{class:"gpk"+(AF.date&&AF.shortcut==="tomorrow"?" on":""),onclick:()=>sc("tomorrow")},"Tomorrow")]),
+  ...(AF.type==="MEETING"?[]:[el("button",{class:"gpk dl"+(AF.deadline?" on":""),"aria-pressed":String(!!AF.deadline),onclick:deadlineSheet},AF.deadline&&AF.date?(AF.type==="CLIENT"?"Needed by ":"Due ")+fmtD(AF.date):AF.type==="CLIENT"?"Needed by…":"Deadline")]));
  $("#tMeet").className="tyb meet"+(AF.type==="MEETING"?" on":"");$("#tMeet").setAttribute("aria-pressed",String(AF.type==="MEETING"));
  $("#tWorkBtn").className="tyb task"+(AF.type==="WORK"?" on":"");$("#tWorkBtn").setAttribute("aria-pressed",String(AF.type==="WORK"));
  // the details tray minimises like the dashboard's filter tray
  {const min=!!S.addTrayMin,tg=$("#addTrayTog");$("#addTray").classList.toggle("min",min);tg.setAttribute("aria-expanded",String(!min));tg.setAttribute("aria-label",min?"Show details":"Hide details");tg.title=min?"Show details":"Hide details";
-  const tn=AF.teams.map(id=>(S.teams.find(t=>t.id===id)||{}).name).filter(Boolean).join(" + "),cn=AF.client?(clientById(AF.client)||{}).name:null,when=!AF.date?"Up next":fmtD(AF.date)+(AF.time?" "+AF.time:"");
+  const tn=AF.teams.map(id=>(S.teams.find(t=>t.id===id)||{}).name).filter(Boolean).join(" + "),cn=AF.client?(clientById(AF.client)||{}).name:null,when=AF.deadline?"Due "+(AF.date?fmtD(AF.date):"?"):!AF.date?"Up next":fmtD(AF.date)+(AF.time?" "+t12(AF.time):" · next free");
   const sum=[tn||null,cn,when].filter(Boolean).join(" · ");
   tg.replaceChildren(svg(min?'<path d="m6 15 6-6 6 6"/>':'<path d="m6 9 6 6 6-6"/>',16,2.5),...(min?[el("span",{},"Details · "+sum)]:[]));
   tg.onclick=()=>{S.addTrayMin=!S.addTrayMin;save();renderAdd();};}
@@ -1579,9 +1591,15 @@ async function micToggle(){
  MIC.t=setInterval(()=>{MIC.secs++;renderAdd();},1000);renderAdd();
 }
 function scheduleSheet(){
- const d=el("input",{class:"in",type:"date",value:AF.date||dk(new Date(Date.now()+DAY))}),t=el("input",{class:"in",type:"time",value:AF.time||"10:00"});
- openSheet("When should it start?",el("div",{style:"display:grid;grid-template-columns:1fr 1fr;gap:8px"},field("Date",d),field("Start time",t)),el("p",{class:"pre",style:"margin:0 0 8px"},"Or close this and use upnext / Tom / today in the bar."),
-  el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{AF.date="";AF.shortcut="upnext";closeSheet();renderAdd();}},"Next free slot"),el("button",{class:"btn",onclick:()=>{if(!d.value)return toast("Pick a date","err");AF.date=d.value;AF.time=t.value||"10:00";AF.shortcut=null;closeSheet();renderAdd();}},"Set")));
+ const d=el("input",{class:"in",type:"date",value:AF.date||dk(new Date(Date.now()+DAY))}),t=el("input",{class:"in",type:"time",value:AF.time||"",placeholder:"Next free"});
+ openSheet("When should it start?",el("div",{style:"display:grid;grid-template-columns:1fr 1fr;gap:8px"},field("Date",d),field("Start time (optional)",t,"Leave blank: the next free time on that day")),el("p",{class:"pre",style:"margin:0 0 8px"},"Or close this and use Up next / Today / Tomorrow in the bar."),
+  el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{AF.date="";AF.time="";AF.shortcut="upnext";closeSheet();renderAdd();}},"Next free slot"),el("button",{class:"btn",onclick:()=>{if(!d.value)return toast("Pick a date","err");if(AF.deadline){AF.deadline=false;if(!AF.hours)AF.hours=2;}AF.date=d.value;AF.time=t.value||"";AF.shortcut=null;closeSheet();renderAdd();}},"Set")));
+}
+/* Deadline only: just the date it must be done by — no hours, no start or stop time, nothing blocked in the day. */
+function deadlineSheet(){
+ const d=el("input",{class:"in",type:"date",value:AF.date||dk(new Date(Date.now()+DAY))});
+ openSheet("Deadline",field("Done by",d,"No hours, start or end time — just the date it must be finished by. It blocks no time in the day."),
+  el("div",{class:"btnrow"},el("button",{class:"btn",onclick:()=>{if(!d.value)return toast("Pick the due date","err");AF.deadline=true;AF.date=d.value;AF.time="";AF.shortcut="deadline";closeSheet();renderAdd();}},"Set deadline")));
 }
 const WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],NTH=["first","second","third","fourth","last"];
 const ord=n=>n+(n%10===1&&n!==11?"st":n%10===2&&n!==12?"nd":n%10===3&&n!==13?"rd":"th");
@@ -1638,27 +1656,42 @@ function recurPicker(init,base,onDone,onClear,title){
  draw();
  openSheet(title||"Repeat",body,el("div",{class:"btnrow",style:"margin-top:14px"},onClear?el("button",{class:"btn ghost",style:"color:#dc2626",onclick:()=>{closeSheet();onClear();}},"Don't repeat"):cancelX(),el("button",{class:"btn",onclick:()=>{r.anchor=r.anchor||dk(base);closeSheet();onDone(r);toast("Repeats: "+recurText(r));}},"Done")));
 }
+/* Who the task will land on right now (Admin: the chosen teams' leaders; TL: picked executives or the team; Exec: me). */
+function plannedAssignees(){const r=role(),m=me();if(AF.type==="MEETING")return [m.id,...meetingGuests().internal.map(u=>u.id)];if(r==="ADMIN")return S.users.filter(u=>u.role==="TEAM_LEADER"&&AF.teams.includes(u.teamId)).map(u=>u.id);if(AF.assignees.length)return AF.assignees;return r==="EXECUTIVE"?[m.id]:S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===m.teamId).map(u=>u.id);}
+/* Next free time on a given day for these people: first 30-min grid start in 10:00–18:00 (not in the past today)
+   where none of their open tasks overlap the whole duration; a full day falls back to right after their last task. */
+function dayFreeSlot(dateKey,ids,hours){
+ const dayStart=new Date(dateKey+"T10:00:00"),dayEnd=new Date(dateKey+"T18:00:00"),need=Math.max(0.5,hours||1)*3600000;
+ const busy=S.tasks.filter(t=>t.status!=="COMPLETED"&&t.id!==(AF.edit&&AF.edit.id)&&t.assignees.some(a=>ids.includes(a))).map(t=>[new Date(t.start).getTime(),new Date(t.end).getTime()]).filter(([a,b])=>b>dayStart.getTime()&&a<dayEnd.getTime()+12*3600000);
+ let from=dayStart.getTime();const now=Date.now();if(from<now&&dateKey===dk(new Date())){from=Math.ceil(now/1800000)*1800000;}
+ const hm=ms=>{const d=new Date(ms);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");};
+ for(let t=from;t+need<=dayEnd.getTime();t+=1800000){if(!busy.some(([a,b])=>a<t+need&&b>t))return {hm:hm(t),full:false};}
+ const last=busy.length?Math.max(...busy.map(([,b])=>b)):from;return {hm:hm(Math.max(last,from)),full:true};
+}
 function nextSlot(){const d=new Date();d.setMinutes(0,0,0);d.setHours(d.getHours()+1);if(d.getHours()>=18){d.setDate(d.getDate()+1);d.setHours(10);}return `${dateChip(d.toISOString())} ${fmtT(d.toISOString())}`;}
 function saveTask(){
  const r=role(),m=me();
- AF.title=$("#tTitle").value.trim();AF.desc=$("#tDesc").value;AF.hours=Number($("#tHours").value)||1;AF.date=$("#tDate").value;AF.time=$("#tTime").value||"10:00";
+ AF.title=$("#tTitle").value.trim();AF.desc=$("#tDesc").value;AF.hours=Number($("#tHours").value)||1;AF.date=$("#tDate").value;AF.time=$("#tTime").value||"";
  if(!AF.title)return toast("Give it a title","err");
- if(AF.type!=="MEETING"&&r==="ADMIN"&&!AF.teams.length)return toast("Pick a team in the green area","err");
- if(AF.type!=="MEETING"&&!workFor(r==="ADMIN"?AF.teams:[m.teamId]).some(w=>w.id===AF.work))return toast("Pick a work type in the green area","err");
+ if(AF.type==="WORK"&&r==="ADMIN"&&!AF.teams.length)return toast("Pick a team in the green area","err");
+ if(AF.type==="WORK"&&!workFor(r==="ADMIN"?AF.teams:[m.teamId]).some(w=>w.id===AF.work))return toast("Pick a work type in the green area","err");
  if(!AF.client)return toast("Pick a client in the green area","err");
  if(clientById(AF.client).onHold)return toast("Work for this client is on hold until payment","err");
- let assignees=AF.type==="MEETING"?[...new Set([m.id,...meetingGuests().internal.map(u=>u.id)])]:r==="ADMIN"?S.users.filter(u=>u.role==="TEAM_LEADER"&&AF.teams.includes(u.teamId)).map(u=>u.id):AF.assignees.length?AF.assignees:(r==="EXECUTIVE"?[m.id]:S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===m.teamId).map(u=>u.id));
+ let assignees=AF.type==="CLIENT"?[m.id]:AF.type==="MEETING"?[...new Set([m.id,...meetingGuests().internal.map(u=>u.id)])]:r==="ADMIN"?S.users.filter(u=>u.role==="TEAM_LEADER"&&AF.teams.includes(u.teamId)).map(u=>u.id):AF.assignees.length?AF.assignees:(r==="EXECUTIVE"?[m.id]:S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===m.teamId).map(u=>u.id));
  if(!assignees.length)return toast("That team has no Team Leader yet (Menu → Add teamleader)","err");
- let start;if(AF.date){start=new Date(AF.date+"T"+(AF.type==="MEETING"&&AF.mo.allDay?"00:00":AF.time)+":00");}else{start=new Date();start.setMinutes(0,0,0);start.setHours(start.getHours()+1);}
- const end=AF.type==="MEETING"&&AF.mo.allDay?new Date(start.getTime()+DAY):new Date(start.getTime()+AF.hours*3600000);
- const team=AF.teams[0]||userById(assignees[0])?.teamId||m.teamId||"t1";
- const base={title:AF.title,desc:AF.desc,client:AF.client,assignees,mins:Math.round(AF.hours*60),start:start.toISOString(),end:end.toISOString(),type:AF.type,work:AF.work,team,prefs:r==="ADMIN"?[...AF.prefs]:(AF.edit?.prefs||[]),important:AF.important,recurring:AF.recurring,rec:AF.recurring?AF.rec:null,recurText:AF.recurring&&AF.rec?recurText(AF.rec):"",voice:AF.type!=="MEETING"&&AF.notes.length>0,guests:AF.type==="MEETING"?meetingGuests().external.map(g=>g.email):[],mo:AF.type==="MEETING"?JSON.parse(JSON.stringify(AF.mo)):null,protected:AF.protect,meet:AF.type==="MEETING"&&AF.mo.meet};
+ if(AF.deadline&&!AF.date)return toast("Pick the due date","err");
+ let start;if(AF.deadline){start=new Date(AF.date+"T18:00:00");}else if(AF.date){const hm=AF.type==="MEETING"&&AF.mo.allDay?"00:00":(AF.time||dayFreeSlot(AF.date,assignees,AF.hours).hm);start=new Date(AF.date+"T"+hm+":00");}else{start=new Date();start.setMinutes(0,0,0);start.setHours(start.getHours()+1);}
+ const end=AF.deadline?start:AF.type==="MEETING"&&AF.mo.allDay?new Date(start.getTime()+DAY):new Date(start.getTime()+AF.hours*3600000);
+ const team=AF.type==="CLIENT"?null:(AF.teams[0]||userById(assignees[0])?.teamId||m.teamId||"t1");
+ const base={title:AF.title,desc:AF.desc,client:AF.client,assignees,mins:AF.deadline?0:Math.round(AF.hours*60),deadline:!!AF.deadline,forClient:AF.type==="CLIENT",start:start.toISOString(),end:end.toISOString(),type:AF.type,work:AF.work,team,prefs:r==="ADMIN"?[...AF.prefs]:(AF.edit?.prefs||[]),important:AF.important,recurring:AF.recurring,rec:AF.recurring?AF.rec:null,recurText:AF.recurring&&AF.rec?recurText(AF.rec):"",voice:AF.type!=="MEETING"&&AF.notes.length>0,guests:AF.type==="MEETING"?meetingGuests().external.map(g=>g.email):[],mo:AF.type==="MEETING"?JSON.parse(JSON.stringify(AF.mo)):null,protected:AF.protect,meet:AF.type==="MEETING"&&AF.mo.meet};
  if(AF.edit){Object.assign(AF.edit,base);toast("Task updated");}
- else{S.tasks.unshift(Object.assign({id:uid(),status:"NOT_STARTED",paused:false,doubt:false,review:false,parent:false,createdBy:m.id,actualStart:null,actualEnd:null},base));assignees.filter(id=>id!==m.id).forEach(id=>notify(id,`New ${AF.type==="MEETING"?"meeting":"task"} from ${first(m.name)}: ${AF.title}`+(r==="ADMIN"&&AF.prefs.length?` · prefers ${AF.prefs.map(x=>first(userById(x).name)).join(", ")} — assign it from the task`:"")));toast(AF.type==="MEETING"?"Meeting scheduled · "+(meetingGuests().internal.length+meetingGuests().external.length)+" invites sent by Google Calendar":"Task added · Drive folder + Chat space queued");}
+ else{S.tasks.unshift(Object.assign({id:uid(),status:"NOT_STARTED",paused:false,doubt:false,review:false,parent:false,createdBy:m.id,actualStart:null,actualEnd:null},base));assignees.filter(id=>id!==m.id).forEach(id=>notify(id,`New ${AF.type==="MEETING"?"meeting":"task"} from ${first(m.name)}: ${AF.title}`+(r==="ADMIN"&&AF.prefs.length?` · prefers ${AF.prefs.map(x=>first(userById(x).name)).join(", ")} — assign it from the task`:"")));toast(AF.type==="CLIENT"?"Client task added · it shows on their tracking link":AF.type==="MEETING"?"Meeting scheduled · "+(meetingGuests().internal.length+meetingGuests().external.length)+" invites sent by Google Calendar":"Task added · Drive folder + Chat space queued");}
  save();show("dash");renderDash();
 }
-$("#tMeet").onclick=()=>{if(AF.type!=="MEETING"&&AF.hours>2)AF.hours=0.5;AF.type="MEETING";renderAdd();};
-$("#tWorkBtn").onclick=()=>{AF.type="WORK";renderAdd();};
+$("#tMeet").onclick=()=>{if(AF.deadline||AF.type==="CLIENT"){AF.deadline=false;AF.hours=0.5;AF.date="";AF.shortcut="upnext";}if(AF.type!=="MEETING"&&AF.hours>2)AF.hours=0.5;AF.type="MEETING";renderAdd();};
+$("#tWorkBtn").onclick=()=>{if(AF.type==="CLIENT"){AF.deadline=false;if(!AF.hours)AF.hours=2;AF.shortcut="upnext";AF.date="";}AF.type="WORK";renderAdd();};
+/* "For client": something we need from the client — no team, no hours, just a date; it shows on their tracking link */
+$("#tClientBtn").onclick=()=>{if(role()!=="ADMIN")return toast("Only Admin adds client tasks","err");AF.type="CLIENT";AF.deadline=true;AF.time="";AF.shortcut="deadline";AF.teams=[];AF.prefs=[];renderAdd();};
 $("#tImportant").onclick=()=>{AF.important=!AF.important;renderAdd();};
 $("#tRecur").onclick=()=>recurSheet();
 $("#tProtect").onclick=()=>{AF.protect=!AF.protect;renderAdd();};
@@ -1715,39 +1748,27 @@ function menuModel(){
  const B=(n,c)=>n?{n,c}:null;
  return [
   {h:"Money",t:"t-money",items:[
-   {go:"drive",ic:"folder",l:"Drive folders",s:"Invoices, bills, GST pack, cancelled"}]},
+   ]},
   {h:"Clients",t:"t-client",items:[
-   {go:"vault:SHARED_DRIVE_LINK",ic:"drive",l:"Shared links",s:"Folders shared with clients"}]},
+   ]},
   {h:"Team",t:"t-team",items:[
-   {go:"insights:HR",ic:"calcheck",l:"HR",s:(()=>{const t=S.attendance[dk()]||{};const st=S.users.filter(u=>["TEAM_LEADER","EXECUTIVE"].includes(u.role));const p=st.filter(u=>t[u.id]==="P"||t[u.id]==="HD").length,l=st.filter(u=>t[u.id]==="L").length;return Object.keys(t).length?p+" present · "+l+" on leave today":"Attendance, inventory, leave";})()},
-   {go:"insights:TASK",ic:"task",l:"Tasks",s:(()=>{const o=S.tasks.filter(t=>t.status!=="COMPLETED");const late=o.filter(t=>rowColour(t)==="red").length;return o.length+" open"+(late?" · "+late+" late to start":"");})(),b:B(S.tasks.filter(t=>t.status!=="COMPLETED"&&rowColour(t)==="red").length,"amber")},
-   {go:"attendance",ic:"usercheck",l:"Attendance",s:"Mark today · leave · monthly sheet"},
-   {go:"inventory",ic:"clock",l:"Inventory",s:"Hours available vs assigned"}]},
+   ]},
   {h:"Other",t:"t-acct",items:[
    {go:"settings",ic:"gear",l:"Settings",s:"Company, bank, invoice, TDS"},
    {go:"signout",ic:"logout",l:"Sign out",danger:true}]},
  ];
 }
-function renderMenu(){
- const m=me(),q=($("#mSearch").value||"").trim().toLowerCase();
- $("#mAv").textContent=m.name.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();$("#mName").textContent=m.name;$("#mRole").textContent={ADMIN:"Admin",TEAM_LEADER:"Team Leader",EXECUTIVE:"Executive",HR:"HR"}[m.role]+" · "+S.settings.company;
- const secs=menuModel().map(sec=>({...sec,items:sec.items.filter(it=>!q||(it.l+" "+(it.s||"")+" "+sec.h).toLowerCase().includes(q))})).filter(sec=>sec.items.length);
- $("#mBody").replaceChildren(...(secs.length?secs.map(sec=>el("div",{class:"msec"},el("h5",{class:sec.t},sec.h),el("div",{class:"mgrid"},...sec.items.map(it=>el("button",{class:"mtile"+(it.danger?" danger":""),title:it.s||it.l,"aria-label":it.l+(it.s?" — "+it.s:""),onclick:()=>{closeMenu();nav(it.go);}},
-   el("span",{class:"mi "+(it.danger?"t-red":sec.t)},msvg(it.ic,22)),el("span",{class:"ml"},it.l.split(" ").map(w=>w.length>=10?w.slice(0,Math.ceil(w.length/2))+"\u00ad"+w.slice(Math.ceil(w.length/2)):w).join(" ")),it.b?el("span",{class:"mbadge "+it.b.c},String(it.b.n)):null))))):[el("div",{class:"mempty"},"Nothing matches “"+q+"”")]));
-}
-/* quick actions retired: the bottom nav and the + cover them */
-$("#mQuick").replaceChildren();$("#mQuick").hidden=true;
-$("#mSearchIco").replaceChildren(msvg("search",16));$("#mClose").replaceChildren(msvg("x",18));$("#mSettings").replaceChildren(msvg("gear",18));
-$("#mClose").onclick=()=>closeMenu();$("#mSettings").onclick=()=>{closeMenu();nav("settings");};
-$("#mSearch").oninput=renderMenu;
-const menuEl=$("#menu");
-function openMenu(){$("#mSearch").value="";renderMenu();menuEl.hidden=false;$("#mBody").scrollTop=0;}function closeMenu(){menuEl.hidden=true;}
-menuEl.addEventListener("click",e=>{if(e.target===menuEl)closeMenu();});
-$("#menuBtn").onclick=openMenu;$("#pgMenu").onclick=()=>{if(role()==="ADMIN")openMenu();else nav("dash");};
-$("#reqBtn").onclick=()=>nav("requests");$("#notifBtn").onclick=()=>nav("notifications");$("#meBtn").onclick=()=>{if(navActive()==="me")nav("dash");else nav("me");};
+/* Settings and Sign out live in the top bar; the menu tray is gone (everything else is in the bottom nav or the +). */
+$("#settingsBtn").replaceChildren(msvg("gear",18));$("#signoutBtn").replaceChildren(msvg("logout",18));
+function signOutSheet(){openSheet("Sign out?",el("p",{class:"pre",style:"margin:0 0 10px"},"You can sign back in with Google any time."),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Keep me signed in"),el("button",{class:"btn red",onclick:()=>{closeSheet();nav("signout");}},"Sign out")));}
+function openMenu(){nav("settings");}function closeMenu(){}
+$("#settingsBtn").onclick=()=>{closeFab();nav("settings");};$("#signoutBtn").onclick=()=>{closeFab();signOutSheet();};
+/* top-bar avatar toggles the Profile page (the hidden dashboards/requests/notifications icons keep their handlers) */
 $("#demoChip").onclick=()=>{S.me=null;save();show("login");};
 $("#pgBack").onclick=()=>goBack();
-$("#pgTop").onclick=e=>{const b=e.target.closest("button[data-id],a[data-id]");if(!b)return;const id=b.dataset.id;const go={menuBtn:()=>openMenu(),dbBtn:()=>nav("insights"),reqBtn:()=>nav("requests"),notifBtn:()=>nav("notifications"),meBtn:()=>{if(navActive()==="me")nav("dash");else nav("me");}}[id];if(go){e.preventDefault();go();}};
+$("#dbBtn").onclick=()=>nav("insights");$("#reqBtn").onclick=()=>nav("requests");$("#notifBtn").onclick=()=>nav("notifications");$("#meBtn").onclick=()=>{closeFab();if(navActive()==="me")nav("dash");else nav("me");};
+{const pm=$("#pgMenu");if(pm)pm.hidden=true;}
+$("#pgTop").onclick=e=>{const b=e.target.closest("button[data-id],a[data-id]");if(!b)return;const id=b.dataset.id;const go={settingsBtn:()=>nav("settings"),signoutBtn:()=>signOutSheet(),dbBtn:()=>nav("insights"),reqBtn:()=>nav("requests"),notifBtn:()=>nav("notifications"),meBtn:()=>{if(navActive()==="me")nav("dash");else nav("me");}}[id];if(go){e.preventDefault();go();}};
 function nav(go){
  const [page,arg]=go.split(":");
  if(page==="dash"){PEEK=null;show("dash");renderDash();return;}
@@ -1938,13 +1959,31 @@ function kitPicker(){
 /* ---------- bottom icon rows ----------
    Dashboard: Dashboard · Requests · Notifications · Profile · + (time pills sit on their own row above).
    Add task: Task / Meeting type · the + menu's other adds as icons · × close. */
-function navBtn(ic,label,fn,badge,cls){return el("button",{class:"nv","aria-label":label+(badge?" ("+badge+")":""),title:label,onclick:fn},el("span",{class:"ic"+(cls?" "+cls:"")},typeof ic==="string"?msvg(ic,20):ic),el("span",{class:"nlab"},label),badge?el("span",{class:"badge"},String(badge)):null);}
+/* soft hyphens so long tab labels wrap at a natural break instead of overflowing a 50px tab */
+const HYPH={Dashboard:"Dash\u00adboard",Attendance:"Atten\u00addance",Notifications:"Notifi\u00adcations",Requests:"Re\u00adquests"};
+const hyph=l=>l.split(" ").map(w=>HYPH[w]||(w.length>=10?w.slice(0,Math.ceil(w.length/2))+"\u00ad"+w.slice(Math.ceil(w.length/2)):w)).join(" ");
+function navBtn(ic,label,fn,badge,cls){return el("button",{class:"nv","aria-label":label+(badge?" ("+badge+")":""),title:label,onclick:fn},el("span",{class:"ic"+(cls?" "+cls:"")},typeof ic==="string"?msvg(ic,20):ic),el("span",{class:"nlab"},hyph(label)),badge?el("span",{class:"badge"},String(badge)):null);}
+/* Folders tab: a small popover with the two Drive pages; tap again or outside to close. */
+function foldersBtn(act){
+ const b=navBtn("folder","Folders",()=>{const open=b.querySelector(".navpop");if(open){open.remove();b.setAttribute("aria-expanded","false");return;}closeFab();
+  const pop=el("div",{class:"navpop",role:"menu"},
+   el("button",{role:"menuitem",onclick:e=>{e.stopPropagation();pop.remove();nav("drive");}},el("span",{class:"pi t-money"},msvg("folder",16)),el("span",{},"Drive folders"),el("small",{},"Invoices · bills · GST pack")),
+   el("button",{role:"menuitem",onclick:e=>{e.stopPropagation();pop.remove();nav("vault:SHARED_DRIVE_LINK");}},el("span",{class:"pi t-client"},msvg("drive",16)),el("span",{},"Shared links"),el("small",{},"Folders shared with clients")));
+  b.appendChild(pop);b.setAttribute("aria-expanded","true");
+  /* keep the popover inside the phone: the Folders tab sits near the right edge */
+  {const ph=$("#phone").getBoundingClientRect(),r=pop.getBoundingClientRect();let dx=0;if(r.right>ph.right-8)dx=ph.right-8-r.right;if(r.left+dx<ph.left+8)dx=ph.left+8-r.left;pop.style.transform=`translateX(calc(-50% + ${Math.round(dx)}px))`;}
+  /* outside tap closes; a tap on the tab itself is left to the tab's own handler, which toggles */
+  setTimeout(()=>document.addEventListener("click",function off(ev){if(!pop.isConnected){document.removeEventListener("click",off,true);return;}if(!pop.contains(ev.target)&&!b.contains(ev.target)){pop.remove();b.setAttribute("aria-expanded","false");document.removeEventListener("click",off,true);}},true),0);});
+ b.setAttribute("aria-haspopup","menu");b.setAttribute("aria-expanded","false");
+ if(act==="drive"||act==="vault"){b.classList.add("on");b.setAttribute("aria-current","page");}
+ return b;
+}
 let PEEK=null; // {label, open}: a list page's add form, minimised to a bar above the nav row
 const pageSig=()=>{const t=typeof HIST!=="undefined"&&HIST[HIST.length-1];return t?t.key+":"+(t.a&&t.a[0]!=null?t.a[0]:""):"";};
 function openListFlow(view,label,form,expanded){nav(view);PEEK={label,open:form,sig:pageSig()};if(expanded)form();else renderPeek();}
 function renderPeek(){const pk=$("#peek");if(!pk)return;const here=!!PEEK&&!$("#s-page").hidden&&pageSig()===PEEK.sig,on=here&&sheetDim.hidden;pk.hidden=!on;$("#s-page").classList.toggle("peeking",here);if(!on)return;
  pk.replaceChildren(el("button",{class:"peekbtn","aria-label":PEEK.label+" (expand)",onclick:()=>{pk.hidden=true;PEEK.open();}},el("span",{class:"pplus"},msvg("plus",18,2.5)),el("b",{},PEEK.label),el("span",{class:"pchev"},svg('<path d="m6 15 6-6 6 6"/>',20,2.25))));}
-const NAVKEYS=["insights","requests","notifications","me"];
+const NAVKEYS=["insights","requests","notifications","me","attendance","drive","vault"];
 function navActive(){if(!$("#s-dash").hidden)return "home";if($("#s-page").hidden)return null;const t=typeof HIST!=="undefined"&&HIST[HIST.length-1];return t&&NAVKEYS.includes(t.key)?t.key:null;}
 function afterShow(name){const g=$("#gNav");if(!g)return;if(name!=="page")PAGEX=null;$("#phone").classList.toggle("addmode",name==="add");const on=(name==="dash"||name==="page"||name==="add")&&!!me();g.hidden=!on;$("#phone").classList.toggle("hasnav",on);if(on)renderDashNav();if(name!=="page"){const pk=$("#peek");if(pk)pk.hidden=true;}closeFab&&!$("#fab").hidden&&closeFab();syncCorner();}
 function renderDashNav(){const r=role(),m=me();if(!m||!$("#dashNavL"))return;const act=navActive();
@@ -1954,8 +1993,9 @@ function renderDashNav(){const r=role(),m=me();if(!m||!$("#dashNavL"))return;con
  const nb=(k,ic,l,b)=>{const x=navBtn(ic,l,tog(k),b);if(act===k){x.classList.add("on");x.setAttribute("aria-current","page");}return x;};
  /* Dashboard · Requests · [+] · Notifications · Home — the + sits in the middle; Profile lives in the top bar */
  const home=navBtn("home","Home",()=>{closeFab();if(!sheetDim.hidden){PEEK=null;closeSheet();}nav("dash");});if(act==="home"){home.classList.add("on");home.setAttribute("aria-current","page");}
- $("#dashNavL").replaceChildren(...(r==="ADMIN"?[nb("insights","chart","Dashboard"),nb("requests","inbox","Requests",openReq)]:[nb("notifications","bell","Notifications",unread)]));
- $("#dashNavR").replaceChildren(...(r==="ADMIN"?[nb("notifications","bell","Notifications",unread),home]:[home]));
+ /* Admin: Dashboard · Requests · Attendance · [+] · Notifications · Folders · Home; others: Attendance · Notifications · [+] · Home */
+ $("#dashNavL").replaceChildren(...(r==="ADMIN"?[nb("insights","chart","Dashboard"),nb("requests","inbox","Requests",openReq),nb("attendance","usercheck","Attendance")]:[nb("attendance","usercheck","Attendance"),nb("notifications","bell","Notifications",unread)]));
+ $("#dashNavR").replaceChildren(...(r==="ADMIN"?[nb("notifications","bell","Notifications",unread),foldersBtn(act),home]:[home]));
 }
 /* ---------- finance helpers ---------- */
 const PAGES={};
@@ -2252,7 +2292,7 @@ function clientForm(c){
  indiaWrap.hidden=v.country!=="IN";indiaOnly.hidden=v.country!=="IN";syncState();
  page(c?c.name:"Add client",[el("div",{style:"padding:12px"},field("Name",inp("name","Client name")),field("Business name",inp("businessName","Legal name printed on invoices")),field("Email",inp("email","accounts@client.com","email")),field("WhatsApp number",inp("phone","+91 …","tel")),field("Country",country),indiaWrap,hint,indiaOnly,field("Billing address",el("textarea",{class:"in",oninput:e=>{v.address=e.target.value;}},v.address||"")),
   el("p",{class:"pre"},"Tax type is picked automatically: same state as your company ("+(GST_STATES[S.settings.stateCode]||S.settings.stateCode)+") → CGST+SGST, another Indian state → IGST, outside India → export invoice at 0% under LUT."))],
-  [zoneActions(pageX(),c?el("button",{class:"btn ghost",onclick:()=>c.kit?PAGES.kit(c.id):kitCreate(c)},c.kit?"Client kit":"Create kit"):null,el("button",{class:"btn blue",onclick:()=>{if(!v.name.trim())return toast("Name is required","err");v.pan=(v.pan||"").toUpperCase().trim();if(v.pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v.pan))return toast("PAN must look like AAACZ1234F","err");v.gstin=(v.gstin||"").toUpperCase().trim();v.tdsPercent=Number(v.tdsPercent)||0;if(v.country!=="IN"){v.stateCode="";v.stateName="";v.pan="";v.tdsPercent=0;v.gstin="";}if(c)Object.assign(c,v);else S.clients.push(Object.assign({id:uid(),onHold:false},v));save();toast(c?"Client saved":"Client added · shows in filters once it has a task");PAGES.clients();}},"Save"))]);
+  [zoneActions(pageX(),c?el("button",{class:"btn ghost",onclick:()=>c.kit?PAGES.kit(c.id):kitCreate(c)},c.kit?"Client kit":"Create kit"):null,c?el("button",{class:"btn ghost",onclick:()=>trackerSheet(c)},"Tracking link"):null,el("button",{class:"btn blue",onclick:()=>{if(!v.name.trim())return toast("Name is required","err");v.pan=(v.pan||"").toUpperCase().trim();if(v.pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v.pan))return toast("PAN must look like AAACZ1234F","err");v.gstin=(v.gstin||"").toUpperCase().trim();v.tdsPercent=Number(v.tdsPercent)||0;if(v.country!=="IN"){v.stateCode="";v.stateName="";v.pan="";v.tdsPercent=0;v.gstin="";}if(c)Object.assign(c,v);else S.clients.push(Object.assign({id:uid(),onHold:false},v));save();toast(c?"Client saved":"Client added · shows in filters once it has a task");PAGES.clients();}},"Save"))]);
 }
 /* ---------- requests ---------- */
 let reqTab="ALL",reqFin="ALL",reqTeam=null,reqClient=null;
@@ -2298,10 +2338,15 @@ function openNotif(n){n.read=true;save();
  if(n.go){nav(n.go);return;}
  if(n.kind==="LEAVE"&&role()==="ADMIN"){reqTab="HR";nav("requests");return;}
  PAGES.notifications();}
+let notifTeam=null,notifClient=null;
 PAGES.notifications=function(){
  const m=me();const all=S.notifs.filter(n=>n.for===m.id);
  const grp=n=>["LEAVE"].includes(n.kind)?"PEOPLE":n.kind.startsWith("MONEY")?"MONEY":"TASKS";
- const mine=all.filter(n=>notifTab==="ALL"||grp(n)===notifTab||(notifTab==="UNREAD"&&!n.read));
+ /* Team / Client rows: a notification belongs to its task's team and client; a money one to its invoice's client */
+ const taskOf=n=>n.task?S.tasks.find(x=>x.id===n.task):null,invOf=n=>n.invoice?S.invoices.find(i=>i.id===n.invoice):null;
+ const teamOf=n=>(taskOf(n)||{}).team||null,clientOf=n=>(taskOf(n)||invOf(n)||{}).client||null;
+ const tcOk=n=>(!notifTeam||teamOf(n)===notifTeam)&&(!notifClient||clientOf(n)===notifClient);
+ const mine=all.filter(n=>(notifTab==="ALL"||grp(n)===notifTab||(notifTab==="UNREAD"&&!n.read))&&tcOk(n));
  const day=iso=>{const o=dayOff(iso);return o===0?"Today":o===-1?"Yesterday":fmtD(iso);};
  const rows=[];let last="";
  for(const n of mine){const d=day(n.at);if(d!==last){rows.push(el("div",{class:"sech"},d));last=d;}
@@ -2311,10 +2356,16 @@ PAGES.notifications=function(){
    el("span",{class:"nic",html:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">'+NI[ic]+'</svg>'}),
    el("span",{class:"nt"},t?el("b",{class:"ntt"},t.title):null,t?el("span",{class:"nwhat"},n.text):el("b",{},n.text),el("small",{},sub)),n.read?null:el("i",{class:"ndot","aria-label":"unread"}),(t||n.invoice||n.go)?el("span",{class:"nchev"},"›"):null));}
  const unread=all.filter(n=>!n.read).length;
- page("Notifications",[el("div",{class:"nhint"},"Updates on tasks, people and money. Things that need your decision are in ",el("button",{class:"linkish",onclick:()=>nav("requests")},"Requests.")),
-  ...(rows.length?rows:[el("div",{class:"empty"},"No updates here.")])],
-  [zoneTabs([["ALL","All"],["UNREAD","Unread"+(unread?" · "+unread:"")],["TASKS","Tasks"],["PEOPLE","People"],["MONEY","Money"]],notifTab,k=>{notifTab=k;PAGES.notifications();}),
-   zoneActions(el("button",{class:"btn ghost",onclick:()=>{all.forEach(n=>n.read=true);save();PAGES.notifications();}},"Mark all read"),el("button",{class:"btn",onclick:()=>nav("dash")},"Task list"))]);
+ const nUnread=f=>all.filter(n=>!n.read&&f(n)).length;
+ const prow=(label,items,cur,set)=>el("div",{class:"wrow drow"},el("span",{class:"plab"},label),el("button",{class:"dk"+(cur===null?" on":""),onclick:()=>{set(null);PAGES.notifications();}},"All"),
+   ...items.map(([id,l,c])=>el("button",{class:"dk"+(cur===id?" on":""),onclick:()=>{set(cur===id?null:id);PAGES.notifications();}},l+(c?" · "+c:""))));
+ page("Notifications",[el("div",{class:"nhint"},"Updates on tasks, people and money. Things that need your decision are in ",el("button",{class:"linkish",onclick:()=>nav("requests")},"Requests."),unread?[" · ",el("button",{class:"linkish",onclick:()=>{all.forEach(n=>n.read=true);save();PAGES.notifications();}},"Mark all read")]:null),
+  ...(rows.length?rows:[el("div",{class:"empty"},notifTeam||notifClient?"No updates for this team or client.":"No updates here.")])],
+  [el("div",{class:"dbz"},
+    prow("Teams",S.teams.map(t=>[t.id,t.name,nUnread(n=>teamOf(n)===t.id)]),notifTeam,v=>{notifTeam=v;}),
+    prow("Clients",S.clients.map(c=>[c.id,c.name,nUnread(n=>clientOf(n)===c.id)]),notifClient,v=>{notifClient=v;})),
+   /* the main tabs stay lowest, nearest the thumb */
+   zoneTabs([["ALL","All"],["UNREAD","Unread"+(unread?" · "+unread:"")],["TASKS","Tasks"],["PEOPLE","People"],["MONEY","Money"]],notifTab,k=>{notifTab=k;PAGES.notifications();})]);
 };
 PAGES.me=function(){
  const m=me();const mine=S.tasks.filter(t=>t.assignees.includes(m.id));
@@ -2667,6 +2718,38 @@ const KIT_WAYS=["Email & password","Sign in with Google","Sign in with Microsoft
 const kitNames=()=>S.settings.kitFolders&&S.settings.kitFolders.length?S.settings.kitFolders:["Brand kit","Credentials","Work","Reports"];
 const kitWho=c=>c.businessName||c.name;
 const kitUrl=c=>"https://drive.google.com/drive/folders/kit"+c.id;
+/* Client tracking link: one page per client (no login) with their tasks, files and money. */
+const portalToken=c=>{if(!c.token){c.token=(c.id+c.name).toLowerCase().replace(/[^a-z0-9]/g,"").slice(0,6)+Math.abs([...c.id+c.name].reduce((a,ch)=>a*31+ch.charCodeAt(0)|0,7)).toString(36);save();}return c.token;};
+const portalUrl=c=>"https://tasks.eraofmarketing.com/c/"+portalToken(c);
+function trackerSheet(c){const url=portalUrl(c);
+ openSheet("Client tracking link",el("p",{class:"pre",style:"margin:0 0 8px"},kitWho(c)+" opens this link (no login) to see their work's progress, their Drive folder, upcoming and past payments, and download invoices. They see task names and dates only — never hours."),
+  el("div",{class:"card",style:"margin:0 0 10px;font-family:ui-monospace,monospace;font-size:12px;overflow-wrap:anywhere"},url),
+  el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{try{navigator.clipboard.writeText(url).then(()=>toast("Link copied"),()=>toast(url));}catch(e){toast(url);}}},"Copy link"),el("button",{class:"btn ghost",onclick:()=>{closeSheet();toast("Sent to "+(c.email||"the client")+" · email + WhatsApp");}},"Send"),el("button",{class:"btn blue",onclick:()=>{closeSheet();nav("portal:"+c.id);}},"Preview")));}
+PAGES.portal=function(cid){
+ const c=clientById(cid);if(!c)return nav("clients");
+ const all=S.tasks.filter(t=>t.client===cid&&t.type!=="MEETING");
+ const asks=all.filter(t=>t.forClient),work=all.filter(t=>!t.forClient);
+ const done=work.filter(t=>t.status==="COMPLETED").length;
+ const due=t=>t.deadline?t.start:t.end;
+ const status=t=>{const col=rowColour(t);return t.status==="COMPLETED"?"Done":t.doubt?"Query raised":t.paused?"On hold":col==="green"?"In progress":col==="red"?(t.forClient?"Waiting for you · overdue":"Not started · overdue"):(t.forClient?"Waiting for you":"Not started");};
+ const row=t=>el("li",{class:"row portal "+rowColour(t)},el("div",{class:"rtop"},el("div",{class:"title"},el("b",{},t.title))),el("div",{class:"rline"},el("div",{class:"chips"},el("span",{class:"chip"},status(t))),el("div",{class:"rp"},el("span",{class:"pill"},(t.forClient?"Needed by ":"Due ")+fmtD(due(t))))));
+ const list=(title,ts,empty)=>[el("div",{class:"sech",style:"margin-top:12px"},title),ts.length?el("ul",{class:"list",style:"padding:0 12px"},...ts.sort((a,b)=>new Date(due(a))-new Date(due(b))).map(row)):el("div",{class:"empty"},empty)];
+ const inv=S.invoices.filter(i=>i.client===cid&&i.issued&&i.status!=="CANCELLED"&&i.status!=="AWAITING_APPROVAL");
+ const upcoming=inv.filter(i=>i.status!=="PAID"&&balance(i)>0).sort((a,b)=>new Date(a.due)-new Date(b.due));
+ const paid=inv.filter(i=>i.status==="PAID").sort((a,b)=>new Date(b.paidAt)-new Date(a.paidAt));
+ const money=(label,i,amt,when)=>el("div",{class:"item",style:"cursor:default"},el("div",{class:"m"},el("b",{},DOCL[i.docType]+" "+(i.number||"")),el("small",{},label+" · "+when)),el("div",{class:"amt",style:when.startsWith("overdue")?"color:#dc2626":""},inr(amt)),el("button",{class:"pill",style:"height:30px;margin-left:8px",onclick:()=>toast("Downloads "+(i.number||"the PDF"))},"PDF ↓"));
+ page(kitWho(c)+" · tracker",[
+  el("div",{class:"nhint"},el("b",{},"Preview · "),"this is what ",kitWho(c)," sees at ",el("span",{style:"font-family:ui-monospace,monospace;font-size:12px"},portalUrl(c))),
+  el("div",{class:"card",style:"margin:12px"},el("h4",{},"Work in progress"),el("div",{class:"kv"},el("span",{},done+" of "+work.length+" done"),el("span",{},work.length-done+" open")),el("div",{style:"height:8px;border-radius:999px;background:var(--chip);overflow:hidden;margin-top:6px"},el("div",{style:"height:100%;width:"+(work.length?Math.round(done/work.length*100):0)+"%;background:linear-gradient(90deg,#34d399,#059669)"}))),
+  ...(asks.length?list("Things we need from you",asks,""):[]),
+  ...list("Your work",work.filter(t=>t.status!=="COMPLETED"),"Nothing in progress right now."),
+  ...(work.some(t=>t.status==="COMPLETED")?list("Done",work.filter(t=>t.status==="COMPLETED"),""):[]),
+  el("div",{class:"sech",style:"margin-top:12px"},"Files"),
+  el("div",{class:"item",onclick:()=>toast(c.kit?"Opens "+kitUrl(c):"Being set up")},el("div",{class:"m"},el("b",{},c.kit?"Open your Drive folder":"Your Drive folder is being set up"),el("small",{},c.kit?"Final work is uploaded here · "+kitUrl(c):"We'll add it to this page")),c.kit?el("span",{class:"pill"},"Open ↗"):null),
+  el("div",{class:"sech",style:"margin-top:12px"},"Upcoming payments"),...(upcoming.length?upcoming.map(i=>money("Due",i,balance(i),(dayOff(i.due)<0?"overdue · ":"")+fmtD(i.due))):[el("div",{class:"empty"},"Nothing due. Thank you!")]),
+  el("div",{class:"sech",style:"margin-top:12px"},"Last payments"),...(paid.length?paid.slice(0,5).map(i=>money("Paid",i,total(i),fmtD(i.paidAt))):[el("div",{class:"empty"},"No payments yet.")]),
+  el("div",{class:"nhint",style:"margin-top:12px"},S.settings.company+" · "+S.settings.email+" · +"+S.settings.phone)],[]);
+};
 function kitCreate(c){
  const names=kitNames();const steps=[`Folder “Client Kit › ${kitWho(c)}” in your Drive`,...names.map(n=>`Folder “${n}”`),`Google Sheet “${kitWho(c)} — Credentials” with the How-to-fill guide`,c.email?`Shared with ${c.email} as Editor`:"Not shared yet — add the client's email to share"];
  const list=el("div",{class:"card",style:"margin:0 0 10px"});openSheet("Creating client kit…",list);
@@ -2713,6 +2796,7 @@ PAGES.kit=function(cid){
   el("div",{class:"card dcard"},el("div",{class:"dhead"},el("h4",{},"📁 "+kitWho(c)),el("button",{class:"pill dbtn",onclick:()=>driveShare("kit"+c.id,"Client Kit › "+kitWho(c),()=>PAGES.kit(c.id),{team:true,scopes:[{key:"kit"+c.id,name:"Whole kit",label:"Client Kit › "+kitWho(c)},...names.map(n=>({key:"kit"+c.id+"/"+n,name:n,label:kitWho(c)+" › "+n}))]})},"👤+ Share"),el("button",{class:"pill dbtn",onclick:()=>toast("Opens the kit in Drive")},"Open ↗")),
    el("div",{class:"dgrid"},...names.map((n,ix)=>fol(ic[ix]||"📁",n,ix===0?"Client uploads logos, fonts, photos":ix===1?"Sheet: "+kitWho(c)+" — Credentials":ix===2?"We upload the work we make":"Monthly reports for the client",ix===1?()=>kitSheetPreview(c):null))),
    el("div",{class:"kv",style:"margin-top:10px"},el("span",{},c.kit.sharedWith?"Shared with "+c.kit.sharedWith+" (Editor)":"Not shared with the client yet"),el("button",{class:"pill",style:"height:30px",onclick:()=>{const u=kitUrl(c);try{navigator.clipboard.writeText(u).then(()=>toast("Link copied"),()=>toast(u));}catch(e){toast(u);}}},"Copy link"))),
+  el("div",{class:"card"},el("h4",{},"Client tracking link"),el("div",{class:"kv"},el("span",{style:"font-family:ui-monospace,monospace;font-size:12px;overflow-wrap:anywhere"},portalUrl(c)),el("button",{class:"pill",style:"height:30px;flex:none",onclick:()=>trackerSheet(c)},"Share link")),el("p",{class:"pre",style:"margin:6px 0 0"},"Their tasks, dates and status · this Drive folder · payments and invoices. No hours are shown.")),
   el("div",{class:"card"},el("h4",{},"Send to client"),el("div",{class:"kv"},el("span",{},"Last sent"),el("span",{},c.kit.sentAt?fmtD(c.kit.sentAt)+" · "+c.kit.sentVia.join(" + "):"never")),
    el("div",{class:"btnrow",style:"margin-top:8px"},el("button",{class:"btn ghost",disabled:!c.email||null,onclick:()=>kitSend(c)},"✉️ Email"),el("button",{class:"btn ghost",disabled:!c.phone||null,onclick:()=>kitSend(c)},"💬 WhatsApp"))),
   el("div",{class:"sech"},"Saved in the app · encrypted"),
