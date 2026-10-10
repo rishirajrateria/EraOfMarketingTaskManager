@@ -10,7 +10,7 @@ import { addTaskInventory, createTask, previewSlot } from "@/server/tasks/create
 import { uploadAttachment } from "@/server/tasks/manage";
 import { AddTaskHeader } from "@/components/tasks/AddTaskHeader";
 import { AddTaskBody } from "@/components/tasks/AddTaskBody";
-import { AddTaskBottomBar, TaskTypeSheet, type Shortcut } from "@/components/tasks/AddTaskFooter";
+import { AddTaskBottomBar, type Shortcut } from "@/components/tasks/AddTaskFooter";
 import { AddTaskGreenRows, AddTaskSummary } from "@/components/tasks/AddTaskRows";
 import { AssigneeSheet, ScheduleSheet } from "@/components/tasks/AddTaskDetails";
 import { RepeatSheet } from "@/components/tasks/RecurrencePicker";
@@ -66,7 +66,6 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [assigneesOpen, setAssigneesOpen] = useState(false);
   const [repeatOpen, setRepeatOpen] = useState(false);
-  const [typeOpen, setTypeOpen] = useState(false);
   const [nextSlot, setNextSlot] = useState<Date | null>(null);
 
   const patch = useCallback((p: Partial<AddTaskForm>) => setForm((f) => ({ ...f, ...p })), []);
@@ -74,7 +73,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
   // Reset everything each time the sheet opens (or the entry mode changes while open).
   useEffect(() => {
     if (!open) return;
-    // "+" and "Work" open a task; the Meet icon opens a meeting. The type icon in the bottom bar switches later.
+    // "+" and "Work" open a task; the Meet icon opens a meeting. Meet / Work in the bottom bar switch later.
     const type: TaskMode = mode === "MEETING" ? "MEETING" : "WORK";
     setChosen(type);
     setForm(emptyForm(type, data.me.id, data.role));
@@ -85,7 +84,6 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
     setScheduleOpen(false);
     setAssigneesOpen(false);
     setRepeatOpen(false);
-    setTypeOpen(false);
   }, [open, mode, data.me.id, data.role]);
 
   // WORK is single-select: auto-select the first work type of the team(s) when the current one doesn't belong.
@@ -135,7 +133,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
 
   const assignees = useMemo(() => allowedAssignees(data, chosen ?? "WORK"), [data, chosen]);
   const meeting = chosen === "MEETING";
-  const subSheetOpen = scheduleOpen || assigneesOpen || repeatOpen || typeOpen;
+  const subSheetOpen = scheduleOpen || assigneesOpen || repeatOpen;
 
   const choose = (type: TaskMode) => {
     if (type === chosen) return;
@@ -237,13 +235,10 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
             onShortcut={setShortcut}
             onType={choose}
             onOpenSchedule={() => setScheduleOpen(true)}
-            onOpenTypeChooser={() => setTypeOpen(true)}
             onClose={close}
           />
         </div>
       </Sheet>
-
-      <TaskTypeSheet open={typeOpen} onClose={() => setTypeOpen(false)} type={chosen} onType={choose} />
       <ScheduleSheet open={scheduleOpen} onClose={() => setScheduleOpen(false)} value={form.scheduledStart} tz={data.tz} onSet={(scheduledStart) => patch({ scheduledStart })} onError={(m) => toast(m, "err")} />
       <AssigneeSheet open={assigneesOpen} onClose={() => setAssigneesOpen(false)} form={liveForm} patch={patch} data={data} assignees={assignees} />
       {!meeting ? (

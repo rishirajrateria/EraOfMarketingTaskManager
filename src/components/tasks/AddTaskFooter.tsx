@@ -1,6 +1,5 @@
 "use client";
-import { CalendarDays, ClipboardList, X } from "lucide-react";
-import { ActionList, Sheet } from "@/components/ui/Sheet";
+import { CalendarDays, X } from "lucide-react";
 import { clsx } from "@/lib/clsx";
 import { shortcutStart, type AddTaskForm, type TaskMode } from "@/components/tasks/add-task-helpers";
 
@@ -35,21 +34,7 @@ function MeetIcon({ size = 22 }: { size?: number }) {
   );
 }
 
-/** Small chooser opened by the type icon: add a task/work, or schedule a meeting. */
-export function TaskTypeSheet({ open, onClose, type, onType }: { open: boolean; onClose: () => void; type: TaskMode | null; onType: (t: TaskMode) => void }) {
-  return (
-    <Sheet open={open} onClose={onClose} title="What do you want to add?">
-      <ActionList
-        items={[
-          { label: "Add a task / work", hint: type === "WORK" ? "selected" : "Drive folder, Meet, Chat space", onClick: () => { onType("WORK"); onClose(); } },
-          { label: "Schedule a meeting", hint: type === "MEETING" ? "selected" : "Calendar event with Meet link", onClick: () => { onType("MEETING"); onClose(); } },
-        ]}
-      />
-    </Sheet>
-  );
-}
-
-/** BOTTOM BAR (56px): calendar (opens "When should it start?") + upnext/Tom/today (green 62%) · Meet / Work / type selector / X (glass 38%). */
+/** BOTTOM BAR (56px): calendar (opens "When should it start?") + upnext/Tom/today (green 62%) · Meet / Work / X (glass 38%). */
 export function AddTaskBottomBar({
   form,
   type,
@@ -57,7 +42,6 @@ export function AddTaskBottomBar({
   onShortcut,
   onType,
   onOpenSchedule,
-  onOpenTypeChooser,
   onClose,
 }: {
   form: AddTaskForm;
@@ -66,7 +50,6 @@ export function AddTaskBottomBar({
   onShortcut: (kind: Shortcut) => void;
   onType: (type: TaskMode) => void;
   onOpenSchedule: () => void;
-  onOpenTypeChooser: () => void;
   onClose: () => void;
 }) {
   const startIs = (kind: "tomorrow" | "today") => !!form.scheduledStart && form.scheduledStart === shortcutStart(kind, new Date(), tz);
@@ -97,10 +80,6 @@ export function AddTaskBottomBar({
           className={clsx("no-select glass-chip h-[30px] rounded-full px-3 text-xs font-semibold leading-none text-ink", type === "WORK" && "ring-1 ring-ink/50")}
         >
           Work
-        </button>
-        <button type="button" onClick={onOpenTypeChooser} aria-label="Choose task or meeting" title={type === "MEETING" ? "Meeting" : "Task / work"} className="relative flex h-10 w-8 items-center justify-center">
-          <ClipboardList size={22} strokeWidth={1.75} aria-hidden />
-          <span className={clsx("absolute bottom-1.5 right-0.5 h-2 w-2 rounded-full", type === "MEETING" ? "bg-[#00AC47]" : "bg-[#2563EB]")} aria-hidden />
         </button>
         <button type="button" onClick={onClose} aria-label="Close and go back to all tasks" className="flex h-10 w-8 items-center justify-center">
           <X size={24} strokeWidth={2.25} aria-hidden />

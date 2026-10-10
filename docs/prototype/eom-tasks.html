@@ -593,7 +593,6 @@ select.in{padding-right:10px}
       <div class="w">
         <button class="sq" id="tMeet" aria-label="Meeting"><svg width="26" height="26" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h5v5H3z" fill="#00832D"/><path d="M3 11h7v5H5a2 2 0 0 1-2-2z" fill="#0066DA"/><path d="M10 6h5v5h-5z" fill="#2684FC"/><path d="M10 11h5v5h-5z" fill="#00AC47"/><path d="M15 6h.5a1.5 1.5 0 0 1 1.5 1.5V11h-2z" fill="#FFBA00"/><path d="M15 11h2v3.5a1.5 1.5 0 0 1-1.5 1.5H15z" fill="#00AC47"/><path d="M17 10.2 21 7v8l-4-3.2z" fill="#00AC47"/></svg></button>
         <button class="pill" id="tWorkBtn">Work</button>
-        <button class="sq" id="tType" aria-label="Choose task or meeting" style="position:relative"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/></svg><span id="tTypeDot" style="position:absolute;right:0;bottom:-2px;width:8px;height:8px;border-radius:999px;background:#2563eb"></span></button>
         <button class="sq" id="tClose" aria-label="Close"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       </div>
     </div>
@@ -955,16 +954,14 @@ function openDetail(t,attach){
 let AF=null; // form
 function openAdd(mode,edit){
  const m=me(),r=role();
- AF={notes:edit&&edit.voice?[{secs:42,url:null}]:[],rec:edit?.rec||null,prefs:edit?[...(edit.prefs||[])]:[],edit:edit||null,type:mode==="CHOOSE"?null:mode,title:edit?edit.title:"",desc:edit?edit.desc:"",hours:edit?edit.mins/60:2,work:edit?edit.work:S.workTypes[0].id,client:edit?edit.client:"",teams:edit?[edit.team]:[],assignees:edit?[...edit.assignees]:[],date:edit?dk(new Date(edit.start)):"",time:edit?fmtTimeInput(edit.start):"10:00",important:!!edit?.important,recurring:!!edit?.recurring,recur:"WEEKLY",voice:!!edit?.voice,protect:!!edit?.protected,shortcut:edit?null:"upnext"};
+ AF={notes:edit&&edit.voice?[{secs:42,url:null}]:[],rec:edit?.rec||null,prefs:edit?[...(edit.prefs||[])]:[],edit:edit||null,type:mode==="MEETING"?"MEETING":"WORK",title:edit?edit.title:"",desc:edit?edit.desc:"",hours:edit?edit.mins/60:2,work:edit?edit.work:S.workTypes[0].id,client:edit?edit.client:"",teams:edit?[edit.team]:[],assignees:edit?[...edit.assignees]:[],date:edit?dk(new Date(edit.start)):"",time:edit?fmtTimeInput(edit.start):"10:00",important:!!edit?.important,recurring:!!edit?.recurring,recur:"WEEKLY",voice:!!edit?.voice,protect:!!edit?.protected,shortcut:edit?null:"upnext"};
  if(r==="EXECUTIVE")AF.assignees=[m.id];
  AF.guests=edit?[...(edit.guests||[])]:[];AF.people=edit?(edit.type==="MEETING"?[...edit.assignees]:[]):[];AF.noClientEmail=false;
  AF.mo=edit?.mo?JSON.parse(JSON.stringify(edit.mo)):{meet:true,reminders:[{m:"popup",n:10,u:"minutes"}],modify:false,invite:true,see:true,location:"",busy:true,vis:"default",color:"",allDay:false,tz:S.settings.tz||"Asia/Kolkata"};
  if(mode==="MEETING"&&!edit)AF.hours=0.5;
  show("add");renderAdd();
- if(mode==="CHOOSE")typeChooser();
 }
 const fmtTimeInput=iso=>{const d=new Date(iso);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");};
-function typeChooser(){openSheet("What do you want to add?",actionList([{label:"Add a task / work",hint:AF.type==="WORK"?"selected":"Drive folder, Meet, Chat space",onClick:()=>{AF.type="WORK";closeSheet();renderAdd();}},{label:"Schedule a meeting",hint:AF.type==="MEETING"?"selected":"Calendar event with Meet link",onClick:()=>{AF.type="MEETING";closeSheet();renderAdd();}}]));}
 function loads(){
  const r=role(),m=me();
  let people=r==="ADMIN"?(AF.prefs.length?AF.prefs:S.users.filter(u=>u.role==="EXECUTIVE"&&(!AF.teams.length||AF.teams.includes(u.teamId))).map(u=>u.id)):(AF.assignees.length?AF.assignees:S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===m.teamId).map(u=>u.id));
@@ -1016,7 +1013,6 @@ function renderAdd(){
   el("button",{class:"gpk"+(!AF.date?" on":""),onclick:()=>sc("upnext")},"upnext"),el("button",{class:"gpk"+(AF.date&&AF.shortcut==="tomorrow"?" on":""),onclick:()=>sc("tomorrow")},"Tom"),el("button",{class:"gpk"+(AF.date&&AF.shortcut==="today"?" on":""),onclick:()=>sc("today")},"today"));
  $("#tMeet").className="sq"+(AF.type==="MEETING"?" on":"");
  $("#tWorkBtn").style.boxShadow=AF.type==="WORK"?"0 0 0 1px rgba(0,0,0,.6)":"";
- $("#tTypeDot").style.background=AF.type==="MEETING"?"#00AC47":"#2563eb";
  meetingExtras();
 }
 const fmtSecs=s=>Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
@@ -1092,7 +1088,6 @@ function nextSlot(){const d=new Date();d.setMinutes(0,0,0);d.setHours(d.getHours
 function saveTask(){
  const r=role(),m=me();
  AF.title=$("#tTitle").value.trim();AF.desc=$("#tDesc").value;AF.hours=Number($("#tHours").value)||1;AF.date=$("#tDate").value;AF.time=$("#tTime").value||"10:00";
- if(!AF.type){typeChooser();return;}
  if(!AF.title)return toast("Give it a title","err");
  if(AF.type!=="MEETING"&&r==="ADMIN"&&!AF.teams.length)return toast("Pick a team in the green area","err");
  if(AF.type!=="MEETING"&&!workFor(r==="ADMIN"?AF.teams:[m.teamId]).some(w=>w.id===AF.work))return toast("Pick a work type in the green area","err");
@@ -1111,7 +1106,6 @@ function saveTask(){
 $("#tClose").onclick=()=>{show("dash");renderDash();};
 $("#tMeet").onclick=()=>{if(AF.type!=="MEETING"&&AF.hours>2)AF.hours=0.5;AF.type="MEETING";renderAdd();};
 $("#tWorkBtn").onclick=()=>{AF.type="WORK";renderAdd();};
-$("#tType").onclick=typeChooser;
 $("#tImportant").onclick=()=>{AF.important=!AF.important;renderAdd();};
 $("#tRecur").onclick=()=>recurSheet();
 $("#tProtect").onclick=()=>{AF.protect=!AF.protect;renderAdd();};
