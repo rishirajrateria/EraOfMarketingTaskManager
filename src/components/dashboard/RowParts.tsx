@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 import { Check, Pause, RotateCcw } from "lucide-react";
 import { clsx } from "@/lib/clsx";
 import { fmtMinutes, fmtTime } from "@/lib/time";
@@ -7,13 +7,19 @@ import { actualTone } from "@/server/tasks/state";
 import { REVIEW_FIELD_NAME, type ReviewField } from "@/server/tasks/review-fields";
 import type { TaskRow as Row } from "@/server/tasks/types";
 import { datePill } from "@/components/dashboard/format";
+import { actualTimeLines } from "@/components/dashboard/actual-time";
+import { TimePopover } from "@/components/dashboard/TimePopover";
 
 export const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
 const HOLD_MS = 450;
 
-/** Inline outline icon button on the icon line of a card (details / Drive / Meet / Chat / Call / WhatsApp / Email) — 30×32px; `compact` 26px when a voice-note icon makes it eight. */
-export function IconBtn({ label, onClick, disabled, compact, children }: { label: string; onClick: () => void; disabled?: boolean; compact?: boolean; children: React.ReactNode }) {
+/**
+ * Inline outline icon button on the icon line of a card (details / Drive / Meet / Chat / Call / WhatsApp / Email / voice
+ * notes). The buttons share the space left by the time pill (flex 1 1 0, 20–30px wide), so 7–8 icons and the pill fit
+ * at 360px.
+ */
+export function IconBtn({ label, onClick, disabled, children }: { label: string; onClick: () => void; disabled?: boolean; children: React.ReactNode }) {
   return (
     <button
       type="button"
@@ -26,7 +32,7 @@ export function IconBtn({ label, onClick, disabled, compact, children }: { label
         e.stopPropagation();
         onClick();
       }}
-      className={clsx("flex h-8 shrink-0 items-center justify-center rounded-[10px] text-muted active:bg-chip disabled:opacity-35", compact ? "w-[26px]" : "w-[30px]")}
+      className="flex h-8 min-w-5 max-w-[30px] flex-[1_1_0] items-center justify-center rounded-[10px] p-0 text-muted active:bg-chip disabled:opacity-35 [&>svg]:shrink-0"
     >
       {children}
     </button>
@@ -95,29 +101,37 @@ const PILL = "glass-chip relative inline-flex h-6 items-center rounded-full px-[
 /** No text selection or iOS callout on a long-press. */
 const NO_CALLOUT = "select-none [-webkit-touch-callout:none] [-webkit-user-select:none]";
 
+type PopupProps = { ref: React.Ref<HTMLButtonElement>; expanded: boolean; controls: string; hint: string };
+
 /**
  * A pill that can be reviewed (ADR 0015): start date, time allotted or start time. Hold / right-click → the review menu
- * (request / withdraw / mark reviewed / flag); a red dot shows the pill is under review. A plain tap opens the details.
+ * (request / withdraw / mark reviewed / flag); a red dot shows the pill is under review. A plain tap calls `onTap` (the
+ * details, or the time pill's actual-time bubble — `popup` wires its aria-expanded / aria-controls). `dot` adds the
+ * small currentColor dot after the text that hints there is more behind the tap.
  */
-export function ReviewPill({ t, field, text, className, onMenu, onTap }: { t: Row; field: ReviewField; text: string; className?: string; onMenu: () => void; onTap: () => void }) {
+export function ReviewPill({ t, field, text, className, onMenu, onTap, popup, dot }: { t: Row; field: ReviewField; text: string; className?: string; onMenu: () => void; onTap: () => void; popup?: PopupProps; dot?: boolean }) {
   const { holding, handlers, consumed } = useHoldMenu(onMenu);
   const flagged = t.reviewFields.includes(field);
   const name = REVIEW_FIELD_NAME[field];
   return (
     <button
       type="button"
+      ref={popup?.ref}
       {...handlers}
       onClick={(e) => {
         e.stopPropagation();
         if (!consumed()) onTap();
       }}
-      aria-haspopup="menu"
-      aria-label={`${name[0]!.toUpperCase()}${name.slice(1)}: ${text}${flagged ? " · review requested" : ""} (hold or right-click to review)`}
+      aria-haspopup={popup ? "dialog" : "menu"}
+      aria-expanded={popup?.expanded}
+      aria-controls={popup?.expanded ? popup.controls : undefined}
+      aria-label={`${name[0]!.toUpperCase()}${name.slice(1)}: ${text}${popup?.hint ?? ""}${flagged ? " · review requested" : ""} (${popup ? "tap for the actual time, " : ""}hold or right-click to review)`}
       title={flagged ? `Review requested on the ${name}` : `Hold or right-click to request a review of the ${name}`}
       data-review={flagged || undefined}
       className={clsx(PILL, NO_CALLOUT, holding && "ring-2 ring-primary/40", flagged && "shadow-[inset_0_0_0_1.5px_rgba(239,68,68,.75)]", className)}
     >
       {text}
+      {dot ? <span aria-hidden className="ml-[5px] h-[5px] w-[5px] shrink-0 rounded-full bg-current" data-actual-dot /> : null}
       {flagged ? <span aria-hidden className="absolute -right-1 -top-1 h-[10px] w-[10px] rounded-full bg-[#EF4444] shadow-[0_0_0_2px_var(--bg)]" /> : null}
     </button>
   );
@@ -134,25 +148,40 @@ export function DateHoursPills({ t, tz, onPillMenu, onTap }: { t: Row; tz: strin
   );
 }
 
-/** Scheduled window "11:00am – 3:00pm" (red while the task is late to start), reviewable as the start time. */
-export function TimePill({ t, tz, onPillMenu, onTap }: { t: Row; tz: string; onPillMenu: (field: ReviewField) => void; onTap: () => void }) {
+/**
+ * Scheduled window "11:00am – 3:00pm", reviewable as the start time (hold / right-click → review menu). A tap opens the
+ * actual-time bubble (scheduled / started / finished). Before the start it is red only while late to start; once
+ * started (or finished) its text turns green on time / red late (`actualTone`) with a small dot after it.
+ */
+export function TimePill({ t, tz, onPillMenu }: { t: Row; tz: string; onPillMenu: (field: ReviewField) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLButtonElement>(null);
+  const popId = useId();
+  const close = useCallback(() => setOpen(false), []);
+  const now = new Date();
   const start = t.scheduledStart ? new Date(t.scheduledStart) : null;
   const end = t.scheduledEnd ? new Date(t.scheduledEnd) : null;
-  const late = t.colour === "red" && !t.actualStart;
-  return (
-    <ReviewPill t={t} field="time" text={`${fmtTime(start, tz)} – ${fmtTime(end, tz)}`} className={clsx("font-medium", late ? "text-late" : "text-ink")} onMenu={() => onPillMenu("time")} onTap={onTap} />
-  );
-}
-
-/** Actual start – end once started ("▶ 10:05am – …"): green on time, red late (`actualTone`, ADR 0015). */
-export function ActualPill({ t, tz, now = new Date() }: { t: Row; tz: string; now?: Date }) {
   const tone = actualTone(t, now);
-  if (!tone) return null;
-  const end = t.finishRequestedAt ?? t.actualEnd;
+  const lateToStart = !tone && t.colour === "red" && !t.actualStart;
+  const colour = tone === "red" || lateToStart ? "font-semibold text-late" : tone === "green" ? "font-semibold text-ontime" : "font-medium text-ink";
+  const hint = tone ? ` · actual ${tone === "red" ? "late" : "on time"}` : "";
   return (
-    <span className={clsx(PILL, NO_CALLOUT, "font-semibold", tone === "red" ? "text-late" : "text-ontime")} title={tone === "red" ? "Actual · late" : "Actual · on time"} data-tone={tone}>
-      ▶ {t.actualStart ? fmtTime(new Date(t.actualStart), tz) : "--:--"} – {end ? fmtTime(new Date(end), tz) : "…"}
-    </span>
+    <>
+      <ReviewPill
+        t={t}
+        field="time"
+        text={`${fmtTime(start, tz)} – ${fmtTime(end, tz)}`}
+        className={clsx("shrink-0", colour)}
+        dot={!!tone}
+        popup={{ ref, expanded: open, controls: popId, hint }}
+        onMenu={() => {
+          setOpen(false);
+          onPillMenu("time");
+        }}
+        onTap={() => setOpen((o) => !o)}
+      />
+      {open ? <TimePopover id={popId} anchor={ref} lines={actualTimeLines(t, tz, now)} onClose={close} /> : null}
+    </>
   );
 }
 
