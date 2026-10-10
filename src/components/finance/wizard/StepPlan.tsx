@@ -26,20 +26,28 @@ const ANCHORS: { value: "START" | "END" | "DAY"; label: string }[] = [
 const DAYS = Array.from({ length: 28 }, (_, i) => String(i + 1));
 
 /** Step 3 — plan: one time (due date + optional reminder) / recurring (frequency, day, notify time, end, due days) / part payment. */
-export function StepPlan({ form, set, errors }: StepProps) {
+export function StepPlan({ form, set, errors, edit }: StepProps) {
   const taxable = formTaxable(form);
   const seg = (active: boolean) => `touch-target flex-1 rounded-lg px-3 py-1.5 text-center text-sm ${active ? segActive : segIdle}`;
+  const cards = PLAN_CARDS.filter((c) => !edit || edit.plans.includes(c.value));
   return (
     <div className="space-y-4 px-4 py-4">
+      {edit && edit.plans.length === 1 ? (
+        <p className="text-xs text-muted">
+          {form.partEdit
+            ? `${edit.partLabel ?? "This part"}: only this part changes here. Use Edit schedule on the invoice to change the other parts.`
+            : "This is one occurrence of a recurring invoice, so it stays recurring. Changes to the schedule apply to the next ones."}
+        </p>
+      ) : null}
       <div className="grid gap-2">
-        {PLAN_CARDS.map((c) => {
+        {cards.map((c) => {
           const active = form.plan === c.value;
           return (
-            <button key={c.value} type="button" aria-pressed={active} onClick={() => set({ plan: c.value })} className={`flex items-center gap-3 rounded-2xl p-3 text-left transition ${active ? "glass-dark text-white" : "glass text-gray-900"}`}>
+            <button key={c.value} type="button" aria-pressed={active} onClick={() => set({ plan: c.value })} className={`flex items-center gap-3 rounded-2xl p-3 text-left transition ${active ? "glass-dark text-ink ring-2 ring-[#1e63d6]" : "glass text-ink"}`}>
               <span className="text-2xl">{c.icon}</span>
               <span>
                 <span className="block text-base font-semibold">{c.title}</span>
-                <span className={`block text-xs ${active ? "opacity-80" : "text-gray-500"}`}>{c.hint}</span>
+                <span className="block text-xs text-muted">{c.hint}</span>
               </span>
             </button>
           );
@@ -95,11 +103,19 @@ export function StepPlan({ form, set, errors }: StepProps) {
           <Field label="Due days after issue" hint="Each occurrence is due this many days after it is approved">
             <input type="number" min="0" max="365" value={form.dueDays} onChange={(e) => set({ dueDays: e.target.value, dueDate: addDaysKey(Number(e.target.value) || 0) })} className={inputSm} />
           </Field>
+          {edit ? <p className="text-xs text-muted">Saving a changed schedule recalculates the next run from today.</p> : null}
           <FieldError error={errors.recurrence} />
         </div>
       ) : null}
 
-      {form.plan === "PART" ? (
+      {form.plan === "PART" && form.partEdit ? (
+        <Field label={`Due date${edit?.partLabel ? ` · ${edit.partLabel}` : ""}`} hint="The other parts keep their amounts and dates; the plan total follows this part's amount">
+          <input type="date" value={form.dueDate} onChange={(e) => set({ dueDate: e.target.value })} className={inputCls} />
+          <FieldError error={errors.dueDate} />
+        </Field>
+      ) : null}
+
+      {form.plan === "PART" && !form.partEdit ? (
         <div>
           <PartsEditor parts={form.parts} total={taxable} onChange={(parts) => set({ parts })} label={`Parts of the taxable total (GST is added to each part)`} />
           <FieldError error={errors.parts} />

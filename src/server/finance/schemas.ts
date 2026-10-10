@@ -70,36 +70,44 @@ export const partInputSchema = z.object({
 export type PartInput = z.infer<typeof partInputSchema>;
 
 /** `createInvoice` input (ADR 0005). Either `items[]` or the `amount` + `description` convenience. */
-export const invoiceInputSchema = z
-  .object({
-    clientId: z.string().min(1, "client required"),
-    docType: z.enum(["TAX_INVOICE", "EXPORT_INVOICE", "PROFORMA"]).optional().nullable(),
-    plan: z.enum(["ONE_TIME", "RECURRING", "PART"]).default("ONE_TIME"),
-    items: z.array(invoiceItemSchema).optional(),
-    amount: z.coerce.number().min(0).optional().nullable(),
-    hsnSac: optionalStr,
-    gstPercent: z.coerce.number().min(0).max(100).optional().nullable(),
-    description: z.string().trim().max(5000).default(""),
-    notes: optionalStr,
-    paymentTerms: optionalStr,
-    dueDate: optionalDateInput,
-    recurrence: recurrenceInputSchema.optional().nullable(),
-    parts: z.array(partInputSchema).optional().nullable(),
-    /** ADR 0006: the client will deduct TDS on this invoice. Omitted/null → true when the client has a TDS %. */
-    tdsApplicable: z.boolean().optional().nullable(),
-    /** ADR 0007: printed currency (export invoices); null → the client's currency. */
-    currency: currencyInput,
-    /** ADR 0007: "remind me to approve and send on" (non-recurring documents). */
-    remindAt: optionalDateInput,
-  })
-  .superRefine((v, ctx) => {
-    const hasItems = (v.items?.length ?? 0) > 0;
-    if (!hasItems && (v.amount == null || v.amount <= 0)) ctx.addIssue({ code: "custom", path: ["items"], message: "add at least one line item or an amount" });
-    if (!hasItems && v.amount != null && v.amount > 0 && !v.description) ctx.addIssue({ code: "custom", path: ["description"], message: "description required with a single amount" });
-    if (v.plan === "RECURRING" && !v.recurrence) ctx.addIssue({ code: "custom", path: ["recurrence"], message: "recurrence rule required for recurring invoices" });
-    if (v.plan === "PART" && (v.parts?.length ?? 0) < 1) ctx.addIssue({ code: "custom", path: ["parts"], message: "at least one part required for part payments" });
-  });
+const invoiceInputObject = z.object({
+  clientId: z.string().min(1, "client required"),
+  docType: z.enum(["TAX_INVOICE", "EXPORT_INVOICE", "PROFORMA"]).optional().nullable(),
+  plan: z.enum(["ONE_TIME", "RECURRING", "PART"]).default("ONE_TIME"),
+  items: z.array(invoiceItemSchema).optional(),
+  amount: z.coerce.number().min(0).optional().nullable(),
+  hsnSac: optionalStr,
+  gstPercent: z.coerce.number().min(0).max(100).optional().nullable(),
+  description: z.string().trim().max(5000).default(""),
+  notes: optionalStr,
+  paymentTerms: optionalStr,
+  dueDate: optionalDateInput,
+  recurrence: recurrenceInputSchema.optional().nullable(),
+  parts: z.array(partInputSchema).optional().nullable(),
+  /** ADR 0006: the client will deduct TDS on this invoice. Omitted/null → true when the client has a TDS %. */
+  tdsApplicable: z.boolean().optional().nullable(),
+  /** ADR 0007: printed currency (export invoices); null → the client's currency. */
+  currency: currencyInput,
+  /** ADR 0007: "remind me to approve and send on" (non-recurring documents). */
+  remindAt: optionalDateInput,
+});
+
+function refineInvoice(v: z.infer<typeof invoiceInputObject>, ctx: z.RefinementCtx, partsRequired: boolean) {
+  const hasItems = (v.items?.length ?? 0) > 0;
+  if (!hasItems && (v.amount == null || v.amount <= 0)) ctx.addIssue({ code: "custom", path: ["items"], message: "add at least one line item or an amount" });
+  if (!hasItems && v.amount != null && v.amount > 0 && !v.description) ctx.addIssue({ code: "custom", path: ["description"], message: "description required with a single amount" });
+  if (v.plan === "RECURRING" && !v.recurrence) ctx.addIssue({ code: "custom", path: ["recurrence"], message: "recurrence rule required for recurring invoices" });
+  if (partsRequired && v.plan === "PART" && (v.parts?.length ?? 0) < 1) ctx.addIssue({ code: "custom", path: ["parts"], message: "at least one part required for part payments" });
+}
+
+export const invoiceInputSchema = invoiceInputObject.superRefine((v, ctx) => refineInvoice(v, ctx, true));
 export type InvoiceInput = z.infer<typeof invoiceInputSchema>;
+
+/**
+ * `updateDraftInvoice` input: the same fields as `createInvoice`. A part-payment draft edits only its issued part
+ * (amount, description, due date…), so the part schedule (`parts`) is not required there and is ignored.
+ */
+export const invoiceUpdateSchema = invoiceInputObject.superRefine((v, ctx) => refineInvoice(v, ctx, false));
 
 export const approveOptionsSchema = z.object({
   email: z.boolean().default(false),

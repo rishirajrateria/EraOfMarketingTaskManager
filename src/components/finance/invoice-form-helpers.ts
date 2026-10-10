@@ -38,6 +38,8 @@ export type InvoiceFormState = {
   tdsApplicable: boolean;
   notes: string;
   paymentTerms: string;
+  /** Editing a part-payment draft: only the issued part changes (one amount + `dueDate`); the schedule stays. */
+  partEdit: boolean;
 };
 
 export const emptyLine = (): LineRow => ({ description: "", hsnSac: "", qty: "1", unit: "FIXED", rate: "" });
@@ -68,6 +70,7 @@ export function emptyForm(defaults: { gstPercent: number; paymentTerms: string; 
     tdsApplicable: false,
     notes: "",
     paymentTerms: defaults.paymentTerms,
+    partEdit: false,
   };
 }
 
@@ -168,7 +171,8 @@ export function validateForm(f: InvoiceFormState): Record<string, string> {
   if (f.plan === "RECURRING" && f.frequency === "MONTHLY" && f.monthAnchor === "DAY" && (num(f.dayOfMonth) < 1 || num(f.dayOfMonth) > 28)) errors.recurrence = "Pick a day between 1 and 28";
   if (f.plan !== "RECURRING" && f.remindDate && !/^\d{4}-\d{2}-\d{2}$/.test(f.remindDate)) errors.remindAt = "Pick a valid reminder date";
   if (f.plan === "PART" && f.proforma) errors.parts = "A proforma can't be split into parts — use one time or recurring";
-  if (f.plan === "PART") {
+  if (f.plan === "PART" && f.partEdit && f.useLines && f.lines.filter((l) => l.description.trim() || num(l.rate) > 0).length > 1) errors.items = "A part payment is billed as one amount — switch off line items";
+  if (f.plan === "PART" && !f.partEdit) {
     const s = partsSummary(f.parts, taxable);
     if (!s.valid && s.error) errors.parts = s.error;
   }
@@ -205,8 +209,8 @@ export function buildInvoiceInput(f: InvoiceFormState) {
           endDate: f.infinite ? null : f.endDate || null,
         }
       : null;
-  const parts = f.plan === "PART" ? f.parts.map((p) => ({ kind: p.kind, value: num(p.value), dueDate: p.dueDate, description: p.description.trim() })) : null;
-  const dueDate = f.plan === "ONE_TIME" ? f.dueDate || null : f.plan === "RECURRING" ? f.dueDate || null : f.parts[0]?.dueDate || null;
+  const parts = f.plan === "PART" && !f.partEdit ? f.parts.map((p) => ({ kind: p.kind, value: num(p.value), dueDate: p.dueDate, description: p.description.trim() })) : null;
+  const dueDate = f.plan === "ONE_TIME" ? f.dueDate || null : f.plan === "RECURRING" || f.partEdit ? f.dueDate || null : f.parts[0]?.dueDate || null;
   return {
     clientId: f.clientId,
     docType: f.proforma ? ("PROFORMA" as const) : null,

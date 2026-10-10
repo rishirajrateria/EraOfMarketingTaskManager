@@ -8,6 +8,7 @@ import { PaymentSheet } from "@/components/finance/PaymentSheet";
 import { CancelInvoiceSheet, CreditNoteSheet, HoldWorkSheet, PushForwardSheet } from "@/components/finance/InvoiceSheets";
 import { useAction } from "@/components/finance/useAction";
 import { fmtDayTime } from "@/components/finance/finance-ui";
+import { canEditDraft } from "@/components/finance/invoice-edit-helpers";
 
 type SheetKind = "approve" | "resend" | "pay" | "push" | "hold" | "credit" | "cancel" | null;
 
@@ -21,6 +22,8 @@ export function availableActions(inv: InvoiceDetail) {
   const open = inv.status === "SENT" || inv.status === "PARTIALLY_PAID" || inv.status === "OVERDUE";
   const settled = inv.status === "PAID" || inv.status === "CANCELLED";
   return {
+    // Owner request: change a draft before approving it (no number yet, nothing sent).
+    edit: canEditDraft(inv),
     approve: unapproved || inv.status === "AWAITING_APPROVAL",
     resend: open,
     pay: billed && open,
@@ -57,7 +60,9 @@ export function InvoiceActions({ inv, tz, templates, tdsPercent, openTasks, next
     );
   };
 
+  const editHref = (from?: "approve") => `/admin/invoices/${inv.id}/edit${from ? `?from=${from}` : ""}`;
   const pills: { key: string; label: string; onClick: () => void; danger?: boolean }[] = [];
+  if (a.edit) pills.push({ key: "edit", label: "✎ Edit draft", onClick: () => router.push(editHref()) });
   if (a.push) pills.push({ key: "push", label: inv.remindAt ? "Reminder set" : "Push forward", onClick: () => setSheet("push") });
   if (a.remind) pills.push({ key: "remind", label: inv.reminderSentAt ? `Remind again (${inv.reminderCount})` : "Send reminder", onClick: () => run(() => sendReminder(inv.id), (d) => `Reminder ${d.reminderCount} sent${d.emailed ? " by email" : ""}${d.whatsapped ? " on WhatsApp" : ""}`) });
   if (a.hold) pills.push({ key: "hold", label: "Hold work", onClick: () => setSheet("hold") });
@@ -96,7 +101,7 @@ export function InvoiceActions({ inv, tz, templates, tdsPercent, openTasks, next
         }
       />
       {/* The mode is fixed when the sheet opens so the refresh after approval does not retitle it. */}
-      {sheet === "approve" || sheet === "resend" ? <ApproveSheet inv={inv} tz={tz} templates={templates} open onClose={close} resend={sheet === "resend"} /> : null}
+      {sheet === "approve" || sheet === "resend" ? <ApproveSheet inv={inv} tz={tz} templates={templates} open onClose={close} resend={sheet === "resend"} onEdit={a.edit && sheet === "approve" ? () => router.push(editHref("approve")) : undefined} /> : null}
       {sheet === "pay" ? <PaymentSheet inv={inv} tdsPercent={tdsPercent} open onClose={close} /> : null}
       {sheet === "push" ? <PushForwardSheet inv={inv} open onClose={close} /> : null}
       {sheet === "hold" ? <HoldWorkSheet inv={inv} openTasks={openTasks} open onClose={close} /> : null}

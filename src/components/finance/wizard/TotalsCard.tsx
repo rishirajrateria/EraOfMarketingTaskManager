@@ -13,7 +13,7 @@ export function TotalsCard({ form, taxMode, compact }: { form: Pick<InvoiceFormS
     </div>
   );
   return (
-    <div className={`glass-dark rounded-2xl px-4 text-white ${compact ? "py-2" : "py-3"}`}>
+    <div className={`glass-dark rounded-2xl px-4 text-ink ${compact ? "py-2" : "py-3"}`}>
       <Row k="Taxable" v={formatINR(t.taxable)} />
       {taxMode === "CGST_SGST" ? (
         <>

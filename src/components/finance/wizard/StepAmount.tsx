@@ -44,9 +44,11 @@ export function StepAmount({ form, set, errors, tax, clients }: StepProps) {
         <textarea rows={3} value={form.description} onChange={(e) => set({ description: e.target.value })} className={inputCls} placeholder="e.g. Social media management — October 2026" />
         <FieldError error={errors.description} />
       </Field>
-      <div className="glass rounded-2xl px-3">
-        <Toggle checked={form.useLines} onChange={(v) => set({ useLines: v })} label="Add line items instead" hint="Description, HSN/SAC, qty, hours or fixed, rate" />
-      </div>
+      {form.partEdit ? null : (
+        <div className="glass rounded-2xl px-3">
+          <Toggle checked={form.useLines} onChange={(v) => set({ useLines: v })} label="Add line items instead" hint="Description, HSN/SAC, qty, hours or fixed, rate" />
+        </div>
+      )}
       {form.useLines ? (
         <div>
           <LineItemsEditor lines={form.lines} onChange={(lines) => set({ lines })} />

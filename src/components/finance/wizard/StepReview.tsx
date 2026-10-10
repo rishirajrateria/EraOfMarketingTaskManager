@@ -12,11 +12,11 @@ import { FieldError, type StepProps } from "@/components/finance/wizard/types";
 const fmtKey = (k: string) => (k ? new Date(`${k}T00:00:00`).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "on receipt");
 
 /** Step 4 — review everything, choose Proforma, notes / payment terms, then "Save (awaiting approval)". */
-export function StepReview({ form, set, errors, clients, tax }: StepProps) {
+export function StepReview({ form, set, errors, clients, tax, edit }: StepProps) {
   const client = clients.find((c) => c.id === form.clientId);
   const plan = PLAN_CARDS.find((p) => p.value === form.plan)!;
   const taxable = formTaxable(form);
-  const parts = form.plan === "PART" ? partsSummary(form.parts, taxable) : null;
+  const parts = form.plan === "PART" && !form.partEdit ? partsSummary(form.parts, taxable) : null;
   const Row = ({ k, v }: { k: string; v: React.ReactNode }) => (
     <div className="flex justify-between gap-3 text-sm">
       <span className="text-gray-500">{k}</span>
@@ -32,6 +32,7 @@ export function StepReview({ form, set, errors, clients, tax }: StepProps) {
         <Row k="TDS" v={form.tdsApplicable ? `Client deducts TDS${client?.tdsPercent != null ? ` (${client.tdsPercent}%)` : ""}` : "Not deducted"} />
         {form.currency && form.currency !== "INR" ? <Row k="Currency" v={form.currency} /> : null}
         {form.plan === "ONE_TIME" ? <Row k="Due" v={fmtKey(form.dueDate)} /> : null}
+        {form.partEdit ? <Row k={edit?.partLabel ?? "Part"} v={`due ${fmtKey(form.dueDate)}`} /> : null}
         {form.plan === "RECURRING" ? (
           <Row k="Repeats" v={`${form.frequency === "CUSTOM" ? `every ${form.interval} days` : form.frequency === "MONTHLY" ? `monthly on ${describeMonthAnchor(form.monthAnchor, Number(form.dayOfMonth))}` : "weekly"} at ${form.notifyTime || "09:00"}${form.infinite ? " · infinite" : ` · until ${fmtKey(form.endDate)}`} · due +${form.dueDays || 0}d`} />
         ) : null}
@@ -55,9 +56,11 @@ export function StepReview({ form, set, errors, clients, tax }: StepProps) {
         </div>
       </div>
       <TotalsCard form={form} taxMode={tax?.taxMode ?? "CGST_SGST"} compact />
-      <div className="glass rounded-2xl px-3">
-        <Toggle checked={form.proforma} onChange={(v) => set({ proforma: v })} label="Create as Proforma instead" hint="No tax, no series number; convert to the tax invoice later" />
-      </div>
+      {form.partEdit ? null : (
+        <div className="glass rounded-2xl px-3">
+          <Toggle checked={form.proforma} onChange={(v) => set({ proforma: v })} label={edit ? "Make it a Proforma" : "Create as Proforma instead"} hint="No tax, no series number; convert to the tax invoice later" />
+        </div>
+      )}
       <Field label="Payment terms" hint="From Settings; printed on the PDF">
         <textarea rows={2} value={form.paymentTerms} onChange={(e) => set({ paymentTerms: e.target.value })} className={inputCls} />
       </Field>
@@ -67,7 +70,9 @@ export function StepReview({ form, set, errors, clients, tax }: StepProps) {
       {Object.entries(errors).map(([k, v]) => (
         <FieldError key={k} error={`${k}: ${v}`} />
       ))}
-      <p className="text-xs text-gray-500">Nothing is sent now. The document waits for your approval, where you confirm Email and WhatsApp.</p>
+      <p className="text-xs text-gray-500">
+        {edit ? "Saving updates this draft; it stays awaiting approval and nothing is sent." : "Nothing is sent now. The document waits for your approval, where you confirm Email and WhatsApp."}
+      </p>
     </div>
   );
 }

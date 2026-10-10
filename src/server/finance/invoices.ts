@@ -11,7 +11,8 @@ import { convertProformaCore, createCreditNoteCore } from "@/server/finance/cred
 import { holdWorkCore, resumeWorkCore, type HoldResult, type ResumeResult } from "@/server/finance/hold-work";
 import { sendReminderCore } from "@/server/finance/reminder-core";
 import { assertCancellableDocType, cancelInvoiceCore, type CancelResult } from "@/server/finance/cancel-core";
-import { approveOptionsSchema, cancelInvoiceSchema, creditNoteInputSchema, dateInput, invoiceInputSchema, mergePartsSchema, parseInput, partScheduleSchema } from "@/server/finance/schemas";
+import { updateDraftCore } from "@/server/finance/draft-edit-core";
+import { approveOptionsSchema, cancelInvoiceSchema, creditNoteInputSchema, dateInput, invoiceInputSchema, invoiceUpdateSchema, mergePartsSchema, parseInput, partScheduleSchema } from "@/server/finance/schemas";
 
 /** Invoicing v2 server actions (ADR 0005). All mutations are ADMIN-only; nothing here sends without approval. */
 const LIST = "/admin/invoices";
@@ -33,6 +34,22 @@ export async function createInvoice(raw: unknown): Promise<ActionResult<CreateIn
     const inv = await createInvoiceRecord(input, actor.id);
     safeRevalidate(...paths(inv.id));
     return { id: inv.id, number: inv.number, status: inv.status, total: inv.total.toNumber(), planId: inv.planId };
+  });
+}
+
+export type UpdateDraftResult = { id: string; number: string; status: string; total: number; currency: string };
+
+/**
+ * "✎ Edit" before approving: change client, amount / items, GST, plan settings, dates or the proforma choice of a
+ * draft that is still AWAITING_APPROVAL (no number, nothing sent). Number and public token stay; audited.
+ */
+export async function updateDraftInvoice(id: string, raw: unknown): Promise<ActionResult<UpdateDraftResult>> {
+  return wrap(async () => {
+    const actor = await requireWrite();
+    const input = parseInput(invoiceUpdateSchema, raw);
+    const inv = await updateDraftCore(String(id), input, actor.id);
+    safeRevalidate(...paths(inv.id));
+    return { id: inv.id, number: inv.number, status: inv.status, total: inv.total.toNumber(), currency: inv.currency };
   });
 }
 
