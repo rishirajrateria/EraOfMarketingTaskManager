@@ -829,7 +829,7 @@ select.in{padding-right:10px}
 /* bottom icon rows (dashboard + add task) */
 .navrow{height:64px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 10px 0 6px;background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-top:1px solid var(--hair)}
 .navrow .nl{flex:1;min-width:0;display:flex;align-items:center;gap:2px;overflow-x:auto;scrollbar-width:none}.navrow .nl::-webkit-scrollbar{display:none}
-#dashNav .nl .nv{flex:1 1 0}
+#gNav .nl .nv{flex:1 1 0}
 .nv{position:relative;flex:none;min-width:48px;height:56px;padding:0 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:0;background:none;color:var(--ink);font:inherit;cursor:pointer;border-radius:12px}
 .nv .ic{width:34px;height:30px;display:grid;place-items:center;border-radius:10px;color:var(--ink)}
 .nv .ic.g{width:32px;height:32px;color:#fff}.nv .ic.g.t-team{color:#3b2a00}
@@ -850,7 +850,27 @@ select.in{padding-right:10px}
 .btnrow:has(.fx){align-items:center}
 #addNav.solo .nl{visibility:hidden}
 .r2:has(.fx){align-items:center}
-#s-dash .topbar .tsep,#s-dash .topbar #dbBtn,#s-dash .topbar #reqBtn,#s-dash .topbar #notifBtn,#s-dash .topbar #meBtn{display:none!important}
+.topbar .tsep,.topbar #dbBtn,.topbar #reqBtn,.topbar #notifBtn,.topbar #meBtn,.topbar [data-id=dbBtn],.topbar [data-id=reqBtn],.topbar [data-id=notifBtn],.topbar [data-id=meBtn]{display:none!important}
+/* global bottom nav (dashboard + every page): tabs toggle; + always at the right */
+#gNav{position:absolute;left:0;right:0;bottom:0;z-index:27;height:calc(64px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px)}
+#gNav[hidden]{display:none!important}
+.hasnav #s-dash,.hasnav #s-page{bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+.hasnav #s-dash .bottom{padding-bottom:0}
+.nv.on .ic,.nv.on .nlab{color:#2563eb}.nv.on .ic{background:rgba(37,99,235,.14)}
+.nv.on .avatar{box-shadow:0 0 0 2px var(--bg),0 0 0 4px #2563eb}
+.fabrow{display:flex;align-items:center;gap:8px;animation:fabin .18s ease-out both}
+.fabrow .fabi{animation:none}
+.fabeye{width:38px;height:38px;border-radius:12px;border:1px solid var(--hair);background:var(--glass-strong);box-shadow:var(--shadow);color:var(--ink);display:grid;place-items:center;cursor:pointer;flex:none}
+.fabeye:focus-visible{outline:2px solid #3b82f6;outline-offset:2px}
+.peek{flex-shrink:0;padding:6px 12px 8px;background:var(--glass);border-top:1px solid var(--hair)}
+.peek[hidden]{display:none!important}
+#s-page.peeking #pgZone .r2{display:none}
+#s-page.peeking #pgZone:not(:has(.r1)){display:none}
+.peekbtn{width:100%;height:46px;display:flex;align-items:center;gap:10px;padding:0 10px;border-radius:14px;border:1px solid var(--hair);background:var(--glass-strong);box-shadow:var(--shadow);color:var(--ink);font:inherit;font-size:14px;cursor:pointer}
+.peekbtn b{flex:1;text-align:left;font-weight:700}
+.pplus{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(150deg,#3b82f6,#1d4ed8);color:#fff}
+.pchev{color:var(--muted);display:grid;place-items:center}
+@media (prefers-reduced-motion:reduce){.fabrow,.fabi{animation:none}}
 </style>
 <div class="phone" id="phone">
   <!-- role picker -->
@@ -889,7 +909,6 @@ select.in{padding-right:10px}
       <div class="bar">
         <div class="g" id="barg"></div>
       </div>
-      <div class="navrow" id="dashNav"><div class="nl" id="dashNavL"></div><button class="sq" id="addChoose" aria-label="Add" aria-haspopup="menu" aria-expanded="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
     </div>
       </section>
 
@@ -929,6 +948,7 @@ select.in{padding-right:10px}
     <div class="hdr"><button id="pgBack" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><b id="pgTitle"></b><button id="pgMenu" aria-label="Menu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>
     <div class="grow" id="pgBody"></div>
     <div class="bz" id="pgZone"></div>
+    <div class="peek" id="peek" hidden></div>
   </section>
 
   <!-- admin menu tray -->
@@ -942,6 +962,7 @@ select.in{padding-right:10px}
     </div>
   </div>
 
+  <div class="navrow" id="gNav" hidden><div class="nl" id="dashNavL"></div><button class="sq" id="addChoose" aria-label="Add" aria-haspopup="menu" aria-expanded="false"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
   <div class="fabdim" id="fab" hidden><div class="fabstack" id="fabStack" role="menu" aria-label="Add"></div></div>
   <div class="dim" id="sheetDim" hidden><div class="sheet" id="sheet"></div></div>
   <div class="toast" id="toast" hidden></div>
@@ -1132,17 +1153,17 @@ function audit(){}
 /* ---------- sheet ---------- */
 const sheetDim=$("#sheetDim"),sheetEl=$("#sheet");
 function openSheet(title,...content){sheetEl.replaceChildren(el("div",{class:"grab"}),...[title?el("h3",{},title):null,...content.flat()].filter(Boolean));sheetDim.hidden=false;}
-function closeSheet(){sheetDim.hidden=true;}
+function closeSheet(){sheetDim.hidden=true;if(typeof renderPeek==="function")renderPeek();}
 sheetDim.addEventListener("click",e=>{if(e.target===sheetDim)closeSheet();});
 function actionList(items){return el("div",{class:"al"},items.map(it=>el("button",{class:it.danger?"danger":"",onclick:it.onClick},el("span",{},it.label),it.hint?el("small",{},it.hint):null)));}
 /* Close (×) for sheet forms: same blue square, same bottom-right spot as the + it came from. */
 function pageX(fn){const b=cancelX();b.onclick=fn||(()=>goBack());return b;}
-function cancelX(){return el("button",{class:"fx","aria-label":"Close",title:"Close",onclick:closeSheet},svg('<path d="M18 6 6 18M6 6l12 12"/>',24,2.5));}
+function cancelX(){return el("button",{class:"fx","aria-label":"Close",title:"Close",onclick:()=>{if(typeof PEEK!=="undefined"&&PEEK){PEEK=null;closeSheet();nav("dash");}else closeSheet();}},svg('<path d="M18 6 6 18M6 6l12 12"/>',24,2.5));}
 function field(label,input,hint){return el("div",{class:"field"},el("label",{},label),input,hint?el("div",{class:"hint"},hint):null);}
 
 /* ---------- screens ---------- */
 const screens={login:$("#s-login"),dash:$("#s-dash"),add:$("#s-add"),page:$("#s-page")};
-function show(name){for(const [k,v] of Object.entries(screens))v.hidden=k!==name;if(name!=="page"&&typeof HIST!=="undefined")HIST.length=0;if(name==="page"&&typeof pageTop==="function")pageTop();}
+function show(name){for(const [k,v] of Object.entries(screens))v.hidden=k!==name;if(typeof afterShow==="function")afterShow(name);if(name!=="page"&&typeof HIST!=="undefined")HIST.length=0;if(name==="page"&&typeof pageTop==="function")pageTop();}
 function visibleTasks(){
  const r=role(),m=me();
  return S.tasks.filter(t=>{
@@ -1604,6 +1625,7 @@ const MI={
  drive:'<path d="M22 12H2M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11zM6 16h.01M10 16h.01"/>',
  calcheck:'<path d="M8 2v4M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M9 16l2 2 4-4"/>',
  clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+ eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
  user:'<circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/>',
  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
  lead:'<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/><path d="m12 5 .9 1.8 2 .3-1.45 1.4.35 2L12 9.55 10.2 10.5l.35-2L9.1 7.1l2-.3Z" fill="currentColor" stroke="none"/>',
@@ -1673,13 +1695,14 @@ $("#pgBack").onclick=()=>goBack();
 $("#pgTop").onclick=e=>{const b=e.target.closest("button[data-id],a[data-id]");if(!b)return;const id=b.dataset.id;const go={menuBtn:()=>openMenu(),dbBtn:()=>nav("insights"),reqBtn:()=>nav("requests"),notifBtn:()=>nav("notifications"),meBtn:()=>nav("me")}[id];if(go){e.preventDefault();go();}};
 function nav(go){
  const [page,arg]=go.split(":");
- if(page==="dash"){show("dash");renderDash();return;}
+ if(page==="dash"){PEEK=null;show("dash");renderDash();return;}
  if(page==="add"){openAdd(arg||"CHOOSE");return;}
  if(page==="signout"){S.me=null;save();show("login");return;}
+ PEEK=null;
  const fn=PAGES[page];if(!fn)return toast("Not in the prototype");
  show("page");fn(arg);
 }
-function page(title,body,zone){$("#pgTitle").textContent=title;$("#pgBody").replaceChildren(...body.flat().filter(Boolean));$("#pgZone").replaceChildren(...(zone||[]).filter(Boolean));$("#pgZone").hidden=!zone||!zone.length;}
+function page(title,body,zone){$("#pgTitle").textContent=title;$("#pgBody").replaceChildren(...body.flat().filter(Boolean));$("#pgZone").replaceChildren(...(zone||[]).filter(Boolean));$("#pgZone").hidden=!zone||!zone.length;if(typeof renderDashNav==="function")renderDashNav();if(typeof renderPeek==="function")renderPeek();}
 function zoneTabs(items,active,on){return el("div",{class:"r1"},...items.map(([k,l])=>el("button",{class:"gp"+(active===k?" on":""),style:"height:30px;font-size:12px;background:"+(active===k?"#111":"var(--chip)")+";color:"+(active===k?"#fff":"var(--ink)"),onclick:()=>on(k)},l)));}
 function zoneActions(...btns){return el("div",{class:"r2"},...btns);}
 
@@ -1808,15 +1831,17 @@ $("#tGuests").onclick=guestsSheet;$("#tOpts").onclick=optionsSheet;
 const MEET_ICON=$("#tMeet svg").outerHTML;
 function fabItems(){
  const it=(k,l,cls,ic,fn,main)=>({k,l,cls,ic,fn,main});
+ /* list page + its add form: the icon opens the form, the eye opens the list with the form minimised */
+ const lv=(k,l,cls,ic,view,peek,form)=>({k,l,cls,ic,view:()=>openListFlow(view,peek,form,false),fn:()=>openListFlow(view,peek,form,true)});
  const out=[it("TASK","Task","t-task","task",()=>openAdd("CHOOSE"),1),it("MEETING","Meeting","meet",null,()=>openAdd("MEETING"),1)];
  if(role()==="ADMIN")out.push(
   it("INVOICE","Invoice","t-money","invoice",()=>{show("page");openWizard();}),
   it("EXPENSE","Expense","t-money","receipt",()=>{show("page");billEditor();}),
-  it("EXECUTIVE","Executive","t-team","user",()=>personForm("EXECUTIVE")),
-  it("WORK","Work type","t-team","tag",()=>workForm()),
-  it("TEAM","Team","t-team","layers",()=>teamForm()),
-  it("TEAM_LEADER","Team leader","t-team","lead",()=>personForm("TEAM_LEADER")),
-  it("KIT","Client kit","t-client","key",()=>kitPicker()));
+  lv("EXECUTIVE","Executive","t-team","user","people:EXECUTIVE","Add executive",()=>personForm("EXECUTIVE")),
+  lv("WORK","Work type","t-team","tag","worktypes","Add work type",()=>workForm()),
+  lv("TEAM","Team","t-team","layers","teams","Add team",()=>teamForm()),
+  lv("TEAM_LEADER","Team leader","t-team","lead","people:TEAM_LEADER","Add team leader",()=>personForm("TEAM_LEADER")),
+  lv("KIT","Client kit","t-client","key","kit","New client kit",()=>kitPicker()));
  return out;
 }
 function openFab(){
@@ -1824,7 +1849,8 @@ function openFab(){
  items.forEach((x,i)=>{
   if(i===2)nodes.push(el("div",{class:"fabsep"}));
   const ic=el("span",{class:"ic "+x.cls});if(x.ic)ic.append(msvg(x.ic,x.main?22:20));else ic.innerHTML=MEET_ICON;
-  nodes.push(el("button",{class:"fabi"+(x.main?" main":""),role:"menuitem","data-add":x.k,style:"animation-delay:"+(i*18)+"ms",onclick:()=>{closeFab();x.fn();}},el("b",{},x.l),ic));
+  const main=el("button",{class:"fabi"+(x.main?" main":""),role:"menuitem","data-add":x.k,"aria-label":"Add "+x.l.toLowerCase(),onclick:()=>{closeFab();x.fn();}},el("b",{},x.l),ic);
+  nodes.push(el("div",{class:"fabrow",style:"animation-delay:"+(i*18)+"ms"},x.view?el("button",{class:"fabeye",role:"menuitem","data-view":x.k,"aria-label":"View "+(x.k==="KIT"?"client kits":x.l.toLowerCase()+"s"),title:"View existing",onclick:()=>{closeFab();x.view();}},msvg("eye",18)):null,main));
  });
  $("#fabStack").replaceChildren(...nodes);$("#fab").hidden=false;document.body.classList.add("fabon");$("#addChoose").setAttribute("aria-expanded","true");
  $("#fabStack [data-add=TASK]").focus();
@@ -1847,10 +1873,19 @@ function kitPicker(){
    Dashboard: Dashboard · Requests · Notifications · Profile · + (time pills sit on their own row above).
    Add task: Task / Meeting type · the + menu's other adds as icons · × close. */
 function navBtn(ic,label,fn,badge,cls){return el("button",{class:"nv","aria-label":label+(badge?" ("+badge+")":""),title:label,onclick:fn},el("span",{class:"ic"+(cls?" "+cls:"")},typeof ic==="string"?msvg(ic,20):ic),el("span",{class:"nlab"},label),badge?el("span",{class:"badge"},String(badge)):null);}
-function renderDashNav(){const r=role(),m=me();if(!m)return;
+let PEEK=null; // {label, open}: a list page's add form, minimised to a bar above the nav row
+function openListFlow(view,label,form,expanded){nav(view);PEEK={label,open:form};if(expanded)form();else renderPeek();}
+function renderPeek(){const pk=$("#peek");if(!pk)return;const on=!!PEEK&&!$("#s-page").hidden&&sheetDim.hidden;pk.hidden=!on;$("#s-page").classList.toggle("peeking",!!PEEK);if(!on)return;
+ pk.replaceChildren(el("button",{class:"peekbtn","aria-label":PEEK.label+" (expand)",onclick:()=>{pk.hidden=true;PEEK.open();}},el("span",{class:"pplus"},msvg("plus",18,2.5)),el("b",{},PEEK.label),el("span",{class:"pchev"},svg('<path d="m6 15 6-6 6 6"/>',20,2.25))));}
+const NAVKEYS=["insights","requests","notifications","me"];
+function navActive(){if($("#s-page").hidden)return null;const t=typeof HIST!=="undefined"&&HIST[HIST.length-1];return t&&NAVKEYS.includes(t.key)?t.key:null;}
+function afterShow(name){const g=$("#gNav");if(!g)return;const on=(name==="dash"||name==="page")&&!!me();g.hidden=!on;$("#phone").classList.toggle("hasnav",on);if(on)renderDashNav();if(name!=="page"){const pk=$("#peek");if(pk)pk.hidden=true;}closeFab&&!$("#fab").hidden&&closeFab();}
+function renderDashNav(){const r=role(),m=me();if(!m||!$("#dashNavL"))return;const act=navActive();
+ const tog=k=>()=>{closeFab();if(navActive()===k)nav("dash");else nav(k);};
  const openReq=S.requests.filter(x=>x.status==="OPEN").length,unread=S.notifs.filter(n=>n.for===m.id&&!n.read).length;
  const av=el("span",{class:"avatar"},m.name.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase());
- $("#dashNavL").replaceChildren(...[r==="ADMIN"?navBtn("chart","Dashboard",()=>nav("insights")):null,r==="ADMIN"?navBtn("inbox","Requests",()=>nav("requests"),openReq):null,navBtn("bell","Notifications",()=>nav("notifications"),unread),navBtn(av,"Profile",()=>nav("me"))].filter(Boolean));
+ const nb=(k,ic,l,b)=>{const x=navBtn(ic,l,tog(k),b);if(act===k){x.classList.add("on");x.setAttribute("aria-current","page");}return x;};
+ $("#dashNavL").replaceChildren(...[r==="ADMIN"?nb("insights","chart","Dashboard"):null,r==="ADMIN"?nb("requests","inbox","Requests",openReq):null,nb("notifications","bell","Notifications",unread),nb("me",av,"Profile")].filter(Boolean));
 }
 function renderAddNav(){
  const items=fabItems().filter(x=>x.k!=="TASK"&&x.k!=="MEETING");const short={INVOICE:"Invoice",EXPENSE:"Expense",EXECUTIVE:"Exec",WORK:"Work",TEAM:"Team",TEAM_LEADER:"Leader",KIT:"Kit"};
