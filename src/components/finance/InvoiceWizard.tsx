@@ -4,10 +4,10 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, Search, X } from "lucide-react";
 import { BarChip, BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
 import { useToast } from "@/components/ui/Toast";
-import { createInvoice } from "@/server/finance/invoices";
+import { createInvoice, updateDraftInvoice, type UpdateDraftResult } from "@/server/finance/invoices";
 import { dateKeyLocal } from "@/components/finance/finance-ui";
 import { buildInvoiceInput, defaultPartsFor, emptyForm, formTax, splitActionError, validateForm, type InvoiceFormState } from "@/components/finance/invoice-form-helpers";
-import { STEP_FIELDS, type ClientOpt } from "@/components/finance/wizard/types";
+import { STEP_FIELDS, type ClientOpt, type WizardEditInfo } from "@/components/finance/wizard/types";
 import { StepClient } from "@/components/finance/wizard/StepClient";
 import { StepAmount } from "@/components/finance/wizard/StepAmount";
 import { PLAN_CARDS, StepPlan } from "@/components/finance/wizard/StepPlan";
@@ -15,15 +15,29 @@ import { StepReview } from "@/components/finance/wizard/StepReview";
 
 const TITLES = ["Client", "Amount", "Plan", "Review"];
 
-/** "+ New invoice": four thumb-reach steps inside a full-screen Sheet; saves as AWAITING_APPROVAL (never sends). */
-export function InvoiceWizard({ clients, companyStateCode, defaults, onClose }: { clients: ClientOpt[]; companyStateCode: string | null; defaults: { gstPercent: number; paymentTerms: string }; onClose: () => void }) {
+/** Edit mode: the draft's id, its form state (`invoiceToForm`) and what may change. */
+export type WizardEdit = WizardEditInfo & { id: string; initial: InvoiceFormState };
+
+type Props = {
+  clients: ClientOpt[];
+  companyStateCode: string | null;
+  defaults: { gstPercent: number; paymentTerms: string };
+  onClose: () => void;
+  /** "Edit draft": opens at the Amount step pre-filled; "Save changes" calls `updateDraftInvoice`, then `onSaved`. */
+  edit?: WizardEdit | null;
+  onSaved?: (res: UpdateDraftResult) => void;
+};
+
+/** "+ New invoice" / "Edit draft": four thumb-reach steps inside a full-screen Sheet; saves as AWAITING_APPROVAL (never sends). */
+export function InvoiceWizard({ clients, companyStateCode, defaults, onClose, edit = null, onSaved }: Props) {
   const router = useRouter();
   const toast = useToast();
   const [pending, start] = useTransition();
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(edit ? 2 : 1);
   const [query, setQuery] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [form, setForm] = useState<InvoiceFormState>(() => emptyForm({ gstPercent: defaults.gstPercent, paymentTerms: defaults.paymentTerms, today: dateKeyLocal() }));
+  const [form, setForm] = useState<InvoiceFormState>(() => edit?.initial ?? emptyForm({ gstPercent: defaults.gstPercent, paymentTerms: defaults.paymentTerms, today: dateKeyLocal() }));
+  const plans = edit?.plans ?? PLAN_CARDS.map((c) => c.value);
   const set = (patch: Partial<InvoiceFormState>) => {
     setForm((f) => ({ ...f, ...patch }));
     if (Object.keys(errors).length) setErrors({});
@@ -44,6 +58,18 @@ export function InvoiceWizard({ clients, companyStateCode, defaults, onClose }: 
   const save = () => {
     if (!check(4)) return toast("Please fix the highlighted fields", "err");
     start(async () => {
+      if (edit) {
+        const res = await updateDraftInvoice(edit.id, buildInvoiceInput(form));
+        if (!res.ok) {
+          const { fields, rest } = splitActionError(res.error);
+          setErrors(fields);
+          toast(rest || res.error, "err");
+          return;
+        }
+        toast("Draft updated · still awaiting approval");
+        onSaved?.(res.data);
+        return;
+      }
       const res = await createInvoice(buildInvoiceInput(form));
       if (!res.ok) {
         const { fields, rest } = splitActionError(res.error);
@@ -57,27 +83,29 @@ export function InvoiceWizard({ clients, companyStateCode, defaults, onClose }: 
     });
   };
 
-  const stepProps = { form, set, errors, clients, tax };
+  const stepProps = { form, set, errors, clients, tax, edit };
   const rows =
-    step === 2 ? (
+    step === 2 && !form.partEdit ? (
       <ZoneRow label="Amount mode">
         <ZonePill active={!form.useLines} onClick={() => set({ useLines: false })}>Single amount</ZonePill>
         <ZonePill active={form.useLines} onClick={() => set({ useLines: true })}>Line items</ZonePill>
       </ZoneRow>
     ) : step === 3 ? (
       <>
-        <ZoneRow label="Plan">
-          {PLAN_CARDS.map((c) => (
-            <ZonePill key={c.value} active={form.plan === c.value} onClick={() => set({ plan: c.value })}>{c.title}</ZonePill>
-          ))}
-        </ZoneRow>
+        {plans.length > 1 ? (
+          <ZoneRow label="Plan">
+            {PLAN_CARDS.filter((c) => plans.includes(c.value)).map((c) => (
+              <ZonePill key={c.value} active={form.plan === c.value} onClick={() => set({ plan: c.value })}>{c.title}</ZonePill>
+            ))}
+          </ZoneRow>
+        ) : null}
         {form.plan === "RECURRING" && form.frequency === "MONTHLY" ? (
           <ZoneRow label="Bill on">
             <ZonePill active={form.monthAnchor === "START"} onClick={() => set({ monthAnchor: "START" })}>1st day</ZonePill>
             <ZonePill active={form.monthAnchor === "END"} onClick={() => set({ monthAnchor: "END" })}>Last day</ZonePill>
             <ZonePill active={form.monthAnchor === "DAY"} onClick={() => set({ monthAnchor: "DAY" })}>A date</ZonePill>
           </ZoneRow>
-        ) : form.plan === "PART" ? (
+        ) : form.plan === "PART" && !form.partEdit ? (
           <ZoneRow label="Part presets">
             {[2, 3, 4].map((n) => (
               <ZonePill key={n} active={form.parts.length === n && form.parts.every((p) => p.kind === "PERCENT")} onClick={() => set({ parts: defaultPartsFor(n, dateKeyLocal()) })}>{n} equal parts</ZonePill>
@@ -85,7 +113,7 @@ export function InvoiceWizard({ clients, companyStateCode, defaults, onClose }: 
           </ZoneRow>
         ) : null}
       </>
-    ) : step === 4 ? (
+    ) : step === 4 && !form.partEdit ? (
       <ZoneRow label="Document type">
         <ZonePill active={!form.proforma} onClick={() => set({ proforma: false })}>{tax?.docType === "EXPORT_INVOICE" || (form.proforma && tax?.placeOfSupply.startsWith("Outside")) ? "Export Invoice" : "Tax Invoice"}</ZonePill>
         <ZonePill active={form.proforma} onClick={() => set({ proforma: true })}>Proforma</ZonePill>
@@ -96,8 +124,8 @@ export function InvoiceWizard({ clients, companyStateCode, defaults, onClose }: 
     <div className="flex h-full min-h-[100dvh] flex-col">
       <div className="sticky top-0 z-10 flex items-center gap-2 bg-gradient-to-br from-[#1e63d6]/90 to-[#22c3e6]/80 px-4 py-3 text-white backdrop-blur-xl">
         <div className="flex-1">
-          <div className="text-[11px] uppercase opacity-80">New invoice · step {step} of 4</div>
-          <h2 className="text-base font-semibold">{TITLES[step - 1]}</h2>
+          <div className="text-[11px] uppercase opacity-80">{edit ? `Step ${step} of 4 · ${TITLES[step - 1]}` : `New invoice · step ${step} of 4`}</div>
+          <h2 className="text-base font-semibold">{edit ? "Edit draft" : TITLES[step - 1]}</h2>
         </div>
         <button type="button" className="touch-target" onClick={onClose} aria-label="Close"><X size={20} /></button>
       </div>
@@ -138,7 +166,9 @@ export function InvoiceWizard({ clients, companyStateCode, defaults, onClose }: 
           step < 4 ? (
             <BarChip onClick={next} label="Next" className="font-semibold">Next →</BarChip>
           ) : (
-            <BarChip onClick={save} label="Save (awaiting approval)" className={`font-semibold ${pending ? "opacity-60" : ""}`}>{pending ? "Saving…" : "Save (awaiting approval)"}</BarChip>
+            <BarChip onClick={save} label={edit ? "Save changes" : "Save (awaiting approval)"} className={`font-semibold ${pending ? "opacity-60" : ""}`}>
+              {pending ? "Saving…" : edit ? "Save changes" : "Save (awaiting approval)"}
+            </BarChip>
           )
         }
       />

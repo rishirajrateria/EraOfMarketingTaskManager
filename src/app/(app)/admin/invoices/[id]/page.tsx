@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { canEditDraft } from "@/components/finance/invoice-edit-helpers";
 import { prisma } from "@/lib/db";
 import { requireFinancePage } from "@/server/finance/guard";
 import { getInvoiceDetail } from "@/server/finance/queries";
@@ -32,6 +34,11 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
         {inv.status === "AWAITING_APPROVAL" ? (
           <div role="status" className="mx-4 mb-3 rounded-xl border border-white/60 bg-amber-100/70 px-3 py-2 text-sm text-amber-900 backdrop-blur-sm">
             <b>Awaiting your approval.</b> Nothing has been sent. Review, then tap <b>Approve &amp; send</b> below to allocate the number and deliver it.
+            {user.canWrite && canEditDraft(inv) ? (
+              <Link href={`/admin/invoices/${inv.id}/edit`} className="mt-2 flex w-fit items-center gap-1 rounded-full border border-amber-900/20 bg-white/70 px-3 py-1.5 text-xs font-semibold text-amber-950 dark:bg-white/10 dark:text-amber-100">
+                ✎ Edit draft
+              </Link>
+            ) : null}
           </div>
         ) : null}
         {inv.docType === "PROFORMA" ? (

@@ -13,7 +13,7 @@ export function StepClient({ form, set, errors, clients, tax, query }: StepProps
   return (
     <div className="space-y-4 px-4 py-4">
       <div>
-        <div className="mb-2 text-xs font-medium text-gray-600">Who is this invoice for?</div>
+        <div className="mb-2 text-xs font-medium text-gray-600">{form.partEdit ? "Part payments stay with their client. To bill someone else, delete the draft and create it again." : "Who is this invoice for?"}</div>
         {shown.length === 0 ? <p className="text-sm text-gray-500">{clients.length === 0 ? "Add a client first (Admin menu → Add Client)." : "No clients match."}</p> : null}
         <div className="flex flex-wrap gap-2">
           {shown.map((c) => {
@@ -23,8 +23,9 @@ export function StepClient({ form, set, errors, clients, tax, query }: StepProps
                 key={c.id}
                 type="button"
                 aria-pressed={active}
+                disabled={form.partEdit && !active}
                 onClick={() => set({ clientId: c.id, tdsApplicable: (c.country ?? "IN").toUpperCase() === "IN" && c.tdsPercent != null, currency: c.country?.toUpperCase() === "IN" ? "INR" : c.currency || "INR" })}
-                className={`touch-target rounded-full px-3.5 py-1.5 text-sm font-medium transition ${active ? "bg-gradient-to-b from-[#2f74e6] to-[#1e63d6] text-white shadow-[0_6px_16px_rgba(30,99,214,.35)]" : "glass-chip text-gray-800"}`}
+                className={`touch-target rounded-full px-3.5 py-1.5 text-sm font-medium transition disabled:opacity-40 ${active ? "bg-gradient-to-b from-[#2f74e6] to-[#1e63d6] text-white shadow-[0_6px_16px_rgba(30,99,214,.35)]" : "glass-chip text-gray-800"}`}
               >
                 {c.name}
                 {c.workOnHold ? <span className="ml-1 text-[10px] opacity-80">· hold</span> : null}

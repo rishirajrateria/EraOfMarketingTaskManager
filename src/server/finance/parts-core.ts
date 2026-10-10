@@ -68,7 +68,7 @@ export function partPosition(parts: Pick<InvoicePart, "seq" | "status">[], seq: 
   return { index: index || seq, count: Math.max(active.length, index) };
 }
 
-function partDescription(plan: InvoicePlan, part: InvoicePart, pos: { index: number; count: number }): string {
+export function partDescription(plan: Pick<InvoicePlan, "title">, part: Pick<InvoicePart, "kind" | "value" | "description">, pos: { index: number; count: number }): string {
   const share = part.kind === "PERCENT" ? `${part.value.toNumber()}%` : "fixed";
   const base = part.description || plan.title;
   return `${base} — Part ${pos.index} of ${pos.count} (${share})`;

@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { Sheet } from "@/components/ui/Sheet";
-import { Field, btnPrimary, inputCls } from "@/components/ui/Field";
+import { Field, btnPrimary, btnSecondary, inputCls } from "@/components/ui/Field";
 import { formatINRNumber } from "@/server/finance/money";
 import { approveAndSend } from "@/server/finance/invoices";
 import type { ApproveResult } from "@/server/finance/approve-core";
@@ -19,7 +19,7 @@ export type Templates = { email: string; whatsapp: string; companyName: string }
  * in a tab opened before the await so popup blockers allow it. With both channels off the button reads "Approve only"
  * (or "Approve & download"): the number is allocated and the PDF stored, nothing is sent.
  */
-export function ApproveSheet({ inv, tz, templates, open, onClose, resend }: { inv: InvoiceDetail; tz: string; templates: Templates; open: boolean; onClose: () => void; resend: boolean }) {
+export function ApproveSheet({ inv, tz, templates, open, onClose, resend, onEdit }: { inv: InvoiceDetail; tz: string; templates: Templates; open: boolean; onClose: () => void; resend: boolean; onEdit?: () => void }) {
   const { pending, run } = useAction();
   const vars = useMemo(
     () => ({
@@ -67,12 +67,12 @@ export function ApproveSheet({ inv, tz, templates, open, onClose, resend }: { in
           <a href={`/api/files/invoice/${inv.id}`} target="_blank" rel="noreferrer" className="glass-chip shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium text-gray-800">📄 Preview PDF</a>
         </div>
         {result ? (
-          <div className="glass-dark space-y-1 rounded-2xl px-4 py-3 text-sm text-white">
+          <div className="glass-dark space-y-1 rounded-2xl px-4 py-3 text-sm text-ink">
             <div className="font-semibold">{result.number} · {result.status.toLowerCase().replace("_", " ")}</div>
             <div>✉️ Email: {email ? (result.emailed ? "sent" : "failed") : "skipped"}</div>
             <div>💬 WhatsApp: {whatsapp ? (result.whatsapped ? "sent" : "failed") : "skipped"}</div>
             {result.errors.map((e) => (
-              <div key={e} className="text-xs text-amber-200">{e}</div>
+              <div key={e} className="text-xs text-amber-700 dark:text-amber-200">{e}</div>
             ))}
             <button type="button" className={`${btnPrimary} mt-2 w-full`} onClick={onClose}>Done</button>
           </div>
@@ -100,9 +100,16 @@ export function ApproveSheet({ inv, tz, templates, open, onClose, resend }: { in
               <span>📥 Download the PDF <span className="text-xs text-gray-500">· opens in a new tab after approval</span></span>
               <input type="checkbox" className="h-5 w-5 accent-brand-blue" checked={download} onChange={(e) => setDownload(e.target.checked)} />
             </label>
-            <button type="button" className={`${btnPrimary} w-full py-3 text-base`} disabled={pending || (resend && !sending && !download)} onClick={confirm}>
-              {pending ? (sending ? "Sending…" : "Approving…") : label}
-            </button>
+            {/* Prototype `.btnrow`: Not now · ✎ Edit (drafts) · Approve & send. */}
+            <div className="flex gap-2">
+              <button type="button" className={`${btnSecondary} shrink-0 whitespace-nowrap px-3`} onClick={onClose}>Not now</button>
+              {onEdit ? (
+                <button type="button" className={`${btnSecondary} shrink-0 whitespace-nowrap px-3`} disabled={pending} onClick={onEdit}>✎ Edit</button>
+              ) : null}
+              <button type="button" className={`${btnPrimary} min-w-0 flex-1 whitespace-nowrap px-3 py-3`} disabled={pending || (resend && !sending && !download)} onClick={confirm}>
+                {pending ? (sending ? "Sending…" : "Approving…") : label}
+              </button>
+            </div>
             {!sending && !resend ? <p className="text-center text-xs text-gray-500">The number is allocated and the PDF stored; nothing is sent.</p> : null}
           </>
         )}
