@@ -895,6 +895,16 @@ select.in{padding-right:10px}
 #addNav .nfix{grid-column:1;grid-row:1;justify-self:start}
 #addNav #tClose{grid-column:2;grid-row:1}
 #addNav .nl{grid-column:3;grid-row:1}
+/* filter tray minimise tab */
+.traytog{position:absolute;left:50%;top:-12px;transform:translateX(-50%);z-index:3;height:24px;min-width:44px;padding:0 10px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:999px;border:1px solid var(--hair);background:var(--glass-strong);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:var(--shadow);color:var(--ink);font:inherit;font-size:12px;font-weight:600;cursor:pointer;max-width:calc(100% - 32px)}
+.traytog span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.traytog:focus-visible{outline:2px solid #3b82f6;outline-offset:2px}
+#dashTray.min>:not(.traytog){display:none!important}
+#dashTray.min{height:40px;border-top:1px solid var(--hair);background:var(--glass);border-radius:20px 20px 0 0;box-shadow:0 -10px 30px -18px rgba(15,40,70,.4)}
+#dashTray.min .traytog{top:7px;height:26px}
+#dashTray:not(.min) .traytog{height:22px;min-width:40px;padding:0 8px}
+.mquick{grid-template-columns:repeat(auto-fit,minmax(0,1fr))}
+.mquick .mq:only-child{flex-direction:row;justify-content:center;gap:10px;font-size:13px}
 </style>
 <div class="phone" id="phone">
   <!-- role picker -->
@@ -927,7 +937,8 @@ select.in{padding-right:10px}
       <div class="cols" id="cols"></div>
     </div>
     <div class="grow"><ul class="list" id="rows"></ul></div>
-    <div class="bottom">
+    <div class="bottom" id="dashTray">
+      <button class="traytog" id="trayTog" aria-controls="dashTray" aria-expanded="true"></button>
       <div class="strip" id="strip"></div>
       <div class="greenarea"><div class="prow" id="prow1"></div><div class="prow" id="prow2"></div></div>
       <div class="bar">
@@ -1253,10 +1264,14 @@ function renderDash(){
  const groups=pillGroups(),two=groups.length===2;
  const sub=[f.row1?dockName(f.row1):null,f.row2?dockName(f.row2):null,f.date?fmtD(f.date):f.quick==="today"?"Today":f.quick==="tomorrow"?"Tomorrow":null].filter(Boolean);
  // compact summary: one line per group — label, then content-sized chips "Social 9.8h ·7" that wrap
- $("#cols").replaceChildren(el("div",{class:"sumtop"},el("span",{},"Open hours"),el("span",{},sub.length?sub.join(" · "):"all tasks")),
+ $("#cols").replaceChildren(
   ...groups.map(g=>el("div",{class:"sumsec2",role:"group","aria-label":g.label},el("span",{class:"slab"},g.label),
    el("div",{class:"schips"},...(g.items.length?g.items.map(it=>el("button",{class:"sch"+(f.pill===it.id?" on":""),title:`${it.label}: ${hh(it.minutes)} open in ${it.count} task(s)`,onclick:()=>{f.pill=f.pill===it.id?null:it.id;save();renderDash();}},
     el("span",{class:"n"},it.label),el("b",{},hh(it.minutes)),el("small",{},String(it.count)))):[el("span",{class:"sumnone"},"Nothing open")])))));
+ // filter tray: a small tab on its top edge minimises it to a slim bar that names the filters in use
+ {const min=!!S.trayMin,tg=$("#trayTog");$("#dashTray").classList.toggle("min",min);tg.setAttribute("aria-expanded",String(!min));tg.setAttribute("aria-label",min?"Show filters":"Hide filters");tg.title=min?"Show filters":"Hide filters";
+  tg.replaceChildren(svg(min?'<path d="m6 15 6-6 6 6"/>':'<path d="m6 9 6 6 6-6"/>',16,2.5),...(min?[el("span",{},"Filters · "+(sub.length?sub.join(" · "):"all tasks"))]:[]));
+  tg.onclick=()=>{S.trayMin=!S.trayMin;save();renderDash();};}
  // rows
  const ts=applyFilters(visibleTasks(),f);
  $("#rows").replaceChildren(...(ts.length?ts.map(taskRow):[el("li",{class:"empty"},f.completed?"No completed tasks match.":"Nothing here. Tap + to add a task, or clear a filter below.")]));
@@ -1686,17 +1701,12 @@ function menuModel(){
    {go:"drive",ic:"folder",l:"Drive folders",s:"Invoices, bills, GST pack, cancelled"}]},
   {h:"Clients",t:"t-client",items:[
    {go:"clients",ic:"building",l:"Clients",s:S.clients.length+" clients · GST, PAN, TDS"},
-   {go:"kit",ic:"key",l:"Client kit",s:(()=>{const k=S.clients.filter(c=>c.kit).length;return k+" of "+S.clients.length+" have a kit"+(expiring?" · "+expiring+" expiring":" · Drive, logins");})(),b:B(expiring,"amber")},
    {go:"vault:SHARED_DRIVE_LINK",ic:"drive",l:"Shared links",s:"Folders shared with clients"}]},
   {h:"Team",t:"t-team",items:[
    {go:"insights:HR",ic:"calcheck",l:"HR",s:(()=>{const t=S.attendance[dk()]||{};const st=S.users.filter(u=>["TEAM_LEADER","EXECUTIVE"].includes(u.role));const p=st.filter(u=>t[u.id]==="P"||t[u.id]==="HD").length,l=st.filter(u=>t[u.id]==="L").length;return Object.keys(t).length?p+" present · "+l+" on leave today":"Attendance, inventory, leave";})()},
    {go:"insights:TASK",ic:"task",l:"Tasks",s:(()=>{const o=S.tasks.filter(t=>t.status!=="COMPLETED");const late=o.filter(t=>rowColour(t)==="red").length;return o.length+" open"+(late?" · "+late+" late to start":"");})(),b:B(S.tasks.filter(t=>t.status!=="COMPLETED"&&rowColour(t)==="red").length,"amber")},
    {go:"attendance",ic:"usercheck",l:"Attendance",s:"Mark today · leave · monthly sheet"},
-   {go:"inventory",ic:"clock",l:"Inventory",s:"Hours available vs assigned"},
-   {go:"people:EXECUTIVE",ic:"users",l:"Executives",s:S.users.filter(u=>u.role==="EXECUTIVE").length+" people · specialities"},
-   {go:"people:TEAM_LEADER",ic:"lead",l:"Team leaders",s:"One per team"},
-   {go:"teams",ic:"layers",l:"Teams",s:S.teams.map(t=>t.name).join(", ")},
-   {go:"worktypes",ic:"tag",l:"Work types",s:S.workTypes.length+" types across teams"}]},
+   {go:"inventory",ic:"clock",l:"Inventory",s:"Hours available vs assigned"}]},
   {h:"Other",t:"t-acct",items:[
    {go:"requests",ic:"inbox",l:"Requests",s:reqs?reqs+" open":"Review, time change, leave",b:B(reqs,"red")},
    {go:"notifications",ic:"bell",l:"Notifications",s:unread?unread+" unread":"All caught up",b:B(unread,"soft")},
@@ -1709,9 +1719,9 @@ function renderMenu(){
  $("#mAv").textContent=m.name.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();$("#mName").textContent=m.name;$("#mRole").textContent={ADMIN:"Admin",TEAM_LEADER:"Team Leader",EXECUTIVE:"Executive",HR:"HR"}[m.role]+" · "+S.settings.company;
  const secs=menuModel().map(sec=>({...sec,items:sec.items.filter(it=>!q||(it.l+" "+(it.s||"")+" "+sec.h).toLowerCase().includes(q))})).filter(sec=>sec.items.length);
  $("#mBody").replaceChildren(...(secs.length?secs.map(sec=>el("div",{class:"msec"},el("h5",{class:sec.t},sec.h),el("div",{class:"mgrid"},...sec.items.map(it=>el("button",{class:"mtile"+(it.danger?" danger":""),title:it.s||it.l,"aria-label":it.l+(it.s?" — "+it.s:""),onclick:()=>{closeMenu();nav(it.go);}},
-   el("span",{class:"mi "+(it.danger?"t-red":sec.t)},msvg(it.ic,22)),el("span",{class:"ml"},it.l),it.b?el("span",{class:"mbadge "+it.b.c},String(it.b.n)):null))))):[el("div",{class:"mempty"},"Nothing matches “"+q+"”")]));
+   el("span",{class:"mi "+(it.danger?"t-red":sec.t)},msvg(it.ic,22)),el("span",{class:"ml"},it.l.split(" ").map(w=>w.length>=10?w.slice(0,Math.ceil(w.length/2))+"\u00ad"+w.slice(Math.ceil(w.length/2)):w).join(" ")),it.b?el("span",{class:"mbadge "+it.b.c},String(it.b.n)):null))))):[el("div",{class:"mempty"},"Nothing matches “"+q+"”")]));
 }
-$("#mQuick").replaceChildren(...[["invoice","t-money","New invoice",()=>{nav("invoices");openWizard();}],["receipt","t-money","Add expense",()=>{nav("expenses");billEditor();}],["inbox","t-red","Approvals",()=>{reqTab="FIN";reqFin="APPR";nav("requests");}]].map(([ic,t,l,fn])=>el("button",{class:"mq",onclick:()=>{closeMenu();fn();}},el("span",{class:t},msvg(ic,20)),l)));
+$("#mQuick").replaceChildren(...[["inbox","t-red","Approvals",()=>{reqTab="FIN";reqFin="APPR";nav("requests");}]].map(([ic,t,l,fn])=>el("button",{class:"mq",onclick:()=>{closeMenu();fn();}},el("span",{class:t},msvg(ic,20)),l)));
 $("#mSearchIco").replaceChildren(msvg("search",16));$("#mClose").replaceChildren(msvg("x",18));$("#mSettings").replaceChildren(msvg("gear",18));
 $("#mClose").onclick=()=>closeMenu();$("#mSettings").onclick=()=>{closeMenu();nav("settings");};
 $("#mSearch").oninput=renderMenu;
@@ -1892,7 +1902,7 @@ function cornerMode(){if(!$("#fab").hidden)return "fab";if(!sheetDim.hidden)retu
 function syncCorner(){const b=$("#addChoose");if(!b)return;const m=cornerMode();b.classList.toggle("isx",!!m);b.setAttribute("aria-label",m?"Close":"Add");b.title=m?"Close":"Add";b.setAttribute("aria-expanded",String(m==="fab"));}
 function cornerTap(){const m=cornerMode();
  if(m==="fab")closeFab();
- else if(m==="sheet"){if(PEEK){PEEK=null;closeSheet();nav("dash");}else closeSheet();}
+ else if(m==="sheet"){if(PEEK&&pageSig()===PEEK.sig){PEEK=null;closeSheet();nav("dash");}else closeSheet();}
  else if(m==="page"){const f=PAGEX;PAGEX=null;f();}
  else openFab();
  syncCorner();}
@@ -1913,8 +1923,9 @@ function kitPicker(){
    Add task: Task / Meeting type · the + menu's other adds as icons · × close. */
 function navBtn(ic,label,fn,badge,cls){return el("button",{class:"nv","aria-label":label+(badge?" ("+badge+")":""),title:label,onclick:fn},el("span",{class:"ic"+(cls?" "+cls:"")},typeof ic==="string"?msvg(ic,20):ic),el("span",{class:"nlab"},label),badge?el("span",{class:"badge"},String(badge)):null);}
 let PEEK=null; // {label, open}: a list page's add form, minimised to a bar above the nav row
-function openListFlow(view,label,form,expanded){nav(view);PEEK={label,open:form};if(expanded)form();else renderPeek();}
-function renderPeek(){const pk=$("#peek");if(!pk)return;const on=!!PEEK&&!$("#s-page").hidden&&sheetDim.hidden;pk.hidden=!on;$("#s-page").classList.toggle("peeking",!!PEEK);if(!on)return;
+const pageSig=()=>{const t=typeof HIST!=="undefined"&&HIST[HIST.length-1];return t?t.key+":"+(t.a&&t.a[0]!=null?t.a[0]:""):"";};
+function openListFlow(view,label,form,expanded){nav(view);PEEK={label,open:form,sig:pageSig()};if(expanded)form();else renderPeek();}
+function renderPeek(){const pk=$("#peek");if(!pk)return;const here=!!PEEK&&!$("#s-page").hidden&&pageSig()===PEEK.sig,on=here&&sheetDim.hidden;pk.hidden=!on;$("#s-page").classList.toggle("peeking",here);if(!on)return;
  pk.replaceChildren(el("button",{class:"peekbtn","aria-label":PEEK.label+" (expand)",onclick:()=>{pk.hidden=true;PEEK.open();}},el("span",{class:"pplus"},msvg("plus",18,2.5)),el("b",{},PEEK.label),el("span",{class:"pchev"},svg('<path d="m6 15 6-6 6 6"/>',20,2.25))));}
 const NAVKEYS=["insights","requests","notifications","me"];
 function navActive(){if(!$("#s-dash").hidden)return "home";if($("#s-page").hidden)return null;const t=typeof HIST!=="undefined"&&HIST[HIST.length-1];return t&&NAVKEYS.includes(t.key)?t.key:null;}
