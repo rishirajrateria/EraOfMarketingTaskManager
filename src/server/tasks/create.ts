@@ -5,7 +5,7 @@ import { wrap, type ActionResult } from "@/lib/action-result";
 import { audit } from "@/lib/audit";
 import { notify, publishTaskChanged } from "@/lib/notify";
 import { safeRevalidate } from "@/lib/revalidate";
-import { dateKey } from "@/lib/time";
+import { dateKey, zonedEndOfDay, zonedStartOfDay } from "@/lib/time";
 import { getSettings } from "@/lib/settings";
 import { proposeSlot, shiftDisplacedTasks, type SlotProposal } from "@/server/scheduling/slot";
 import { queueTaskCreation } from "@/google/task-integrations";
@@ -97,8 +97,16 @@ export async function createTask(raw: unknown): Promise<ActionResult<CreateResul
     const settings = await getSettings();
     const selfAssigned = plan.assigneeIds.length === 1 && plan.assigneeIds[0] === user.id;
 
+    const meeting = input.type === "MEETING";
+    // Meetings (ADR 0012): options default to the company time zone; all-day meetings cover whole days in that zone.
+    const meetingOptions = meeting && input.meetingOptions ? { ...input.meetingOptions, timeZone: input.meetingOptions.timeZone || settings.timezone } : null;
     let start = input.scheduledStart ? new Date(input.scheduledStart) : null;
     let end = input.scheduledEnd ? new Date(input.scheduledEnd) : null;
+    if (meetingOptions?.allDay) {
+      const zone = meetingOptions.timeZone;
+      start = zonedStartOfDay(start ?? new Date(), zone);
+      end = zonedEndOfDay(end && end > start ? new Date(end.getTime() - 1) : start, zone);
+    }
     let slot: SlotProposal | null = null;
     if (start && !end) end = new Date(start.getTime() + input.allocatedMinutes * 60000);
     if (!start) {
@@ -127,6 +135,8 @@ export async function createTask(raw: unknown): Promise<ActionResult<CreateResul
         recurrenceRuleId: rule?.id,
         status: "ASSIGNED",
         preferredAssigneeIds: plan.preferredAssigneeIds,
+        guestEmails: meeting ? input.guestEmails : [],
+        ...(meetingOptions ? { meetingOptions } : {}),
         assignees: { create: plan.assigneeIds.map((userId) => ({ userId })) },
         teams: { create: plan.teamIds.map((teamId) => ({ teamId })) },
         tags: { create: plan.tagIds.map((workTypeId) => ({ workTypeId })) },
@@ -147,13 +157,13 @@ export async function createTask(raw: unknown): Promise<ActionResult<CreateResul
 }
 
 /** Preview the next available slot before saving (SPEC §9.2 step 5). */
-export async function previewSlot(assigneeIds: string[], allocatedMinutes: number): Promise<ActionResult<SlotProposal | null>> {
+export async function previewSlot(assigneeIds: string[], allocatedMinutes: number, type: "WORK" | "MEETING" = "WORK"): Promise<ActionResult<SlotProposal | null>> {
   return wrap(async () => {
     const user = await requireUser();
     if (user.role === "HR" || user.role === "CA") throw new ForbiddenError();
     const ids = idsSchema.parse(assigneeIds);
     if (!ids.length) return null;
-    await validateAssignees(user, ids, "WORK"); // only people this user may assign to
+    await validateAssignees(user, ids, type === "MEETING" ? "MEETING" : "WORK"); // only people this user may assign / invite
     const minutes = z.number().int().min(5).max(24 * 60 * 30).parse(allocatedMinutes);
     return proposeSlot(ids, minutes, { requesterRole: user.role, requesterId: user.id });
   });
@@ -182,42 +192,27 @@ export async function periodLoads(assigneeIds: string[]): Promise<ActionResult<R
   });
 }
 
-/**
- * Whose inventory the add-task header may show: Admin → anyone with a dashboard (the preferred / team executives,
- * ADR 0008); Team Leader → self + own team's executives; Executive → self.
- */
-async function assertInventoryScope(user: SessionUser, ids: string[]) {
-  if (user.role === "ADMIN") {
-    const n = await prisma.user.count({ where: { id: { in: ids }, active: true, role: { in: ["ADMIN", "TEAM_LEADER", "EXECUTIVE"] } } });
-    if (n !== ids.length) throw new Error("Unknown or inactive assignee");
-    return;
-  }
-  await validateAssignees(user, ids, "WORK");
-}
+const teamIdsSchema = z.array(z.string().min(1).max(64)).min(1, "Pick a team").max(20);
+
+export type TeamPeriodLoad = { leftMinutes: number; bookedMinutes: number; count: number };
 
 /**
- * Add-task header (design): remaining inventory (capacity − assigned) and the number of tasks already assigned
- * for Today / Tom / Week / month. Scope = the selected people (Admin: the preferred executives, else the chosen teams'
- * executives), or the caller's whole visible team when none are selected (Admin: everyone; Team Leader: own team +
- * self; Executive: self).
+ * Add-task header (owner's revision): capacity of the selected team(s) — all active members (Team Leader +
+ * executives) — for Today / Tom / Week / Month: minutes BOOKED (scheduled minutes of open tasks, per person, as in
+ * the inventory screen), minutes LEFT (inventory: capacity − booked) and the number of tasks booked. Admin may look
+ * at any active team; Team Leaders and Executives only at their own team.
  */
-export async function addTaskInventory(assigneeIds: string[]): Promise<ActionResult<Record<string, { minutes: number; count: number }>>> {
+export async function addTaskInventory(teamIds: string[]): Promise<ActionResult<Record<"today" | "tomorrow" | "week" | "month", TeamPeriodLoad>>> {
   return wrap(async () => {
     const user = await requireUser();
-    if (user.role === "HR" || user.role === "CA") throw new ForbiddenError();
-    const requested = idsSchema.parse(assigneeIds);
-    if (requested.length) await assertInventoryScope(user, requested);
-    let scope: string[] = requested;
-    if (!scope.length) {
-      if (user.role === "ADMIN") {
-        scope = (await prisma.user.findMany({ where: { active: true, role: { in: ["ADMIN", "TEAM_LEADER", "EXECUTIVE"] } }, select: { id: true } })).map((u) => u.id);
-      } else if (user.role === "TEAM_LEADER") {
-        const team = { active: true, role: "EXECUTIVE" as const, OR: [{ teamLeaderId: user.id }, ...(user.teamId ? [{ teamId: user.teamId }] : [])] };
-        scope = [user.id, ...(await prisma.user.findMany({ where: team, select: { id: true } })).map((u) => u.id)];
-      } else {
-        scope = [user.id];
-      }
-    }
+    if (user.role !== "ADMIN" && user.role !== "TEAM_LEADER" && user.role !== "EXECUTIVE") throw new ForbiddenError();
+    const ids = Array.from(new Set(teamIdsSchema.parse(teamIds)));
+    if (user.role !== "ADMIN" && (!user.teamId || ids.some((id) => id !== user.teamId))) throw new ForbiddenError("You can only see your own team's capacity");
+    const teams = await prisma.team.count({ where: { id: { in: ids }, active: true } });
+    if (teams !== ids.length) throw new Error("Unknown or inactive team");
+    const { teamMemberIds } = await import("@/server/tasks/assignment");
+    const scope = new Set(await teamMemberIds(ids));
+
     const { inventoryFor } = await import("@/server/inventory/queries");
     const { zonedStartOfDay } = await import("@/lib/time");
     const { addDays, addMonths } = await import("date-fns");
@@ -225,30 +220,28 @@ export async function addTaskInventory(assigneeIds: string[]): Promise<ActionRes
     const today = zonedStartOfDay(new Date(), tz);
     const monthEnd = addDays(addMonths(today, 1), -1);
     const key = (d: Date) => dateKey(d, tz);
-    const periods: Record<string, { fromKey: string; toKey: string }> = {
+    const periods = {
       today: { fromKey: key(today), toKey: key(today) },
       tomorrow: { fromKey: key(addDays(today, 1)), toKey: key(addDays(today, 1)) },
       week: { fromKey: key(today), toKey: key(addDays(today, 6)) },
       month: { fromKey: key(today), toKey: key(monthEnd) },
     };
     // One inventory pass over the month; periods are derived from the per-user per-day rows.
-    const scopeSet = new Set(scope);
     const inv = await inventoryFor({ from: today, to: monthEnd });
-    const rows = inv.rows.filter((r) => scopeSet.has(r.userId));
-    const tasks = await prisma.task.findMany({
-      where: {
-        deletedAt: null,
-        status: { in: ACTIVE_STATUSES },
-        assignees: { some: { userId: { in: scope } } },
-        scheduledStart: { gte: today, lt: addDays(monthEnd, 1) },
-      },
-      select: { scheduledStart: true },
-    });
-    const out: Record<string, { minutes: number; count: number }> = {};
-    for (const [name, p] of Object.entries(periods)) {
+    const rows = inv.rows.filter((r) => scope.has(r.userId));
+    const tasks = scope.size
+      ? await prisma.task.findMany({
+          where: { deletedAt: null, status: { in: ACTIVE_STATUSES }, assignees: { some: { userId: { in: [...scope] } } }, scheduledStart: { gte: today, lt: addDays(monthEnd, 1) } },
+          select: { scheduledStart: true },
+        })
+      : [];
+    const out = {} as Record<keyof typeof periods, TeamPeriodLoad>;
+    for (const [name, p] of Object.entries(periods) as [keyof typeof periods, (typeof periods)["today"]][]) {
       const inRange = (k: string) => k >= p.fromKey && k <= p.toKey;
+      const inPeriod = rows.filter((r) => inRange(r.date));
       out[name] = {
-        minutes: rows.filter((r) => inRange(r.date)).reduce((sum, r) => sum + r.sellableMinutes, 0),
+        leftMinutes: inPeriod.reduce((sum, r) => sum + r.sellableMinutes, 0),
+        bookedMinutes: inPeriod.reduce((sum, r) => sum + r.assignedMinutes, 0),
         count: tasks.filter((t) => t.scheduledStart && inRange(key(t.scheduledStart))).length,
       };
     }

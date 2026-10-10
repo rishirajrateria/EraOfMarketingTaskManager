@@ -1,4 +1,5 @@
 "use client";
+import { useRef } from "react";
 import { clsx } from "@/lib/clsx";
 import type { DashboardData } from "@/server/tasks/types";
 import {
@@ -10,8 +11,11 @@ import {
   toggleId,
   workTeamIds,
   workTypesFor,
+  externalGuests,
+  meetingInvitees,
   type AddTaskForm,
 } from "@/components/tasks/add-task-helpers";
+import { START_SLOTS, fmtStartPill, meetingTz, parseHHMM, pickClient, pickStartTime, startMinutes } from "@/components/tasks/meeting-helpers";
 
 const first = (name: string) => name.split(" ")[0] ?? name;
 
@@ -34,7 +38,7 @@ export function TagPill({ active, pref, onClick, children }: { active: boolean; 
 }
 
 /** One labelled green row: small uppercase white label on the left, scrollable pills on the right. */
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+export function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="scrollbar-none flex h-10 items-center gap-2 overflow-x-auto px-3" role="group" aria-label={label}>
       <span className="min-w-[52px] shrink-0 text-[10px] font-bold uppercase tracking-[.08em] text-z2label">{label}</span>
@@ -92,7 +96,18 @@ export function AddTaskGreenRows({ form, patch, data }: Props) {
     ) : null;
 
   let teamRow: React.ReactNode = null;
-  if (role === "ADMIN") {
+  if (meeting) {
+    // Meetings (ADR 0012): TEAM = "invite these teams" (Team Leader + executives), multi-select, every role.
+    teamRow = (
+      <Row label="Team">
+        {data.teams.map((t) => (
+          <TagPill key={t.id} active={form.teamIds.includes(t.id)} onClick={() => patch({ teamIds: toggleId(form.teamIds, t.id) })}>
+            {t.name}
+          </TagPill>
+        ))}
+      </Row>
+    );
+  } else if (role === "ADMIN") {
     teamRow = (
       <Row label="Team">
         {data.teams.map((t) => (
@@ -125,17 +140,92 @@ export function AddTaskGreenRows({ form, patch, data }: Props) {
       {teamRow}
       <Row label="Client">
         {data.clients.map((c) => (
-          <TagPill key={c.id} active={form.clientId === c.id} onClick={() => patch({ clientId: form.clientId === c.id ? "" : c.id })}>
+          <TagPill key={c.id} active={form.clientId === c.id} onClick={() => patch(pickClient(form, data, c.id))}>
             {c.name}
           </TagPill>
         ))}
       </Row>
+      {meeting && !form.meeting?.allDay ? <StartRow form={form} patch={patch} tz={meetingTz(form, data.tz)} /> : null}
+    </div>
+  );
+}
+
+/**
+ * Meetings: START row directly above the bottom bar — a pill every 30 minutes 9 am … 8 pm plus "Custom…" (native time
+ * input). The day comes from Tom / today / the calendar icon, else today when the time is still ahead, else tomorrow.
+ */
+function StartRow({ form, patch, tz }: { form: AddTaskForm; patch: (p: Partial<AddTaskForm>) => void; tz: string }) {
+  const custom = useRef<HTMLInputElement>(null);
+  const chosen = startMinutes(form.scheduledStart);
+  const isCustom = chosen !== null && !START_SLOTS.includes(chosen);
+  const set = (min: number) => patch({ scheduledStart: pickStartTime(form.scheduledStart, min, new Date(), tz) });
+  const openCustom = () => {
+    const el = custom.current;
+    if (!el) return;
+    try {
+      el.showPicker();
+    } catch {
+      el.focus();
+      el.click();
+    }
+  };
+  return (
+    <Row label="Start">
+      {START_SLOTS.map((min) => (
+        <TagPill key={min} active={chosen === min} onClick={() => set(min)}>
+          {fmtStartPill(min)}
+        </TagPill>
+      ))}
+      <span className="relative shrink-0">
+        <TagPill active={isCustom} onClick={openCustom}>
+          {isCustom && chosen !== null ? fmtStartPill(chosen) : "Custom…"}
+        </TagPill>
+        <input
+          ref={custom}
+          type="time"
+          step={300}
+          aria-label="Custom start time"
+          tabIndex={-1}
+          value={chosen !== null ? form.scheduledStart.slice(11, 16) : ""}
+          onChange={(e) => {
+            const min = parseHHMM(e.target.value);
+            if (min !== null) set(min);
+          }}
+          className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
+        />
+      </span>
+    </Row>
+  );
+}
+
+/** Meetings: who is invited (internal names, teams, outside guests) and the client-without-email hint. */
+function MeetingSummary({ form, data }: Omit<Props, "patch">) {
+  // Only known names / addresses are joined — never "null" / "undefined" when there is no client or team.
+  const name = (id: string) => (id === data.me.id ? "me" : first(data.people.find((p) => p.id === id)?.name || "someone"));
+  const invitees = meetingInvitees(form, data);
+  const external = externalGuests(form).filter(Boolean);
+  const teams = data.teams.filter((t) => form.teamIds.includes(t.id) && !!t.name);
+  const led = teams.filter((t) => teamLeadersOf(data, [t.id]).length);
+  const leaderless = teams.filter((t) => !led.includes(t)).map((t) => t.name);
+  const client = form.clientId ? data.clients.find((c) => c.id === form.clientId) : undefined;
+  const noEmail = !!client?.name && !(client.emails ?? []).length;
+  return (
+    <div className="glass-card mt-3 px-3 py-2.5 text-[12.5px] leading-snug text-ink" aria-live="polite">
+      <div>
+        Inviting <b>{invitees.map(name).join(", ")}</b>
+        {led.length ? <span className="text-muted">{` · ${led.map((t) => t.name).join(", ")} (Team Leader${led.length === 1 ? "" : "s"})`}</span> : null}
+      </div>
+      {leaderless.length ? <div className="mt-1 text-amber-700 dark:text-amber-300">{`${leaderless.join(", ")}: no Team Leader yet — invite people in 👥 Guests`}</div> : null}
+      <div className={clsx("mt-1", !external.length && "text-muted")}>{external.length ? `Guests: ${external.join(", ")}` : "No outside guests · add emails in 👥 Guests"}</div>
+      {noEmail ? <div className="mt-1 text-amber-700 dark:text-amber-300">{`${client?.name ?? ""} has no email — add one in Clients`}</div> : null}
+      <div className="mt-1 text-muted">Google Calendar emails the invites{form.meeting?.withMeet === false ? "" : " with the Meet link"}.</div>
     </div>
   );
 }
 
 /** Body card: who gets the task (Admin: "Goes to Priya (TL, Social)", preference, specialists; TL: "Assigned to …"). */
 export function AddTaskSummary({ form, data }: Omit<Props, "patch">) {
+  if (form.type === "MEETING") return <MeetingSummary form={form} data={data} />;
   const name = (id: string) => (id === data.me.id ? "me" : first(data.people.find((p) => p.id === id)?.name ?? "?"));
   const muted = "text-muted";
   let body: React.ReactNode = null;

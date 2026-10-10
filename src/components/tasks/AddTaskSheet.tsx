@@ -14,6 +14,10 @@ import { AddTaskBottomBar, type Shortcut } from "@/components/tasks/AddTaskFoote
 import { AddTaskGreenRows, AddTaskSummary } from "@/components/tasks/AddTaskRows";
 import { AssigneeSheet, ScheduleSheet } from "@/components/tasks/AddTaskDetails";
 import { RepeatSheet } from "@/components/tasks/RecurrencePicker";
+import { MeetingGuestsSheet } from "@/components/tasks/MeetingGuestsSheet";
+import { MeetingOptionsSheet } from "@/components/tasks/MeetingOptionsSheet";
+import { FindTimeSheet } from "@/components/tasks/FindTimeSheet";
+import { clientEmails, findTimeDay, guestCount, meetingLine, meetingShortcut, meetingTz, voiceNotesFor } from "@/components/tasks/meeting-helpers";
 import type { VoiceNote } from "@/components/tasks/VoiceRecorder";
 import {
   EMPTY_LOADS,
@@ -23,7 +27,7 @@ import {
   fallbackNextSlot,
   forWhom,
   hoursToMinutes,
-  inventoryScope,
+  headerTeamIds,
   parseAddParam,
   repeatBaseDay,
   scheduleLine,
@@ -66,6 +70,8 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [assigneesOpen, setAssigneesOpen] = useState(false);
   const [repeatOpen, setRepeatOpen] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [findOpen, setFindOpen] = useState(false);
   const [nextSlot, setNextSlot] = useState<Date | null>(null);
 
   const patch = useCallback((p: Partial<AddTaskForm>) => setForm((f) => ({ ...f, ...p })), []);
@@ -84,6 +90,8 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
     setScheduleOpen(false);
     setAssigneesOpen(false);
     setRepeatOpen(false);
+    setOptionsOpen(false);
+    setFindOpen(false);
   }, [open, mode, data.me.id, data.role]);
 
   // WORK is single-select: auto-select the first work type of the team(s) when the current one doesn't belong.
@@ -95,24 +103,25 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
     });
   }, [teamKey, open, data]);
 
-  // Header pills (remaining inventory + assigned tasks) — refreshed (debounced 400ms) whenever the scope changes
-  // (Admin: preferred executives, else the picked teams' executives; Team Leader: the EXEC picks, else the team).
-  const scope = inventoryScope(form, data);
-  const scopeKey = scope.join(",");
+  // Capacity header: hours left / booked of the selected team(s) — refreshed (debounced 300ms) when the teams change;
+  // hidden while no team is known (Admin before picking a TEAM; a TL / Executive without a team).
+  const headerTeams = headerTeamIds(form, data);
+  const headerKey = headerTeams.join(",");
   useEffect(() => {
-    if (!open) return;
+    if (!open || !headerTeams.length) return;
     let cancelled = false;
     const t = setTimeout(async () => {
-      const res = await addTaskInventory(scope).catch(() => null);
+      const res = await addTaskInventory(headerTeams).catch(() => null);
       if (cancelled || !res || !res.ok) return;
-      setLoads({ ...EMPTY_LOADS, ...(res.data as Partial<PeriodLoads>) });
-    }, 400);
+      setLoads({ ...EMPTY_LOADS, ...res.data });
+    }, 300);
     return () => {
       cancelled = true;
       clearTimeout(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, scopeKey]);
+  }, [open, headerKey]);
+  const headerName = headerTeams.length ? headerTeams.map((id) => data.teams.find((t) => t.id === id)?.name ?? "Team").join(" + ") : null;
 
   // "📅 Next free slot: …" — the slot the server would pick for the effective assignees (debounced 400ms).
   const slotIds = effectiveAssignees({ ...form, type: chosen ?? "WORK" }, data);
@@ -121,7 +130,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
     if (!open || form.scheduledStart) return;
     let cancelled = false;
     const t = setTimeout(async () => {
-      const res = slotIds.length ? await previewSlot(slotIds, hoursToMinutes(form.hours)).catch(() => null) : null;
+      const res = slotIds.length ? await previewSlot(slotIds, hoursToMinutes(form.hours), chosen ?? "WORK").catch(() => null) : null;
       if (!cancelled) setNextSlot(res && res.ok && res.data ? new Date(res.data.start) : null);
     }, 400);
     return () => {
@@ -133,19 +142,31 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
 
   const assignees = useMemo(() => allowedAssignees(data, chosen ?? "WORK"), [data, chosen]);
   const meeting = chosen === "MEETING";
-  const subSheetOpen = scheduleOpen || assigneesOpen || repeatOpen;
+  const subSheetOpen = scheduleOpen || assigneesOpen || repeatOpen || optionsOpen || findOpen;
+  // Meetings: the start is chosen and shown in the meeting's time zone (Options → Time zone).
+  const zone = meeting ? meetingTz(form, data.tz) : data.tz;
 
   const choose = (type: TaskMode) => {
     if (type === chosen) return;
     setChosen(type);
-    setForm((f) => ({ ...emptyForm(type, data.me.id, data.role), title: f.title, description: f.description, clientId: f.clientId, teamIds: f.teamIds, tagIds: f.tagIds }));
+    setForm((f) => ({
+      ...emptyForm(type, data.me.id, data.role),
+      title: f.title,
+      description: f.description,
+      clientId: f.clientId,
+      teamIds: f.teamIds,
+      tagIds: f.tagIds,
+      clientGuests: type === "MEETING" && f.clientId ? clientEmails(data, f.clientId) : [],
+    }));
   };
 
-  const setShortcut = (kind: Shortcut) => patch({ scheduledStart: kind === "upnext" ? "" : shortcutStart(kind, new Date(), data.tz) });
+  // Meetings: once a START time is picked, Tom / today only change the day.
+  const setShortcut = (kind: Shortcut) =>
+    patch({ scheduledStart: kind === "upnext" ? "" : meeting ? meetingShortcut(kind, form.scheduledStart, new Date(), zone) : shortcutStart(kind, new Date(), data.tz) });
 
   const uploadAll = async (taskId: string) => {
     const jobs: { file: File; kind: "FILE" | "VOICE_NOTE" | "IMAGE"; durationSec?: number }[] = [
-      ...voiceNotes.map((n, i) => ({ file: new File([n.blob], `voice-note-${i + 1}.webm`, { type: n.blob.type || "audio/webm" }), kind: "VOICE_NOTE" as const, durationSec: n.durationSec })),
+      ...voiceNotesFor(chosen ?? "WORK", voiceNotes).map((n, i) => ({ file: new File([n.blob], `voice-note-${i + 1}.webm`, { type: n.blob.type || "audio/webm" }), kind: "VOICE_NOTE" as const, durationSec: n.durationSec })),
       ...files.map((file) => ({ file, kind: file.type.startsWith("image/") ? ("IMAGE" as const) : ("FILE" as const) })),
     ];
     if (!jobs.length) return;
@@ -200,14 +221,22 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
   // Work: the green rows pick team / executives. Meetings can also invite anyone from the people glyph.
   const canPickAssignees = meeting;
 
-  const scheduleText = scheduleLine(liveForm, forWhom(liveForm, data), nextSlot ?? fallbackNextSlot(new Date(), data.tz), new Date(), data.tz);
+  const scheduleText = meeting
+    ? meetingLine(liveForm, data, nextSlot ?? fallbackNextSlot(new Date(), zone), new Date(), data.tz)
+    : scheduleLine(liveForm, forWhom(liveForm, data), nextSlot ?? fallbackNextSlot(new Date(), data.tz), new Date(), data.tz);
+  const guests = meeting ? guestCount(liveForm, data) : 0;
+  const openFindTime = () => {
+    setAssigneesOpen(false);
+    setOptionsOpen(false);
+    setFindOpen(true);
+  };
   const repeatBase = repeatBaseDay(liveForm, new Date(), data.tz);
 
   return (
     <>
       <Sheet open={open} onClose={subSheetOpen ? () => undefined : close} full>
         <div className="flex h-full min-h-full flex-col" style={{ background: "var(--aurora), var(--bg)" }}>
-          <AddTaskHeader loads={loads} />
+          <AddTaskHeader loads={loads} teamName={headerName} />
           <AddTaskBody
             form={liveForm}
             patch={patch}
@@ -215,6 +244,8 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
             hoursError={errors.hours}
             canPickAssignees={canPickAssignees}
             onOpenAssignees={() => setAssigneesOpen(true)}
+            onOpenOptions={() => setOptionsOpen(true)}
+            guestCount={guests}
             onOpenRepeat={() => setRepeatOpen(true)}
             onSubmit={submit}
             voiceNotes={voiceNotes}
@@ -231,7 +262,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
           <AddTaskBottomBar
             form={liveForm}
             type={chosen}
-            tz={data.tz}
+            tz={zone}
             onShortcut={setShortcut}
             onType={choose}
             onOpenSchedule={() => setScheduleOpen(true)}
@@ -239,21 +270,39 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
           />
         </div>
       </Sheet>
-      <ScheduleSheet open={scheduleOpen} onClose={() => setScheduleOpen(false)} value={form.scheduledStart} tz={data.tz} onSet={(scheduledStart) => patch({ scheduledStart })} onError={(m) => toast(m, "err")} />
-      <AssigneeSheet open={assigneesOpen} onClose={() => setAssigneesOpen(false)} form={liveForm} patch={patch} data={data} assignees={assignees} />
-      {!meeting ? (
-        <RepeatSheet
-          open={repeatOpen}
-          onClose={() => setRepeatOpen(false)}
-          value={form.recurrence}
-          base={repeatBase}
-          onDone={(recurrence) => {
-            patch({ recurrence });
-            toast(`Repeats: ${describeRule(recurrence)}`);
-          }}
-          onClear={form.recurrence ? () => patch({ recurrence: null }) : undefined}
-        />
-      ) : null}
+      <ScheduleSheet open={scheduleOpen} onClose={() => setScheduleOpen(false)} value={form.scheduledStart} tz={zone} onSet={(scheduledStart) => patch({ scheduledStart })} onError={(m) => toast(m, "err")} />
+      {meeting ? (
+        <>
+          <MeetingGuestsSheet open={assigneesOpen} onClose={() => setAssigneesOpen(false)} form={liveForm} patch={patch} data={data} people={assignees} onFindTime={openFindTime} onError={(m) => toast(m, "err")} />
+          <MeetingOptionsSheet open={optionsOpen} onClose={() => setOptionsOpen(false)} value={form.meeting} onChange={(meetingOptions) => patch({ meeting: meetingOptions })} companyTz={data.tz} onFindTime={openFindTime} />
+          <FindTimeSheet
+            open={findOpen}
+            onClose={() => setFindOpen(false)}
+            userIds={effectiveAssignees(liveForm, data)}
+            initialDay={findTimeDay(liveForm, new Date(), data.tz)}
+            zone={zone}
+            durationMinutes={hoursToMinutes(form.hours)}
+            onPick={(scheduledStart) => {
+              patch({ scheduledStart });
+              toast("Start time set");
+            }}
+            onError={(m) => toast(m, "err")}
+          />
+        </>
+      ) : (
+        <AssigneeSheet open={assigneesOpen} onClose={() => setAssigneesOpen(false)} form={liveForm} patch={patch} data={data} assignees={assignees} />
+      )}
+      <RepeatSheet
+        open={repeatOpen}
+        onClose={() => setRepeatOpen(false)}
+        value={form.recurrence}
+        base={repeatBase}
+        onDone={(recurrence) => {
+          patch({ recurrence });
+          toast(`Repeats: ${describeRule(recurrence)}`);
+        }}
+        onClear={form.recurrence ? () => patch({ recurrence: null }) : undefined}
+      />
     </>
   );
 }
@@ -265,7 +314,7 @@ function errorsFromMessage(message: string): AddTaskErrors {
   if (m.includes("pick a team") || m.includes("team leader yet")) return { teamIds: message };
   if (m.includes("work type")) return { tagIds: message };
   if (m.includes("client")) return { clientId: message };
-  if (m.includes("assign")) return { assigneeIds: message };
+  if (m.includes("assign") || m.includes("invite")) return { assigneeIds: message };
   if (m.includes("allocated")) return { hours: message };
   return {};
 }

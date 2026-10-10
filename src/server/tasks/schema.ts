@@ -29,6 +29,52 @@ export const recurrenceSchema = z
   .nullable();
 export type RecurrenceInput = NonNullable<z.infer<typeof recurrenceSchema>>;
 
+/** Google Calendar allows at most 5 reminder overrides per event; a reminder may be up to 4 weeks before. */
+export const MAX_REMINDERS = 5;
+export const MAX_REMINDER_MINUTES = 4 * 7 * 24 * 60;
+export const GOOGLE_COLOR_IDS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"] as const;
+
+const isTimeZone = (tz: string) => {
+  if (!tz) return true; // "" = the company time zone
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/** Meeting → Google Calendar event options (ADR 0012). Every field has a default so older / partial payloads parse. */
+export const meetingOptionsSchema = z.object({
+  reminders: z
+    .array(z.object({ method: z.enum(["popup", "email"]), minutes: z.number().int().min(0).max(MAX_REMINDER_MINUTES) }))
+    .max(MAX_REMINDERS, `Google Calendar allows at most ${MAX_REMINDERS} notifications`)
+    .default([{ method: "popup", minutes: 10 }]),
+  guestsCanModify: z.boolean().default(false),
+  guestsCanInviteOthers: z.boolean().default(true),
+  guestsCanSeeOtherGuests: z.boolean().default(true),
+  location: z.string().trim().max(500).default(""),
+  transparency: z.enum(["opaque", "transparent"]).default("opaque"),
+  visibility: z.enum(["default", "public", "private"]).default("default"),
+  /** "" = the calendar's colour; "1"–"11" = Google's event colours. */
+  colorId: z.enum(["", ...GOOGLE_COLOR_IDS]).default(""),
+  allDay: z.boolean().default(false),
+  /** IANA zone the start time is interpreted in; "" = company settings time zone. */
+  timeZone: z.string().max(64).refine(isTimeZone, "Unknown time zone").default(""),
+  withMeet: z.boolean().default(true),
+});
+export type MeetingOptions = z.infer<typeof meetingOptionsSchema>;
+
+/** External guest emails: trimmed, lowercased, deduped; an invalid address is rejected with its value. */
+export const guestEmailsSchema = z
+  .array(z.string().trim().toLowerCase())
+  .max(100, "At most 100 guests")
+  .superRefine((list, ctx) => {
+    const bad = list.find((e) => !z.email().safeParse(e).success);
+    if (bad !== undefined) ctx.addIssue({ code: "custom", message: `Invalid guest email: ${bad || "(empty)"}` });
+  })
+  .transform((list) => Array.from(new Set(list)));
+
 const ids = (max: number) => z.array(z.string()).max(max);
 const isoOrNull = z.string().datetime({ offset: true }).nullable();
 
@@ -49,6 +95,10 @@ const taskFields = {
   important: z.boolean(),
   priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]),
   recurrence: recurrenceSchema,
+  /** Meetings: external guests (client email + typed). Ignored for work tasks. */
+  guestEmails: guestEmailsSchema,
+  /** Meetings: Google Calendar options. Ignored for work tasks. */
+  meetingOptions: meetingOptionsSchema.nullable(),
 };
 
 export const taskInputSchema = z.object({
@@ -66,6 +116,8 @@ export const taskInputSchema = z.object({
   important: taskFields.important.default(false),
   priority: taskFields.priority.default("NORMAL"),
   recurrence: recurrenceSchema.default(null),
+  guestEmails: guestEmailsSchema.default([]),
+  meetingOptions: meetingOptionsSchema.nullable().default(null),
   /** when the creator accepted the proposed slot, the client passes it back; otherwise server recomputes */
   acceptProposedSlot: z.boolean().default(true),
 });

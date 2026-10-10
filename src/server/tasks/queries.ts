@@ -6,6 +6,7 @@ import { rowColour, ACTIVE_STATUSES } from "@/server/tasks/state";
 import { describeRecord } from "@/server/tasks/recurrence";
 import { DEFAULT_TZ } from "@/lib/time";
 import type { DashboardData, PillGroup, TaskRow } from "@/server/tasks/types";
+import { clientGuestEmails, readMeetingOptions } from "@/server/tasks/meeting";
 
 export const taskInclude = {
   client: { select: { id: true, name: true } },
@@ -55,6 +56,8 @@ export function toRow(t: TaskWithRelations): TaskRow {
     driveFolderUrl: t.driveFolderUrl,
     meetLink: t.meetLink,
     meetActive: t.meetActive,
+    guestEmails: t.guestEmails,
+    meetingOptions: t.type === "MEETING" ? readMeetingOptions(t.meetingOptions) : null,
     chatSpaceUrl: t.chatSpaceUrl,
     calendarEventId: t.calendarEventId,
     integrationError: t.integrationError,
@@ -200,7 +203,7 @@ export async function dashboardData(user: SessionUser): Promise<DashboardData> {
   const [tasks, workTypeRows, clients, teams, peopleRows] = await Promise.all([
     listTasks(user, { includeCompleted: true }),
     prisma.workType.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, colour: true, teams: { select: { id: true } } } }),
-    prisma.client.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, visibleInFilters: true } }),
+    prisma.client.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, visibleInFilters: true, email: true, contact: true } }),
     prisma.team.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, colour: true } }),
     prisma.user.findMany({
       where: { active: true, role: { in: ["ADMIN", "TEAM_LEADER", "EXECUTIVE"] } },
@@ -242,7 +245,7 @@ export async function dashboardData(user: SessionUser): Promise<DashboardData> {
     row1,
     row2,
     workTypes,
-    clients: clients.map((c) => ({ id: c.id, name: c.name })),
+    clients: clients.map((c) => ({ id: c.id, name: c.name, emails: clientGuestEmails(c) })),
     teams,
     people,
     me: { id: user.id, role: user.role, teamId: user.teamId },

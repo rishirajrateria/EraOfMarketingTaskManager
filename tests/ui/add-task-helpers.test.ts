@@ -116,7 +116,7 @@ describe("toTaskInput / validateForm", () => {
     expect(payload).toMatchObject({ title: "Brief", allocatedMinutes: 150, scheduledStart: null, scheduledEnd: null, recurrence: null, tagIds: ["w1"] });
     expect(taskInputSchema.safeParse(payload).success).toBe(true);
   });
-  it("meetings drop tags and recurrence; the start comes from the calendar icon / shortcuts", () => {
+  it("meetings drop tags but keep the repeat rule; the start comes from the calendar icon / shortcuts", () => {
     const form = {
       ...emptyForm("MEETING", "ex1"),
       title: "Sync",
@@ -127,7 +127,8 @@ describe("toTaskInput / validateForm", () => {
     };
     const payload = toTaskInput(form, TZ);
     expect(payload.tagIds).toEqual([]);
-    expect(payload.recurrence).toBeNull();
+    expect(payload.recurrence).toMatchObject({ freq: defaultRule("2026-09-12").freq, trigger: "ON_SCHEDULE" });
+    expect(payload.important).toBe(false); // no ★ Important for meetings
     expect(payload.scheduledStart).toBe("2026-09-12T10:00:00+05:30");
     expect(payload.scheduledEnd).toBeNull(); // the server ends it after the allocated time
     expect(taskInputSchema.safeParse(payload).success).toBe(true);

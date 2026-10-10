@@ -48,6 +48,9 @@ export async function spawnNextOccurrence(taskId: string, actorId: string | null
       scheduledEnd: end,
       important: t.important,
       priority: t.priority,
+      // Meetings (ADR 0012): each occurrence is its own Calendar event with the same guests and options.
+      guestEmails: t.guestEmails,
+      ...(t.meetingOptions ? { meetingOptions: t.meetingOptions } : {}),
       selfAssigned: t.selfAssigned,
       protected: t.protected,
       parentTaskId: t.id,

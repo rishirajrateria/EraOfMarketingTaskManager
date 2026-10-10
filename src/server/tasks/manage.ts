@@ -17,6 +17,8 @@ import type { DashboardFilters } from "@/server/tasks/types";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { sanitizeDescription } from "@/lib/sanitize";
+import { getSettings } from "@/lib/settings";
+import { zonedEndOfDay, zonedStartOfDay } from "@/lib/time";
 
 const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 const attachmentSchema = z.object({
@@ -48,9 +50,19 @@ export async function updateTask(raw: unknown): Promise<ActionResult<undefined>>
     if (!t || t.deletedAt) throw new Error("Task not found");
     if (t.protected && t.createdById !== user.id) throw new ForbiddenError("This task is fixed by its owner");
     if (input.assigneeIds) await validateAssignees(user, input.assigneeIds, input.type ?? t.type);
-    const start = input.scheduledStart === undefined ? undefined : input.scheduledStart ? new Date(input.scheduledStart) : null;
+    const meeting = (input.type ?? t.type) === "MEETING";
+    const tz = (await getSettings()).timezone;
+    const meetingOptions = meeting && input.meetingOptions ? { ...input.meetingOptions, timeZone: input.meetingOptions.timeZone || tz } : undefined;
+    let start = input.scheduledStart === undefined ? undefined : input.scheduledStart ? new Date(input.scheduledStart) : null;
     let end = input.scheduledEnd === undefined ? undefined : input.scheduledEnd ? new Date(input.scheduledEnd) : null;
     if (start && end === undefined) end = new Date(start.getTime() + (input.allocatedMinutes ?? t.allocatedMinutes) * 60000);
+    if (meetingOptions?.allDay) {
+      // All-day meetings cover whole days in the meeting's zone (ADR 0012).
+      const from = start ?? t.scheduledStart ?? new Date();
+      const to = end ?? t.scheduledEnd ?? from;
+      start = zonedStartOfDay(from, meetingOptions.timeZone);
+      end = zonedEndOfDay(to > from ? new Date(to.getTime() - 1) : from, meetingOptions.timeZone);
+    }
     const now = new Date();
     await prisma.$transaction(async (tx) => {
       await tx.task.update({
@@ -65,6 +77,8 @@ export async function updateTask(raw: unknown): Promise<ActionResult<undefined>>
           scheduledEnd: end,
           important: input.important,
           priority: input.priority,
+          ...(meeting && input.guestEmails ? { guestEmails: input.guestEmails } : {}),
+          ...(meetingOptions ? { meetingOptions } : {}),
           reviewRequested: false,
           reviewNote: null,
           overdue: false,
@@ -237,6 +251,7 @@ export async function uploadAttachment(form: FormData): Promise<ActionResult<{ i
     if (file.size > MAX_ATTACHMENT_BYTES) throw new Error("File is larger than 20 MB");
     if (!(await canView(user, taskId))) throw new ForbiddenError();
     const t = await prisma.task.findUniqueOrThrow({ where: { id: taskId }, include: { client: true } });
+    if (kind === "VOICE_NOTE" && t.type === "MEETING") throw new Error("Meetings don't take voice notes — put the agenda in the description");
     let folderId = t.driveFolderId;
     if (!folderId) {
       const folder = await Drive.ensurePath(["Clients", t.client.name, `${t.title} – ${t.id.slice(-6)}`]);

@@ -275,7 +275,7 @@ svg{display:block}
   --shadow:0 1px 1px rgba(15,40,70,.04),0 8px 24px -8px rgba(15,40,70,.18),inset 0 1px 0 rgba(255,255,255,.9);
   --shadow-lg:0 20px 50px -12px rgba(15,40,70,.35);
   /* top zone: teal → sky */
-  --z1a:rgba(6,182,212,.86);--z1b:rgba(14,165,233,.78);--z1c:rgba(56,189,248,.70);
+  --capfg:#06283d;--capcell:rgba(255,255,255,.42);--z1a:rgba(6,182,212,.86);--z1b:rgba(14,165,233,.78);--z1c:rgba(56,189,248,.70);
   --z1pill:rgba(255,255,255,.58);--z1pill-on:rgba(255,255,255,.95);--z1ink:#06303d;--z1ring:#0e7490;--z1icon:rgba(255,255,255,.88);
   /* bottom zone: emerald */
   --z2a:rgba(16,185,129,.80);--z2b:rgba(34,197,94,.74);--z2bar-a:rgba(5,150,105,.92);--z2bar-b:rgba(22,163,74,.88);
@@ -291,7 +291,7 @@ svg{display:block}
   --bg:#070e18;--frame:rgba(255,255,255,.02);
   --glass:rgba(20,30,46,.55);--glass-strong:rgba(20,30,46,.80);--chip:rgba(255,255,255,.08);--input:rgba(255,255,255,.06);--sheet:rgba(14,22,36,.86);
   --shadow:0 1px 1px rgba(0,0,0,.2),0 10px 28px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06);--shadow-lg:0 24px 60px -12px rgba(0,0,0,.7);
-  --z1a:rgba(8,145,178,.62);--z1b:rgba(3,105,161,.55);--z1c:rgba(14,116,144,.50);
+  --capfg:#fff;--capcell:rgba(255,255,255,.16);--z1a:rgba(8,145,178,.62);--z1b:rgba(3,105,161,.55);--z1c:rgba(14,116,144,.50);
   --z1pill:rgba(255,255,255,.12);--z1pill-on:rgba(255,255,255,.88);--z1ink:#e6fbff;--z1ring:#67e8f9;--z1icon:rgba(255,255,255,.8);
   --z2a:rgba(5,150,105,.55);--z2b:rgba(21,128,61,.52);--z2bar-a:rgba(4,120,87,.85);--z2bar-b:rgba(21,128,61,.82);
   --z2pill:rgba(255,255,255,.12);--z2pill-on:rgba(255,255,255,.9);--z2ink:#ecfdf5;--z2label:rgba(236,253,245,.85);
@@ -303,7 +303,7 @@ svg{display:block}
   --bg:#070e18;--frame:rgba(255,255,255,.02);
   --glass:rgba(20,30,46,.55);--glass-strong:rgba(20,30,46,.80);--chip:rgba(255,255,255,.08);--input:rgba(255,255,255,.06);--sheet:rgba(14,22,36,.86);
   --shadow:0 1px 1px rgba(0,0,0,.2),0 10px 28px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06);--shadow-lg:0 24px 60px -12px rgba(0,0,0,.7);
-  --z1a:rgba(8,145,178,.62);--z1b:rgba(3,105,161,.55);--z1c:rgba(14,116,144,.50);
+  --capfg:#fff;--capcell:rgba(255,255,255,.16);--z1a:rgba(8,145,178,.62);--z1b:rgba(3,105,161,.55);--z1c:rgba(14,116,144,.50);
   --z1pill:rgba(255,255,255,.12);--z1pill-on:rgba(255,255,255,.88);--z1ink:#e6fbff;--z1ring:#67e8f9;--z1icon:rgba(255,255,255,.8);
   --z2a:rgba(5,150,105,.55);--z2b:rgba(21,128,61,.52);--z2bar-a:rgba(4,120,87,.85);--z2bar-b:rgba(21,128,61,.82);
   --z2pill:rgba(255,255,255,.12);--z2pill-on:rgba(255,255,255,.9);--z2ink:#ecfdf5;--z2label:rgba(236,253,245,.85);
@@ -501,7 +501,7 @@ select.in{padding-right:10px}
 .mq{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 2px;border-radius:16px;border:1px solid var(--hair);background:var(--glass-strong);box-shadow:var(--shadow);font-size:11px;font-weight:600;color:var(--ink);white-space:nowrap;min-width:0}
 .mq span{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff}
 .mempty{padding:28px 8px;text-align:center;color:var(--muted);font-size:13px}
-.t-money{background:linear-gradient(150deg,#10b981,#059669)}.t-client{background:linear-gradient(150deg,#38bdf8,#0284c7)}.t-team{background:linear-gradient(150deg,#a78bfa,#7c3aed)}.t-acct{background:linear-gradient(150deg,#94a3b8,#64748b)}.t-task{background:linear-gradient(150deg,#22d3ee,#0891b2)}.t-red{background:linear-gradient(150deg,#f87171,#dc2626)}
+.t-money{background:linear-gradient(150deg,#10b981,#059669)}.t-client{background:linear-gradient(150deg,#38bdf8,#0284c7)}.t-team{background:linear-gradient(150deg,#a78bfa,#7c3aed)}.t-day{background:linear-gradient(150deg,#fbbf24,#ea580c)}.t-acct{background:linear-gradient(150deg,#94a3b8,#64748b)}.t-task{background:linear-gradient(150deg,#22d3ee,#0891b2)}.t-red{background:linear-gradient(150deg,#f87171,#dc2626)}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .mbadge.amber{color:#fcd34d}}
 :root[data-theme="dark"] .mbadge.amber{color:#fcd34d}
 @media (min-width:540px){.msheet{border-radius:28px 28px 0 0}}
@@ -525,6 +525,151 @@ select.in{padding-right:10px}
 #tRowStart{overflow:hidden}
 .tstrip{display:flex;align-items:center;gap:8px;overflow-x:auto;min-width:0;flex:1;scrollbar-width:none;height:100%}
 .tstrip::-webkit-scrollbar{display:none}
+.addhdr{padding:10px 12px 12px!important;padding-top:calc(10px + env(safe-area-inset-top,0px))!important;gap:8px;animation:capin .22s ease-out}
+.addhdr[hidden]{display:none!important}
+@keyframes capin{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.addhdr{animation:none}}
+.caphd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11px;letter-spacing:.04em;color:var(--capfg);opacity:.85}
+.capnm{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--capfg);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.capgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.capc{display:flex;flex-direction:column;gap:1px;padding:7px 8px;border-radius:12px;background:var(--capcell);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 0 0 1px rgba(255,255,255,.28);color:var(--capfg);min-width:0;font-variant-numeric:tabular-nums}
+.capc.full{background:rgba(239,68,68,.28)}
+.capl{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.85}
+.capc b{font-size:16px;font-weight:800;line-height:1.15;white-space:nowrap}
+.capc b small{font-size:10.5px;font-weight:600;opacity:.85}
+.capb{font-size:11px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sech{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:12px 4px 4px}
+.dcard{padding:12px!important}
+.dhead{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.dhead h4{margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dbtn{height:32px!important;padding:0 11px!important;font-size:12.5px!important;white-space:nowrap}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.dchip{display:flex;align-items:center;justify-content:space-between;gap:6px;height:40px;padding:0 12px;border-radius:12px;border:0;background:var(--chip);color:var(--ink);font:inherit;font-size:13px;cursor:pointer;min-width:0;font-variant-numeric:tabular-nums}
+.dchip .dl{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shadd{display:flex;align-items:flex-start;gap:8px}
+.shchips{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:46px;padding:6px 10px;border-radius:14px;background:var(--input);box-shadow:inset 0 0 0 1px var(--hair)}
+.shin{flex:1;min-width:120px;border:0;background:transparent;color:var(--ink);font:inherit;font-size:15px;outline:none;height:32px}
+.shchip{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 4px 0 10px;border-radius:999px;background:var(--chip);font-size:13px;max-width:100%;overflow:hidden}
+.shchip button{border:0;background:transparent;color:var(--muted);font-size:16px;width:22px;height:22px;cursor:pointer}
+.shsel{height:36px;border-radius:10px;border:0;background:var(--chip);color:var(--ink);font:inherit;font-size:13px;padding:0 8px;max-width:150px}
+.shrow{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--hair)}
+.shrow .m{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.shrow .m b,.shrow .m small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shrow .m small{color:var(--muted);font-size:12px;white-space:normal}
+.shrow .m .shsel{align-self:flex-start;background:transparent;padding:0;height:24px;font-weight:700;font-size:14px;max-width:100%}
+.shav{width:34px;height:34px;flex-shrink:0;border-radius:999px;display:grid;place-items:center;background:var(--primary);color:#fff;font-weight:800;font-size:14px}
+.shav.on{background:#16a34a}
+.shown{font-size:13px;color:var(--muted)}
+.ksheet{border-collapse:collapse;font-size:12px;min-width:640px;width:100%}
+.ksheet th{position:sticky;top:0;background:var(--chip);font-weight:800;text-align:left;padding:8px;white-space:nowrap;border-bottom:1px solid var(--hair)}
+.ksheet td{padding:7px 8px;border-bottom:1px solid var(--hair);white-space:nowrap}
+.ksheet tr.kex td{color:var(--muted);font-style:italic}
+.rpills .pill.ok{color:#16a34a;font-weight:700}.rpills .pill.od{color:#dc2626;font-weight:700}
+.chip.team{color:#7c3aed}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .chip.team{color:#c4b5fd}:root:not([data-theme="light"]) .rpills .pill.ok{color:#4ade80}:root:not([data-theme="light"]) .rpills .pill.od{color:#f87171}}
+:root[data-theme="dark"] .chip.team{color:#c4b5fd}:root[data-theme="dark"] .rpills .pill.ok{color:#4ade80}:root[data-theme="dark"] .rpills .pill.od{color:#f87171}
+.toast .undo{margin-left:12px;border:0;background:transparent;color:#7dd3fc;font:inherit;font-weight:800;cursor:pointer;padding:2px 4px}
+.row.grey{background:var(--row-white)!important;opacity:.55;filter:saturate(.45)}
+.row.grey::before{opacity:.5}
+.doubtTag{flex-shrink:0;display:inline-grid;place-items:center;width:18px;height:18px;border-radius:999px;background:#f59e0b;color:#111;font-size:12px;font-weight:900}
+/* The next-slot line and the "Goes to / Inviting" summary card are not shown (owner request). */
+#tSlot,#tAssignWrap{display:none!important}
+/* ---- dashboard summary (compact) + neutral bottom dock ---- */
+.cols{display:block!important;margin-top:4px}
+.sumcap{display:flex;justify-content:space-between;gap:8px;font-size:11px;letter-spacing:.04em;color:var(--z1ink);opacity:.85;padding:0 2px 6px}
+.sumcap span:first-child{font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.sumcap span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sumgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.sumcol{min-width:0;display:flex;flex-direction:column;gap:4px}
+.sumh{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--z1ink);opacity:.75;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sumlist{display:flex;flex-direction:column;gap:4px;max-height:136px;overflow-y:auto;scrollbar-width:none}
+.sumlist::-webkit-scrollbar{display:none}
+.sumrow{flex-shrink:0;height:30px;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 10px;border-radius:10px;border:1px solid rgba(255,255,255,.28);background:var(--z1pill);color:var(--z1ink);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;font-variant-numeric:tabular-nums;text-align:left}
+.sumrow .t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sumrow b{flex-shrink:0;font-weight:800}
+.sumrow.on{background:var(--z1pill-on);color:#06303d;box-shadow:inset 0 0 0 2px var(--z1ring)}
+.sumnone{padding:4px;color:var(--z1ink);opacity:.6;font-size:12px}
+.cyan{padding-bottom:12px!important}
+#s-dash .greenarea{display:none}
+#s-dash .bar{height:56px;background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-top:1px solid var(--hair)}
+#s-dash .bar .g{flex:1;background:transparent!important;color:var(--ink);padding:0 4px 0 12px;gap:6px}
+#s-dash .bar .w{flex:none;border-left:0;background:transparent;padding:0 10px 0 4px;gap:6px}
+#s-dash .bar .w #addChoose{background:linear-gradient(150deg,#3b82f6,#1d4ed8);color:#fff;border-radius:14px;box-shadow:0 6px 16px -6px rgba(37,99,235,.7)}
+.dk{flex-shrink:0;height:34px;display:inline-flex;align-items:center;gap:5px;padding:0 10px;border-radius:12px;border:1px solid var(--hair);background:var(--chip);color:var(--ink);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;max-width:118px}
+.dk span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dk i{font-style:normal;opacity:.6;font-size:11px}
+.dk.on{background:var(--ink);color:var(--bg);border-color:transparent}
+.dk.on i.x{opacity:.9;font-size:15px;line-height:1;padding-left:2px}
+/* ---- compact card: title + circle / chips + date,hours / icons + time / actual ---- */
+.row{padding:10px 10px 10px 14px!important}
+.rtop{display:flex;align-items:flex-start;gap:8px}
+.rtop .title{flex:1;min-width:0;padding-top:4px}
+.rtop .title b{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.rline{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;min-width:0}
+.rline.end{justify-content:flex-end;margin-top:4px}
+.rline .chips{flex:1;min-width:0;flex-wrap:nowrap!important;overflow:hidden}
+.rline .chips .chip{flex-shrink:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rline .icons{margin:0 0 0 -6px!important;gap:0!important}
+.rline .icons button{width:32px!important;height:32px!important}
+.rp{display:flex;gap:4px;flex-shrink:0}
+.rp .pill,.rline .pill.act{position:relative;height:24px;padding:0 9px;font-size:11.5px;display:inline-flex;align-items:center;white-space:nowrap;font-variant-numeric:tabular-nums;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.rp .pill.b{font-weight:700}
+.pill.rv{box-shadow:inset 0 0 0 1.5px rgba(239,68,68,.75)}
+.rvdot{position:absolute;top:-4px;right:-4px;width:10px;height:10px;border-radius:999px;background:#ef4444;box-shadow:0 0 0 2px var(--bg)}
+.row .circle{flex-shrink:0;width:32px;height:32px}
+/* dashboard summary in the add-task capacity style */
+.sumsec{display:flex;flex-direction:column;gap:6px}
+.sumsec+.sumsec{margin-top:10px}
+.sumstrip{display:grid;grid-auto-flow:column;grid-auto-columns:calc((100% - 12px)/3);gap:6px;overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity}
+.sumstrip::-webkit-scrollbar{display:none}
+.sumc{border:0;font:inherit;text-align:left;cursor:pointer;scroll-snap-align:start}
+.sumc .capl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:none;letter-spacing:0;font-size:12.5px;font-weight:700;opacity:.95}
+.sumc.on{background:rgba(255,255,255,.85);color:#06303d;box-shadow:inset 0 0 0 2px var(--z1ring)}
+/* doubt = purple */
+:root{--row-purple:rgba(237,233,254,.8);--acc-purple:#8b5cf6}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--row-purple:rgba(139,92,246,.2)}}
+:root[data-theme="dark"]{--row-purple:rgba(139,92,246,.2)}
+.row.purple{background:var(--row-purple)}.row.purple::before{background:var(--acc-purple)}
+.doubtTag{background:#8b5cf6!important;color:#fff!important}
+.strip .sw{width:34px}
+.sw[aria-label^="Doubt"]{display:grid;place-items:center;font-weight:900;color:#6d28d9;font-size:14px}
+.sw[aria-label^="Doubt"]::after{content:"?"}
+/* filter rows: neutral glass, one row each (replaces green) */
+#s-dash .greenarea{display:block!important;background:var(--glass)!important;backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:none!important;border-top:1px solid var(--hair);padding:4px 0 2px!important}
+#s-dash .prow{height:42px;padding:0 12px;gap:6px}
+.plab{flex-shrink:0;width:52px;font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+#s-dash .bar{border-top:0!important}
+#s-dash .bar .g .dk{height:32px}
+#s-dash .prow .dk,#s-dash .bar .g .dk{max-width:none;white-space:nowrap;height:32px;font-weight:600}
+.itog.pall{width:auto!important;padding:0 8px;gap:3px;display:inline-flex;align-items:center;border-radius:10px;font-size:11px;font-weight:700}
+.strip .sw{width:30px!important}
+.strip{gap:4px!important}
+/* dashboard summary v3: content-sized chips, no empty space */
+.sumtop{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--capfg);opacity:.85;padding:0 2px 6px}
+.sumtop span:first-child{font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.sumtop span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sumsec2{display:flex;align-items:flex-start;gap:8px}
+.sumsec2+.sumsec2{margin-top:6px}
+.slab{flex-shrink:0;width:54px;padding-top:9px;font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--capfg);opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.schips{flex:1;min-width:0;display:flex;flex-wrap:nowrap;gap:5px;overflow-x:auto;scrollbar-width:none;padding-right:2px}
+.schips::-webkit-scrollbar{display:none}
+.sch{flex-shrink:0}
+.sch{display:inline-flex;align-items:baseline;gap:5px;height:30px;padding:0 9px;border-radius:10px;border:0;background:var(--capcell);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 0 0 1px rgba(255,255,255,.25);color:var(--capfg);font:inherit;font-size:12.5px;cursor:pointer;font-variant-numeric:tabular-nums;max-width:100%;align-items:center}
+.sch .n{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.sch b{font-weight:800}
+.sch small{font-size:10px;font-weight:700;opacity:.7;padding:1px 5px;border-radius:999px;background:rgba(255,255,255,.22)}
+.sch.on{background:rgba(255,255,255,.88);color:#06303d;box-shadow:inset 0 0 0 2px var(--z1ring)}
+/* add-task rows + bar in the same neutral glass feel as the dashboard dock */
+#s-add .greenarea{background:var(--glass)!important;backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:none!important;border-top:1px solid var(--hair);padding:4px 0 2px!important}
+#s-add .wrow{height:42px;padding:0 12px;gap:6px}
+#s-add .wrow .lbl{position:sticky;left:0;z-index:1;width:52px;min-width:52px;font-size:10.5px;font-weight:800;letter-spacing:.07em;color:var(--muted);background:transparent}
+#s-add .gpk{height:32px;padding:0 11px;border-radius:12px;border:1px solid var(--hair);background:var(--chip);color:var(--ink);font-size:12.5px;font-weight:600;box-shadow:none}
+#s-add .gpk.on{background:var(--ink);color:var(--bg);border-color:transparent}
+#s-add .gpk.pref.on{box-shadow:inset 0 0 0 2px var(--bg)}
+#s-add .bar{height:56px;background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-top:0}
+#s-add .bar .g{background:transparent!important;color:var(--ink);padding:0 4px 0 12px}
+#s-add .bar .g>button:first-child{color:var(--ink)!important}
+#s-add .bar .w{background:transparent;border-left:0}
 </style><div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
@@ -561,7 +706,6 @@ select.in{padding-right:10px}
         <div class="g" id="barg"></div>
         <div class="w">
           <button class="sq" id="addMeet" aria-label="Schedule a meeting"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h5v5H3z" fill="#00832D"/><path d="M3 11h7v5H5a2 2 0 0 1-2-2z" fill="#0066DA"/><path d="M10 6h5v5h-5z" fill="#2684FC"/><path d="M10 11h5v5h-5z" fill="#00AC47"/><path d="M15 6h.5a1.5 1.5 0 0 1 1.5 1.5V11h-2z" fill="#FFBA00"/><path d="M15 11h2v3.5a1.5 1.5 0 0 1-1.5 1.5H15z" fill="#00AC47"/><path d="M17 10.2 21 7v8l-4-3.2z" fill="#00AC47"/></svg></button>
-          <button class="pill" id="addWork">Work</button>
           <button class="sq" id="addChoose" aria-label="Add task"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
         </div>
       </div>
@@ -673,7 +817,7 @@ function seed(){
   T({title:"Landing page hero redesign",client:"c2",assignees:["u6"],mins:240,start:at(-1,11),end:at(-1,15),status:"STARTED",actualStart:at(-1,11,20),doubt:true,team:"t2",work:"w2",desc:"Client asked for a darker palette. Doubt: which logo version?"}),
   T({title:"Meta ads — festive campaign setup",client:"c4",assignees:["u3","u4"],mins:120,start:at(-2,10),end:at(-2,12),work:"w3",desc:"Overdue: waiting on creatives."}),
   T({title:"Client kickoff — Nordic Labs",client:"c3",assignees:["u2","u3"],mins:45,start:at(0,16),end:at(0,16,45),type:"MEETING",createdBy:"u1",meet:true}),
-  T({title:"Blog: 10 SEO wins for D2C brands",client:"c3",assignees:["u4"],mins:150,start:at(1,10),end:at(1,12,30),team:"t3",review:true}),
+  T({title:"Blog: 10 SEO wins for D2C brands",client:"c3",assignees:["u4"],mins:150,start:at(1,10),end:at(1,12,30),team:"t3",review:true,reviewFields:["date","time","mins"]}),
   T({title:"Brand guideline PDF v2",client:"c1",assignees:["u6"],mins:300,start:at(1,11),end:at(1,16),team:"t2",work:"w2",paused:true}),
   T({title:"Monthly newsletter copy",client:"c4",assignees:["u3"],mins:90,start:at(2,10),end:at(2,11,30),recurring:true,recurText:"Every month on the last day"}),
   T({title:"Website audit fixes",client:"c2",assignees:["u3"],mins:120,start:at(-3,10),end:at(-3,12),status:"COMPLETED",actualStart:at(-3,10),actualEnd:at(-3,12,10)}),
@@ -752,7 +896,7 @@ const role=()=>me()?me().role:null;
 const userById=id=>S.users.find(u=>u.id===id);
 const clientById=id=>S.clients.find(c=>c.id===id);
 const first=n=>n.split(" ")[0];
-const fmtMin=m=>{const h=Math.floor(m/60),mm=m%60;return mm?`${h}h ${mm}m`:`${h} Hours`.replace("1 Hours","1 Hour");};
+const fmtMin=m=>{const h=Math.floor(m/60),mm=m%60;if(!h)return `${mm}m`;return mm?`${h}h ${mm}m`:`${h} Hours`.replace("1 Hours","1 Hour");};
 const shortLabel=l=>{const w=l.trim().split(/\s+/)[0]||"";return w.length>6?w.slice(0,5):w;};
 const pillHours=m=>{const h=Math.round(m/60*10)/10;return Number.isInteger(h)?String(h):h.toFixed(1);};
 const fmtH=m=>{const h=m/60;return (Number.isInteger(h)?h:h.toFixed(1))+" Hours";};
@@ -770,10 +914,16 @@ const payeeKey=s=>(s||"").trim().toLowerCase();
 const payeeFyTotal=(payee,ref=new Date(),exclOcc=null)=>S.expenses.filter(e=>e.kind!=="SALARY"&&payeeKey(e.payee)===payeeKey(payee)).flatMap(e=>e.occ).filter(o=>o!==exclOcc&&o.status==="PAID"&&inFY(o.paidAt,ref)).reduce((s,o)=>s+o.amount,0);
 const inr=n=>"₹"+Math.round(n).toLocaleString("en-IN");
 const dayOff=iso=>Math.round((new Date(iso).setHours(0,0,0,0)-today0().getTime())/DAY);
-const dateChip=iso=>{const o=dayOff(iso);return o===0?"Today":o===1?"Tom":o===-1?"Yest":fmtD(iso);};
-const rowColour=t=>t.status==="COMPLETED"?"grey":t.doubt?"yellow":(t.status!=="COMPLETED"&&new Date(t.end)<new Date()&&t.status!=="FINISH_REQUESTED")?"red":t.status==="STARTED"?"green":"white";
+/* Cards always show the real date (never Today/Tom). */
+const dateChip=iso=>fmtD(iso);
+/* Actual-time pill: green when started on time / finished inside the slot, red when started late or running past the end. */
+const actualTone=t=>{if(!t.actualStart)return "";const late=new Date(t.actualStart)>new Date(t.start);if(t.status==="COMPLETED")return t.actualEnd&&new Date(t.actualEnd)<=new Date(t.end)?"ok":"od";if(new Date()>new Date(t.end))return "od";return late?"od":"ok";};
+/* Row colour: completed = faded, doubt (?) = purple, paused = yellow, started = green, not started after its start time = red. */
+const rowColour=t=>t.status==="COMPLETED"?"grey":t.doubt?"purple":t.paused?"yellow":(t.status==="STARTED"||t.status==="FINISH_REQUESTED")?"green":new Date(t.start)<new Date()?"red":"white";
 const toastEl=$("#toast");let toastT=null;
-function toast(msg,kind){toastEl.textContent=msg;toastEl.className="toast"+(kind==="err"?" err":"");toastEl.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>toastEl.hidden=true,2200);}
+function toast(msg,kind){toastEl.textContent=msg;toastEl.className="toast"+(kind==="err"?" err":"");toastEl.style.pointerEvents="";toastEl.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>toastEl.hidden=true,2200);}
+/* Google-Tasks style toast with Undo (5s). */
+function undoToast(msg,onUndo){toastEl.replaceChildren(el("span",{},msg),el("button",{class:"undo",onclick:()=>{toastEl.hidden=true;onUndo();}},"Undo"));toastEl.className="toast";toastEl.style.pointerEvents="auto";toastEl.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>toastEl.hidden=true,5000);}
 function notify(forId,text){S.notifs.unshift({id:uid(),text,at:new Date().toISOString(),read:false,for:forId});}
 function audit(){}
 
@@ -798,18 +948,21 @@ function visibleTasks(){
 }
 function filtersFor(){S.filters[S.me]=S.filters[S.me]||{pill:null,row1:null,row2:null,quick:null,date:null,completed:false,colours:[],icons:[]};return S.filters[S.me];}
 function tog(arr,k){return arr.includes(k)?arr.filter(x=>x!==k):[...arr,k];}
+/* Top summary: open hours grouped by team and client (TL: people + client; Exec: date + client).
+   It follows the filters chosen in the bottom dock (team/person, client/work, day). */
 function pillGroups(){
- const r=role(),ts=visibleTasks().filter(t=>t.status!=="COMPLETED");
- const sum=(pred)=>ts.filter(pred).reduce((a,t)=>a+t.mins,0);
- const clientsG={key:"client",label:"Client",items:S.clients.filter(c=>ts.some(t=>t.client===c.id)).map(c=>({id:"client:"+c.id,label:c.name,minutes:sum(t=>t.client===c.id)}))};
- const dateG={key:"date",label:"Date",items:[["Today",0],["Tom",1],["Day+2",2]].map(([l,o])=>({id:"date:"+o,label:l,minutes:sum(t=>dayOff(t.start)===o)}))};
- if(r==="ADMIN")return [
-  {key:"team",label:"Team",items:S.teams.map(t=>({id:"team:"+t.id,label:t.name,minutes:sum(x=>x.team===t.id)}))},
-  {key:"person",label:"Person",items:S.users.filter(u=>["TEAM_LEADER","EXECUTIVE"].includes(u.role)).map(u=>({id:"user:"+u.id,label:first(u.name),minutes:sum(x=>x.assignees.includes(u.id))}))},
-  clientsG];
- if(r==="TEAM_LEADER")return [
-  {key:"exec",label:"Executive",items:S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===me().teamId).map(u=>({id:"user:"+u.id,label:first(u.name),minutes:sum(x=>x.assignees.includes(u.id))}))},
-  dateG,clientsG];
+ const r=role(),f=filtersFor();
+ const ts=applyFilters(visibleTasks(),Object.assign({},f,{pill:null,colours:[],icons:[],completed:false,quick:f.quick==="asc"?null:f.quick}));
+ const sum=pred=>ts.filter(pred).reduce((a,t)=>a+t.mins,0);const cnt=pred=>ts.filter(pred).length;
+ const keep=it=>it.minutes>0||f.pill===it.id;
+ const clientsG={key:"client",label:"Clients",items:S.clients.map(c=>({id:"client:"+c.id,label:c.name,minutes:sum(t=>t.client===c.id),count:cnt(t=>t.client===c.id)})).filter(keep)};
+ const people=(ids,label)=>({key:"person",label,items:ids.map(id=>userById(id)).filter(Boolean).map(u=>({id:"user:"+u.id,label:first(u.name),minutes:sum(x=>x.assignees.includes(u.id)),count:cnt(x=>x.assignees.includes(u.id))})).filter(keep)});
+ const dateG={key:"date",label:"Days",items:[["Today",0],["Tom",1],["Day+2",2]].map(([l,o])=>({id:"date:"+o,label:l,minutes:sum(t=>dayOff(t.start)===o),count:cnt(t=>dayOff(t.start)===o)}))};
+ if(r==="ADMIN"){
+  const team=f.row1&&f.row1.startsWith("team:")?S.teams.find(t=>t.id===f.row1.slice(5)):null;
+  return [team?people(S.users.filter(u=>u.teamId===team.id&&["TEAM_LEADER","EXECUTIVE"].includes(u.role)).map(u=>u.id),team.name+" · people"):{key:"team",label:"Teams",items:S.teams.map(t=>({id:"team:"+t.id,label:t.name,minutes:sum(x=>x.team===t.id),count:cnt(x=>x.team===t.id)})).filter(keep)},clientsG];
+ }
+ if(r==="TEAM_LEADER")return [people(S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===me().teamId).map(u=>u.id),"People"),clientsG];
  return [dateG,clientsG];
 }
 function matchPill(t,p){if(!p)return true;const [k,v]=p.split(":");if(k==="team")return t.team===v;if(k==="user")return t.assignees.includes(v);if(k==="client")return t.client===v;if(k==="date")return dayOff(t.start)===Number(v);return true;}
@@ -819,7 +972,7 @@ function applyFilters(ts,f){
  if(f.row1){const [k,v]=f.row1.split(":");out=out.filter(t=>k==="team"?t.team===v:k==="user"?t.assignees.includes(v):t.client===v);}
  if(f.row2){const [k,v]=f.row2.split(":");out=out.filter(t=>k==="work"?t.work===v:t.client===v);}
  if(f.colours.length)out=out.filter(t=>f.colours.includes(rowColour(t)));
- if(f.icons.length)out=out.filter(t=>f.icons.some(i=>i==="restarted"?t.parent:i==="recurring"?t.recurring:i==="paused"?t.paused:t.review));
+ if(f.icons.length)out=out.filter(t=>f.icons.some(i=>i==="restarted"?t.parent:i==="recurring"?t.recurring:i==="paused"?t.paused:(t.reviewFields?t.reviewFields.length>0:t.review)));
  if(f.quick==="today")out=out.filter(t=>dayOff(t.start)===0);
  if(f.quick==="tomorrow")out=out.filter(t=>dayOff(t.start)===1);
  if(f.date)out=out.filter(t=>dk(new Date(t.start))===f.date);
@@ -837,8 +990,12 @@ function renderDash(){
  $("#notifBadge").hidden=!unread;$("#notifBadge").textContent=unread;
  // cyan columns
  const groups=pillGroups(),two=groups.length===2;
- $("#cols").replaceChildren(...groups.map((g,i)=>el("div",{class:"col"+(two?(i===1?" end":" start"):""),role:"group","aria-label":g.label},
-  g.items.length?g.items.map(it=>el("button",{class:"cpill"+(f.pill===it.id?" on":""),title:`${it.label} - ${fmtH(it.minutes)}`,onclick:()=>{f.pill=f.pill===it.id?null:it.id;save();renderDash();}},el("span",{class:"t"},shortLabel(it.label)),el("span",{class:"h"},"- "+pillHours(it.minutes)))):el("span",{style:"padding:0 4px;font-size:12px;font-weight:600;color:rgba(255,255,255,.7)"},"—"))));
+ const sub=[f.row1?dockName(f.row1):null,f.row2?dockName(f.row2):null,f.date?fmtD(f.date):f.quick==="today"?"Today":f.quick==="tomorrow"?"Tomorrow":null].filter(Boolean);
+ // compact summary: one line per group — label, then content-sized chips "Social 9.8h ·7" that wrap
+ $("#cols").replaceChildren(el("div",{class:"sumtop"},el("span",{},"Open hours"),el("span",{},sub.length?sub.join(" · "):"all tasks")),
+  ...groups.map(g=>el("div",{class:"sumsec2",role:"group","aria-label":g.label},el("span",{class:"slab"},g.label),
+   el("div",{class:"schips"},...(g.items.length?g.items.map(it=>el("button",{class:"sch"+(f.pill===it.id?" on":""),title:`${it.label}: ${hh(it.minutes)} open in ${it.count} task(s)`,onclick:()=>{f.pill=f.pill===it.id?null:it.id;save();renderDash();}},
+    el("span",{class:"n"},it.label),el("b",{},hh(it.minutes)),el("small",{},String(it.count)))):[el("span",{class:"sumnone"},"Nothing open")])))));
  // rows
  const ts=applyFilters(visibleTasks(),f);
  $("#rows").replaceChildren(...(ts.length?ts.map(taskRow):[el("li",{class:"empty"},f.completed?"No completed tasks match.":"Nothing here. Tap + to add a task, or clear a filter below.")]));
@@ -847,86 +1004,134 @@ function renderDash(){
   el("button",{class:"itog"+(f.icons.includes("restarted")?" on":""),title:"Restarted tasks",onclick:()=>{f.icons=tog(f.icons,"restarted");save();renderDash();}},svg(I.restart,15,2.5)),
   el("button",{class:"comp"+(f.completed?" on":""),onclick:()=>{f.completed=!f.completed;save();renderDash();}},"completed"),
   el("button",{class:"itog"+(f.icons.includes("recurring")?" on":""),title:"Recurring tasks",onclick:()=>{f.icons=tog(f.icons,"recurring");save();renderDash();}},svg(I.repeat,15,2.5)),
-  el("button",{class:"itog"+(f.icons.includes("paused")?" on":""),title:"Paused tasks",onclick:()=>{f.icons=tog(f.icons,"paused");save();renderDash();}},svg(I.pause,13,0)),
-  ...[["red","#F8CACA","Overdue"],["yellow","#F6E7B4","Doubt raised"],["green","#CBEFCB","Ongoing"]].map(([k,hex,l])=>el("button",{class:"sw"+(f.colours.includes(k)?" on":""),style:"background:"+hex,title:l,"aria-label":l,onclick:()=>{f.colours=tog(f.colours,k);save();renderDash();}})),
+  ...[["red","#F8CACA","Not started · start time passed"],["yellow","#F6E7B4","Paused"],["green","#CBEFCB","Started"],["purple","#E4D7FB","Doubt raised (?)"]].map(([k,hex,l])=>el("button",{class:"sw"+(f.colours.includes(k)?" on":""),style:"background:"+hex,title:l,"aria-label":l,onclick:()=>{f.colours=tog(f.colours,k);save();renderDash();}})),
+  r==="ADMIN"?el("button",{class:"itog pall",title:"Pause or resume all tasks shown","aria-label":"Pause all",onclick:pauseAllSheet},svg(I.pause,13,0),el("span",{},"all")):null,
   el("button",{class:"rdbtn"+(f.icons.includes("review")?" on":""),title:"Review requested",onclick:()=>{f.icons=tog(f.icons,"review");save();renderDash();}},el("i")));
- // green rows
+ // bottom dock: Team / Client / Day pickers (neutral glass, one row) + Meet and + buttons
  const vis=visibleTasks();
  const row1=r==="ADMIN"?S.teams.map(t=>({id:"team:"+t.id,label:t.name})):r==="TEAM_LEADER"?S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===m.teamId).map(u=>({id:"user:"+u.id,label:first(u.name)})):S.clients.filter(c=>vis.some(t=>t.client===c.id)).map(c=>({id:"client:"+c.id,label:c.name}));
  const row2=r==="EXECUTIVE"?workFor([m.teamId]).map(w=>({id:"work:"+w.id,label:w.name})):S.clients.filter(c=>vis.some(t=>t.client===c.id)).map(c=>({id:"client:"+c.id,label:c.name}));
- const prow=(host,items,key)=>host.replaceChildren(el("button",{class:"gp"+(f[key]===null?" on":""),onclick:()=>{f[key]=null;save();renderDash();}},"All"),...items.map(it=>el("button",{class:"gp"+(f[key]===it.id?" on":""),onclick:()=>{f[key]=f[key]===it.id?null:it.id;save();renderDash();}},it.label)));
- prow($("#prow1"),row1,"row1");prow($("#prow2"),row2,"row2");
- const quick=q=>{f.quick=f.quick===q?null:q;save();renderDash();};
+ // one neutral glass row per filter (as before, not green): Teams / Clients pills, then day pills + add buttons
+ const lab1=r==="ADMIN"?"Teams":r==="TEAM_LEADER"?"People":"Clients",lab2=r==="EXECUTIVE"?"Work":"Clients";
+ const prow=(host,label,items,key)=>host.replaceChildren(el("span",{class:"plab"},label),el("button",{class:"dk"+(f[key]===null?" on":""),onclick:()=>{f[key]=null;f.pill=null;save();renderDash();}},"All"),...items.map(it=>el("button",{class:"dk"+(f[key]===it.id?" on":""),onclick:()=>{f[key]=f[key]===it.id?null:it.id;f.pill=null;save();renderDash();}},it.label)));
+ prow($("#prow1"),lab1,row1,"row1");prow($("#prow2"),lab2,row2,"row2");
+ const quick=q=>{f.quick=f.quick===q?null:q;f.date=null;f.pill=null;save();renderDash();};
  $("#barg").replaceChildren(
-  el("button",{style:"display:flex;align-items:center;gap:4px;height:32px;flex-shrink:0;color:#fff",title:"Pick a date",onclick:openDatePicker},svg(I.cal,20,2.25),f.date?el("span",{style:"font-size:11px;font-weight:600"},fmtD(f.date)):null),
-  el("button",{class:"gp"+(f.quick==="asc"?" on":""),onclick:()=>quick("asc")},"Ascending"),
-  el("button",{class:"gp"+(f.quick==="tomorrow"?" on":""),onclick:()=>quick("tomorrow")},"tomorrow"),
-  el("button",{class:"gp"+(f.quick==="today"?" on":""),onclick:()=>quick("today")},"today"));
+  el("button",{class:"dk"+(f.date?" on":""),title:"Pick a date","aria-label":"Pick a date",onclick:daySheet},svg(I.cal,16,2.25),f.date?el("span",{},fmtD(f.date)):null),
+  el("button",{class:"dk"+(f.quick==="today"?" on":""),onclick:()=>quick("today")},"Today"),
+  el("button",{class:"dk"+(f.quick==="tomorrow"?" on":""),onclick:()=>quick("tomorrow")},"Tomorrow"),
+  el("button",{class:"dk"+(f.quick==="asc"?" on":""),onclick:()=>quick("asc")},"Oldest"));
+}
+const hh=m=>{const h=m/60;return (Number.isInteger(h)?h:h.toFixed(1))+"h";};
+function dockName(id){const [k,v]=id.split(":");if(k==="team")return (S.teams.find(t=>t.id===v)||{}).name||"Team";if(k==="user")return first((userById(v)||{name:"?"}).name);if(k==="client")return (clientById(v)||{}).name||"Client";if(k==="work")return (S.workTypes.find(w=>w.id===v)||{}).name||"Work";return id;}
+function daySheet(){const f=filtersFor();const inp=el("input",{class:"in",type:"date",value:f.date||""});
+ const set=(q,d)=>{f.quick=q;f.date=d;f.pill=null;save();closeSheet();renderDash();};
+ openSheet("Which day?",el("div",{class:"seg",style:"margin:0 0 12px"},el("button",{class:!f.date&&!f.quick?"on":"",onclick:()=>set(null,null)},"Any day"),el("button",{class:f.quick==="today"?"on":"",onclick:()=>set("today",null)},"Today"),el("button",{class:f.quick==="tomorrow"?"on":"",onclick:()=>set("tomorrow",null)},"Tomorrow"),el("button",{class:f.quick==="asc"?"on":"",onclick:()=>set("asc",null)},"Oldest first")),
+  field("Or pick a date",inp),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>inp.value?set(null,inp.value):closeSheet()},"Show")));}
+/* Admin: pause (or resume) every open task currently shown by the filters, in one go. */
+function pauseAllSheet(){
+ const f=filtersFor();const shown=applyFilters(visibleTasks(),Object.assign({},f,{completed:false})).filter(t=>t.status!=="COMPLETED");
+ const toPause=shown.filter(t=>!t.paused),toResume=shown.filter(t=>t.paused);
+ const scope=[f.row1?dockName(f.row1):null,f.row2?dockName(f.row2):null,f.date?fmtD(f.date):f.quick==="today"?"today":f.quick==="tomorrow"?"tomorrow":null].filter(Boolean).join(" · ")||"all open tasks";
+ const why=el("textarea",{class:"in",rows:2,placeholder:"Reason (optional) — e.g. Office closed for Diwali"});
+ const run=(list,on)=>{list.forEach(t=>{t.paused=on;t.assignees.forEach(id=>notify(id,(on?"⏸ Paused":"▶ Resumed")+` by Admin: ${t.title}`+(why.value.trim()?` — ${why.value.trim()}`:"")));});save();closeSheet();renderDash();toast((on?"Paused ":"Resumed ")+list.length+" task"+(list.length===1?"":"s"));};
+ openSheet("Pause all",el("p",{class:"pre",style:"margin:0 0 10px"},"Applies to the tasks shown right now: "+scope+". Assignees are notified; each card shows ⏸ and turns yellow."),
+  el("div",{class:"card",style:"margin:0 0 10px"},el("div",{class:"kv"},el("span",{},"Open, running"),el("b",{class:"num"},String(toPause.length))),el("div",{class:"kv"},el("span",{},"Already paused"),el("b",{class:"num"},String(toResume.length)))),
+  field("Reason",why),
+  el("div",{class:"btnrow"},el("button",{class:"btn ghost",disabled:!toResume.length||null,onclick:()=>run(toResume,false)},"Resume all ("+toResume.length+")"),el("button",{class:"btn",style:"background:#d97706;color:#fff",disabled:!toPause.length||null,onclick:()=>run(toPause,true)},"Pause all ("+toPause.length+")")));
 }
 function openDatePicker(){
  const f=filtersFor();const inp=el("input",{class:"in",type:"date",value:f.date||""});
  openSheet("Show one day",field("Date",inp),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{f.date=null;save();closeSheet();renderDash();}},"Clear"),el("button",{class:"btn",onclick:()=>{f.date=inp.value||null;save();closeSheet();renderDash();}},"Apply")));
 }
+/* Review flags per pill (date / start time / time allotted). Old single flag counts as "time allotted". */
+const RVF={date:"start date",time:"start time",mins:"time allotted"};
+const rvOf=t=>t.reviewFields||(t.review?["mins"]:[]);
+function rpill(t,field,cls,text){
+ let pt=null,plong=false;const has=rvOf(t).includes(field);
+ return el("span",{class:"pill "+cls+(has?" rv":""),title:has?"Review requested on the "+RVF[field]:"Hold or right-click to request a review of the "+RVF[field],
+  onpointerdown:e=>{e.stopPropagation();plong=false;pt=setTimeout(()=>{plong=true;pillMenu(t,field);},450);},onpointerup:e=>{e.stopPropagation();clearTimeout(pt);},onpointerleave:()=>clearTimeout(pt),onpointercancel:()=>clearTimeout(pt),
+  oncontextmenu:e=>{e.preventDefault();e.stopPropagation();clearTimeout(pt);pillMenu(t,field);},
+  onclick:e=>{if(plong){e.stopPropagation();plong=false;}}},text,has?el("i",{class:"rvdot","aria-label":"Review requested"}):null);
+}
+function pillMenu(t,field){
+ const r=role(),has=rvOf(t).includes(field),name=RVF[field];
+ const setF=on=>{const f=new Set(rvOf(t));on?f.add(field):f.delete(field);t.reviewFields=[...f];t.review=t.reviewFields.length>0;};
+ const items=[];
+ if(r==="ADMIN"){
+  if(has){items.push({label:"Mark the "+name+" reviewed",hint:"Removes the red dot for everyone",onClick:()=>{setF(false);S.requests.filter(q=>q.task===t.id&&q.kind==="REVIEW"&&q.field===field&&q.status==="OPEN").forEach(q=>q.status="DONE");save();closeSheet();renderDash();toast("Reviewed");}});
+   items.push({label:"Change the "+name,onClick:()=>{closeSheet();openAdd(t.type,t);}});}
+  else items.push({label:"Flag the "+name+" for review",hint:"Puts a red dot on it",onClick:()=>{setF(true);save();closeSheet();renderDash();toast("Flagged for review");}});
+ }else{
+  if(has)items.push({label:"Withdraw review of the "+name,onClick:()=>{setF(false);save();closeSheet();renderDash();toast("Review withdrawn");}});
+  else items.push({label:"Request review of the "+name,hint:"Red dot on this pill for you and Admin; lands in Admin requests",onClick:()=>noteSheet("Review the "+name,t,txt=>{setF(true);S.requests.unshift({id:uid(),kind:"REVIEW",field,task:t.id,by:me().id,note:txt,status:"OPEN",at:new Date().toISOString()});})});
+ }
+ items.push({label:"All task actions",onClick:()=>{closeSheet();openActions(t);}});
+ openSheet(t.title+" · "+name,actionList(items));
+}
 function taskRow(t){
  const r=role(),m=me(),c=clientById(t.client),col=rowColour(t),od=col==="red";
- const assignee=t.assignees.includes(m.id)?"me":(t.assignees.map(id=>first(userById(id).name)).join(", ")||"—");
  const ib=(label,icon,on,dis)=>el("button",{title:label,"aria-label":label,disabled:dis||null,onclick:e=>{e.stopPropagation();on();}},svg(icon,20));
  const circle=(()=>{
   if(t.status==="COMPLETED")return el("button",{class:"circle",title:"Restart",onclick:e=>{e.stopPropagation();restartTask(t);}},svg(I.restart,15,2.5));
-  const cls="circle"+(t.doubt?" doubt":col==="green"?" started":"");
-  return el("button",{class:cls,title:"Tap to request finish",onclick:e=>{e.stopPropagation();onCircle(t);}},t.paused?svg(I.pause,13,0):t.status==="FINISH_REQUESTED"?svg(I.check,15,3):null);
+  const cls="circle"+(col==="green"?" started":"");
+  let ct=null,clong=false;
+  return el("button",{class:cls,title:"Tap to complete · hold or right-click for more","aria-label":"Complete “"+t.title+"” (hold or right-click for more)",
+   onpointerdown:e=>{e.stopPropagation();clong=false;ct=setTimeout(()=>{clong=true;openActions(t);},450);},onpointerup:e=>{e.stopPropagation();clearTimeout(ct);},onpointerleave:()=>clearTimeout(ct),onpointercancel:()=>clearTimeout(ct),
+   oncontextmenu:e=>{e.preventDefault();e.stopPropagation();clearTimeout(ct);openActions(t);},
+   onkeydown:e=>{if(e.key==="ContextMenu"||(e.shiftKey&&e.key==="F10")){e.preventDefault();openActions(t);}},
+   onclick:e=>{e.stopPropagation();if(clong){clong=false;return;}onCircle(t);}},t.paused?svg(I.pause,13,0):t.status==="FINISH_REQUESTED"?svg(I.check,15,3):null);
  })();
  let pressT=null,long=false;
  const li=el("li",{class:"row "+col,"aria-label":t.title,
   onpointerdown:()=>{long=false;pressT=setTimeout(()=>{long=true;openActions(t);},500);},
   onpointerup:()=>{clearTimeout(pressT);},onpointerleave:()=>clearTimeout(pressT),onpointercancel:()=>clearTimeout(pressT),
-  onclick:()=>{if(!long)openDetail(t);},oncontextmenu:e=>e.preventDefault()},
+  onclick:()=>{if(!long)openDetail(t);},oncontextmenu:e=>{e.preventDefault();clearTimeout(pressT);openActions(t);}},
   t.parent?el("span",{class:"restartTag",title:"Restarted task"},svg(I.restart,10,3)):null,
-  el("div",{class:"title"},el("b",{},t.title),t.important?svg(I.star,12,2):null,t.recurring?el("span",{style:"color:#2563eb;flex-shrink:0"},svg(I.repeat,12,2.5)):null,t.paused?el("span",{class:"pauseTag",title:"Paused"},svg(I.pause,9,0)):null,
-   r==="TEAM_LEADER"?el("span",{class:"names"},t.assignees.length===1&&t.assignees[0]===m.id?svg(I.user,14,0):t.assignees.map(id=>first(userById(id).name).toLowerCase()).join(", ")):null),
-  el("div",{class:"body"},
-   el("div",{class:"left"},
-    el("div",{class:"chips"},el("span",{class:"chip"},c.name),el("span",{class:"chip me"},assignee),(t.prefs&&t.prefs.length&&t.assignees.every(id=>userById(id)?.role==="TEAM_LEADER"))?el("span",{class:"chip",style:"color:#b45309",title:"Admin preference — Team Leader decides"},"pref: "+t.prefs.map(id=>first(userById(id).name).toLowerCase()).join(", ")):null,t.type==="MEETING"?el("span",{class:"chip meet"},"Meeting"):null),
-    el("div",{class:"icons"},
-     ib("Task details",I.info,()=>openDetail(t)),
-     ib("Drive folder",I.folder,()=>toast("Opens the task's Drive folder"),t.type==="MEETING"),
-     ib("Google Meet",I.video,()=>toast("Opens the Meet link"),!t.meet||t.status==="COMPLETED"),
-     ib("Chat space",I.chat,()=>toast("Opens the Chat space"),t.type==="MEETING"),
-     ib("Calendar",I.cal,()=>toast("Opens Google Calendar on "+fmtD(t.start))),
-     t.voice?ib("Voice notes",I.mic,()=>openDetail(t,true)):null)),
-   el("div",{class:"rpills"},
-    el("span",{class:"pill b"},t.type==="MEETING"?"Meet":fmtMin(t.mins),t.review?el("i",{class:"reddot tl",title:"Review requested"}):null),
-    el("span",{class:"pill"+(od?" od":"")},fmtT(t.start)+" – "+fmtT(t.end)),
-    t.actualStart?el("span",{class:"pill dim"},fmtT(t.actualStart)+" – "+(t.actualEnd?fmtT(t.actualEnd):"…")):null,
-    el("span",{class:"pill"},dateChip(t.start),t.doubt&&t.review?el("i",{class:"reddot tr"}):null)),
-   circle));
+  el("div",{class:"rtop"},el("div",{class:"title"},el("b",{},t.title),t.recurring?el("span",{style:"color:#2563eb;flex-shrink:0"},svg(I.repeat,12,2.5)):null,t.paused?el("span",{class:"pauseTag",title:"Paused"},svg(I.pause,9,0)):null,t.doubt?el("span",{class:"doubtTag",title:"Doubt raised"},"?"):null),circle),
+  el("div",{class:"rline"},
+   el("div",{class:"chips"},el("span",{class:"chip"},c.name),S.teams.find(x=>x.id===t.team)?el("span",{class:"chip team"},S.teams.find(x=>x.id===t.team).name):null,null),
+   el("div",{class:"rp"},rpill(t,"date","",dateChip(t.start)),rpill(t,"mins","b"+(t.type==="MEETING"?" mt":""),(t.type==="MEETING"?"🎥 ":"")+fmtMin(t.mins)))),
+  el("div",{class:"rline"},
+   el("div",{class:"icons"},
+    ib("Task details",I.info,()=>openDetail(t)),
+    ib("Drive folder",I.folder,()=>driveInfo(t)),
+    ib("Google Meet",I.video,()=>toast("Joins meet.google.com/"+meetCode(t)+" · anyone with the link can join")),
+    ib("Chat space",I.chat,()=>toast("Opens the task's Google Chat space")),
+    ib("Calendar",I.cal,()=>toast("Opens Google Calendar on "+fmtD(t.start))),
+    t.voice?ib("Voice notes",I.mic,()=>openDetail(t,true)):null),
+   el("div",{class:"rp"},rpill(t,"time",od?"od":"",fmtT(t.start)+" – "+fmtT(t.end)))),
+  t.actualStart?el("div",{class:"rline end"},el("span",{class:"pill act "+(actualTone(t)||"dim"),title:"Actual start – finish"},"▶ "+fmtT(t.actualStart)+" – "+(t.actualEnd?fmtT(t.actualEnd):"…"))):null);
  return li;
 }
 /* ---------- lifecycle ---------- */
+/* Circle = Google Tasks checkbox: tap completes "from my side" (Admin: done; others: finish requested), with Undo. */
 function onCircle(t){
  const r=role();
- if(r==="EXECUTIVE")return toast("Ask your Team Leader to finish");
- if(t.status==="STARTED"){t.status="FINISH_REQUESTED";t.actualEnd=new Date().toISOString();notify("u1",`${first(me().name)} requested finish on “${t.title}”`);save();renderDash();return toast("Finish requested");}
- if(t.status==="FINISH_REQUESTED"){if(r==="ADMIN"){t.status="COMPLETED";t.doubt=false;t.review=false;t.assignees.forEach(id=>notify(id,`Admin approved finish on ${t.title}`));save();renderDash();return toast("Task completed");}return toast("Waiting for Admin approval");}
  if(t.paused)return toast("Task is paused by Admin");
- toast("Long-press the row and choose Start first");
+ if(t.status==="FINISH_REQUESTED"&&r!=="ADMIN")return toast("Done from your side · waiting for Admin");
+ const snap=JSON.parse(JSON.stringify(t));const now=new Date().toISOString();
+ if(!t.actualStart)t.actualStart=now;t.actualEnd=now;
+ if(r==="ADMIN"){t.status="COMPLETED";t.doubt=false;t.review=false;}else{t.status="FINISH_REQUESTED";notify("u1",`${first(me().name)} finished “${t.title}” from their side`);}
+ save();renderDash();
+ undoToast(r==="ADMIN"?"Task completed":"Done from your side · sent to Admin",()=>{Object.assign(t,snap);if(!snap.actualStart)t.actualStart=null;if(!snap.actualEnd)t.actualEnd=null;save();renderDash();toast("Undone");});
 }
 function restartTask(t){if(role()==="EXECUTIVE")return toast("Ask your Team Leader to restart");const n=Object.assign({},t,{id:uid(),status:"NOT_STARTED",actualStart:null,actualEnd:null,parent:true,start:at(0,10),end:at(0,10+Math.ceil(t.mins/60)),doubt:false,review:false});S.tasks.unshift(n);save();renderDash();toast("Task restarted as a new copy");}
 function openActions(t){
  const r=role(),items=[];
  const done=(fn,msg)=>()=>{fn();save();closeSheet();renderDash();toast(msg);};
+ if(t.status!=="COMPLETED"&&!t.paused&&(r==="ADMIN"||t.status!=="FINISH_REQUESTED"))items.unshift({label:r==="ADMIN"?"Complete task":"Complete from my side",hint:r==="ADMIN"?"Same as tapping the circle":"Admin approves to close it",onClick:()=>{closeSheet();onCircle(t);}});
  if(t.status==="NOT_STARTED"&&!t.paused&&r!=="EXECUTIVE")items.push({label:"Start",hint:"Marks the row green and records the start time",onClick:done(()=>{t.status="STARTED";t.actualStart=new Date().toISOString();},"Task started")});
- if(t.status==="STARTED"&&r!=="EXECUTIVE")items.push({label:"Request finish",hint:"Admin approves to complete",onClick:done(()=>{t.status="FINISH_REQUESTED";t.actualEnd=new Date().toISOString();},"Finish requested")});
  if(t.status==="FINISH_REQUESTED"&&r==="ADMIN"){items.push({label:"Approve finish",onClick:done(()=>{t.status="COMPLETED";t.doubt=false;t.review=false;},"Task completed")});items.push({label:"Reject finish",hint:"Sends the task back with a note",onClick:()=>noteSheet("Reject finish",t,txt=>{t.status="STARTED";t.actualEnd=null;t.assignees.forEach(id=>notify(id,`Finish rejected on ${t.title}: ${txt}`));})});}
  if((r==="TEAM_LEADER"||r==="ADMIN")&&t.status!=="COMPLETED")items.push({label:"Assign executive",hint:t.prefs&&t.prefs.length?"Admin prefers "+t.prefs.map(id=>first(userById(id).name)).join(", ")+" · you decide":"Pick who does this task",onClick:()=>{closeSheet();assignSheet(t);}});
- if(r==="ADMIN"){items.push(t.paused?{label:"Resume",onClick:done(()=>{t.paused=false;},"Task resumed")}:{label:"Pause",hint:"Shows ⏸ in the circle; assignees are notified",onClick:done(()=>{t.paused=true;},"Task paused")});items.push({label:t.protected?"Unprotect":"Protect",hint:"Protected tasks are not shifted by leave",onClick:done(()=>{t.protected=!t.protected;},t.protected?"Task unprotected":"Task protected")});}
+ if(r==="ADMIN"){items.push(t.paused?{label:"Resume",onClick:done(()=>{t.paused=false;},"Task resumed")}:{label:"Pause",hint:"Shows ⏸ in the circle; assignees are notified",onClick:done(()=>{t.paused=true;},"Task paused")});}
  if(t.doubt){if(r!=="EXECUTIVE")items.push({label:"Resolve doubt",onClick:done(()=>{t.doubt=false;},"Doubt resolved")});}else items.push({label:"Raise doubt",hint:"Row turns yellow until resolved",onClick:()=>noteSheet("Raise doubt",t,txt=>{t.doubt=true;notify("u1",`Doubt raised on “${t.title}”: ${txt}`);})});
  items.push({label:"Request review",hint:"Red dot on the hours pill; lands in Admin requests",onClick:()=>noteSheet("Request review",t,txt=>{t.review=true;S.requests.unshift({id:uid(),kind:"REVIEW",task:t.id,by:me().id,note:txt,status:"OPEN",at:new Date().toISOString()});})});
  items.push({label:"Request time change",onClick:()=>noteSheet("Request time change",t,txt=>{S.requests.unshift({id:uid(),kind:"TIME_CHANGE",task:t.id,by:me().id,note:txt,status:"OPEN",at:new Date().toISOString()});})});
  if(t.status==="COMPLETED"&&r!=="EXECUTIVE")items.push({label:"Restart",hint:"Creates a fresh copy linked to this one",onClick:()=>{closeSheet();restartTask(t);}});
  items.push({label:"Details",onClick:()=>{closeSheet();openDetail(t);}});
  if(r!=="EXECUTIVE")items.push({label:"Edit",onClick:()=>{closeSheet();openAdd(t.type,t);}});
- if(r==="ADMIN")items.push({label:"Delete",danger:true,hint:"Also removes Calendar event and Chat space in the real app",onClick:()=>{closeSheet();openSheet("Delete “"+t.title+"”?",el("p",{style:"font-size:13px;color:var(--muted);margin:0 0 10px"},"This cannot be undone."),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Keep"),el("button",{class:"btn red",onclick:()=>{S.tasks=S.tasks.filter(x=>x.id!==t.id);save();closeSheet();renderDash();toast("Task deleted");}},"Delete")));}});
+ if(r==="ADMIN")items.push({label:"Delete",danger:true,hint:"Removes the task with its Meet link, Drive folder and Chat space",onClick:()=>{closeSheet();openSheet("Delete “"+t.title+"”?",el("div",{class:"card",style:"margin:0 0 10px"},...["Task details and voice notes","Google Meet link (stops working)","Drive folder, incl. Meeting notes","Google Chat space","Calendar event"].map(x=>el("div",{class:"kv"},el("span",{},"🗑 "+x)))),el("p",{style:"font-size:13px;color:var(--muted);margin:0 0 10px"},"Everything above is removed for everyone. This cannot be undone."),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Keep"),el("button",{class:"btn red",onclick:()=>{S.tasks=S.tasks.filter(x=>x.id!==t.id);save();closeSheet();renderDash();toast("Task deleted · Meet link, Drive folder and Chat space removed");}},"Delete everything")));}});
  openSheet(t.title,actionList(items));
 }
 function assignSheet(t){
@@ -940,13 +1145,18 @@ function noteSheet(title,t,apply){
  const ta=el("textarea",{class:"in",placeholder:"Write a short note…"});
  openSheet(title+" · "+t.title,field("Note",ta),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>{if(!ta.value.trim())return toast("A note is required","err");apply(ta.value.trim());save();closeSheet();renderDash();toast("Sent");}},"Send")));
 }
+const meetCode=t=>{let h=0;for(const ch of t.id)h=(h*31+ch.charCodeAt(0))>>>0;const a="abcdefghijkmnopqrstuvwxyz";const g=n=>Array.from({length:n},(_,i)=>a[(h>>(i*3))%a.length]).join("");return g(3)+"-"+g(4)+"-"+g(3);};
+function driveInfo(t){const c=clientById(t.client);const base=c.kit?"Client Kit › "+(c.businessName||c.name)+" › Work":"Clients › "+c.name;const notes=(t.notes||[]);
+ openSheet("Drive · "+t.title,el("div",{class:"card",style:"margin:0 0 10px"},el("div",{class:"kv"},el("span",{class:"pre"},base+" › "+t.title)),el("div",{class:"kv"},el("span",{},"📁 Meeting notes"),el("span",{class:"num"},(t.type==="MEETING"?1:0)+" by Gemini")),el("div",{class:"kv"},el("span",{},"📄 Files"),el("span",{class:"num"},"shared with the team"))),
+  el("p",{class:"pre",style:"margin:0 0 10px"},"Every call on this task's Meet link is noted by Gemini; the notes land in “Meeting notes” here automatically."),
+  el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Close"),el("button",{class:"btn blue",onclick:()=>toast("Opens the folder in Drive")},"Open in Drive")));}
 function openDetail(t,attach){
  const c=clientById(t.client);
  const kv=(k,v)=>el("div",{class:"kv"},el("span",{},k),el("span",{class:"num"},v));
  openSheet(t.title,
-  el("div",{style:"display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"},el("span",{class:"chip"},c.name),el("span",{class:"chip me"},t.assignees.map(id=>first(userById(id).name)).join(", ")),el("span",{class:"chip"},t.type==="MEETING"?"Meeting":S.workTypes.find(w=>w.id===t.work)?.name||"Work"),el("span",{class:"chip"},t.status.replace("_"," ").toLowerCase())),
+  el("div",{style:"display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"},el("span",{class:"chip"},c.name),el("span",{class:"chip"},t.type==="MEETING"?"Meeting":S.workTypes.find(w=>w.id===t.work)?.name||"Work"),el("span",{class:"chip"},t.status.replace("_"," ").toLowerCase())),
   t.desc?el("p",{style:"font-size:13px;margin:0 0 10px"},t.desc):null,
-  el("div",{class:"card",style:"margin:0 0 10px"},kv("Allocated",fmtMin(t.mins)),kv("Scheduled",fmtDY(t.start)+" · "+fmtT(t.start)+" – "+fmtT(t.end)),kv("Actual",t.actualStart?fmtT(t.actualStart)+" – "+(t.actualEnd?fmtT(t.actualEnd):"…"):"not started"),kv("Created by",userById(t.createdBy).name),kv("Team",S.teams.find(x=>x.id===t.team)?.name||"—"),t.recurring?kv("Repeats",t.recurText||"yes"):null,t.type==="MEETING"&&t.guests&&t.guests.length?kv("Guests",t.guests.join(", ")):null,t.mo&&t.mo.location?kv("Location",t.mo.location):null),
+  el("div",{class:"card",style:"margin:0 0 10px"},kv("Allocated",fmtMin(t.mins)),kv("Scheduled",fmtDY(t.start)+" · "+fmtT(t.start)+" – "+fmtT(t.end)),kv("Actual",t.actualStart?fmtT(t.actualStart)+" – "+(t.actualEnd?fmtT(t.actualEnd):"…"):"not started"),kv("Created by",userById(t.createdBy).name),kv("Team",S.teams.find(x=>x.id===t.team)?.name||"—"),kv("Assigned to",t.assignees.map(id=>userById(id)).filter(Boolean).map(u=>u.name+(u.role==="TEAM_LEADER"?" (TL)":"")).join(", ")||"—"),t.prefs&&t.prefs.length?kv("Your preference",t.prefs.map(id=>first(userById(id).name)).join(", ")):null,t.recurring?kv("Repeats",t.recurText||"yes"):null,t.type==="MEETING"&&t.guests&&t.guests.length?kv("Guests",t.guests.join(", ")):null,t.mo&&t.mo.location?kv("Location",t.mo.location):null),
   el("div",{class:"card",style:"margin:0 0 10px"+(attach?";box-shadow:0 0 0 2px var(--blue)":"")},el("h4",{},"Attachments"),t.voice?el("div",{style:"display:flex;align-items:center;gap:8px;font-size:13px"},svg(I.mic,18),"Voice note · 0:42",el("button",{class:"pill",style:"margin-left:auto",onclick:()=>toast("Plays the voice note")},"Play")):el("div",{class:"pre"},"No voice notes. Drive folder holds files.")),
   el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Close"),el("button",{class:"btn",onclick:()=>{closeSheet();openActions(t);}},"Actions")));
 }
@@ -962,20 +1172,23 @@ function openAdd(mode,edit){
  show("add");renderAdd();
 }
 const fmtTimeInput=iso=>{const d=new Date(iso);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");};
+function capTeams(){const r=role(),m=me();return r==="ADMIN"?AF.teams:(m.teamId?[m.teamId]:[]);}
 function loads(){
- const r=role(),m=me();
- let people=r==="ADMIN"?(AF.prefs.length?AF.prefs:S.users.filter(u=>u.role==="EXECUTIVE"&&(!AF.teams.length||AF.teams.includes(u.teamId))).map(u=>u.id)):(AF.assignees.length?AF.assignees:S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===m.teamId).map(u=>u.id));
- if(r==="EXECUTIVE")people=[m.id];
+ const tids=capTeams();if(!tids.length)return null;
+ const people=S.users.filter(u=>(u.role==="EXECUTIVE"||u.role==="TEAM_LEADER")&&u.active!==false&&tids.includes(u.teamId)).map(u=>u.id);
  const per=S.inventory.hours;const dayH=id=>(per[id]||40)/5;
  const periods={today:[0,0],tomorrow:[1,1],week:[0,6],month:[0,29]};
  const out={};
- for(const [k,[a,b]] of Object.entries(periods)){const days=b-a+1;const ts=S.tasks.filter(t=>t.status!=="COMPLETED"&&t.assignees.some(id=>people.includes(id))&&dayOff(t.start)>=a&&dayOff(t.start)<=b);const cap=people.reduce((s,id)=>s+dayH(id)*Math.min(days,k==="week"?5:k==="month"?22:1),0);const used=ts.reduce((s,t)=>s+t.mins/60,0);out[k]={left:Math.max(0,cap-used),count:ts.length};}
+ for(const [k,[a,b]] of Object.entries(periods)){const days=b-a+1;const ts=S.tasks.filter(t=>t.status!=="COMPLETED"&&t.assignees.some(id=>people.includes(id))&&dayOff(t.start)>=a&&dayOff(t.start)<=b);const cap=people.reduce((s,id)=>s+dayH(id)*Math.min(days,k==="week"?5:k==="month"?22:1),0);const used=ts.reduce((s,t)=>s+t.mins/60,0);out[k]={left:Math.max(0,cap-used),booked:used,count:ts.length};}
+ out.name=tids.map(id=>(S.teams.find(t=>t.id===id)||{}).name).filter(Boolean).join(" + ");out.people=people.length;
  return out;
 }
 function renderAdd(){
  const r=role(),m=me(),L=loads();
  {const wl0=workFor(r==="ADMIN"?AF.teams:[m.teamId]);if(wl0.length&&!wl0.some(w=>w.id===AF.work))AF.work=wl0[0].id;}
- $("#addLoads").replaceChildren(...[["today","Today"],["tomorrow","Tom"],["week","Week"],["month","month"]].map(([k,l])=>el("div",{class:"ltile",title:`${L[k].left} hours left to assign · ${L[k].count} task(s) already assigned`},el("b",{},l),` - ${Number.isInteger(L[k].left)?L[k].left:L[k].left.toFixed(1)} Hours - `,el("b",{},L[k].count))));
+ {const H=$("#addLoads");if(!L){H.hidden=true;H.replaceChildren();}else{H.hidden=false;const fh=v=>(v>=10||Number.isInteger(v)?Math.round(v):v.toFixed(1))+"h";
+  H.replaceChildren(el("div",{class:"caphd"},el("span",{class:"capnm"},L.name),el("span",{},L.people+" people · left / booked")),
+   el("div",{class:"capgrid"},...[["today","Today"],["tomorrow","Tom"],["week","Week"],["month","Month"]].map(([k,l])=>el("div",{class:"capc"+(L[k].left<=0?" full":""),title:`${l}: ${fh(L[k].left)} free to assign · ${fh(L[k].booked)} booked in ${L[k].count} task(s)`},el("span",{class:"capl"},l),el("b",{},fh(L[k].left),el("small",{}," left")),el("span",{class:"capb"},fh(L[k].booked)+" booked")))));}}
  $("#tTitle").value=AF.title;$("#tTitle").placeholder=AF.type==="MEETING"?"Meeting title":"Task title";
  $("#tDesc").value=AF.desc;$("#tHours").value=AF.hours;
  const HP=[0.5,1,2,3,4,6,8];const hl=h=>h===0.5?"½h":(Number.isInteger(h)?h:h.toFixed(2).replace(/0$/,""))+"h";
@@ -1116,7 +1329,7 @@ $("#tTitle").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();saveTask();}};
 // save button lives in the header tiles area? No: the real app saves from the title row ✓ — add a floating save
 const saveBtn=el("button",{class:"btn",style:"flex:none;height:40px;border-radius:999px;padding:0 22px;box-shadow:0 8px 24px rgba(0,0,0,.2);pointer-events:auto",onclick:saveTask},"Save");
 $("#s-add .addbody").append(el("div",{style:"position:sticky;bottom:10px;display:flex;justify-content:flex-end;margin-top:12px;pointer-events:none"},saveBtn));
-$("#addMeet").onclick=()=>openAdd("MEETING");$("#addWork").onclick=()=>openAdd("WORK");$("#addChoose").onclick=()=>openAdd("CHOOSE");
+$("#addMeet").onclick=()=>openAdd("MEETING");$("#addChoose").onclick=()=>openAdd("CHOOSE");
 
 /* ---------- menu ---------- */
 const MI={
@@ -1159,18 +1372,17 @@ function menuModel(){
  return [
   {h:"Money",t:"t-money",items:[
    {go:"invoices",ic:"invoice",l:"Invoices",s:toApprove?toApprove+" waiting for your approval":"Create, approve and send",b:B(toApprove,"red")},
-   {go:"payments",ic:"wallet",l:"Payments",s:outstanding?inr(outstanding)+" outstanding":"Nothing outstanding"},
+   {go:"payments",ic:"wallet",l:"Payments & finance",s:[toApprove?toApprove+" to approve":null,outstanding?inr(outstanding)+" outstanding":null].filter(Boolean).join(" · ")||"Approvals, reminders, totals, TDS, GST",b:B(payTodo().late.length,"red")},
    {go:"expenses",ic:"receipt",l:"Expenses",s:overdueBills?overdueBills+" overdue · "+dueSoon+" due this week":dueSoon?dueSoon+" due this week":"Bills, GST credit, TDS",b:overdueBills?{n:overdueBills,c:"red"}:B(dueSoon,"amber")},
-   {go:"finance",ic:"chart",l:"Finance sheet",s:gst?"GST to claim this month "+inr(gst):"Totals, TDS and GST"},
    {go:"drive",ic:"folder",l:"Monthly Drive folders",s:"Invoices, bills, GST pack, cancelled"}]},
   {h:"Clients",t:"t-client",items:[
    {go:"clients",ic:"building",l:"Clients",s:S.clients.length+" clients · GST, PAN, TDS"},
-   {go:"vault:ASSET_DRIVE_LINK",ic:"link",l:"Asset drive links",s:"Brand kits and source files"},
-   {go:"vault:CREDENTIAL",ic:"key",l:"Credentials",s:expiring?expiring+" expiring soon":"Logins, encrypted",b:B(expiring,"amber")},
+   {go:"kit",ic:"key",l:"Client kit",s:(()=>{const k=S.clients.filter(c=>c.kit).length;return k+" of "+S.clients.length+" have a kit"+(expiring?" · "+expiring+" expiring":" · Drive, logins");})(),b:B(expiring,"amber")},
    {go:"vault:SHARED_DRIVE_LINK",ic:"drive",l:"Shared drive links",s:"Folders shared with clients"}]},
-  {h:"Team",t:"t-team",items:[
+  {h:"Workday",t:"t-day",items:[
    {go:"attendance",ic:"calcheck",l:"Attendance",s:"Mark present, half day, leave"},
-   {go:"inventory",ic:"clock",l:"Inventory",s:"Hours available vs assigned"},
+   {go:"inventory",ic:"clock",l:"Inventory",s:"Hours available vs assigned"}]},
+  {h:"Team",t:"t-team",items:[
    {go:"people:EXECUTIVE",ic:"users",l:"Executives",s:S.users.filter(u=>u.role==="EXECUTIVE").length+" people · specialities"},
    {go:"people:TEAM_LEADER",ic:"lead",l:"Team leaders",s:"One per team"},
    {go:"teams",ic:"layers",l:"Teams",s:S.teams.map(t=>t.name).join(", ")},
@@ -1220,7 +1432,8 @@ const t12=hm=>{const [h,mm]=hm.split(":").map(Number);const ap=h>=12?"pm":"am";c
 const addMin=(hm,min)=>{const [h,mm]=hm.split(":").map(Number);const t=h*60+mm+min;return String(Math.floor(t/60)%24).padStart(2,"0")+":"+String(t%60).padStart(2,"0");};
 function meetingGuests(){
  const r=role(),m=me();
- const fromTeams=S.users.filter(u=>["TEAM_LEADER","EXECUTIVE"].includes(u.role)&&(r==="ADMIN"?AF.teams:[]).includes(u.teamId));
+ // A team invite goes to that team's Team Leader only; anyone else is added by hand.
+ const fromTeams=S.users.filter(u=>u.role==="TEAM_LEADER"&&(r==="ADMIN"?AF.teams:[]).includes(u.teamId));
  const picked=[...(r==="TEAM_LEADER"?AF.assignees:[]),...AF.people].map(userById).filter(Boolean);
  const internal=[...new Map([...fromTeams,...picked].filter(u=>u.id!==m.id).map(u=>[u.id,u])).values()];
  const c=AF.client?clientById(AF.client):null;const ext=[];
@@ -1233,6 +1446,8 @@ function meetingExtras(){
  document.querySelector("#s-add .voice").hidden=mt;
  $("#tGuests").hidden=!mt;$("#tOpts").hidden=!mt;
  const rs=$("#tRowStart");rs.hidden=!mt||AF.mo.allDay;
+ // Important / Protected are not offered any more (work or meeting).
+ $("#tImportant").hidden=true;$("#tProtect").hidden=true;AF.important=false;
  if(!mt)return;
  const G=meetingGuests(),n=G.internal.length+G.external.length;
  $("#tGuests").replaceChildren("👥 Guests",el("span",{class:"gbadge"},String(n)));
@@ -1256,7 +1471,7 @@ function meetingExtras(){
  $("#tSlot").textContent=AF.mo.allDay?`📅 ${day} · all day · ${n} guest${n===1?"":"s"}`:`📅 ${day}${AF.date?" "+t12(AF.time)+"–"+t12(addMin(AF.time,Math.round(AF.hours*60))):""} · ${dl(AF.hours)} · ${n} guest${n===1?"":"s"}`+(AF.mo.tz!==(S.settings.tz||"Asia/Kolkata")?" · "+AF.mo.tz:"");
  const aw=$("#tAssignWrap");aw.hidden=false;
  aw.replaceChildren(...[el("div",{},el("b",{},"Invites"),el("span",{class:"pre"}," · sent by Google Calendar"+(AF.mo.meet?" with a Meet link":""))),
-  el("div",{style:"margin-top:4px"},G.internal.length?"Team: "+G.internal.map(u=>first(u.name)).join(", "):el("span",{class:"pre"},r==="ADMIN"?"Tap teams in INVITE to invite everyone in them":"Tap people in EXEC to invite them")),
+  el("div",{style:"margin-top:4px"},G.internal.length?"Invited: "+G.internal.map(u=>first(u.name)).join(", "):el("span",{class:"pre"},r==="ADMIN"?"Tap a team in INVITE to invite its Team Leader":"Tap people in EXEC to invite them")),
   el("div",{style:"margin-top:2px"},G.external.length?"Guests: "+G.external.map(g=>g.email).join(", "):el("span",{class:"pre"},"No outside guests")),
   G.client&&!G.client.email?el("div",{class:"pre",style:"color:#b45309"},G.client.name+" has no email — add one in Clients"):null].filter(Boolean));
 }
@@ -1269,18 +1484,18 @@ function guestsSheet(){
   const add=()=>{const parts=inp.value.split(/[\s,;]+/).map(s=>s.trim().toLowerCase()).filter(Boolean);const bad=parts.filter(s=>!EMAIL_RE.test(s));for(const s of parts)if(EMAIL_RE.test(s)&&!AF.guests.includes(s))AF.guests.push(s);if(bad.length)toast("Not an email: "+bad.join(", "),"err");inp.value="";draw();renderAdd();setTimeout(()=>body.querySelector("input")?.focus(),0);};
   inp.onkeydown=e=>{if(e.key==="Enter"||e.key===","){e.preventDefault();add();}};inp.onpaste=()=>setTimeout(add,0);
   const staff=S.users.filter(u=>u.id!==m.id&&u.role!=="ADMIN"||u.role==="ADMIN"&&u.id!==m.id);
-  body.replaceChildren(
+  body.replaceChildren(...[
    el("div",{style:"display:flex;gap:8px"},inp,el("button",{class:"btn",style:"flex:none;width:64px",onclick:add},"Add")),
    G.client?el("div",{class:"gsub"},"From client · "+G.client.name):null,
    G.client?el("div",{class:"gchips"},G.client.email?(AF.noClientEmail?el("button",{class:"pill",onclick:()=>{AF.noClientEmail=false;draw();renderAdd();}},"+ "+G.client.email):chip(G.client.email,()=>{AF.noClientEmail=true;draw();renderAdd();})):el("span",{class:"pre",style:"color:#b45309"},"No email on this client — add one in Clients")):null,
    G.fromTeams.length?el("div",{class:"gsub"},"From teams · "+S.teams.filter(t=>AF.teams.includes(t.id)).map(t=>t.name).join(", ")):null,
-   G.fromTeams.length?el("div",{class:"gchips"},...G.fromTeams.map(u=>chip(u.name,null))):null,
+   G.fromTeams.length?el("div",{class:"gchips"},...G.fromTeams.map(u=>chip(u.name+" · Team leader",null))):null,
    el("div",{class:"gsub"},"Your people"),
-   el("div",{class:"seg",style:"margin:6px 0 12px"},...staff.map(u=>el("button",{class:AF.people.includes(u.id)||G.fromTeams.some(x=>x.id===u.id)?"on":"",onclick:()=>{if(G.fromTeams.some(x=>x.id===u.id))return toast(first(u.name)+" is invited through their team");AF.people=tog(AF.people,u.id);draw();renderAdd();}},first(u.name)))),
+   el("div",{class:"seg",style:"margin:6px 0 12px"},...staff.map(u=>el("button",{class:AF.people.includes(u.id)||G.fromTeams.some(x=>x.id===u.id)?"on":"",onclick:()=>{if(G.fromTeams.some(x=>x.id===u.id))return toast(first(u.name)+" is invited as the team's Team Leader");AF.people=tog(AF.people,u.id);draw();renderAdd();}},first(u.name)))),
    AF.guests.length?el("div",{class:"gsub"},"Other guests"):null,
    AF.guests.length?el("div",{class:"gchips"},...AF.guests.map(g=>chip(g,()=>{AF.guests=AF.guests.filter(x=>x!==g);draw();renderAdd();}))):null,
    el("p",{class:"pre",style:"margin:4px 0 8px"},"Google Calendar emails everyone the invite with the Meet link. Outside guests need no account here."),
-   el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{closeSheet();findTimeSheet();}},"Find a time"),el("button",{class:"btn",onclick:closeSheet},"Done")));
+   el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{closeSheet();findTimeSheet();}},"Find a time"),el("button",{class:"btn",onclick:closeSheet},"Done"))].filter(Boolean));
  };
  draw();openSheet("Guests",body);
 }
@@ -1341,6 +1556,14 @@ const total=i=>i.amount*(1+(i.gst||0)/100);
 const balance=i=>Math.max(0,total(i)-i.paid);
 const fyKey=()=>{const d=new Date();const y=d.getMonth()>=3?d.getFullYear():d.getFullYear()-1;return String(y).slice(2)+"-"+String(y+1).slice(2);};
 const nextNumber=()=>{S.seq+=1;return `${S.settings.fyPrefix}/${fyKey()}/${String(S.seq).padStart(4,"0")}`;};
+const cleanFn=s=>String(s||"").replace(/[\/\\:*?"<>|]+/g,"-").replace(/\s+/g," ").trim();
+/* File names used for Drive, email/WhatsApp attachments and downloads. */
+function invFileName(i){const c=clientById(i.client)||{};const who=cleanFn(c.businessName||c.name),n=cleanFn(i.number);
+ if(i.docType==="PROFORMA")return `P Invoice (${who}).pdf`;
+ if(i.status==="CANCELLED")return `C Invoice No. ${n} (${who}).pdf`;
+ if(i.docType==="EXPORT_INVOICE")return `Ex Invoice No. ${n} (${who}).pdf`;
+ if(i.docType==="CREDIT_NOTE")return `Credit Note ${n} (${who}).pdf`;
+ return `Invoice No. ${n} (${who}).pdf`;}
 const stTag=i=>el("span",{class:"tag "+STL[i.status][1]},STL[i.status][0]);
 const docTag=i=>el("span",{class:"tag "+DOCC[i.docType]},DOCL[i.docType]);
 
@@ -1418,7 +1641,8 @@ function openInvoice(i){
  const acts=[];
  const z=[];
  if(i.status==="AWAITING_APPROVAL")z.push(el("button",{class:"btn green",onclick:()=>approveSheet(i)},"Approve & send…"));
- if(["SENT","PARTIALLY_PAID","OVERDUE"].includes(i.status)){z.push(el("button",{class:"btn blue",onclick:()=>paymentSheet(i)},"Record payment"));}
+ if(i.docType==="PROFORMA"&&i.status!=="AWAITING_APPROVAL"){const cc=clientById(i.client);z.push(el("button",{class:"btn blue",onclick:()=>{i.docType=docFor(cc);i.taxMode=taxFor(cc);i.gst=i.taxMode==="EXPORT_LUT"?0:18;i.status="AWAITING_APPROVAL";i.number="DRAFT-"+uid().slice(0,4);save();toast("Converted · approve to number and send");openInvoice(i);}},"Make tax invoice"));}
+ else if(["SENT","PARTIALLY_PAID","OVERDUE"].includes(i.status)){z.push(el("button",{class:"btn blue",onclick:()=>paymentSheet(i)},"Record payment"));}
  z.push(el("button",{class:"btn ghost",onclick:()=>invoicePreview(i)},"Preview"));if(i.status!=="CANCELLED")z.push(el("button",{class:"btn ghost",onclick:()=>invoiceActions(i)},"More"));
  page(i.number.startsWith("DRAFT")?"Draft invoice":i.number,[
   i.status==="CANCELLED"?el("div",{class:"cxl"},el("b",{},"Cancelled on "+fmtDY(i.cancelledAt)),el("div",{},"Reason: "+(i.cancelReason||"—")),el("div",{class:"pre"},"Number "+i.number+" stays used and is never given to another invoice. Filed in Drive › Finance › "+mkOf(i.issued||i.cancelledAt)+" › Cancelled invoices.")):null,
@@ -1437,12 +1661,12 @@ function approveSheet(i){
  const em=el("input",{type:"checkbox",checked:c.email?true:null,disabled:!c.email||null}),wa=el("input",{type:"checkbox",checked:c.phone?true:null,disabled:!c.phone||null}),dl=el("input",{type:"checkbox"});
  const partDesc=i.plan==="PART"?el("input",{class:"in",placeholder:"Description for part 1 (optional)",value:i.parts[0]?.desc||""}):null;
  openSheet("Approve "+DOCL[i.docType].toLowerCase()+"?",
-  el("p",{style:"font-size:13px;margin:0 0 10px"},"Number ",el("b",{},i.docType==="PROFORMA"?"PF-"+String(S.seq+1).padStart(4,"0"):S.settings.fyPrefix+"/"+fyKey()+"/"+String(S.seq+1).padStart(4,"0"))," will be assigned. Total ",el("b",{},inr(i.plan==="PART"?i.parts[0].amount:total(i)))),
+  i.docType==="PROFORMA"?el("p",{style:"font-size:13px;margin:0 0 10px"},"A proforma gets no invoice number and isn't kept in your books. File: ",el("b",{},invFileName(i)),". Total ",el("b",{},inr(total(i)))):el("p",{style:"font-size:13px;margin:0 0 10px"},"Number ",el("b",{},S.settings.fyPrefix+"/"+fyKey()+"/"+String(S.seq+1).padStart(4,"0"))," will be assigned. Total ",el("b",{},inr(i.plan==="PART"?i.parts[0].amount:total(i)))),
   partDesc?field("Part 1 description",partDesc):null,
   el("label",{class:"check"},em,el("div",{},el("b",{},"Email the PDF"),el("small",{},c.email||"no email on the client"))),
   el("label",{class:"check"},wa,el("div",{},el("b",{},"WhatsApp (Twilio)"),el("small",{},c.phone||"no WhatsApp number on the client"))),el("label",{class:"check"},dl,el("div",{},el("b",{},"Download the PDF"),el("small",{},"Save a copy on this phone to send yourself"))),el("p",{class:"pre",style:"margin:0 0 8px"},"Untick both channels to just approve and number it without sending."),
   el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Not now"),el("button",{class:"btn green",onclick:()=>{
-   i.number=i.docType==="PROFORMA"?"PF-"+String(++S.seq).padStart(4,"0"):nextNumber();i.status="SENT";i.issued=new Date().toISOString();i.publicToken=uid()+uid();
+   i.number=i.docType==="PROFORMA"?"Proforma":nextNumber();i.status="SENT";i.issued=new Date().toISOString();i.publicToken=uid()+uid();
    if(em.checked)i.emailAt=i.issued;if(wa.checked){i.waAt=i.issued;i.waStatus="delivered (mock)";}
    if(i.plan==="PART"&&i.parts[0]){i.parts[0].status="SENT";if(partDesc)i.parts[0].desc=partDesc.value;}
    i.remindAt=null;save();closeSheet();const done=[em.checked?"emailed":null,wa.checked?"WhatsApp sent":null,dl.checked?"PDF downloaded":null].filter(Boolean);toast(done.length?"Approved · "+done.join(" + "):"Approved · numbered, not sent");if(dl.checked)invoicePreview(i);else openInvoice(i);}},"Approve"+((em.checked||wa.checked)?" & send":""))));
@@ -1463,7 +1687,7 @@ function cancelSheet(i){
    i.status="CANCELLED";i.cancelledAt=new Date().toISOString();i.cancelReason=reason.value.trim();i.remindAt=null;
    if(i.plan==="PART")i.parts.forEach(pt=>{if(pt.status!=="PAID")pt.status="CANCELLED";});
    if(c.onHold&&c.holdInvoice===i.id){c.onHold=false;S.tasks.filter(t=>t.client===c.id).forEach(t=>t.paused=false);}
-   save();closeSheet();toast(i.number+" cancelled"+(em.checked||wa.checked?" · client informed (real app)":"")+" · next invoice will be "+nextNo);openInvoice(i);}},"Cancel invoice")));
+   save();closeSheet();toast(i.number+" cancelled · filed as “"+invFileName(i)+"”"+(em.checked||wa.checked?" · client informed":"")+" · next invoice will be "+nextNo);openInvoice(i);}},"Cancel invoice")));
 }
 function paymentSheet(i){
  const c=clientById(i.client);const bal=balance(i);
@@ -1499,24 +1723,46 @@ function invoiceActions(i){
  if(i.docType==="PROFORMA"&&i.status!=="AWAITING_APPROVAL")items.push({label:"Convert to tax invoice",onClick:go(()=>{i.docType=docFor(c);i.taxMode=taxFor(c);i.gst=i.taxMode==="EXPORT_LUT"?0:18;i.status="AWAITING_APPROVAL";i.number="DRAFT-"+uid().slice(0,4);},"Converted · approve to number and send")});
  items.push({label:"Preview invoice",hint:"Exactly what the client receives (your template)",onClick:()=>{closeSheet();invoicePreview(i);}});items.push({label:"Open public PDF link",hint:"Signed link the client can open without login",onClick:()=>{closeSheet();toast("Opens /api/public/invoice/"+(i.publicToken||"…").slice(0,8)+"…");}});
  if(i.status==="AWAITING_APPROVAL")items.push({label:"Delete draft",danger:true,onClick:()=>{S.invoices=S.invoices.filter(x=>x.id!==i.id);save();closeSheet();toast("Draft deleted");PAGES.invoices();}});
+ else if(i.docType==="PROFORMA")items.push({label:"Delete proforma",danger:true,hint:"Proformas can't be cancelled and aren't kept in your books",onClick:()=>{S.invoices=S.invoices.filter(x=>x.id!==i.id);save();closeSheet();toast("Proforma deleted");PAGES.invoices();}});
  else if(i.status!=="PAID"&&i.status!=="CANCELLED"&&i.docType!=="CREDIT_NOTE")items.push(i.paid>0?{label:"Cancel invoice",hint:"Has payments recorded · issue a credit note instead",onClick:()=>toast("This invoice has payments. Use Credit note to reverse it.","err")}:{label:"Cancel invoice",danger:true,hint:"Number stays used; next invoice continues the series",onClick:()=>{closeSheet();cancelSheet(i);}});
  openSheet(i.number,actionList(items));
 }
 
 /* ---------- payments dashboard ---------- */
-let payTab="OUT";
+let payTab="TODO";
+/* Payments & finance hub: what needs you (approvals + reminders), the finance summary, and the payment lists. */
+function payTodo(){
+ expenseTick();
+ const appr=S.invoices.filter(i=>i.status==="AWAITING_APPROVAL");
+ const open=S.invoices.filter(i=>!["PAID","CANCELLED","AWAITING_APPROVAL"].includes(i.status)&&i.docType!=="PROFORMA"&&i.docType!=="CREDIT_NOTE");
+ const late=open.filter(i=>dayOff(i.due)<0).sort((a,b)=>new Date(a.due)-new Date(b.due));
+ const week=open.filter(i=>dayOff(i.due)>=0&&dayOff(i.due)<=7).sort((a,b)=>new Date(a.due)-new Date(b.due));
+ const bills=allOcc().filter(x=>x.o.status==="DUE"&&dayOff(x.o.due)<=7).sort((a,b)=>new Date(a.o.due)-new Date(b.o.due));
+ return {appr,late,week,bills,n:appr.length+late.length+bills.filter(x=>isOver(x.o)).length};
+}
 PAGES.payments=function(){
  const open=S.invoices.filter(i=>!["PAID","CANCELLED","AWAITING_APPROVAL"].includes(i.status)&&i.docType!=="PROFORMA"&&i.docType!=="CREDIT_NOTE");
  const byClient=S.clients.map(c=>({c,bal:open.filter(i=>i.client===c.id).reduce((s,i)=>s+balance(i),0),n:open.filter(i=>i.client===c.id).length})).filter(x=>x.bal>0).sort((a,b)=>b.bal-a.bal);
  const soon=open.filter(i=>dayOff(i.due)<=7).sort((a,b)=>new Date(a.due)-new Date(b.due));
  const recv=S.payments.slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
  const month=recv.filter(p=>dayOff(p.date)>=-30).reduce((s,p)=>s+p.amount,0);
+ const T=payTodo();
+ const sec=(h,rows)=>rows.length?[el("div",{class:"sech"},h+" · "+rows.length),...rows]:[];
+ const invRow=(i,sub,act,red)=>el("div",{class:"item",onclick:act},el("div",{class:"m"},el("b",{},(clientById(i.client)||{}).name||"—"),el("small",{},sub)),el("div",{class:"amt",style:red?"color:#dc2626":""},inr(i.plan==="PART"&&i.status==="AWAITING_APPROVAL"&&i.parts[0]?i.parts[0].amount:i.status==="AWAITING_APPROVAL"?total(i):balance(i))));
  let body;
- if(payTab==="OUT")body=byClient.length?byClient.map(x=>el("div",{class:"item",onclick:()=>{S._client=x.c.id;PAGES.ledger(x.c.id);}},el("div",{class:"m"},el("b",{},x.c.name),el("small",{},x.n+" open invoice"+(x.n>1?"s":"")+(x.c.onHold?" · WORK ON HOLD":""))),el("div",{class:"amt",style:x.c.onHold?"color:#dc2626":""},inr(x.bal)))):[el("div",{class:"empty"},"Nothing outstanding 🎉")];
+ if(payTab==="TODO"){
+  body=[...sec("Approve & send",T.appr.map(i=>invRow(i,DOCL[i.docType]+" · "+(i.remindAt?"reminder "+fmtD(i.remindAt)+" "+fmtT(i.remindAt):"waiting for approval"),()=>approveSheet(i)))),
+   ...sec("Client payments overdue",T.late.map(i=>invRow(i,i.number+" · "+(-dayOff(i.due))+" days late",()=>openInvoice(i),true))),
+   ...sec("Client payments due this week",T.week.map(i=>invRow(i,i.number+" · due "+fmtD(i.due),()=>openInvoice(i)))),
+   ...sec("Bills to pay",T.bills.map(x=>el("div",{class:"item",onclick:()=>markPaid(x.e,x.o)},el("div",{class:"m"},el("b",{},x.e.payee),el("small",{},(isOver(x.o)?(-dayOff(x.o.due))+" days overdue":"due "+fmtD(x.o.due))+" · mark paid")),el("div",{class:"amt",style:isOver(x.o)?"color:#dc2626":""},inr(x.o.amount)))))];
+  if(!body.length)body=[el("div",{class:"empty"},"All clear — nothing to approve or chase 🎉")];
+ }
+ else if(payTab==="SUM")body=financeSummary();
+ else if(payTab==="OUT")body=byClient.length?byClient.map(x=>el("div",{class:"item",onclick:()=>{S._client=x.c.id;PAGES.ledger(x.c.id);}},el("div",{class:"m"},el("b",{},x.c.name),el("small",{},x.n+" open invoice"+(x.n>1?"s":"")+(x.c.onHold?" · WORK ON HOLD":""))),el("div",{class:"amt",style:x.c.onHold?"color:#dc2626":""},inr(x.bal)))):[el("div",{class:"empty"},"Nothing outstanding 🎉")];
  else if(payTab==="SOON")body=soon.length?soon.map(i=>el("div",{class:"item",onclick:()=>openInvoice(i)},el("div",{class:"m"},el("b",{},clientById(i.client).name),el("small",{},i.number+" · due "+fmtD(i.due)+(dayOff(i.due)<0?" · "+(-dayOff(i.due))+" days late":""))),el("div",{class:"amt",style:dayOff(i.due)<0?"color:#dc2626":""},inr(balance(i))))):[el("div",{class:"empty"},"Nothing due this week")];
  else body=recv.map(p=>{const i=S.invoices.find(x=>x.id===p.invoice);return el("div",{class:"item",onclick:()=>i&&openInvoice(i)},el("div",{class:"m"},el("b",{},i?clientById(i.client).name:"—"),el("small",{},fmtDY(p.date)+" · "+p.method+(p.tds?" · TDS "+inr(p.tds):"")+(p.note?" · "+p.note:""))),el("div",{class:"amt"},inr(p.amount)));});
- page("Payments",[el("div",{class:"tiles"},tile("Outstanding",inr(open.reduce((s,i)=>s+balance(i),0))),tile("Overdue",inr(open.filter(i=>dayOff(i.due)<0).reduce((s,i)=>s+balance(i),0))),tile("Received · 30d",inr(month)),tile("Due · 7d",inr(soon.filter(i=>dayOff(i.due)>=0).reduce((s,i)=>s+balance(i),0)))),...body],
-  [zoneTabs([["OUT","By client"],["SOON","Due soon"],["RECV","Received"]],payTab,k=>{payTab=k;PAGES.payments();}),zoneActions(el("button",{class:"btn ghost",onclick:()=>nav("invoices")},"Invoices"),el("button",{class:"btn blue",onclick:()=>openWizard()},"+ New invoice"))]);
+ page("Payments & finance",[payTab==="SUM"?null:el("div",{class:"tiles"},tile("Outstanding",inr(open.reduce((s,i)=>s+balance(i),0))),tile("Overdue",inr(open.filter(i=>dayOff(i.due)<0).reduce((s,i)=>s+balance(i),0))),tile("Received · 30d",inr(month)),tile("Due · 7d",inr(soon.filter(i=>dayOff(i.due)>=0).reduce((s,i)=>s+balance(i),0)))),...body],
+  [zoneTabs([["TODO","Needs you"+(T.n?" · "+T.n:"")],["SUM","Summary"],["OUT","By client"],["SOON","Due soon"],["RECV","Received"]],payTab,k=>{payTab=k;PAGES.payments();}),zoneActions(payTab==="SUM"?el("button",{class:"btn ghost",onclick:()=>toast("Pushed to Google Sheets (mock)")},"Push to Sheets"):el("button",{class:"btn ghost",onclick:()=>nav("invoices")},"Invoices"),el("button",{class:"btn blue",onclick:()=>openWizard()},"+ New invoice"))]);
 };
 PAGES.ledger=function(cid){
  const c=clientById(cid);const inv=S.invoices.filter(i=>i.client===cid);
@@ -1558,7 +1804,7 @@ function invoicePreview(i){
   el("div",{class:"ft"},el("span",{},s.website),el("span",{},"HSN Code - "+s.hsn),el("span",{},tt)));
  const wrap=el("div",{class:"invwrap"},pageEl);
  const fit=()=>{const w=wrap.clientWidth-20;const sc=invZoom==="fit"?Math.min(1,w/595):1;pageEl.style.transform="scale("+sc+")";pageEl.style.marginBottom=(842*sc-842)+"px";pageEl.style.marginRight=(595*sc-595)+"px";};
- page(numLabel,[wrap],[zoneActions(el("button",{class:"btn ghost",onclick:()=>{invZoom=invZoom==="fit"?"100":"fit";fit();}},"Zoom"),el("button",{class:"btn ghost",onclick:()=>openInvoice(i)},"Back"),el("button",{class:"btn blue",onclick:()=>toast("PDF downloads in the real app (public signed link)")},"Download PDF"))]);
+ page(numLabel,[wrap],[zoneActions(el("button",{class:"btn ghost",onclick:()=>{invZoom=invZoom==="fit"?"100":"fit";fit();}},"Zoom"),el("button",{class:"btn ghost",onclick:()=>openInvoice(i)},"Back"),el("button",{class:"btn blue",onclick:()=>toast("Downloads “"+invFileName(i)+"”")},"Download PDF"))]);
  $("#pgBody").style.display="flex";$("#pgBody").style.flexDirection="column";requestAnimationFrame(fit);
  const obs=new MutationObserver(()=>{if(!document.body.contains(wrap)){$("#pgBody").style.display="";obs.disconnect();}});obs.observe($("#pgBody"),{childList:true});
 }
@@ -1583,7 +1829,7 @@ function clientForm(c){
  indiaWrap.hidden=v.country!=="IN";indiaOnly.hidden=v.country!=="IN";syncState();
  page(c?c.name:"Add client",[el("div",{style:"padding:12px"},field("Name",inp("name","Client name")),field("Business name",inp("businessName","Legal name printed on invoices")),field("Email",inp("email","accounts@client.com","email")),field("WhatsApp number",inp("phone","+91 …","tel")),field("Country",country),indiaWrap,hint,indiaOnly,field("Billing address",el("textarea",{class:"in",oninput:e=>{v.address=e.target.value;}},v.address||"")),
   el("p",{class:"pre"},"Tax type is picked automatically: same state as your company ("+(GST_STATES[S.settings.stateCode]||S.settings.stateCode)+") → CGST+SGST, another Indian state → IGST, outside India → export invoice at 0% under LUT."))],
-  [zoneActions(el("button",{class:"btn ghost",onclick:()=>PAGES.clients()},"Cancel"),el("button",{class:"btn blue",onclick:()=>{if(!v.name.trim())return toast("Name is required","err");v.pan=(v.pan||"").toUpperCase().trim();if(v.pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v.pan))return toast("PAN must look like AAACZ1234F","err");v.gstin=(v.gstin||"").toUpperCase().trim();v.tdsPercent=Number(v.tdsPercent)||0;if(v.country!=="IN"){v.stateCode="";v.stateName="";v.pan="";v.tdsPercent=0;v.gstin="";}if(c)Object.assign(c,v);else S.clients.push(Object.assign({id:uid(),onHold:false},v));save();toast(c?"Client saved":"Client added · shows in filters once it has a task");PAGES.clients();}},"Save"))]);
+  [zoneActions(el("button",{class:"btn ghost",onclick:()=>PAGES.clients()},"Cancel"),c?el("button",{class:"btn ghost",onclick:()=>c.kit?PAGES.kit(c.id):kitCreate(c)},c.kit?"Client kit":"Create kit"):null,el("button",{class:"btn blue",onclick:()=>{if(!v.name.trim())return toast("Name is required","err");v.pan=(v.pan||"").toUpperCase().trim();if(v.pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v.pan))return toast("PAN must look like AAACZ1234F","err");v.gstin=(v.gstin||"").toUpperCase().trim();v.tdsPercent=Number(v.tdsPercent)||0;if(v.country!=="IN"){v.stateCode="";v.stateName="";v.pan="";v.tdsPercent=0;v.gstin="";}if(c)Object.assign(c,v);else S.clients.push(Object.assign({id:uid(),onHold:false},v));save();toast(c?"Client saved":"Client added · shows in filters once it has a task");PAGES.clients();}},"Save"))]);
 }
 /* ---------- requests ---------- */
 PAGES.requests=function(){
@@ -1809,21 +2055,22 @@ function billEditor(e){
  };
  page(isNew?"Add expense":"Edit · "+e.payee,[box],[zoneActions(isNew?el("button",{class:"btn ghost",onclick:()=>PAGES.expenses()},"Cancel"):el("button",{class:"btn ghost",style:"color:#dc2626",onclick:()=>{openSheet("Delete this bill?",el("p",{class:"pre",style:"margin:0 0 10px"},"Removes "+e.payee+" and all its payments from the books."),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Keep"),el("button",{class:"btn red",onclick:()=>{S.expenses=S.expenses.filter(x=>x!==e);save();closeSheet();PAGES.expenses();toast("Deleted");}},"Delete")));}},"Delete"),el("button",{class:"btn blue",onclick:saveBill},"Save"))]);
 }
-PAGES.finance=function(){
+PAGES.finance=function(){payTab="SUM";PAGES.payments();};
+function financeSummary(){
  const inv=S.invoices.filter(i=>i.docType!=="PROFORMA"&&i.docType!=="CREDIT_NOTE"&&!["AWAITING_APPROVAL","CANCELLED"].includes(i.status));
  const billed=inv.reduce((s,i)=>s+total(i),0),recv=S.payments.reduce((s,p)=>s+p.amount,0),tds=S.payments.filter(p=>inFY(p.date)).reduce((s,p)=>s+p.tds,0),exp=allOcc().filter(x=>x.o.status==="PAID").reduce((s,x)=>s+x.o.amount,0),tdsOut=allOcc().filter(x=>x.o.status==="PAID"&&inFY(x.o.paidAt)).reduce((s,x)=>s+(x.o.tds||0),0);expenseTick();const dueAll=allOcc().filter(x=>x.o.status==="DUE"),payOver=dueAll.filter(x=>isOver(x.o)).reduce((s,x)=>s+x.o.amount,0),pay30=dueAll.filter(x=>dayOff(x.o.due)<=30).reduce((s,x)=>s+x.o.amount,0);
  const fyk=fyKey();const byCl={};S.payments.filter(p=>inFY(p.date)&&p.tds>0).forEach(p=>{const i=S.invoices.find(x=>x.id===p.invoice);if(!i)return;byCl[i.client]=(byCl[i.client]||0)+p.tds;});
- page("Finance sheet",[el("div",{class:"tiles"},tile("Billed",inr(billed)),tile("Received",inr(recv)),tile("Expenses paid",inr(exp)),tile("To pay · 30 days",inr(pay30)),tile("Overdue to pay",inr(payOver)),tile("Outstanding",inr(inv.reduce((s,i)=>s+balance(i),0))),tile("TDS receivable · FY "+fyk,inr(tds)),tile("TDS deducted · FY "+fyk,inr(tdsOut)),tile("GST to claim · "+new Date().toLocaleDateString("en-IN",{month:"short"}),inr(allOcc().filter(x=>x.o.status==="PAID"&&x.o.itc&&mkOf(x.o.paidAt)===dk().slice(0,7)).reduce((s,x)=>s+(x.o.gst||0),0))),tile("Expense bills attached",allOcc().filter(x=>x.o.status==="PAID"&&mkOf(x.o.paidAt)===dk().slice(0,7)&&x.o.file).length+" this month")),
+ return [el("div",{class:"tiles"},tile("Billed",inr(billed)),tile("Received",inr(recv)),tile("Expenses paid",inr(exp)),tile("To pay · 30 days",inr(pay30)),tile("Overdue to pay",inr(payOver)),tile("Outstanding",inr(inv.reduce((s,i)=>s+balance(i),0))),tile("TDS receivable · FY "+fyk,inr(tds)),tile("TDS deducted · FY "+fyk,inr(tdsOut)),tile("GST to claim · "+new Date().toLocaleDateString("en-IN",{month:"short"}),inr(allOcc().filter(x=>x.o.status==="PAID"&&x.o.itc&&mkOf(x.o.paidAt)===dk().slice(0,7)).reduce((s,x)=>s+(x.o.gst||0),0))),tile("Bills attached · "+new Date().toLocaleDateString("en-IN",{month:"short"}),String(allOcc().filter(x=>x.o.status==="PAID"&&mkOf(x.o.paidAt)===dk().slice(0,7)&&x.o.file).length))),
   el("div",{class:"card"},el("h4",{},"TDS cut by clients this FY (your credit at year end)"),...(Object.keys(byCl).length?Object.entries(byCl).sort((a,b)=>b[1]-a[1]).map(([cid,v])=>el("div",{class:"kv"},el("span",{},clientById(cid).name+(clientById(cid).pan?" · "+clientById(cid).pan:"")),el("span",{class:"num"},inr(v)))):[el("div",{class:"pre"},"No TDS recorded yet this FY")]),el("div",{class:"kv"},el("b",{},"Total"),el("b",{class:"num"},inr(tds)))),
   el("div",{class:"card"},el("h4",{},"Google Sheets sync"),el("div",{class:"kv"},el("span",{},"Mode"),el("span",{},"Push only (app → sheet)")),el("div",{class:"kv"},el("span",{},"Last push"),el("span",{},fmtDY(new Date().toISOString())+" "+fmtT(new Date().toISOString()))),el("div",{class:"kv"},el("span",{},"Tabs"),el("span",{},"Invoices · Payments · Expenses"))),
-  el("div",{class:"card"},el("h4",{},"GST summary · "+new Date().toLocaleDateString("en-IN",{month:"long"})),...["CGST_SGST","IGST","EXPORT_LUT"].map(k=>el("div",{class:"kv"},el("span",{},TAXL[k]),el("span",{class:"num"},inr(inv.filter(i=>i.taxMode===k).reduce((s,i)=>s+i.amount*i.gst/100,0))))))],
-  [zoneActions(el("button",{class:"btn ghost",onclick:()=>toast("Pushed to Google Sheets (mock)")},"Push to Sheets"),el("button",{class:"btn",onclick:()=>nav("payments")},"Payments"))]);
+  el("div",{class:"card"},el("h4",{},"GST summary · "+new Date().toLocaleDateString("en-IN",{month:"long"})),...["CGST_SGST","IGST","EXPORT_LUT"].map(k=>el("div",{class:"kv"},el("span",{},TAXL[k]),el("span",{class:"num"},inr(inv.filter(i=>i.taxMode===k).reduce((s,i)=>s+i.amount*i.gst/100,0))))))];
 };
 PAGES.settings=function(){
  const s=S.settings;const inp=(k,type="text")=>el("input",{class:"in",type,value:s[k],oninput:e=>{s[k]=type==="number"?Number(e.target.value):e.target.value;}});
  const stSel=el("select",{class:"in",onchange:e=>{s.stateCode=e.target.value;s.stateName=GST_STATES[s.stateCode];}},...Object.entries(GST_STATES).map(([k,l])=>el("option",{value:k,selected:s.stateCode===k||null},k+" · "+l)));
  const gstIn=el("input",{class:"in",value:s.gstin,oninput:e=>{s.gstin=e.target.value.toUpperCase();const code=s.gstin.slice(0,2);if(GST_STATES[code]){s.stateCode=code;s.stateName=GST_STATES[code];stSel.value=code;}}});
  page("Settings",[el("div",{style:"padding:12px"},el("div",{style:"font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px"},"Your company (printed on every invoice)"),field("Company / brand name",inp("company")),field("Legal name",inp("legalName"),"As registered under GST"),field("GSTIN",gstIn,"State is read from the first two digits"),field("State",stSel,"Clients in this state get CGST+SGST, other states IGST"),field("PAN",inp("pan")),field("LUT number",inp("lut"),"Printed on export invoices (0% under LUT)"),field("IEC code",inp("iec"),"Import Export Code, printed on export invoices"),field("Billing address",el("textarea",{class:"in",oninput:e=>{s.address=e.target.value;}},s.address||"")),field("Billing email",inp("email","email"),"Invoices are sent from and replied to here"),field("Phone",inp("phone","tel")),field("Website",inp("website"),"Printed in the invoice footer"),field("HSN / SAC code",inp("hsn"),"Printed in the invoice footer"),el("div",{style:"font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:8px 0"},"Pay to (printed on every invoice)"),field("Account name",inp("bankAccountName")),field("Account number",inp("bankAccountNumber")),field("Swift / BIC code",inp("bankSwift")),field("IFSC code",inp("bankIfsc")),field("Bank name",inp("bankName")),field("Bank address",inp("bankAddress")),el("div",{style:"font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:8px 0"},"Logo & signature"),el("div",{style:"display:flex;gap:12px;align-items:center;margin-bottom:12px"},el("img",{src:s.logo,style:"width:48px;height:48px;border-radius:8px"}),el("img",{src:s.signature,style:"height:40px"}),el("label",{class:"pill",style:"margin-left:auto;cursor:pointer"},"Replace…",el("input",{type:"file",accept:"image/*",hidden:true,onchange:e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{if(f.name.toLowerCase().includes("sig"))s.signature=r.result;else s.logo=r.result;save();PAGES.settings();toast("Image updated (file name with \"sig\" replaces the signature)");};r.readAsDataURL(f);}}))),el("div",{style:"font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:8px 0"},"Numbering & payments"),field("Invoice prefix",inp("fyPrefix"),"Numbers: "+s.fyPrefix+"/"+fyKey()+"/0001, reset every 1 April"),field("UPI ID",inp("upi"),"QR printed on invoices"),field("Half day = minutes of inventory",inp("halfDayMinutes","number")),field("Finance person's email",inp("financeEmail","email"),"The monthly GST pack (claimable expense bills) is sent here"),field("TDS threshold per payee (₹ per FY)",inp("tdsThreshold","number"),"You are warned when payments to one payee cross this in a financial year; resets every 1 April"),
+  field("Client kit folders",el("textarea",{class:"in",oninput:e=>{s.kitFolders=e.target.value.split("\n").map(x=>x.trim()).filter(Boolean);}},(s.kitFolders&&s.kitFolders.length?s.kitFolders:["Brand kit","Credentials","Work","Reports"]).join("\n")),"One per line · created inside each client's kit folder"),
   field("Expense categories",el("textarea",{class:"in",oninput:e=>{s.expenseCategories=e.target.value.split("\n").map(x=>x.trim()).filter(Boolean);}},s.expenseCategories.join("\n")),"One per line"),
   el("label",{class:"check"},el("input",{type:"checkbox",checked:s.notifyChat||null,onchange:e=>{s.notifyChat=e.target.checked;}}),el("div",{},el("b",{},"Also post notifications to Google Chat"),el("small",{},"In-app + push are always on"))),
   el("div",{class:"card",style:"margin:0"},el("h4",{},"Integrations"),...[["Google Workspace","service account · domain-wide delegation"],["Twilio WhatsApp","mock in demo"],["Web push","VAPID keys set"],["Google Sheets","push only"]].map(([k,v])=>el("div",{class:"kv"},el("span",{},k),el("span",{},v)))))],
@@ -1867,13 +2114,114 @@ function workForm(w){
 }
 PAGES.teams=function(){page("Teams",[...S.teams.map(t=>el("div",{class:"item",style:"cursor:default"},el("div",{class:"m"},el("b",{},t.name),el("small",{},(S.users.filter(u=>u.teamId===t.id).map(u=>first(u.name)).join(", ")||"nobody yet")+" · work: "+(S.workTypes.filter(w=>(w.teams||[]).includes(t.id)).map(w=>w.name).join(", ")||"none"))),el("div",{class:"amt"},S.tasks.filter(x=>x.team===t.id&&x.status!=="COMPLETED").length+" open")))],[zoneActions(el("button",{class:"btn blue",onclick:()=>{const n=el("input",{class:"in",placeholder:"e.g. Video"});openSheet("Add team",field("Name",n),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn",onclick:()=>{if(!n.value.trim())return;S.teams.push({id:uid(),name:n.value.trim()});save();closeSheet();PAGES.teams();}},"Add")));}},"+ Add team"))]);};
 
+/* Google-Drive-style share sheet for a month folder (Drive API permissions in the real app). */
+const DROLES=[["reader","Viewer"],["commenter","Commenter"],["writer","Editor"]];
+function driveShare(key,label,onDone){
+ S.shares=S.shares||{};const sh=S.shares[key]=S.shares[key]||{people:[],link:"RESTRICTED",linkRole:"reader"};
+ const owner=S.settings.email;const url="https://drive.google.com/drive/folders/"+btoa(key).replace(/=/g,"");
+ const pending=[];
+ const render=()=>{
+  const chipsBox=el("div",{class:"shchips"});const inp=el("input",{class:"shin",type:"email",placeholder:pending.length?"":"Add people by email"});
+  const add=()=>{const v=inp.value.trim().replace(/[,;]$/,"");if(!v)return true;if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)){toast("“"+v+"” isn't an email","err");return false;}if(v===owner||sh.people.some(p=>p.email===v)||pending.includes(v)){inp.value="";return true;}pending.push(v);render();setTimeout(()=>sheetEl.querySelector(".shin")?.focus(),0);return true;};
+  inp.onkeydown=e=>{if(e.key==="Enter"||e.key===","||e.key===";"){e.preventDefault();add();}else if(e.key==="Backspace"&&!inp.value&&pending.length){pending.pop();render();}};
+  inp.onblur=()=>{if(inp.value.trim())add();};
+  chipsBox.append(...pending.map((p,ix)=>el("span",{class:"shchip"},p,el("button",{"aria-label":"Remove "+p,onclick:()=>{pending.splice(ix,1);render();}},"×"))),inp);
+  const nrole=el("select",{class:"shsel","aria-label":"Role for new people"},...DROLES.map(([v,l])=>el("option",{value:v,selected:v==="reader"||null},l)));
+  const notify=el("input",{type:"checkbox",checked:true}),msg=el("textarea",{class:"in",rows:2,placeholder:"Message"});
+  const av=e=>el("span",{class:"shav"},e[0].toUpperCase());
+  const people=[el("div",{class:"shrow"},av(owner),el("div",{class:"m"},el("b",{},"You"),el("small",{},owner)),el("span",{class:"shown"},"Owner")),
+   ...sh.people.map(p=>{const sel=el("select",{class:"shsel","aria-label":"Access for "+p.email},...DROLES.map(([v,l])=>el("option",{value:v,selected:p.role===v||null},l)),el("option",{disabled:true},"──────"),el("option",{value:"remove"},"Remove access"));
+    sel.onchange=()=>{if(sel.value==="remove"){sh.people=sh.people.filter(x=>x!==p);toast("Removed "+p.email);}else{p.role=sel.value;toast(p.email+" is now "+DROLES.find(r=>r[0]===sel.value)[1].toLowerCase());}save();render();};
+    return el("div",{class:"shrow"},av(p.email),el("div",{class:"m"},el("b",{},p.email.split("@")[0]),el("small",{},p.email)),sel);})];
+  const gen=el("select",{class:"shsel","aria-label":"General access"},el("option",{value:"RESTRICTED",selected:sh.link==="RESTRICTED"||null},"Restricted"),el("option",{value:"ANYONE",selected:sh.link==="ANYONE"||null},"Anyone with the link"));
+  gen.onchange=()=>{sh.link=gen.value;save();render();toast(sh.link==="ANYONE"?"Anyone with the link can open it":"Only people with access can open it");};
+  const lrole=el("select",{class:"shsel","aria-label":"Link role"},...DROLES.map(([v,l])=>el("option",{value:v,selected:sh.linkRole===v||null},l)));lrole.onchange=()=>{sh.linkRole=lrole.value;save();};
+  const copy=()=>{const done=()=>toast("Link copied");try{navigator.clipboard.writeText(url).then(done,()=>toast(url));}catch(e){toast(url);}};
+  openSheet("Share “"+label+"”",
+   el("div",{class:"shadd"},chipsBox,pending.length?nrole:null),
+   pending.length?[el("label",{class:"check"},notify,el("div",{},el("b",{},"Notify people"),el("small",{},"Google Drive emails them a link"))),msg,
+    el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{pending.length=0;render();}},"Cancel"),el("button",{class:"btn blue",onclick:()=>{if(inp.value.trim()&&!add())return;pending.forEach(e=>sh.people.push({email:e,role:nrole.value}));const n=pending.length;pending.length=0;save();render();toast("Shared with "+n+" "+(n>1?"people":"person")+(notify.checked?" · email sent":""));}},"Send"))]
+   :[el("div",{class:"sech",style:"margin-top:12px"},"People with access"),...people,
+    el("div",{class:"sech",style:"margin-top:12px"},"General access"),
+    el("div",{class:"shrow"},el("span",{class:"shav "+(sh.link==="ANYONE"?"on":"")},sh.link==="ANYONE"?"🌐":"🔒"),el("div",{class:"m"},gen,el("small",{},sh.link==="ANYONE"?"Anyone on the internet with the link can "+(sh.linkRole==="reader"?"view":sh.linkRole==="commenter"?"comment":"edit"):"Only people with access can open with the link")),sh.link==="ANYONE"?lrole:null),
+    el("div",{class:"btnrow",style:"margin-top:12px"},el("button",{class:"btn ghost",onclick:copy},"🔗 Copy link"),el("button",{class:"btn",onclick:()=>{closeSheet();onDone&&onDone();}},"Done"))]);
+ };
+ render();
+}
+function driveFiles(title,names,extra){openSheet(title,names.length?el("div",{class:"card",style:"margin:0 0 10px"},...names.map(n=>el("div",{class:"kv"},el("span",{style:"overflow-wrap:anywhere"},"📄 "+n)))):el("div",{class:"empty"},"No files yet"),extra||null,el("div",{class:"btnrow"},el("button",{class:"btn",onclick:closeSheet},"Close")));}
 PAGES.drive=function(){
  const now=new Date(),start=fyStart(now),months=[];for(let d=new Date(now.getFullYear(),now.getMonth(),1);d>=start;d=new Date(d.getFullYear(),d.getMonth()-1,1))months.push(dk(d).slice(0,7));
- const cnt=m=>{const occ=allOcc().filter(x=>x.o.status==="PAID"&&mkOf(x.o.paidAt)===m);return {cxl:S.invoices.filter(i=>i.status==="CANCELLED"&&i.issued&&mkOf(i.issued)===m).length,inv:S.invoices.filter(i=>i.issued&&mkOf(i.issued)===m&&i.docType!=="PROFORMA"&&i.status!=="CANCELLED").length,bills:occ.filter(x=>x.o.file).length,itc:occ.filter(x=>x.o.itc&&x.o.gst>0&&x.o.file).length,gst:occ.filter(x=>x.o.itc).reduce((s,x)=>s+(x.o.gst||0),0)};};
- const fr=(icon,name,n,extra)=>el("div",{class:"kv"},el("span",{},icon+" "+name),el("span",{class:"num"},n+" file"+(n===1?"":"s")+(extra||"")));
- page("Monthly Drive folders",[el("p",{class:"pre",style:"padding:12px 12px 0"},"On the 1st of every month a folder is created in Google Drive under Finance › YYYY-MM. Approved invoices and attached expense bills are filed into it automatically; bills whose GST you get back are also put in “GST claimable”, ready for your finance person. Cancelled invoices move to “Cancelled invoices” in the month they were issued, stamped CANCELLED, so the number series has no gaps."),
-  ...months.map(m=>{const c=cnt(m);return el("div",{class:"card"},el("div",{style:"display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px"},el("h4",{style:"margin:0"},"📁 "+mkLabel(m)),el("button",{class:"pill",onclick:()=>toast("Opens Drive › Finance › "+m+" (real app)")},"Open in Drive")),fr("🧾","Sales invoices",c.inv),fr("📎","Expense bills",c.bills),fr("✅","GST claimable",c.itc,c.gst?" · "+inr(c.gst):""),fr("🚫","Cancelled invoices",c.cxl),el("div",{style:"display:flex;justify-content:flex-end;margin-top:8px"},el("button",{class:"pill",onclick:()=>{gstMonth=m;expTab="GST";nav("expenses");}},"GST pack ›")));})],
-  [zoneActions(el("button",{class:"btn blue",onclick:()=>toast("Opens Drive › Finance (real app)")},"Open Finance folder in Drive"))]);
+ const files=m=>{const occ=allOcc().filter(x=>x.o.status==="PAID"&&mkOf(x.o.paidAt)===m);return {cxl:S.invoices.filter(i=>i.status==="CANCELLED"&&i.issued&&mkOf(i.issued)===m&&i.docType!=="PROFORMA"),inv:S.invoices.filter(i=>i.issued&&mkOf(i.issued)===m&&i.docType!=="PROFORMA"&&i.status!=="CANCELLED"),bills:occ.filter(x=>x.o.file),itc:occ.filter(x=>x.o.itc&&x.o.gst>0&&x.o.file),gst:occ.filter(x=>x.o.itc).reduce((s,x)=>s+(x.o.gst||0),0)};};
+ const shared=k=>{const sh=(S.shares||{})[k];return sh&&(sh.people.length||sh.link==="ANYONE")?(sh.link==="ANYONE"?"link":sh.people.length):"";};
+ const chip=(icon,name,n,on,extra)=>el("button",{class:"dchip",onclick:on},el("span",{class:"dl"},icon+" "+name),el("b",{},n+(extra||"")));
+ page("Monthly Drive folders",[el("p",{class:"pre",style:"padding:12px 12px 4px;margin:0"},"In your Google Drive ("+S.settings.email+") › Finance. Share a month like any Drive folder. Proformas aren't filed."),
+  ...months.map(m=>{const c=files(m),lab="Finance › "+m,sc=shared(m);return el("div",{class:"card dcard"},
+   el("div",{class:"dhead"},el("h4",{},"📁 "+mkLabel(m)),
+    el("button",{class:"pill dbtn",onclick:()=>driveShare(m,lab,PAGES.drive)},"👤+ Share"+(sc?" · "+sc:"")),
+    el("button",{class:"pill dbtn",onclick:()=>toast("Opens Drive › "+lab)},"Open ↗")),
+   el("div",{class:"dgrid"},
+    chip("🧾","Sales",c.inv.length,()=>driveFiles(mkLabel(m)+" · Sales invoices",c.inv.map(invFileName))),
+    chip("📎","Bills",c.bills.length,()=>driveFiles(mkLabel(m)+" · Expense bills",c.bills.map(x=>x.o.file.name))),
+    chip("✅","GST claim",c.itc.length,()=>driveFiles(mkLabel(m)+" · GST claimable",c.itc.map(x=>x.o.file.name),el("div",{class:"btnrow",style:"margin-bottom:8px"},el("button",{class:"btn blue",onclick:()=>{closeSheet();gstMonth=m;expTab="GST";nav("expenses");}},"Open GST pack"+(c.gst?" · "+inr(c.gst):""))))),
+    chip("🚫","Cancelled",c.cxl.length,()=>driveFiles(mkLabel(m)+" · Cancelled invoices",c.cxl.map(invFileName)))));})],
+  [zoneActions(el("button",{class:"btn ghost",onclick:()=>driveShare("ROOT","Finance",PAGES.drive)},"Share Finance"),el("button",{class:"btn blue",onclick:()=>toast("Opens Drive › Finance")},"Open in Drive"))]);
+};
+/* ---------- Client kit: one shared Drive folder per client (Brand kit, Credentials sheet, Work, Reports) ---------- */
+const KIT_WAYS=["Email & password","Sign in with Google","Sign in with Microsoft","Sign in with Apple","Sign in with Facebook","Phone OTP","Other"];
+const kitNames=()=>S.settings.kitFolders&&S.settings.kitFolders.length?S.settings.kitFolders:["Brand kit","Credentials","Work","Reports"];
+const kitWho=c=>c.businessName||c.name;
+const kitUrl=c=>"https://drive.google.com/drive/folders/kit"+c.id;
+function kitCreate(c){
+ const names=kitNames();const steps=[`Folder “Client Kit › ${kitWho(c)}” in your Drive`,...names.map(n=>`Folder “${n}”`),`Google Sheet “${kitWho(c)} — Credentials” with the How-to-fill guide`,c.email?`Shared with ${c.email} as Editor`:"Not shared yet — add the client's email to share"];
+ const list=el("div",{class:"card",style:"margin:0 0 10px"});openSheet("Creating client kit…",list);
+ steps.forEach((t,ix)=>setTimeout(()=>{list.append(el("div",{class:"kv"},el("span",{},"✓ "+t)));if(ix===steps.length-1){
+  const had=!!c.kit;c.kit=Object.assign(c.kit||{},{createdAt:(c.kit&&c.kit.createdAt)||new Date().toISOString(),folders:names.slice(),sharedWith:c.email||null});save();
+  setTimeout(()=>{closeSheet();toast(had?"Kit checked · missing parts re-created":"Client kit ready");PAGES.kit(c.id);},350);}},180*(ix+1)));
+}
+function kitSheetPreview(c,tab){
+ tab=tab||"SHEET";
+ const cols=["Platform","Login URL","Username / email","Password","Way","2FA code goes to","Notes"];
+ const ex=[["Instagram","instagram.com","@brand","","Sign in with Facebook","Owner's phone","Business account"],["Google Ads","ads.google.com","ads@brand.com","","Sign in with Google","ads@brand.com","Give us Admin access"],["Website (WordPress)","brand.com/wp-admin","agency","••••••••","Email & password","—","Editor role is enough"]];
+ const tbl=tab==="SHEET"?el("div",{style:"overflow-x:auto;margin:0 0 10px;border-radius:12px;box-shadow:inset 0 0 0 1px var(--hair)"},el("table",{class:"ksheet"},el("thead",{},el("tr",{},...cols.map(h=>el("th",{},h)))),el("tbody",{},...ex.map(r=>el("tr",{class:"kex"},...r.map(v=>el("td",{},v||" ")))),el("tr",{},...cols.map((h,ix)=>el("td",{},ix===4?"▾ pick one":" "))))))
+  :el("div",{class:"card",style:"margin:0 0 10px"},...[
+   ["One row per platform","Instagram, Facebook, Google Ads, website, hosting, email — anything we should manage."],
+   ["Way","How you log in. Pick from the list: "+KIT_WAYS.join(", ")+"."],
+   ["Sign in with Google / Microsoft / Apple / Facebook","Write the account email in “Username / email” and leave Password empty — we'll ask you to add us as a user instead."],
+   ["2FA code goes to","Whose phone or email gets the login code, so we know whom to ask."],
+   ["Never add","Bank, card or UPI PINs. We never need them."],
+   ["Questions?",S.settings.company+" · "+S.settings.email+" · +"+S.settings.phone]].map(([k,v])=>el("div",{class:"kv",style:"display:block"},el("b",{style:"display:block"},k),el("small",{class:"pre"},v))));
+ openSheet(kitWho(c)+" — Credentials",el("div",{class:"r1",style:"margin:0 0 10px;padding:0"},el("button",{class:"gp"+(tab==="SHEET"?" on":""),onclick:()=>kitSheetPreview(c,"SHEET")},"Credentials"),el("button",{class:"gp"+(tab==="GUIDE"?" on":""),onclick:()=>kitSheetPreview(c,"GUIDE")},"How to fill")),tbl,
+  el("p",{class:"pre",style:"margin:0 0 10px"},"Way is a dropdown in the real sheet; grey rows are examples."),el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>toast("Opens the Google Sheet")},"Open sheet ↗"),el("button",{class:"btn",onclick:closeSheet},"Close")));
+}
+function kitSend(c){
+ const em=el("input",{type:"checkbox",checked:c.email?true:null,disabled:!c.email||null}),wa=el("input",{type:"checkbox",checked:c.phone?true:null,disabled:!c.phone||null});
+ const msg=el("textarea",{class:"in",rows:7},`Hi ${first(c.name)},\n\nHere is your ${S.settings.company} client kit: ${kitUrl(c)}\n\n1. Brand kit — upload your logo, fonts, photos and brand guide.\n2. Credentials — fill the sheet; the “How to fill” tab explains each column.\n3. Work — we'll put everything we make for you here.\n4. Reports — your monthly reports.\n\nThanks!`);
+ openSheet("Send the kit to "+first(c.name),el("label",{class:"check"},em,el("div",{},el("b",{},"Email"),el("small",{},c.email||"no email on the client — add one in Clients"))),el("label",{class:"check"},wa,el("div",{},el("b",{},"WhatsApp"),el("small",{},c.phone||"no WhatsApp number on the client"))),field("Message",msg),
+  el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:closeSheet},"Cancel"),el("button",{class:"btn blue",onclick:()=>{const via=[em.checked?"email":null,wa.checked?"WhatsApp":null].filter(Boolean);if(!via.length)return toast("Pick email or WhatsApp","err");c.kit.sentAt=new Date().toISOString();c.kit.sentVia=via;save();closeSheet();toast("Kit sent by "+via.join(" + "));PAGES.kit(c.id);}},"Send")));
+}
+PAGES.kit=function(cid){
+ const c=cid&&clientById(cid);
+ if(!c){
+  const n=S.clients.filter(x=>x.kit).length;
+  page("Client kit",[el("p",{class:"pre",style:"padding:12px 12px 4px;margin:0"},"One Google Drive folder per client in your Drive › Client Kit, shared with the client: "+kitNames().join(", ")+". Credentials come as a ready Google Sheet with a guide."),
+   el("div",{class:"tiles"},tile("Kits created",n+" of "+S.clients.length),tile("Sent to client",String(S.clients.filter(x=>x.kit&&x.kit.sentAt).length))),
+   ...S.clients.map(x=>el("div",{class:"item",onclick:()=>x.kit?PAGES.kit(x.id):kitCreate(x)},el("div",{class:"m"},el("b",{},kitWho(x)),el("small",{},x.kit?("Kit ready"+(x.kit.sentAt?" · sent "+fmtD(x.kit.sentAt)+" by "+x.kit.sentVia.join(" + "):" · not sent yet")):"No kit yet")),x.kit?el("span",{class:"tag "+(x.kit.sentAt?"paid":"draft")},x.kit.sentAt?"Sent":"Ready"):el("button",{class:"pill",style:"height:32px",onclick:e=>{e.stopPropagation();kitCreate(x);}},"Create kit")))],
+   [zoneActions(el("button",{class:"btn ghost",onclick:()=>nav("vault:CREDENTIAL")},"Saved logins"),el("button",{class:"btn blue",onclick:()=>nav("clients:add")},"+ Add client"))]);
+  return;
+ }
+ if(!c.kit)return kitCreate(c);
+ const fol=(icon,n,sub,on)=>el("button",{class:"dchip",style:"height:auto;padding:10px 12px;flex-direction:column;align-items:flex-start;gap:2px;text-align:left",onclick:on||(()=>toast("Opens “"+n+"” in Drive"))},el("b",{},icon+" "+n),el("span",{class:"dl",style:"font-size:12px;white-space:normal"},sub));
+ const vi=S.vault.filter(v=>v.client===c.id);const KLx={ASSET_DRIVE_LINK:"Asset link",CREDENTIAL:"Login",SHARED_DRIVE_LINK:"Shared link"};
+ const names=c.kit.folders||kitNames();const ic=["🎨","🔐","🛠️","📊"];
+ page(kitWho(c)+" · kit",[
+  el("div",{class:"card dcard"},el("div",{class:"dhead"},el("h4",{},"📁 "+kitWho(c)),el("button",{class:"pill dbtn",onclick:()=>driveShare("kit"+c.id,"Client Kit › "+kitWho(c),()=>PAGES.kit(c.id))},"👤+ Share"),el("button",{class:"pill dbtn",onclick:()=>toast("Opens the kit in Drive")},"Open ↗")),
+   el("div",{class:"dgrid"},...names.map((n,ix)=>fol(ic[ix]||"📁",n,ix===0?"Client uploads logos, fonts, photos":ix===1?"Sheet: "+kitWho(c)+" — Credentials":ix===2?"We upload the work we make":"Monthly reports for the client",ix===1?()=>kitSheetPreview(c):null))),
+   el("div",{class:"kv",style:"margin-top:10px"},el("span",{},c.kit.sharedWith?"Shared with "+c.kit.sharedWith+" (Editor)":"Not shared with the client yet"),el("button",{class:"pill",style:"height:30px",onclick:()=>{const u=kitUrl(c);try{navigator.clipboard.writeText(u).then(()=>toast("Link copied"),()=>toast(u));}catch(e){toast(u);}}},"Copy link"))),
+  el("div",{class:"card"},el("h4",{},"Send to client"),el("div",{class:"kv"},el("span",{},"Last sent"),el("span",{},c.kit.sentAt?fmtD(c.kit.sentAt)+" · "+c.kit.sentVia.join(" + "):"never")),
+   el("div",{class:"btnrow",style:"margin-top:8px"},el("button",{class:"btn ghost",disabled:!c.email||null,onclick:()=>kitSend(c)},"✉️ Email"),el("button",{class:"btn ghost",disabled:!c.phone||null,onclick:()=>kitSend(c)},"💬 WhatsApp"))),
+  el("div",{class:"sech"},"Saved in the app · encrypted"),
+  ...(vi.length?vi.map(v=>el("div",{class:"item",style:"cursor:default"},el("div",{class:"m"},el("b",{},v.label),el("small",{},KLx[v.kind]+" · "+v.value+(v.expires?" · expires "+fmtD(v.expires):""))))):[el("div",{class:"empty"},"Nothing saved in the app for this client")])],
+  [zoneActions(el("button",{class:"btn ghost",onclick:()=>kitCreate(c)},"Re-check kit"),el("button",{class:"btn blue",onclick:()=>kitSend(c)},"Send kit"))]);
 };
 /* ---------- boot ---------- */
 document.querySelectorAll("[data-login]").forEach(b=>b.onclick=()=>{const r=b.dataset.login;S.me=S.users.find(u=>u.role===r).id;save();if(r==="HR"){show("page");PAGES.attendance();}else{show("dash");renderDash();}});
