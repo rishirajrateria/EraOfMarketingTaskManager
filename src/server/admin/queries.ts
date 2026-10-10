@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { getSettings } from "@/lib/settings";
 import { dateKey } from "@/lib/time";
+import { kitFolderNames } from "@/server/clients/kit-paths";
 
 /** Read-side queries for the admin screens. Results are plain, RSC-serialisable objects. */
 
@@ -166,6 +167,7 @@ export async function getSettingsDto() {
     expenseCategories: s.expenseCategories,
     tdsThresholdAmount: Number(s.tdsThresholdAmount),
     financeEmail: s.financeEmail,
+    clientKitFolders: kitFolderNames(s.clientKitFolders) as string[],
     updatedAt: s.updatedAt.toISOString(),
   };
 }

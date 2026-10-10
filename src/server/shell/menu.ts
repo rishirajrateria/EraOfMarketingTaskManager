@@ -16,6 +16,8 @@ export type MenuCounts = {
   billsDueWeek: number;
   gstToClaimMonth: number;
   clients: number;
+  /** ADR 0014: active clients whose Drive kit exists. */
+  clientsWithKit: number;
   credentials: number;
   executives: number;
   teams: string[];
@@ -36,7 +38,7 @@ export async function menuCounts(): Promise<ActionResult<MenuCounts>> {
     const now = new Date();
     const today = zonedStartOfDay(now, tz);
     const monthStart = zonedStartOfDay(new Date(`${dateKey(now, tz).slice(0, 7)}-01T12:00:00Z`), tz);
-    const [toApprove, open, overdue, dueWeek, gst, clients, credentials, executives, teams, workTypes, requests, unread] = await Promise.all([
+    const [toApprove, open, overdue, dueWeek, gst, clients, kits, credentials, executives, teams, workTypes, requests, unread] = await Promise.all([
       prisma.invoice.count({ where: { status: "AWAITING_APPROVAL" } }),
       prisma.invoice.findMany({
         where: { status: { in: ["SENT", "PARTIALLY_PAID", "OVERDUE"] }, docType: { in: ["TAX_INVOICE", "EXPORT_INVOICE"] } },
@@ -46,6 +48,7 @@ export async function menuCounts(): Promise<ActionResult<MenuCounts>> {
       prisma.expenseOccurrence.count({ where: { status: "DUE", dueDate: { gte: today, lt: new Date(today.getTime() + 8 * DAY) } } }),
       prisma.expenseOccurrence.aggregate({ _sum: { gstAmount: true }, where: { status: "PAID", itcClaimable: true, paidAt: { gte: monthStart } } }),
       prisma.client.count({ where: { active: true } }),
+      prisma.client.count({ where: { active: true, kitFolderId: { not: null }, kitSheetId: { not: null } } }),
       prisma.clientVaultItem.count({ where: { kind: "CREDENTIAL" } }),
       prisma.user.count({ where: { role: "EXECUTIVE", active: true } }),
       prisma.team.findMany({ where: { active: true }, select: { name: true }, orderBy: { name: "asc" } }),
@@ -62,6 +65,7 @@ export async function menuCounts(): Promise<ActionResult<MenuCounts>> {
       billsDueWeek: dueWeek,
       gstToClaimMonth: Math.round(Number(gst._sum.gstAmount ?? 0)),
       clients,
+      clientsWithKit: kits,
       credentials,
       executives,
       teams: teams.map((t) => t.name),

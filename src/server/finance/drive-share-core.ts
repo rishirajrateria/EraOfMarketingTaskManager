@@ -7,8 +7,8 @@ import { monthLabelLong } from "@/server/finance/gst-pack";
 import { financeDriveOwner } from "@/server/finance/month-folders";
 
 /**
- * Share sheet for the finance folders (ADR 0013). Only folders the app created and recorded — the Finance root
- * (FinanceDriveRoot) and each Finance/YYYY-MM folder (FinanceMonthFolder) — can be shared; a folder id from the
+ * Share sheet for the finance and client kit folders (ADR 0013, ADR 0014). Only folders the app created and recorded — the Finance root
+ * (FinanceDriveRoot), each Finance/YYYY-MM folder (FinanceMonthFolder) and each client kit folder — can be shared; a folder id from the
  * browser is looked up in the database and anything else is refused, so the sheet cannot be used to share
  * arbitrary files in the owner's Drive. Every change is audit-logged.
  */
@@ -22,7 +22,7 @@ export type FolderSharing = {
   general: { access: "restricted" | "anyone"; role: ShareRole };
 };
 
-export const FOREIGN_FOLDER_ERROR = "Only the Finance folders created by this app can be shared from here";
+export const FOREIGN_FOLDER_ERROR = "Only the Finance and client kit folders created by this app can be shared from here";
 
 const roleSchema = z.enum(["reader", "commenter", "writer"]);
 const folderIdSchema = z.string().trim().regex(/^[A-Za-z0-9_-]{3,200}$/, "Not a Drive folder id");
@@ -43,12 +43,14 @@ export async function resolveShareableFolder(rawId: unknown): Promise<Folder> {
   const parsed = folderIdSchema.safeParse(rawId);
   if (!parsed.success) throw new Error(FOREIGN_FOLDER_ERROR);
   const id = parsed.data;
-  const [root, month] = await Promise.all([
+  const [root, month, kit] = await Promise.all([
     prisma.financeDriveRoot.findFirst({ where: { folderId: id }, select: { folderId: true } }),
     prisma.financeMonthFolder.findFirst({ where: { folderId: id }, select: { folderId: true, month: true } }),
+    prisma.client.findFirst({ where: { kitFolderId: id }, select: { kitFolderId: true, name: true, businessName: true } }), // ADR 0014
   ]);
   if (root) return { folderId: root.folderId, title: "Finance" };
   if (month) return { folderId: month.folderId, title: `Finance › ${monthLabelLong(month.month)}` };
+  if (kit?.kitFolderId) return { folderId: kit.kitFolderId, title: `Client kit › ${kit.businessName?.trim() || kit.name}` };
   throw new Error(FOREIGN_FOLDER_ERROR);
 }
 

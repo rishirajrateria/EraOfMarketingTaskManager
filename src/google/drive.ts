@@ -118,6 +118,19 @@ export async function trashFile(fileId: string) {
   });
 }
 
+/** True when the file / folder still exists and is not in the trash (used to repair a client kit). Mock: always true. */
+export async function fileAlive(fileId: string): Promise<boolean> {
+  if (isMock()) return true;
+  try {
+    const res = await withRetry(() => drive().files.get({ fileId, fields: "id,trashed", supportsAllDrives: true }));
+    return !res.data.trashed;
+  } catch (e) {
+    const code = (e as { code?: number }).code;
+    if (code === 404 || code === 403) return false;
+    throw e;
+  }
+}
+
 /**
  * Rename / move / replace the content of an existing file in one call (a cancelled invoice is renamed to
  * "C Invoice No. …", moved to Cancelled invoices and replaced by the stamped PDF). Returns false when the file no

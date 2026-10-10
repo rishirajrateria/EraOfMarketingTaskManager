@@ -72,6 +72,31 @@ describe("admin menu counts", () => {
     expect(menuSections(null).flatMap((s) => s.items.map((i) => i.href))).not.toContain("/admin/finance");
   });
 
+  it("ADR 0014: Clients has one Client kit row; Attendance + Inventory have their own section and colour", async () => {
+    const { kitSub } = await import("@/components/shell/MenuTray");
+    const sections = menuSections(null);
+    const byTitle = (t: string) => sections.find((s) => s.title === t)!;
+    expect(sections.map((s) => s.title)).toEqual(["Money", "Clients", "Team", "Time & attendance", "Account"]);
+    expect(byTitle("Clients").items.map((i) => i.label)).toEqual(["Clients", "Client kit", "Shared drive links"]);
+    expect(byTitle("Team").items.map((i) => i.label)).toEqual(["Executives", "Team leaders", "Teams", "Work types"]);
+    expect(byTitle("Time & attendance").items.map((i) => i.href)).toEqual(["/attendance", "/admin/inventory"]);
+    expect(byTitle("Time & attendance").tone).not.toBe(byTitle("Team").tone);
+    const hrefs = sections.flatMap((s) => s.items.map((i) => i.href));
+    expect(hrefs).not.toContain("/admin/vault?tab=CREDENTIAL");
+    expect(hrefs).not.toContain("/admin/vault?tab=ASSET_DRIVE_LINK");
+
+    await testDb.client.update({ where: { id: seed.client.id }, data: { kitFolderId: "f", kitSheetId: "s" } });
+    await testDb.client.create({ data: { name: "Second" } });
+    await testDb.clientVaultItem.create({ data: { clientId: seed.client.id, kind: "CREDENTIAL", label: "Instagram" } });
+    session.set({ id: seed.admin.id, role: "ADMIN" });
+    const { menuCounts } = await import("@/server/shell/menu");
+    const r = await menuCounts();
+    expect(r.ok && r.data.clientsWithKit).toBe(1);
+    if (!r.ok) return;
+    expect(kitSub(r.data)).toBe("1 of 2 clients have a kit · 1 saved login");
+    expect(menuSections(r.data).find((s) => s.title === "Clients")!.items[1].sub).toBe("1 of 2 clients have a kit · 1 saved login");
+  });
+
   it("lists every admin destination once", () => {
     const hrefs = menuSections(null).flatMap((s) => s.items.map((i) => i.href));
     expect(new Set(hrefs).size).toBe(hrefs.length);

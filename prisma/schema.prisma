@@ -378,6 +378,17 @@ model Client {
   holdInvoiceId    String?
   holdSince        DateTime?
   driveFolderId    String?
+  // ADR 0014: client kit in the owner's Drive — Client Kit/<client>/{Brand kit, Credentials, Work, Reports} + sheet
+  kitFolderId      String?
+  kitBrandId       String?
+  kitCredentialsId String?
+  kitSheetId       String?
+  kitWorkId        String?
+  kitReportsId     String?
+  kitCreatedAt     DateTime?
+  kitSharedWith    String? // client email given Editor access
+  kitSentAt        DateTime?
+  kitSentVia       String? // EMAIL | WHATSAPP (last send)
   visibleInFilters Boolean           @default(false)
   active           Boolean           @default(true)
   tasks            Task[]
@@ -953,6 +964,9 @@ model CompanySettings {
   expenseCategories             String[]   @default(["Travel", "Software", "Office", "Marketing", "Salaries", "Rent", "Utilities", "Other"]) // ADR 0004: fixed list, no free text
   tdsThresholdAmount            Decimal    @default(20000) @db.Decimal(12, 2) // ADR 0006: per payee per financial year
   financeEmail                  String     @default("") // ADR 0009: the monthly GST pack is emailed here
+  // ADR 0014: "Client Kit" top folder in the owner's My Drive (created once) and the four subfolder names
+  clientKitRootId               String?
+  clientKitFolders              String[]   @default(["Brand kit", "Credentials", "Work", "Reports"])
   updatedAt                     DateTime   @updatedAt
 }
 
