@@ -568,6 +568,7 @@ select.in{padding-right:10px}
 .chip.team{color:#7c3aed}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .chip.team{color:#c4b5fd}:root:not([data-theme="light"]) .rpills .pill.ok{color:#4ade80}:root:not([data-theme="light"]) .rpills .pill.od{color:#f87171}}
 :root[data-theme="dark"] .chip.team{color:#c4b5fd}:root[data-theme="dark"] .rpills .pill.ok{color:#4ade80}:root[data-theme="dark"] .rpills .pill.od{color:#f87171}
+.toast .undo{margin-left:12px;border:0;background:transparent;color:#7dd3fc;font:inherit;font-weight:800;cursor:pointer;padding:2px 4px}
 </style><div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
@@ -819,7 +820,9 @@ const dateChip=iso=>fmtD(iso);
 const actualTone=t=>{if(!t.actualStart)return "";const late=new Date(t.actualStart)>new Date(t.start);if(t.status==="COMPLETED")return t.actualEnd&&new Date(t.actualEnd)<=new Date(t.end)?"ok":"od";if(new Date()>new Date(t.end))return "od";return late?"od":"ok";};
 const rowColour=t=>t.status==="COMPLETED"?"grey":t.doubt?"yellow":(t.status!=="COMPLETED"&&new Date(t.end)<new Date()&&t.status!=="FINISH_REQUESTED")?"red":t.status==="STARTED"?"green":"white";
 const toastEl=$("#toast");let toastT=null;
-function toast(msg,kind){toastEl.textContent=msg;toastEl.className="toast"+(kind==="err"?" err":"");toastEl.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>toastEl.hidden=true,2200);}
+function toast(msg,kind){toastEl.textContent=msg;toastEl.className="toast"+(kind==="err"?" err":"");toastEl.style.pointerEvents="";toastEl.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>toastEl.hidden=true,2200);}
+/* Google-Tasks style toast with Undo (5s). */
+function undoToast(msg,onUndo){toastEl.replaceChildren(el("span",{},msg),el("button",{class:"undo",onclick:()=>{toastEl.hidden=true;onUndo();}},"Undo"));toastEl.className="toast";toastEl.style.pointerEvents="auto";toastEl.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>toastEl.hidden=true,5000);}
 function notify(forId,text){S.notifs.unshift({id:uid(),text,at:new Date().toISOString(),read:false,for:forId});}
 function audit(){}
 
@@ -919,15 +922,20 @@ function taskRow(t){
  const circle=(()=>{
   if(t.status==="COMPLETED")return el("button",{class:"circle",title:"Restart",onclick:e=>{e.stopPropagation();restartTask(t);}},svg(I.restart,15,2.5));
   const cls="circle"+(t.doubt?" doubt":col==="green"?" started":"");
-  return el("button",{class:cls,title:"Tap to request finish",onclick:e=>{e.stopPropagation();onCircle(t);}},t.paused?svg(I.pause,13,0):t.status==="FINISH_REQUESTED"?svg(I.check,15,3):null);
+  let ct=null,clong=false;
+  return el("button",{class:cls,title:"Tap to complete · hold or right-click for more","aria-label":"Complete “"+t.title+"” (hold or right-click for more)",
+   onpointerdown:e=>{e.stopPropagation();clong=false;ct=setTimeout(()=>{clong=true;openActions(t);},450);},onpointerup:e=>{e.stopPropagation();clearTimeout(ct);},onpointerleave:()=>clearTimeout(ct),onpointercancel:()=>clearTimeout(ct),
+   oncontextmenu:e=>{e.preventDefault();e.stopPropagation();clearTimeout(ct);openActions(t);},
+   onkeydown:e=>{if(e.key==="ContextMenu"||(e.shiftKey&&e.key==="F10")){e.preventDefault();openActions(t);}},
+   onclick:e=>{e.stopPropagation();if(clong){clong=false;return;}onCircle(t);}},t.paused?svg(I.pause,13,0):t.status==="FINISH_REQUESTED"?svg(I.check,15,3):null);
  })();
  let pressT=null,long=false;
  const li=el("li",{class:"row "+col,"aria-label":t.title,
   onpointerdown:()=>{long=false;pressT=setTimeout(()=>{long=true;openActions(t);},500);},
   onpointerup:()=>{clearTimeout(pressT);},onpointerleave:()=>clearTimeout(pressT),onpointercancel:()=>clearTimeout(pressT),
-  onclick:()=>{if(!long)openDetail(t);},oncontextmenu:e=>e.preventDefault()},
+  onclick:()=>{if(!long)openDetail(t);},oncontextmenu:e=>{e.preventDefault();clearTimeout(pressT);openActions(t);}},
   t.parent?el("span",{class:"restartTag",title:"Restarted task"},svg(I.restart,10,3)):null,
-  el("div",{class:"title"},el("b",{},t.title),t.important?svg(I.star,12,2):null,t.recurring?el("span",{style:"color:#2563eb;flex-shrink:0"},svg(I.repeat,12,2.5)):null,t.paused?el("span",{class:"pauseTag",title:"Paused"},svg(I.pause,9,0)):null,
+  el("div",{class:"title"},el("b",{},t.title),t.recurring?el("span",{style:"color:#2563eb;flex-shrink:0"},svg(I.repeat,12,2.5)):null,t.paused?el("span",{class:"pauseTag",title:"Paused"},svg(I.pause,9,0)):null,
    null),
   el("div",{class:"body"},
    el("div",{class:"left"},
@@ -948,23 +956,26 @@ function taskRow(t){
  return li;
 }
 /* ---------- lifecycle ---------- */
+/* Circle = Google Tasks checkbox: tap completes "from my side" (Admin: done; others: finish requested), with Undo. */
 function onCircle(t){
  const r=role();
- if(r==="EXECUTIVE")return toast("Ask your Team Leader to finish");
- if(t.status==="STARTED"){t.status="FINISH_REQUESTED";t.actualEnd=new Date().toISOString();notify("u1",`${first(me().name)} requested finish on “${t.title}”`);save();renderDash();return toast("Finish requested");}
- if(t.status==="FINISH_REQUESTED"){if(r==="ADMIN"){t.status="COMPLETED";t.doubt=false;t.review=false;t.assignees.forEach(id=>notify(id,`Admin approved finish on ${t.title}`));save();renderDash();return toast("Task completed");}return toast("Waiting for Admin approval");}
  if(t.paused)return toast("Task is paused by Admin");
- toast("Long-press the row and choose Start first");
+ if(t.status==="FINISH_REQUESTED"&&r!=="ADMIN")return toast("Done from your side · waiting for Admin");
+ const snap=JSON.parse(JSON.stringify(t));const now=new Date().toISOString();
+ if(!t.actualStart)t.actualStart=now;t.actualEnd=now;
+ if(r==="ADMIN"){t.status="COMPLETED";t.doubt=false;t.review=false;}else{t.status="FINISH_REQUESTED";notify("u1",`${first(me().name)} finished “${t.title}” from their side`);}
+ save();renderDash();
+ undoToast(r==="ADMIN"?"Task completed":"Done from your side · sent to Admin",()=>{Object.assign(t,snap);if(!snap.actualStart)t.actualStart=null;if(!snap.actualEnd)t.actualEnd=null;save();renderDash();toast("Undone");});
 }
 function restartTask(t){if(role()==="EXECUTIVE")return toast("Ask your Team Leader to restart");const n=Object.assign({},t,{id:uid(),status:"NOT_STARTED",actualStart:null,actualEnd:null,parent:true,start:at(0,10),end:at(0,10+Math.ceil(t.mins/60)),doubt:false,review:false});S.tasks.unshift(n);save();renderDash();toast("Task restarted as a new copy");}
 function openActions(t){
  const r=role(),items=[];
  const done=(fn,msg)=>()=>{fn();save();closeSheet();renderDash();toast(msg);};
+ if(t.status!=="COMPLETED"&&!t.paused&&(r==="ADMIN"||t.status!=="FINISH_REQUESTED"))items.unshift({label:r==="ADMIN"?"Complete task":"Complete from my side",hint:r==="ADMIN"?"Same as tapping the circle":"Admin approves to close it",onClick:()=>{closeSheet();onCircle(t);}});
  if(t.status==="NOT_STARTED"&&!t.paused&&r!=="EXECUTIVE")items.push({label:"Start",hint:"Marks the row green and records the start time",onClick:done(()=>{t.status="STARTED";t.actualStart=new Date().toISOString();},"Task started")});
- if(t.status==="STARTED"&&r!=="EXECUTIVE")items.push({label:"Request finish",hint:"Admin approves to complete",onClick:done(()=>{t.status="FINISH_REQUESTED";t.actualEnd=new Date().toISOString();},"Finish requested")});
  if(t.status==="FINISH_REQUESTED"&&r==="ADMIN"){items.push({label:"Approve finish",onClick:done(()=>{t.status="COMPLETED";t.doubt=false;t.review=false;},"Task completed")});items.push({label:"Reject finish",hint:"Sends the task back with a note",onClick:()=>noteSheet("Reject finish",t,txt=>{t.status="STARTED";t.actualEnd=null;t.assignees.forEach(id=>notify(id,`Finish rejected on ${t.title}: ${txt}`));})});}
  if((r==="TEAM_LEADER"||r==="ADMIN")&&t.status!=="COMPLETED")items.push({label:"Assign executive",hint:t.prefs&&t.prefs.length?"Admin prefers "+t.prefs.map(id=>first(userById(id).name)).join(", ")+" · you decide":"Pick who does this task",onClick:()=>{closeSheet();assignSheet(t);}});
- if(r==="ADMIN"){items.push(t.paused?{label:"Resume",onClick:done(()=>{t.paused=false;},"Task resumed")}:{label:"Pause",hint:"Shows ⏸ in the circle; assignees are notified",onClick:done(()=>{t.paused=true;},"Task paused")});items.push({label:t.protected?"Unprotect":"Protect",hint:"Protected tasks are not shifted by leave",onClick:done(()=>{t.protected=!t.protected;},t.protected?"Task unprotected":"Task protected")});}
+ if(r==="ADMIN"){items.push(t.paused?{label:"Resume",onClick:done(()=>{t.paused=false;},"Task resumed")}:{label:"Pause",hint:"Shows ⏸ in the circle; assignees are notified",onClick:done(()=>{t.paused=true;},"Task paused")});}
  if(t.doubt){if(r!=="EXECUTIVE")items.push({label:"Resolve doubt",onClick:done(()=>{t.doubt=false;},"Doubt resolved")});}else items.push({label:"Raise doubt",hint:"Row turns yellow until resolved",onClick:()=>noteSheet("Raise doubt",t,txt=>{t.doubt=true;notify("u1",`Doubt raised on “${t.title}”: ${txt}`);})});
  items.push({label:"Request review",hint:"Red dot on the hours pill; lands in Admin requests",onClick:()=>noteSheet("Request review",t,txt=>{t.review=true;S.requests.unshift({id:uid(),kind:"REVIEW",task:t.id,by:me().id,note:txt,status:"OPEN",at:new Date().toISOString()});})});
  items.push({label:"Request time change",onClick:()=>noteSheet("Request time change",t,txt=>{S.requests.unshift({id:uid(),kind:"TIME_CHANGE",task:t.id,by:me().id,note:txt,status:"OPEN",at:new Date().toISOString()});})});
@@ -1286,7 +1297,8 @@ function meetingExtras(){
  document.querySelector("#s-add .voice").hidden=mt;
  $("#tGuests").hidden=!mt;$("#tOpts").hidden=!mt;
  const rs=$("#tRowStart");rs.hidden=!mt||AF.mo.allDay;
- $("#tImportant").hidden=mt;if(mt){$("#tProtect").hidden=true;AF.important=false;AF.protect=false;}
+ // Important / Protected are not offered any more (work or meeting).
+ $("#tImportant").hidden=true;$("#tProtect").hidden=true;AF.important=false;
  if(!mt)return;
  const G=meetingGuests(),n=G.internal.length+G.external.length;
  $("#tGuests").replaceChildren("👥 Guests",el("span",{class:"gbadge"},String(n)));
