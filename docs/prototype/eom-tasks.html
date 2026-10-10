@@ -644,6 +644,32 @@ select.in{padding-right:10px}
 .itog.pall{width:auto!important;padding:0 8px;gap:3px;display:inline-flex;align-items:center;border-radius:10px;font-size:11px;font-weight:700}
 .strip .sw{width:30px!important}
 .strip{gap:4px!important}
+/* dashboard summary v3: content-sized chips, no empty space */
+.sumtop{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--capfg);opacity:.85;padding:0 2px 6px}
+.sumtop span:first-child{font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.sumtop span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sumsec2{display:flex;align-items:flex-start;gap:8px}
+.sumsec2+.sumsec2{margin-top:6px}
+.slab{flex-shrink:0;width:54px;padding-top:9px;font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--capfg);opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.schips{flex:1;min-width:0;display:flex;flex-wrap:nowrap;gap:5px;overflow-x:auto;scrollbar-width:none;padding-right:2px}
+.schips::-webkit-scrollbar{display:none}
+.sch{flex-shrink:0}
+.sch{display:inline-flex;align-items:baseline;gap:5px;height:30px;padding:0 9px;border-radius:10px;border:0;background:var(--capcell);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 0 0 1px rgba(255,255,255,.25);color:var(--capfg);font:inherit;font-size:12.5px;cursor:pointer;font-variant-numeric:tabular-nums;max-width:100%;align-items:center}
+.sch .n{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.sch b{font-weight:800}
+.sch small{font-size:10px;font-weight:700;opacity:.7;padding:1px 5px;border-radius:999px;background:rgba(255,255,255,.22)}
+.sch.on{background:rgba(255,255,255,.88);color:#06303d;box-shadow:inset 0 0 0 2px var(--z1ring)}
+/* add-task rows + bar in the same neutral glass feel as the dashboard dock */
+#s-add .greenarea{background:var(--glass)!important;backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:none!important;border-top:1px solid var(--hair);padding:4px 0 2px!important}
+#s-add .wrow{height:42px;padding:0 12px;gap:6px}
+#s-add .wrow .lbl{position:sticky;left:0;z-index:1;width:52px;min-width:52px;font-size:10.5px;font-weight:800;letter-spacing:.07em;color:var(--muted);background:transparent}
+#s-add .gpk{height:32px;padding:0 11px;border-radius:12px;border:1px solid var(--hair);background:var(--chip);color:var(--ink);font-size:12.5px;font-weight:600;box-shadow:none}
+#s-add .gpk.on{background:var(--ink);color:var(--bg);border-color:transparent}
+#s-add .gpk.pref.on{box-shadow:inset 0 0 0 2px var(--bg)}
+#s-add .bar{height:56px;background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-top:0}
+#s-add .bar .g{background:transparent!important;color:var(--ink);padding:0 4px 0 12px}
+#s-add .bar .g>button:first-child{color:var(--ink)!important}
+#s-add .bar .w{background:transparent;border-left:0}
 </style><div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
@@ -965,10 +991,11 @@ function renderDash(){
  // cyan columns
  const groups=pillGroups(),two=groups.length===2;
  const sub=[f.row1?dockName(f.row1):null,f.row2?dockName(f.row2):null,f.date?fmtD(f.date):f.quick==="today"?"Today":f.quick==="tomorrow"?"Tomorrow":null].filter(Boolean);
- $("#cols").replaceChildren(...groups.map((g,gi)=>el("div",{class:"sumsec",role:"group","aria-label":g.label},
-  el("div",{class:"caphd"},el("span",{class:"capnm"},g.label),gi===0?el("span",{},sub.length?sub.join(" · "):"open hours · all tasks"):el("span",{},"open hours")),
-  el("div",{class:"sumstrip"},...(g.items.length?g.items.map(it=>el("button",{class:"capc sumc"+(f.pill===it.id?" on":""),title:`${it.label}: ${hh(it.minutes)} open in ${it.count} task(s)`,onclick:()=>{f.pill=f.pill===it.id?null:it.id;save();renderDash();}},
-   el("span",{class:"capl"},it.label),el("b",{},hh(it.minutes)),el("span",{class:"capb"},it.count+" task"+(it.count===1?"":"s")))):[el("div",{class:"sumnone"},"Nothing open")])))));
+ // compact summary: one line per group — label, then content-sized chips "Social 9.8h ·7" that wrap
+ $("#cols").replaceChildren(el("div",{class:"sumtop"},el("span",{},"Open hours"),el("span",{},sub.length?sub.join(" · "):"all tasks")),
+  ...groups.map(g=>el("div",{class:"sumsec2",role:"group","aria-label":g.label},el("span",{class:"slab"},g.label),
+   el("div",{class:"schips"},...(g.items.length?g.items.map(it=>el("button",{class:"sch"+(f.pill===it.id?" on":""),title:`${it.label}: ${hh(it.minutes)} open in ${it.count} task(s)`,onclick:()=>{f.pill=f.pill===it.id?null:it.id;save();renderDash();}},
+    el("span",{class:"n"},it.label),el("b",{},hh(it.minutes)),el("small",{},String(it.count)))):[el("span",{class:"sumnone"},"Nothing open")])))));
  // rows
  const ts=applyFilters(visibleTasks(),f);
  $("#rows").replaceChildren(...(ts.length?ts.map(taskRow):[el("li",{class:"empty"},f.completed?"No completed tasks match.":"Nothing here. Tap + to add a task, or clear a filter below.")]));
