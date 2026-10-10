@@ -716,7 +716,8 @@ select.in{padding-right:10px}
 #pgZone .drow .dk{height:28px;max-width:none;white-space:nowrap;padding:0 10px;font-size:12px}
 #pgZone .drow .plab{width:46px;font-size:10px}
 .dbz{margin:-6px 0 6px!important;width:100%!important}
-#pgZone .drow{padding:0 2px!important}
+#pgZone .drow{padding:0 12px!important}
+#pgZone .dbz{border-bottom:0;margin-bottom:0!important}
 .dbact .btn{white-space:nowrap;font-size:14px;padding:0 10px;height:44px}
 .dbact .btn .nb{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;margin-left:6px;border-radius:999px;background:#ef4444;color:#fff;font-size:11px;font-weight:800}
 .dbtiles{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
@@ -2747,11 +2748,12 @@ PAGES.insights=function(arg){if(arg)DB.view=arg;
  const pills=(items,cur,on)=>items.map(([k,l])=>el("button",{class:"dk"+(cur===k?" on":""),onclick:()=>on(k)},l));
  page({FIN:"Finance dashboard",HR:"HR dashboard",TASK:"Task dashboard"}[DB.view],[el("div",{class:"dbcap"},el("span",{},PERIODS.find(p=>p[0]===DB.period)[1]),el("span",{},[DB.team?(S.teams.find(x=>x.id===DB.team)||{}).name:null,DB.client?(clientById(DB.client)||{}).name:null].filter(Boolean).join(" · ")||"everyone")),...body],
   [el("div",{class:"dbz"},
-    el("div",{class:"wrow drow"},el("span",{class:"plab"},"View"),...pills([["FIN","Finance"],["HR","HR"],["TASK","Tasks"]],DB.view,k=>{DB.view=k;PAGES.insights();})),
     DB.view==="FIN"?el("div",{class:"wrow drow"},el("span",{class:"plab"},"Show"),...pills([["ALL","Overview"],["INC","Income"],["EXP","Expense"]],DB.fin,k=>{DB.fin=k;PAGES.insights();})):null,
     DB.view!=="FIN"?row("Teams",S.teams.map(x=>[x.id,x.name]),"team"):null,
     DB.view!=="HR"?row("Clients",S.clients.map(c=>[c.id,c.name]),"client"):null,
-    el("div",{class:"wrow drow"},el("span",{class:"plab"},"When"),...pills(PERIODS,DB.period,k=>{DB.period=k;PAGES.insights();}))),
+    el("div",{class:"wrow drow"},el("span",{class:"plab"},"When"),...pills(PERIODS,DB.period,k=>{DB.period=k;PAGES.insights();})),
+    /* View sits lowest, nearest the thumb */
+    el("div",{class:"wrow drow dview"},el("span",{class:"plab"},"View"),...pills([["FIN","Finance"],["HR","HR"],["TASK","Tasks"]],DB.view,k=>{DB.view=k;PAGES.insights();}))),
 ]);
 };
 /* ---------- back stack: Back returns to the previous screen, not always the dashboard ---------- */
