@@ -1009,7 +1009,7 @@ function field(label,input,hint){return el("div",{class:"field"},el("label",{},l
 
 /* ---------- screens ---------- */
 const screens={login:$("#s-login"),dash:$("#s-dash"),add:$("#s-add"),page:$("#s-page")};
-function show(name){for(const [k,v] of Object.entries(screens))v.hidden=k!==name;if(name==="page"&&typeof pageTop==="function")pageTop();}
+function show(name){for(const [k,v] of Object.entries(screens))v.hidden=k!==name;if(name!=="page"&&typeof HIST!=="undefined")HIST.length=0;if(name==="page"&&typeof pageTop==="function")pageTop();}
 function visibleTasks(){
  const r=role(),m=me();
  return S.tasks.filter(t=>{
@@ -1488,7 +1488,7 @@ menuEl.addEventListener("click",e=>{if(e.target===menuEl)closeMenu();});
 $("#menuBtn").onclick=openMenu;$("#pgMenu").onclick=()=>{if(role()==="ADMIN")openMenu();else nav("dash");};
 $("#reqBtn").onclick=()=>nav("requests");$("#notifBtn").onclick=()=>nav("notifications");$("#meBtn").onclick=()=>nav("me");
 $("#demoChip").onclick=()=>{S.me=null;save();show("login");};
-$("#pgBack").onclick=()=>nav("dash");
+$("#pgBack").onclick=()=>goBack();
 $("#pgTop").onclick=e=>{const b=e.target.closest("button[data-id],a[data-id]");if(!b)return;const id=b.dataset.id;const go={menuBtn:()=>openMenu(),dbBtn:()=>nav("insights"),reqBtn:()=>nav("requests"),notifBtn:()=>nav("notifications"),meBtn:()=>nav("me")}[id];if(go){e.preventDefault();go();}};
 function nav(go){
  const [page,arg]=go.split(":");
@@ -2412,6 +2412,14 @@ PAGES.insights=function(arg){if(arg)DB.view=arg;
     el("div",{class:"wrow drow"},el("span",{class:"plab"},"When"),...pills(PERIODS,DB.period,k=>{DB.period=k;PAGES.insights();}))),
    (()=>{const z=zoneActions(...actions);z.classList.add("dbact");return z;})()]);
 };
+/* ---------- back stack: Back returns to the previous screen, not always the dashboard ---------- */
+const HIST=[];let replaying=false;
+function track(key,fn){return function(...a){if(!replaying){const top=HIST[HIST.length-1];if(top&&top.key===key)HIST[HIST.length-1]={key,fn,a};else HIST.push({key,fn,a});}return fn.apply(this,a);};}
+for(const k of Object.keys(PAGES))PAGES[k]=track(k,PAGES[k]);
+openInvoice=track("invoice",openInvoice);openWizard=track("wizard",openWizard);invoicePreview=track("preview",invoicePreview);clientForm=track("clientForm",clientForm);billEditor=track("bill",billEditor);
+/* Forms (wizard, bill, client) are never re-opened by Back: Back skips past them. */
+const TRANSIENT=new Set(["wizard","bill","clientForm"]);
+function goBack(){HIST.pop();while(HIST.length&&TRANSIENT.has(HIST[HIST.length-1].key))HIST.pop();const prev=HIST[HIST.length-1];if(!prev){nav("dash");return;}replaying=true;try{show("page");prev.fn.apply(null,prev.a);}finally{replaying=false;}}
 /* ---------- boot ---------- */
 document.querySelectorAll("[data-login]").forEach(b=>b.onclick=()=>{const r=b.dataset.login;S.me=S.users.find(u=>u.role===r).id;save();if(r==="HR"){show("page");PAGES.attendance();}else{show("dash");renderDash();}});
 $("#resetData").onclick=()=>{try{localStorage.removeItem(KEY);}catch(e){}S=seed();toast("Sample data reset");};
