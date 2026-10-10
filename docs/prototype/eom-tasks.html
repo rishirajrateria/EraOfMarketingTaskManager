@@ -857,7 +857,7 @@ select.in{padding-right:10px}
 #gNav{position:absolute;left:0;right:0;bottom:0;z-index:27;height:calc(64px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px)}
 #gNav[hidden]{display:none!important}
 .hasnav #s-dash,.hasnav #s-page{bottom:calc(64px + env(safe-area-inset-bottom,0px))}
-.hasnav #s-dash .bottom{padding-bottom:0}
+.hasnav #s-dash .bottom,.hasnav #s-add .bottom{padding-bottom:0}
 .nv.on .ic,.nv.on .nlab{color:#2563eb}.nv.on .ic{background:rgba(37,99,235,.14)}
 .nv.on .avatar{box-shadow:0 0 0 2px var(--bg),0 0 0 4px #2563eb}
 .fabrow{display:flex;align-items:center;gap:8px;animation:fabin .18s ease-out both}
@@ -899,12 +899,26 @@ select.in{padding-right:10px}
 .traytog{position:absolute;left:50%;top:-12px;transform:translateX(-50%);z-index:3;height:24px;min-width:44px;padding:0 10px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:999px;border:1px solid var(--hair);background:var(--glass-strong);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:var(--shadow);color:var(--ink);font:inherit;font-size:12px;font-weight:600;cursor:pointer;max-width:calc(100% - 32px)}
 .traytog span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .traytog:focus-visible{outline:2px solid #3b82f6;outline-offset:2px}
-#dashTray.min>:not(.traytog){display:none!important}
-#dashTray.min{height:40px;border-top:1px solid var(--hair);background:var(--glass);border-radius:20px 20px 0 0;box-shadow:0 -10px 30px -18px rgba(15,40,70,.4)}
-#dashTray.min .traytog{top:7px;height:26px}
-#dashTray:not(.min) .traytog{height:22px;min-width:40px;padding:0 8px}
+.tray.min>:not(.traytog){display:none!important}
+.tray.min{height:40px;border-top:1px solid var(--hair);background:var(--glass);border-radius:20px 20px 0 0;box-shadow:0 -10px 30px -18px rgba(15,40,70,.4)}
+.tray.min .traytog{top:7px;height:26px}
+.tray:not(.min) .traytog{height:22px;min-width:40px;padding:0 8px}
 .mquick{grid-template-columns:repeat(auto-fit,minmax(0,1fr))}
 .mquick .mq:only-child{flex-direction:row;justify-content:center;gap:10px;font-size:13px}
+/* add task: Task | Meeting switch at the top of the form; bottom = details tray + the shared nav (centre = ×) */
+.typeseg{display:inline-flex;gap:4px;padding:3px;border-radius:14px;background:var(--chip);border:1px solid var(--hair);margin:0 0 10px}
+.tyb{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border:0;border-radius:11px;background:transparent;color:var(--muted);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.tyb.on{background:var(--glass-strong);color:var(--ink);box-shadow:var(--shadow)}
+.tyb.task.on svg{color:#2563eb}
+.tyb:focus-visible{outline:2px solid #3b82f6;outline-offset:2px}
+.hasnav #s-add{bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+#addTray{flex-shrink:0}
+/* dashboards: the pill rows collapse with the same tab */
+#pgZone{position:relative}
+.dbz.tray{position:relative}
+#pgZone .dbz.tray:not(.min){padding-top:6px}
+#pgZone .dbz.tray.min{height:44px;background:none;border:0;box-shadow:none;border-radius:0}
+#pgZone .dbz.tray.min .traytog{top:9px}
 </style>
 <div class="phone" id="phone">
   <!-- role picker -->
@@ -937,7 +951,7 @@ select.in{padding-right:10px}
       <div class="cols" id="cols"></div>
     </div>
     <div class="grow"><ul class="list" id="rows"></ul></div>
-    <div class="bottom" id="dashTray">
+    <div class="bottom tray" id="dashTray">
       <button class="traytog" id="trayTog" aria-controls="dashTray" aria-expanded="true"></button>
       <div class="strip" id="strip"></div>
       <div class="greenarea"><div class="prow" id="prow1"></div><div class="prow" id="prow2"></div></div>
@@ -951,6 +965,7 @@ select.in{padding-right:10px}
   <section class="screen" id="s-add" hidden>
     <div class="addhdr" id="addLoads"></div>
     <div class="grow addbody">
+      <div class="typeseg" role="group" aria-label="Type"><button class="tyb" id="tWorkBtn"></button><button class="tyb meet" id="tMeet"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h5v5H3z" fill="#00832D"/><path d="M3 11h7v5H5a2 2 0 0 1-2-2z" fill="#0066DA"/><path d="M10 6h5v5h-5z" fill="#2684FC"/><path d="M10 11h5v5h-5z" fill="#00AC47"/><path d="M15 6h.5a1.5 1.5 0 0 1 1.5 1.5V11h-2z" fill="#FFBA00"/><path d="M15 11h2v3.5a1.5 1.5 0 0 1-1.5 1.5H15z" fill="#00AC47"/><path d="M17 10.2 21 7v8l-4-3.2z" fill="#00AC47"/></svg><span>Meeting</span></button></div>
       <textarea class="ta" id="tTitle" rows="1" placeholder="Task title"></textarea>
       <textarea class="ta desc" id="tDesc" placeholder="Describe the work. Rich text, links and dictation in the real app."></textarea>
       <div class="mini">
@@ -966,14 +981,12 @@ select.in{padding-right:10px}
       <div class="slot" id="tSlot"></div>
       <div id="tAssignWrap" class="card" style="margin:12px 0 0;padding:10px 12px;font-size:12.5px"></div>
     </div>
+    <div class="bottom tray" id="addTray">
+      <button class="traytog" id="addTrayTog" aria-controls="addTray" aria-expanded="true"></button>
     <div class="greenarea" style="flex-shrink:0"><div class="wrow" id="tRowPref"></div><div class="wrow" id="tRowWork"></div><div class="wrow" id="tRow1"></div><div class="wrow" id="tRow2"></div><div class="wrow" id="tRowStart" hidden></div></div>
     <div class="bar" style="flex-shrink:0">
       <div class="g" id="tBarG"></div>
     </div>
-    <div class="navrow" id="addNav">
-      <div class="nfix"><button class="nb ty" id="tWorkBtn" aria-label="Task" title="Task"></button><button class="nb ty meet" id="tMeet" aria-label="Meeting"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h5v5H3z" fill="#00832D"/><path d="M3 11h7v5H5a2 2 0 0 1-2-2z" fill="#0066DA"/><path d="M10 6h5v5h-5z" fill="#2684FC"/><path d="M10 11h5v5h-5z" fill="#00AC47"/><path d="M15 6h.5a1.5 1.5 0 0 1 1.5 1.5V11h-2z" fill="#FFBA00"/><path d="M15 11h2v3.5a1.5 1.5 0 0 1-1.5 1.5H15z" fill="#00AC47"/><path d="M17 10.2 21 7v8l-4-3.2z" fill="#00AC47"/></svg></button></div>
-      <div class="nl" id="addNavL"></div>
-      <button class="nb x" id="tClose" aria-label="Close"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
   </section>
 
@@ -1545,9 +1558,14 @@ function renderAdd(){
  const sc=k=>{AF.shortcut=k;if(k==="upnext"){AF.date="";}else{AF.date=dk(new Date(Date.now()+(k==="tomorrow"?DAY:0)));AF.time="10:00";}renderAdd();};
  $("#tBarG").replaceChildren(el("button",{style:"display:flex;align-items:center;height:32px;width:28px;justify-content:center;color:#fff;flex-shrink:0",onclick:scheduleSheet},svg(I.cal,22,2)),
   el("button",{class:"gpk"+(!AF.date?" on":""),onclick:()=>sc("upnext")},"Up next"),el("button",{class:"gpk"+(AF.date&&AF.shortcut==="today"?" on":""),onclick:()=>sc("today")},"Today"),el("button",{class:"gpk"+(AF.date&&AF.shortcut==="tomorrow"?" on":""),onclick:()=>sc("tomorrow")},"Tomorrow"));
- $("#tMeet").className="nb ty meet"+(AF.type==="MEETING"?" on":"");$("#tMeet").setAttribute("aria-pressed",String(AF.type==="MEETING"));
- $("#tWorkBtn").className="nb ty task"+(AF.type==="WORK"?" on":"");$("#tWorkBtn").setAttribute("aria-pressed",String(AF.type==="WORK"));
- renderAddNav();
+ $("#tMeet").className="tyb meet"+(AF.type==="MEETING"?" on":"");$("#tMeet").setAttribute("aria-pressed",String(AF.type==="MEETING"));
+ $("#tWorkBtn").className="tyb task"+(AF.type==="WORK"?" on":"");$("#tWorkBtn").setAttribute("aria-pressed",String(AF.type==="WORK"));
+ // the details tray minimises like the dashboard's filter tray
+ {const min=!!S.addTrayMin,tg=$("#addTrayTog");$("#addTray").classList.toggle("min",min);tg.setAttribute("aria-expanded",String(!min));tg.setAttribute("aria-label",min?"Show details":"Hide details");tg.title=min?"Show details":"Hide details";
+  const tn=AF.teams.map(id=>(S.teams.find(t=>t.id===id)||{}).name).filter(Boolean).join(" + "),cn=AF.client?(clientById(AF.client)||{}).name:null,when=!AF.date?"Up next":fmtD(AF.date)+(AF.time?" "+AF.time:"");
+  const sum=[tn||null,cn,when].filter(Boolean).join(" · ");
+  tg.replaceChildren(svg(min?'<path d="m6 15 6-6 6 6"/>':'<path d="m6 9 6 6 6-6"/>',16,2.5),...(min?[el("span",{},"Details · "+sum)]:[]));
+  tg.onclick=()=>{S.addTrayMin=!S.addTrayMin;save();renderAdd();};}
  meetingExtras();
 }
 const fmtSecs=s=>Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
@@ -1638,7 +1656,6 @@ function saveTask(){
  else{S.tasks.unshift(Object.assign({id:uid(),status:"NOT_STARTED",paused:false,doubt:false,review:false,parent:false,createdBy:m.id,actualStart:null,actualEnd:null},base));assignees.filter(id=>id!==m.id).forEach(id=>notify(id,`New ${AF.type==="MEETING"?"meeting":"task"} from ${first(m.name)}: ${AF.title}`+(r==="ADMIN"&&AF.prefs.length?` · prefers ${AF.prefs.map(x=>first(userById(x).name)).join(", ")} — assign it from the task`:"")));toast(AF.type==="MEETING"?"Meeting scheduled · "+(meetingGuests().internal.length+meetingGuests().external.length)+" invites sent by Google Calendar":"Task added · Drive folder + Chat space queued");}
  save();show("dash");renderDash();
 }
-$("#tClose").onclick=()=>{if(!sheetDim.hidden){closeSheet();return;}show("dash");renderDash();};
 $("#tMeet").onclick=()=>{if(AF.type!=="MEETING"&&AF.hours>2)AF.hours=0.5;AF.type="MEETING";renderAdd();};
 $("#tWorkBtn").onclick=()=>{AF.type="WORK";renderAdd();};
 $("#tImportant").onclick=()=>{AF.important=!AF.important;renderAdd();};
@@ -1651,7 +1668,7 @@ $("#tTitle").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();saveTask();}};
 // save button lives in the header tiles area? No: the real app saves from the title row ✓ — add a floating save
 const saveBtn=el("button",{class:"btn",style:"flex:none;height:40px;border-radius:999px;padding:0 22px;box-shadow:0 8px 24px rgba(0,0,0,.2);pointer-events:auto",onclick:saveTask},"Save");
 $("#s-add .addbody").append(el("div",{style:"position:sticky;bottom:10px;display:flex;justify-content:flex-end;margin-top:12px;pointer-events:none"},saveBtn));
-$("#dbBtn").onclick=()=>nav("insights");$("#addChoose").onclick=()=>cornerTap();$("#tWorkBtn").replaceChildren(svg('<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4M13 6h8M13 12h8M13 18h8"/>',22,2));
+$("#dbBtn").onclick=()=>nav("insights");$("#addChoose").onclick=()=>cornerTap();$("#tWorkBtn").replaceChildren(svg('<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4M13 6h8M13 12h8M13 18h8"/>',18,2.2),el("span",{},"Task"));
 
 /* ---------- menu ---------- */
 const MI={
@@ -1697,10 +1714,8 @@ function menuModel(){
  const B=(n,c)=>n?{n,c}:null;
  return [
   {h:"Money",t:"t-money",items:[
-   {go:"insights:FIN",ic:"chart",l:"Finance",s:[toApprove?toApprove+" to approve":null,outstanding?inr(outstanding)+" outstanding":null].filter(Boolean).join(" · ")||"Income, expense, invoices, bills",b:B(toApprove+overdueBills,"red")},
    {go:"drive",ic:"folder",l:"Drive folders",s:"Invoices, bills, GST pack, cancelled"}]},
   {h:"Clients",t:"t-client",items:[
-   {go:"clients",ic:"building",l:"Clients",s:S.clients.length+" clients · GST, PAN, TDS"},
    {go:"vault:SHARED_DRIVE_LINK",ic:"drive",l:"Shared links",s:"Folders shared with clients"}]},
   {h:"Team",t:"t-team",items:[
    {go:"insights:HR",ic:"calcheck",l:"HR",s:(()=>{const t=S.attendance[dk()]||{};const st=S.users.filter(u=>["TEAM_LEADER","EXECUTIVE"].includes(u.role));const p=st.filter(u=>t[u.id]==="P"||t[u.id]==="HD").length,l=st.filter(u=>t[u.id]==="L").length;return Object.keys(t).length?p+" present · "+l+" on leave today":"Attendance, inventory, leave";})()},
@@ -1708,8 +1723,6 @@ function menuModel(){
    {go:"attendance",ic:"usercheck",l:"Attendance",s:"Mark today · leave · monthly sheet"},
    {go:"inventory",ic:"clock",l:"Inventory",s:"Hours available vs assigned"}]},
   {h:"Other",t:"t-acct",items:[
-   {go:"requests",ic:"inbox",l:"Requests",s:reqs?reqs+" open":"Review, time change, leave",b:B(reqs,"red")},
-   {go:"notifications",ic:"bell",l:"Notifications",s:unread?unread+" unread":"All caught up",b:B(unread,"soft")},
    {go:"settings",ic:"gear",l:"Settings",s:"Company, bank, invoice, TDS"},
    {go:"signout",ic:"logout",l:"Sign out",danger:true}]},
  ];
@@ -1721,7 +1734,8 @@ function renderMenu(){
  $("#mBody").replaceChildren(...(secs.length?secs.map(sec=>el("div",{class:"msec"},el("h5",{class:sec.t},sec.h),el("div",{class:"mgrid"},...sec.items.map(it=>el("button",{class:"mtile"+(it.danger?" danger":""),title:it.s||it.l,"aria-label":it.l+(it.s?" — "+it.s:""),onclick:()=>{closeMenu();nav(it.go);}},
    el("span",{class:"mi "+(it.danger?"t-red":sec.t)},msvg(it.ic,22)),el("span",{class:"ml"},it.l.split(" ").map(w=>w.length>=10?w.slice(0,Math.ceil(w.length/2))+"\u00ad"+w.slice(Math.ceil(w.length/2)):w).join(" ")),it.b?el("span",{class:"mbadge "+it.b.c},String(it.b.n)):null))))):[el("div",{class:"mempty"},"Nothing matches “"+q+"”")]));
 }
-$("#mQuick").replaceChildren(...[["inbox","t-red","Approvals",()=>{reqTab="FIN";reqFin="APPR";nav("requests");}]].map(([ic,t,l,fn])=>el("button",{class:"mq",onclick:()=>{closeMenu();fn();}},el("span",{class:t},msvg(ic,20)),l)));
+/* quick actions retired: the bottom nav and the + cover them */
+$("#mQuick").replaceChildren();$("#mQuick").hidden=true;
 $("#mSearchIco").replaceChildren(msvg("search",16));$("#mClose").replaceChildren(msvg("x",18));$("#mSettings").replaceChildren(msvg("gear",18));
 $("#mClose").onclick=()=>closeMenu();$("#mSettings").onclick=()=>{closeMenu();nav("settings");};
 $("#mSearch").oninput=renderMenu;
@@ -1881,6 +1895,7 @@ function fabItems(){
   lv("WORK","Work type","t-team","tag","worktypes","Add work type",()=>workForm()),
   lv("TEAM","Team","t-team","layers","teams","Add team",()=>teamForm()),
   lv("TEAM_LEADER","Team leader","t-team","lead","people:TEAM_LEADER","Add team leader",()=>personForm("TEAM_LEADER")),
+  lv("CLIENT","Client","t-client","building","clients","Add client",()=>clientForm()),
   lv("KIT","Client kit","t-client","key","kit","New client kit",()=>kitPicker()));
  return out;
 }
@@ -1898,11 +1913,12 @@ function openFab(){
 function closeFab(){if($("#fab").hidden)return;$("#fab").hidden=true;document.body.classList.remove("fabon");syncCorner();}
 /* One corner button: + when nothing is open; × that closes whatever is open (speed dial, sheet, form page). */
 let PAGEX=null;
-function cornerMode(){if(!$("#fab").hidden)return "fab";if(!sheetDim.hidden)return "sheet";if(!$("#s-page").hidden&&PAGEX)return "page";return null;}
+function cornerMode(){if(!$("#fab").hidden)return "fab";if(!sheetDim.hidden)return "sheet";if(!$("#s-add").hidden)return "add";if(!$("#s-page").hidden&&PAGEX)return "page";return null;}
 function syncCorner(){const b=$("#addChoose");if(!b)return;const m=cornerMode();b.classList.toggle("isx",!!m);b.setAttribute("aria-label",m?"Close":"Add");b.title=m?"Close":"Add";b.setAttribute("aria-expanded",String(m==="fab"));}
 function cornerTap(){const m=cornerMode();
  if(m==="fab")closeFab();
  else if(m==="sheet"){if(PEEK&&pageSig()===PEEK.sig){PEEK=null;closeSheet();nav("dash");}else closeSheet();}
+ else if(m==="add"){show("dash");renderDash();}
  else if(m==="page"){const f=PAGEX;PAGEX=null;f();}
  else openFab();
  syncCorner();}
@@ -1929,7 +1945,7 @@ function renderPeek(){const pk=$("#peek");if(!pk)return;const here=!!PEEK&&!$("#
  pk.replaceChildren(el("button",{class:"peekbtn","aria-label":PEEK.label+" (expand)",onclick:()=>{pk.hidden=true;PEEK.open();}},el("span",{class:"pplus"},msvg("plus",18,2.5)),el("b",{},PEEK.label),el("span",{class:"pchev"},svg('<path d="m6 15 6-6 6 6"/>',20,2.25))));}
 const NAVKEYS=["insights","requests","notifications","me"];
 function navActive(){if(!$("#s-dash").hidden)return "home";if($("#s-page").hidden)return null;const t=typeof HIST!=="undefined"&&HIST[HIST.length-1];return t&&NAVKEYS.includes(t.key)?t.key:null;}
-function afterShow(name){const g=$("#gNav");if(!g)return;if(name!=="page")PAGEX=null;$("#phone").classList.toggle("addmode",name==="add");const on=(name==="dash"||name==="page")&&!!me();g.hidden=!on;$("#phone").classList.toggle("hasnav",on);if(on)renderDashNav();if(name!=="page"){const pk=$("#peek");if(pk)pk.hidden=true;}closeFab&&!$("#fab").hidden&&closeFab();syncCorner();}
+function afterShow(name){const g=$("#gNav");if(!g)return;if(name!=="page")PAGEX=null;$("#phone").classList.toggle("addmode",name==="add");const on=(name==="dash"||name==="page"||name==="add")&&!!me();g.hidden=!on;$("#phone").classList.toggle("hasnav",on);if(on)renderDashNav();if(name!=="page"){const pk=$("#peek");if(pk)pk.hidden=true;}closeFab&&!$("#fab").hidden&&closeFab();syncCorner();}
 function renderDashNav(){const r=role(),m=me();if(!m||!$("#dashNavL"))return;const act=navActive();
  const tog=k=>()=>{closeFab();if(!sheetDim.hidden){PEEK=null;closeSheet();}if(navActive()===k)nav("dash");else nav(k);};
  const openReq=S.requests.filter(x=>x.status==="OPEN").length,unread=S.notifs.filter(n=>n.for===m.id&&!n.read).length;
@@ -1939,11 +1955,6 @@ function renderDashNav(){const r=role(),m=me();if(!m||!$("#dashNavL"))return;con
  const home=navBtn("home","Home",()=>{closeFab();if(!sheetDim.hidden){PEEK=null;closeSheet();}nav("dash");});if(act==="home"){home.classList.add("on");home.setAttribute("aria-current","page");}
  $("#dashNavL").replaceChildren(...(r==="ADMIN"?[nb("insights","chart","Dashboard"),nb("requests","inbox","Requests",openReq)]:[nb("notifications","bell","Notifications",unread)]));
  $("#dashNavR").replaceChildren(...(r==="ADMIN"?[nb("notifications","bell","Notifications",unread),home]:[home]));
-}
-function renderAddNav(){
- const items=fabItems().filter(x=>x.k!=="TASK"&&x.k!=="MEETING");const short={INVOICE:"Invoice",EXPENSE:"Expense",EXECUTIVE:"Exec",WORK:"Work",TEAM:"Team",TEAM_LEADER:"Leader",KIT:"Kit"};
- $("#addNavL").replaceChildren(...items.map(x=>{const b=navBtn(x.ic,short[x.k],()=>{show("dash");renderDash();x.fn();},0,"g "+x.cls);b.setAttribute("aria-label","New "+x.l.toLowerCase());b.title="New "+x.l.toLowerCase();return b;}));
- $("#addNav").classList.toggle("solo",!items.length);
 }
 /* ---------- finance helpers ---------- */
 const PAGES={};
@@ -2243,14 +2254,17 @@ function clientForm(c){
   [zoneActions(pageX(),c?el("button",{class:"btn ghost",onclick:()=>c.kit?PAGES.kit(c.id):kitCreate(c)},c.kit?"Client kit":"Create kit"):null,el("button",{class:"btn blue",onclick:()=>{if(!v.name.trim())return toast("Name is required","err");v.pan=(v.pan||"").toUpperCase().trim();if(v.pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v.pan))return toast("PAN must look like AAACZ1234F","err");v.gstin=(v.gstin||"").toUpperCase().trim();v.tdsPercent=Number(v.tdsPercent)||0;if(v.country!=="IN"){v.stateCode="";v.stateName="";v.pan="";v.tdsPercent=0;v.gstin="";}if(c)Object.assign(c,v);else S.clients.push(Object.assign({id:uid(),onHold:false},v));save();toast(c?"Client saved":"Client added · shows in filters once it has a task");PAGES.clients();}},"Save"))]);
 }
 /* ---------- requests ---------- */
-let reqTab="ALL",reqFin="ALL";
+let reqTab="ALL",reqFin="ALL",reqTeam=null,reqClient=null;
 /* One requests inbox for everything: Finance (approvals, overdue clients, bills), Work (review / time change), HR (leave). */
 PAGES.requests=function(){
  const KL={REVIEW:"Review",TIME_CHANGE:"Time change",LEAVE:"Leave",FIX_SELF:"Fix self task"};
  const area=r=>r.kind==="LEAVE"?"HR":"WORK";
  const T=role()==="ADMIN"?payTodo():{appr:[],late:[],bills:[]};const finN=T.appr.length+T.late.length+T.bills.length;
  const tabs=[["ALL","All"],["FIN","Finance"+(finN?" · "+finN:"")],["WORK","Work · "+S.requests.filter(r=>r.status==="OPEN"&&area(r)==="WORK").length],["HR","HR · "+S.requests.filter(r=>r.status==="OPEN"&&area(r)==="HR").length]];
- const sel=r=>reqTab==="ALL"||area(r)===reqTab;
+ /* Work tab: narrow by the request's task team and client */
+ const tk=r=>r.task?S.tasks.find(x=>x.id===r.task):null;
+ const wOk=r=>reqTab!=="WORK"||((!reqTeam||(tk(r)||{}).team===reqTeam)&&(!reqClient||(tk(r)||{}).client===reqClient));
+ const sel=r=>(reqTab==="ALL"||area(r)===reqTab)&&wOk(r);
  const open=S.requests.filter(r=>r.status==="OPEN"&&sel(r)),done=S.requests.filter(r=>r.status!=="OPEN"&&sel(r));
  const fOk=k=>reqTab!=="FIN"||reqFin==="ALL"||reqFin===k;
  const fin=(reqTab==="ALL"||reqTab==="FIN")&&role()==="ADMIN"?[
@@ -2258,7 +2272,14 @@ PAGES.requests=function(){
   ...(fOk("PAY")?T.late:[]).map(i=>el("div",{class:"item",onclick:()=>openInvoice(i)},el("div",{class:"m"},el("b",{},(clientById(i.client)||{}).name),el("small",{},"Finance · "+i.number+" · "+(-dayOff(i.due))+" days late")),el("div",{class:"amt",style:"color:#dc2626"},inr(balance(i))))),
   ...(fOk("EXP")?T.bills:[]).map(x=>el("div",{class:"item",onclick:()=>markPaid(x.e,x.o)},el("div",{class:"m"},el("b",{},x.e.payee),el("small",{},"Finance · "+(isOver(x.o)?"bill overdue":"bill due "+fmtD(x.o.due))+" · mark paid")),el("div",{class:"amt",style:isOver(x.o)?"color:#dc2626":""},inr(x.o.amount))))]:[];
  const card=r=>{const t=r.task?S.tasks.find(x=>x.id===r.task):null;return el("div",{class:"card"},el("div",{style:"display:flex;gap:6px;align-items:center;margin-bottom:4px"},el("span",{class:"tag draft"},KL[r.kind]),el("b",{style:"font-size:13px"},first(userById(r.by).name)),el("span",{style:"margin-left:auto;font-size:11px;color:var(--muted)"},fmtD(r.at))),t?el("div",{style:"font-size:13px;font-weight:600"},t.title):null,el("div",{style:"font-size:13px;margin:4px 0 8px"},r.note),r.status==="OPEN"?el("div",{class:"btnrow"},el("button",{class:"btn ghost",onclick:()=>{r.status="DECLINED";if(t)t.review=false;notify(r.by,"Request declined: "+r.note.slice(0,40));save();PAGES.requests();toast("Declined");}},"Decline"),el("button",{class:"btn green",onclick:()=>{r.status="APPROVED";if(t){t.review=false;if(r.kind==="TIME_CHANGE"){const s=new Date(t.start);s.setDate(s.getDate()+1);const e=new Date(t.end);e.setDate(e.getDate()+1);t.start=s.toISOString();t.end=e.toISOString();}}if(r.kind==="LEAVE"){const u=userById(r.by);S.tasks.filter(x=>x.assignees.includes(u.id)&&!x.protected&&x.status==="NOT_STARTED"&&dayOff(x.start)>=0).forEach(x=>{const s=new Date(x.start);s.setDate(s.getDate()+1);const e=new Date(x.end);e.setDate(e.getDate()+1);x.start=s.toISOString();x.end=e.toISOString();});}if(r.kind==="LEAVE"){notify(r.by,"Your leave was approved",{kind:"LEAVE"});notify("u1",first(userById(r.by).name)+"'s leave was approved · unprotected tasks moved a day",{kind:"LEAVE"});}else notify(r.by,"Request approved: "+r.note.slice(0,40),{kind:"INFO",task:r.task});save();PAGES.requests();toast(r.kind==="LEAVE"?"Leave approved · unprotected tasks shifted a day":"Approved");}},"Approve")):el("span",{class:"tag "+(r.status==="APPROVED"?"paid":"canc")},r.status.toLowerCase()));};
- page("Requests",[el("div",{class:"nhint"},"Waiting for your decision — approve, decline or act. Updates that need nothing from you are in ",el("button",{class:"linkish",onclick:()=>nav("notifications")},"Notifications.")),...fin,reqTab!=="FIN"?el("div",{style:"padding:12px 12px 0;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em"},"Open · "+open.length):null,...(reqTab==="FIN"?[]:open.map(card)),reqTab==="FIN"?(fin.length?null:el("div",{class:"empty"},"No finance approvals or reminders.")):open.length||fin.length?null:el("div",{class:"empty"},"Inbox zero."),done.length&&reqTab!=="FIN"?el("div",{style:"padding:12px 12px 0;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em"},"Handled"):null,...(reqTab==="FIN"?[]:done.map(card))].filter(Boolean),[role()==="ADMIN"&&reqTab==="FIN"?zoneTabs([["ALL","All"],["APPR","Approvals "+T.appr.length],["PAY","Payments "+T.late.length],["EXP","Expenses "+T.bills.length]],reqFin,k=>{reqFin=k;PAGES.requests();}):null,
+ page("Requests",[el("div",{class:"nhint"},"Waiting for your decision — approve, decline or act. Updates that need nothing from you are in ",el("button",{class:"linkish",onclick:()=>nav("notifications")},"Notifications.")),...fin,reqTab!=="FIN"?el("div",{style:"padding:12px 12px 0;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em"},"Open · "+open.length):null,...(reqTab==="FIN"?[]:open.map(card)),reqTab==="FIN"?(fin.length?null:el("div",{class:"empty"},"No finance approvals or reminders.")):open.length||fin.length?null:el("div",{class:"empty"},"Inbox zero."),done.length&&reqTab!=="FIN"?el("div",{style:"padding:12px 12px 0;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em"},"Handled"):null,...(reqTab==="FIN"?[]:done.map(card))].filter(Boolean),[...(reqTab==="WORK"?(()=>{const wo=S.requests.filter(r=>r.status==="OPEN"&&area(r)==="WORK");
+   const n=(f)=>wo.filter(f).length;
+   const prow=(label,items,cur,set)=>el("div",{class:"wrow drow"},el("span",{class:"plab"},label),el("button",{class:"dk"+(cur===null?" on":""),onclick:()=>{set(null);PAGES.requests();}},"All"),
+     ...items.map(([id,l,c])=>el("button",{class:"dk"+(cur===id?" on":""),onclick:()=>{set(cur===id?null:id);PAGES.requests();}},l+(c?" · "+c:""))));
+   return [el("div",{class:"dbz"},
+     prow("Teams",S.teams.map(t=>[t.id,t.name,n(r=>(tk(r)||{}).team===t.id)]),reqTeam,v=>{reqTeam=v;}),
+     prow("Clients",S.clients.map(c=>[c.id,c.name,n(r=>(tk(r)||{}).client===c.id)]),reqClient,v=>{reqClient=v;}))];})():[]),
+  role()==="ADMIN"&&reqTab==="FIN"?zoneTabs([["ALL","All"],["APPR","Approvals "+T.appr.length],["PAY","Payments "+T.late.length],["EXP","Expenses "+T.bills.length]],reqFin,k=>{reqFin=k;PAGES.requests();}):null,
   /* main tabs sit lowest, nearest the thumb */
   role()==="ADMIN"?zoneTabs(tabs,reqTab,k=>{reqTab=k;reqFin="ALL";PAGES.requests();}):null]);
 };
@@ -2783,7 +2804,11 @@ PAGES.insights=function(arg){if(arg)DB.view=arg;
  const row=(label,items,key)=>el("div",{class:"wrow drow"},el("span",{class:"plab"},label),el("button",{class:"dk"+(DB[key]===null?" on":""),onclick:()=>{DB[key]=null;PAGES.insights();}},"All"),...items.map(([id,l])=>el("button",{class:"dk"+(DB[key]===id?" on":""),onclick:()=>{DB[key]=DB[key]===id?null:id;PAGES.insights();}},l)));
  const pills=(items,cur,on)=>items.map(([k,l])=>el("button",{class:"dk"+(cur===k?" on":""),onclick:()=>on(k)},l));
  page({FIN:"Finance dashboard",HR:"HR dashboard",TASK:"Task dashboard"}[DB.view],[el("div",{class:"dbcap"},el("span",{},PERIODS.find(p=>p[0]===DB.period)[1]),el("span",{},[DB.team?(S.teams.find(x=>x.id===DB.team)||{}).name:null,DB.client?(clientById(DB.client)||{}).name:null].filter(Boolean).join(" · ")||"everyone")),...body],
-  [el("div",{class:"dbz"},
+  [el("div",{class:"dbz tray"+(S.dbTrayMin?" min":""),id:"dbTray"},
+    /* same minimise tab as the task dashboard's filter tray */
+    (()=>{const min=!!S.dbTrayMin;const sum=[{FIN:"Finance",HR:"HR",TASK:"Tasks"}[DB.view],DB.view==="FIN"?{ALL:"Overview",INC:"Income",EXP:"Expense"}[DB.fin]:null,DB.team?(S.teams.find(x=>x.id===DB.team)||{}).name:null,DB.client?(clientById(DB.client)||{}).name:null,PERIODS.find(p=>p[0]===DB.period)[1]].filter(Boolean).join(" · ");
+      return el("button",{class:"traytog","aria-controls":"dbTray","aria-expanded":String(!min),"aria-label":min?"Show filters":"Hide filters",title:min?"Show filters":"Hide filters",onclick:()=>{S.dbTrayMin=!S.dbTrayMin;save();PAGES.insights();}},
+       svg(min?'<path d="m6 15 6-6 6 6"/>':'<path d="m6 9 6 6 6-6"/>',16,2.5),...(min?[el("span",{},"Filters · "+sum)]:[]));})(),
     DB.view==="FIN"?el("div",{class:"wrow drow"},el("span",{class:"plab"},"Show"),...pills([["ALL","Overview"],["INC","Income"],["EXP","Expense"]],DB.fin,k=>{DB.fin=k;PAGES.insights();})):null,
     DB.view!=="FIN"?row("Teams",S.teams.map(x=>[x.id,x.name]),"team"):null,
     DB.view!=="HR"?row("Clients",S.clients.map(c=>[c.id,c.name]),"client"):null,
