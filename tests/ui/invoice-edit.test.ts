@@ -102,6 +102,11 @@ describe("invoiceToForm", () => {
     );
     expect(f).toMatchObject({ plan: "RECURRING", frequency: "MONTHLY", monthAnchor: "DAY", dayOfMonth: "7", notifyTime: "10:15", infinite: false, endDate: "2027-03-31", dueDays: "10", dueDate: "2026-10-20", remindDate: "" });
     expect(buildInvoiceInput(f).recurrence).toEqual({ frequency: "MONTHLY", interval: 1, byWeekday: [], monthAnchor: "DAY", dayOfMonth: 7, notifyMinutes: 615, endDate: "2027-03-31" });
+    // an older monthly schedule (anchor NONE) keeps its date (here the 17th) instead of moving to the 1st
+    const legacy = invoiceToForm(draft({ plan: "RECURRING", schedule: { frequency: "MONTHLY", interval: 1, monthAnchor: "NONE", dayOfMonth: null, notifyMinutes: 540, endDate: null, nextRunAt: "2026-11-17T03:30:00.000Z" } }), OPTS);
+    expect(legacy).toMatchObject({ monthAnchor: "DAY", dayOfMonth: "17" });
+    const late = invoiceToForm(draft({ plan: "RECURRING", schedule: { frequency: "MONTHLY", interval: 1, monthAnchor: "NONE", dayOfMonth: null, notifyMinutes: 540, endDate: null, nextRunAt: "2026-11-30T03:30:00.000Z" } }), OPTS);
+    expect(late).toMatchObject({ monthAnchor: "END" });
     const daily = invoiceToForm(draft({ plan: "RECURRING", schedule: { frequency: "DAILY", interval: 1, monthAnchor: "NONE", dayOfMonth: null, notifyMinutes: 540, endDate: null } }), OPTS);
     expect(daily).toMatchObject({ frequency: "CUSTOM", interval: "1", infinite: true });
   });

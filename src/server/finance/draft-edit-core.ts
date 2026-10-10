@@ -206,7 +206,8 @@ async function updatePartDraft(inv: InvoiceFull, input: InvoiceInput): Promise<v
       },
     );
     await tx.invoicePart.update({ where: { id: part.id }, data: delta === 0 ? { dueDate } : { kind: "FIXED", value: D(amount), amount: D(amount), dueDate } });
-    await tx.invoicePlan.update({ where: { id: plan.id }, data: { totalAmount: D(plan.totalAmount.toNumber() + delta), gstPercent: D(gstPercent) } });
+    // GST applies to this part only (owner decision): the plan rate, used for later parts, is left alone.
+    await tx.invoicePlan.update({ where: { id: plan.id }, data: { totalAmount: D(plan.totalAmount.toNumber() + delta) } });
   });
 }
 

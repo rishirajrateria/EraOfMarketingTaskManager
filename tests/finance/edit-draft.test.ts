@@ -149,6 +149,10 @@ describe("updateDraftInvoice (edit a draft before approving)", () => {
       ["FIXED", 12000, "2026-11-05"],
       ["PERCENT", 10000, "2026-12-01"],
     ]);
+    // GST changed on this part only: the plan rate (used for the later parts) stays 18%
+    const gst12 = await updateDraftInvoice(part.id, { ...input, gstPercent: 12 });
+    expect(gst12.ok && gst12.data.total).toBe(13440);
+    expect((await testDb.invoicePlan.findUniqueOrThrow({ where: { id: part.planId! } })).gstPercent.toNumber()).toBe(18);
     expect(await updateDraftInvoice(part.id, { ...input, plan: "ONE_TIME" })).toEqual({ ok: false, error: "Part payments can't be changed to another plan here — delete the draft and create it again" });
     const other = await testDb.client.create({ data: { name: "Other" } });
     expect(await updateDraftInvoice(part.id, { ...input, clientId: other.id })).toMatchObject({ ok: false, error: expect.stringContaining("another client") });

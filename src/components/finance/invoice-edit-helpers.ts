@@ -13,7 +13,7 @@ export type DraftForEdit = Pick<
   "id" | "status" | "approvedAt" | "number" | "clientId" | "docType" | "taxMode" | "plan" | "description" | "gstPercent" | "tdsApplicable" | "currency" | "dueDate" | "remindAt" | "notes" | "paymentTerms" | "createdAt"
 > & {
   items: Pick<InvoiceDetail["items"][number], "description" | "hsnSac" | "qty" | "unit" | "rate" | "amount">[];
-  schedule: Pick<NonNullable<InvoiceDetail["schedule"]>, "frequency" | "interval" | "monthAnchor" | "dayOfMonth" | "notifyMinutes" | "endDate"> | null;
+  schedule: Pick<NonNullable<InvoiceDetail["schedule"]>, "frequency" | "interval" | "monthAnchor" | "dayOfMonth" | "notifyMinutes" | "endDate"> & { nextRunAt?: string | null } | null;
   planRef: Pick<NonNullable<InvoiceDetail["planRef"]>, "gstPercent"> | null;
 };
 
@@ -57,6 +57,20 @@ function frequencyOf(f: string): { frequency: Frequency; daily: boolean } {
   return { frequency: "CUSTOM", daily: true }; // DAILY = every 1 day
 }
 
+/**
+ * Older monthly schedules (anchor NONE) repeat on the date they started, e.g. the 17th. The form has no "same date"
+ * option, so show it as "on day 17" (capped at 28, past that the last day) instead of silently moving it to the 1st.
+ */
+function monthAnchorFields(r: NonNullable<DraftForEdit["schedule"]>, tz: string): Pick<InvoiceFormState, "monthAnchor" | "dayOfMonth"> {
+  if (r.monthAnchor === "START" || r.monthAnchor === "END") return { monthAnchor: r.monthAnchor, dayOfMonth: String(r.dayOfMonth ?? 15) };
+  if (r.monthAnchor === "DAY") return { monthAnchor: "DAY", dayOfMonth: String(r.dayOfMonth ?? 15) };
+  const key = dateKeyOf(r.nextRunAt ?? null, tz);
+  const day = key ? Number(key.slice(8, 10)) : NaN;
+  if (!Number.isFinite(day)) return { monthAnchor: "START", dayOfMonth: "15" };
+  if (day > 28) return { monthAnchor: "END", dayOfMonth: "28" };
+  return { monthAnchor: "DAY", dayOfMonth: String(day) };
+}
+
 function recurrenceFields(inv: DraftForEdit, tz: string): Partial<InvoiceFormState> {
   const r = inv.schedule;
   if (!r) return {};
@@ -65,8 +79,7 @@ function recurrenceFields(inv: DraftForEdit, tz: string): Partial<InvoiceFormSta
   return {
     frequency,
     interval: String(daily ? 1 : Math.max(1, r.interval)),
-    monthAnchor: r.monthAnchor === "END" || r.monthAnchor === "DAY" ? r.monthAnchor : "START",
-    dayOfMonth: String(r.dayOfMonth ?? 15),
+    ...monthAnchorFields(r, tz),
     notifyTime: minutesToHhmm(r.notifyMinutes),
     infinite: !r.endDate,
     endDate: dateKeyOf(r.endDate, tz),
