@@ -9,6 +9,7 @@ import * as Drive from "@/google/drive";
 import * as Cal from "@/google/calendar";
 import * as Chat from "@/google/chat";
 import { fmtDateTime } from "@/lib/time";
+import { meetingAttendees, readMeetingOptions } from "@/server/tasks/meeting";
 
 let registered = false;
 
@@ -18,9 +19,15 @@ async function taskContext(taskId: string) {
     include: {
       client: true,
       assignees: { include: { user: { include: { teamLeader: true } } } },
+      createdBy: { select: { email: true } },
     },
   });
   if (!task) throw new Error("Task not found");
+  if (task.type === "MEETING") {
+    // Meetings (ADR 0012): exactly the invitees — the organiser, internal assignees and external guests.
+    const internal = meetingAttendees([task.createdBy.email, ...task.assignees.map((a) => a.user.email)], []);
+    return { task, emails: meetingAttendees(internal, task.guestEmails), internal };
+  }
   const admins = await prisma.user.findMany({ where: { role: "ADMIN", active: true }, select: { email: true } });
   const emails = new Set<string>();
   for (const a of task.assignees) {
@@ -28,15 +35,19 @@ async function taskContext(taskId: string) {
     if (a.user.teamLeader?.email) emails.add(a.user.teamLeader.email);
   }
   admins.forEach((a) => emails.add(a.email));
-  return { task, emails: Array.from(emails) };
+  return { task, emails: Array.from(emails), internal: Array.from(emails) };
 }
+
+const eventSummary = (task: { type: string; title: string }) => `${task.type === "MEETING" ? "Meeting" : "Task"}: ${task.title}`;
+/** Client name + the description as plain text (the agenda for meetings). */
+const eventDescription = (task: { client: { name: string }; description: string }) => `${task.client.name}\n${task.description.replace(/<[^>]+>/g, "")}`.trim();
 
 export function registerTaskIntegrationHandlers() {
   if (registered) return;
   registered = true;
 
   registerHandler("DRIVE_FOLDER", async (_p, job) => {
-    const { task, emails } = await taskContext(job.taskId!);
+    const { task, internal: emails } = await taskContext(job.taskId!); // never external guests
     if (task.driveFolderId) return { id: task.driveFolderId };
     const folder = await Drive.ensurePath(["Clients", task.client.name, `${task.title} – ${task.id.slice(-6)}`]);
     await Drive.shareWith(folder.id, emails, "writer");
@@ -50,14 +61,17 @@ export function registerTaskIntegrationHandlers() {
     if (task.calendarEventId) return { id: task.calendarEventId };
     const start = task.scheduledStart ?? new Date();
     const end = task.scheduledEnd ?? new Date(start.getTime() + task.allocatedMinutes * 60000);
+    const options = task.type === "MEETING" ? readMeetingOptions(task.meetingOptions) : null;
     const ev = await Cal.createEvent({
-      summary: `${task.type === "MEETING" ? "Meeting" : "Task"}: ${task.title}`,
-      description: `${task.client.name}\n${task.description.replace(/<[^>]+>/g, "")}`.trim(),
+      summary: eventSummary(task),
+      description: eventDescription(task),
       start,
       end,
       attendees: emails,
       withMeet: true,
       requestId: `task-${task.id}`,
+      options,
+      timeZone: (await getSettings()).timezone,
     });
     await prisma.task.update({
       where: { id: task.id },
@@ -67,7 +81,7 @@ export function registerTaskIntegrationHandlers() {
   });
 
   registerHandler("CHAT_SPACE", async (_p, job) => {
-    const { task, emails } = await taskContext(job.taskId!);
+    const { task, internal: emails } = await taskContext(job.taskId!); // never external guests
     if (task.chatSpaceId) return { id: task.chatSpaceId };
     const space = await Chat.createSpace(task.title, emails, `task-${task.id}`);
     await prisma.task.update({ where: { id: task.id }, data: { chatSpaceId: space.name, chatSpaceUrl: space.url } });
@@ -90,24 +104,33 @@ export function registerTaskIntegrationHandlers() {
   registerHandler("CALENDAR_UPDATE", async (_p, job) => {
     const { task, emails } = await taskContext(job.taskId!);
     if (!task.calendarEventId) return null;
-    await Cal.updateEvent(task.calendarEventId, {
-      summary: `${task.type === "MEETING" ? "Meeting" : "Task"}: ${task.title}`,
+    const options = task.type === "MEETING" ? readMeetingOptions(task.meetingOptions) : null;
+    // Meet toggled in the meeting options: add a conference when there is none, remove it when switched off.
+    const meet = options ? (options.withMeet && !task.meetLink ? "add" : !options.withMeet && task.meetLink ? "remove" : undefined) : undefined;
+    const res = await Cal.updateEvent(task.calendarEventId, {
+      summary: eventSummary(task),
+      ...(task.type === "MEETING" ? { description: eventDescription(task) } : {}),
       start: task.scheduledStart ?? undefined,
       end: task.scheduledEnd ?? undefined,
       attendees: emails,
+      options,
+      timeZone: (await getSettings()).timezone,
+      meet,
+      requestId: `task-${task.id}-meet-${Date.now()}`,
     });
-    return { updated: true };
+    if (res) await prisma.task.update({ where: { id: task.id }, data: { meetLink: res.meetLink, meetActive: !!res.meetLink } });
+    return { updated: true, attendees: emails.length };
   });
 
   registerHandler("DRIVE_SHARE", async (_p, job) => {
-    const { task, emails } = await taskContext(job.taskId!);
+    const { task, internal: emails } = await taskContext(job.taskId!); // never external guests
     if (!task.driveFolderId) return null;
     await Drive.shareWith(task.driveFolderId, emails, "writer");
     return { shared: emails.length };
   });
 
   registerHandler("CHAT_MEMBERS", async (_p, job) => {
-    const { task, emails } = await taskContext(job.taskId!);
+    const { task, internal: emails } = await taskContext(job.taskId!); // never external guests
     if (!task.chatSpaceId) return null;
     await Chat.addMembers(task.chatSpaceId, emails);
     return { members: emails.length };

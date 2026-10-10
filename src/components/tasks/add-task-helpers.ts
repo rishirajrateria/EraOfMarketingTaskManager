@@ -3,6 +3,8 @@ import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
 import { DEFAULT_TZ, dateChip, dateKey, fmtTime, zonedDayAt } from "@/lib/time";
 import type { DashboardData } from "@/server/tasks/types";
 import type { RepeatRule } from "@/server/tasks/repeat-rule";
+import type { MeetingOptions } from "@/server/tasks/schema";
+import { defaultMeetingOptions, normaliseEmails } from "@/server/tasks/meeting";
 
 /** Pure helpers for the Add-task sheet (SPEC §6). No React, no server access — unit-tested in tests/ui. */
 
@@ -29,16 +31,27 @@ export type AddTaskForm = {
   important: boolean;
   priority: "LOW" | "NORMAL" | "HIGH" | "URGENT";
   recurrence: Recurrence | null;
+  /** Meetings (ADR 0012): the client's addresses, added when the client is picked (removable in the Guests sheet). */
+  clientGuests: string[];
+  /** Meetings: external guests typed in the Guests sheet. */
+  guestEmails: string[];
+  /** Meetings: Google Calendar options (Options sheet). `timeZone: ""` = the company time zone. */
+  meeting: MeetingOptions;
 };
 
-export type PeriodLoad = { minutes: number; count: number };
+/** Header capacity of the selected team(s) for one period: hours left (inventory), hours booked, tasks booked. */
+export type PeriodLoad = { leftMinutes: number; bookedMinutes: number; count: number };
 export type PeriodLoads = Record<"today" | "tomorrow" | "week" | "month", PeriodLoad>;
-export const EMPTY_LOADS: PeriodLoads = {
-  today: { minutes: 0, count: 0 },
-  tomorrow: { minutes: 0, count: 0 },
-  week: { minutes: 0, count: 0 },
-  month: { minutes: 0, count: 0 },
-};
+const NO_LOAD: PeriodLoad = { leftMinutes: 0, bookedMinutes: 0, count: 0 };
+export const EMPTY_LOADS: PeriodLoads = { today: NO_LOAD, tomorrow: NO_LOAD, week: NO_LOAD, month: NO_LOAD };
+
+/** Minutes → compact hours for the header: 90 → "1.5h", 20 → "0.3h", 0 → "0h"; 10h and more are whole ("141h"). */
+export function fmtShortHours(minutes: number): string {
+  const raw = minutes / 60;
+  if (raw >= 10) return `${Math.round(raw)}h`;
+  const h = Math.round(raw * 10) / 10;
+  return `${Number.isInteger(h) ? h : h.toFixed(1)}h`;
+}
 
 /**
  * Fresh form. Admin and Team Leader start with nobody picked (Admin: the chosen team's Team Leader gets it;
@@ -54,11 +67,14 @@ export function emptyForm(type: TaskMode, meId: string, role?: string): AddTaskF
     teamIds: [],
     tagIds: [],
     preferredAssigneeIds: [],
-    hours: 2,
+    hours: type === "MEETING" ? 0.5 : 2, // meetings: "Duration", 30 minutes by default
     scheduledStart: "",
     important: false,
     priority: "NORMAL",
     recurrence: null,
+    clientGuests: [],
+    guestEmails: [],
+    meeting: defaultMeetingOptions(),
   };
 }
 
@@ -137,13 +153,6 @@ export function scheduleLine(form: Pick<AddTaskForm, "scheduledStart" | "hours">
   return `${when} · ${fmtHours(form.hours)}${who ? ` · for ${who}` : ""} · change with the calendar icon below`;
 }
 
-/** Minutes → "5.5 Hours" / "1 Hour" for the header tiles. */
-export function fmtLoadHours(minutes: number): string {
-  const h = Math.round((minutes / 60) * 10) / 10;
-  const text = Number.isInteger(h) ? String(h) : h.toFixed(1);
-  return `${text} ${h === 1 ? "Hour" : "Hours"}`;
-}
-
 /**
  * Who the current user may assign (SPEC §2).
  * Admin → Team Leaders + self; Team Leader → own Executives + self; Executive → self only.
@@ -192,8 +201,12 @@ export function formatSlot(slot: { start: Date | string; end: Date | string }, t
 
 /** Form state → payload for `createTask` (matches `taskInputSchema`). */
 export function toTaskInput(form: AddTaskForm, tz = DEFAULT_TZ) {
-  const scheduledStart = fromDatetimeLocal(form.scheduledStart, tz);
   const meeting = form.type === "MEETING";
+  // Meetings: the start is interpreted in the meeting's time zone; all-day meetings start at that day's midnight.
+  const zone = meeting ? form.meeting?.timeZone || tz : tz;
+  const allDay = meeting && !!form.meeting?.allDay;
+  const allDayKey = /^\d{4}-\d{2}-\d{2}/.test(form.scheduledStart) ? form.scheduledStart.slice(0, 10) : dateKey(new Date(), zone);
+  const scheduledStart = fromDatetimeLocal(allDay ? `${allDayKey}T00:00` : form.scheduledStart, zone);
   return {
     type: form.type,
     title: form.title.trim(),
@@ -206,9 +219,11 @@ export function toTaskInput(form: AddTaskForm, tz = DEFAULT_TZ) {
     allocatedMinutes: hoursToMinutes(form.hours),
     scheduledStart,
     scheduledEnd: null, // the server ends it after the allocated time
-    important: form.important,
+    important: meeting ? false : form.important,
     priority: form.priority,
-    recurrence: meeting || !form.recurrence ? null : { ...form.recurrence, trigger: "ON_SCHEDULE" as const },
+    recurrence: !form.recurrence ? null : { ...form.recurrence, trigger: "ON_SCHEDULE" as const },
+    guestEmails: meeting ? externalGuests(form) : [],
+    meetingOptions: meeting ? { ...(form.meeting ?? defaultMeetingOptions()), timeZone: zone } : null,
   };
 }
 
@@ -222,6 +237,7 @@ export type AddTaskErrors = Partial<Record<AddTaskErrorKey, string>>;
 export function validateForm(form: AddTaskForm, data?: AddTaskData): AddTaskErrors {
   const errors: AddTaskErrors = {};
   if (!form.title.trim()) errors.title = "Title is required";
+  if (form.type === "MEETING") return validateMeeting(form, errors, data);
   if (data?.me.role === "ADMIN" && !form.teamIds.length) errors.teamIds = "Pick a team in the green area";
   if (data && form.type === "WORK" && !errors.teamIds && !workTypesFor(data.workTypes, workTeamIds(form, data)).some((w) => w.id === form.tagIds[0])) {
     errors.tagIds = "Pick a work type in the green area";
@@ -233,6 +249,26 @@ export function validateForm(form: AddTaskForm, data?: AddTaskData): AddTaskErro
   }
   if (!Number.isFinite(form.hours) || form.hours < 0.25) errors.hours = "Pick how long it takes (at least 15 minutes)";
   return errors;
+}
+
+/** Meetings (ADR 0012): no team needed, but someone besides the organiser (a team, people or a guest email). */
+function validateMeeting(form: AddTaskForm, errors: AddTaskErrors, data?: AddTaskData): AddTaskErrors {
+  if (!form.clientId) errors.clientId = data ? "Pick a client in the green area" : "Client is required";
+  const invitees = data ? meetingInvitees(form, data) : form.assigneeIds;
+  const others = data ? invitees.filter((id) => id !== data.me.id) : invitees;
+  if (!others.length && !externalGuests(form).length) errors.assigneeIds = "Invite someone: pick a team, people or add a guest email";
+  if (!Number.isFinite(form.hours) || form.hours < 0.25) errors.hours = "Pick the duration (at least 15 minutes)";
+  return errors;
+}
+
+/** Meetings: external guests = the client's (kept) addresses + typed ones, lowercased and deduped. */
+export function externalGuests(form: Pick<AddTaskForm, "clientGuests" | "guestEmails">): string[] {
+  return normaliseEmails([...(form.clientGuests ?? []), ...(form.guestEmails ?? [])]);
+}
+
+/** Meeting invitees (internal): me (the organiser) + the invited teams' Team Leaders + the people picked in Guests. */
+export function meetingInvitees(form: Pick<AddTaskForm, "teamIds" | "assigneeIds">, data: Pick<DashboardData, "people" | "me">): string[] {
+  return Array.from(new Set([data.me.id, ...teamLeadersOf(data, form.teamIds).map((p) => p.id), ...form.assigneeIds]));
 }
 
 export function toggleId(list: string[], id: string): string[] {
@@ -292,28 +328,27 @@ export function toggleAdminTeam(form: Pick<AddTaskForm, "teamIds" | "preferredAs
 }
 
 /**
- * Who the task is actually assigned to. Admin → the picked teams' Team Leaders (+ extra meeting attendees);
- * Team Leader → the EXEC row picks, or the whole team when none are picked; Executive → self (+ meeting attendees).
+ * Who the task is actually assigned to. Meetings → `meetingInvitees` (me + invited teams + picked people, ADR 0012).
+ * Work: Admin → the picked teams' Team Leaders; Team Leader → the EXEC row picks, or the whole team when none are
+ * picked; Executive → self.
  */
 export function effectiveAssignees(form: Pick<AddTaskForm, "type" | "teamIds" | "assigneeIds">, data: Pick<DashboardData, "people" | "me">): string[] {
   const { me } = data;
-  if (me.role === "ADMIN") {
-    const leaders = teamLeadersOf(data, form.teamIds).map((p) => p.id);
-    const extra = form.type === "MEETING" ? form.assigneeIds.filter((id) => !leaders.includes(id)) : [];
-    return [...leaders, ...extra];
-  }
+  if (form.type === "MEETING") return meetingInvitees(form, data);
+  if (me.role === "ADMIN") return teamLeadersOf(data, form.teamIds).map((p) => p.id);
   if (me.role === "TEAM_LEADER") {
     if (form.assigneeIds.length) return form.assigneeIds;
     const team = me.teamId ? executivesOf(data, [me.teamId]).map((p) => p.id) : [];
     return team.length ? team : [me.id];
   }
-  if (form.type === "MEETING") return form.assigneeIds.includes(me.id) ? form.assigneeIds : [me.id, ...form.assigneeIds];
   return [me.id];
 }
 
-/** Cyan header scope: Admin → preferred executives, else the picked teams' executives; TL → the EXEC picks; Exec → self. */
-export function inventoryScope(form: Pick<AddTaskForm, "teamIds" | "assigneeIds" | "preferredAssigneeIds">, data: Pick<DashboardData, "people" | "me">): string[] {
-  if (data.me.role === "ADMIN") return form.preferredAssigneeIds.length ? form.preferredAssigneeIds : executivesOf(data, form.teamIds).map((p) => p.id);
-  if (data.me.role === "TEAM_LEADER") return form.assigneeIds;
-  return [];
+/**
+ * Teams the capacity header shows (hidden while empty): Admin → the teams picked in the TEAM row; Team Leader /
+ * Executive → their own team (none → hidden).
+ */
+export function headerTeamIds(form: Pick<AddTaskForm, "teamIds">, data: Pick<DashboardData, "me">): string[] {
+  if (data.me.role === "ADMIN") return form.teamIds;
+  return data.me.teamId ? [data.me.teamId] : [];
 }

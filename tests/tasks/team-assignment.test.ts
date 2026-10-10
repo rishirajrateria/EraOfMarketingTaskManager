@@ -125,7 +125,7 @@ describe("Admin add-task: team first, the Team Leader decides (ADR 0008)", () =>
     expect(execData.row2.map((r) => r.label)).toEqual(["Reels"]);
   });
 
-  it("header inventory: Admin may scope it to preferred / team executives", async () => {
+  it("header capacity: the selected team's members (TL + executives), not other teams", async () => {
     const s = await seed();
     const tomorrowIst = formatInTimeZone(addDays(new Date(), 1), "Asia/Kolkata", "yyyy-MM-dd");
     const start = fromZonedTime(`${tomorrowIst}T10:30:00`, "Asia/Kolkata");
@@ -134,12 +134,12 @@ describe("Admin add-task: team first, the Team Leader decides (ADR 0008)", () =>
     });
     const { addTaskInventory } = await import("@/server/tasks/create");
     session.set(s.admin);
-    const pref = await addTaskInventory([s.exec2.id]);
-    expect(pref.ok && pref.data.tomorrow.count).toBe(1);
-    const other = await addTaskInventory([s.otherExec.id]);
-    expect(other.ok && other.data.tomorrow.count).toBe(0);
+    const mine = await addTaskInventory([s.team.id]);
+    expect(mine.ok && mine.data.tomorrow).toMatchObject({ bookedMinutes: 60, count: 1 });
+    const other = await addTaskInventory([s.other.id]);
+    expect(other.ok && other.data.tomorrow).toMatchObject({ bookedMinutes: 0, count: 0 });
     session.set(s.tl);
-    expect((await addTaskInventory([s.otherExec.id])).ok).toBe(false);
+    expect((await addTaskInventory([s.other.id])).ok).toBe(false);
   });
 });
 

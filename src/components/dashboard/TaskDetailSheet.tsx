@@ -98,7 +98,7 @@ export function TaskDetailSheet({
   );
 
   return (
-    <Sheet open={open} onClose={onClose} title="Task details">
+    <Sheet open={open} onClose={onClose} title={t.type === "MEETING" ? "Meeting details" : "Task details"}>
       <div className="space-y-4 px-4 pb-8 pt-3">
         <div className={clsx("rounded-xl px-3 py-2", `row-${t.colour}`)}>
           <p className={clsx("text-base font-bold", t.colour === "grey" && "line-through")}>{t.title}</p>
@@ -122,6 +122,12 @@ export function TaskDetailSheet({
           </div>
         ) : null}
 
+        {t.type === "MEETING" && t.meetLink && t.meetActive && t.status !== "COMPLETED" ? (
+          <a href={t.meetLink} target="_blank" rel="noopener noreferrer" className={clsx(btnPrimary, "w-full")}>
+            <Video size={18} aria-hidden /> Join Google Meet
+          </a>
+        ) : null}
+
         <div className="grid grid-cols-4 gap-2">
           <LinkBtn href={t.driveFolderUrl} label="Drive" icon={<FolderOpen size={18} />} disabled={t.type === "MEETING"} />
           <LinkBtn href={t.meetLink} label="Meet" icon={<Video size={18} />} disabled={!t.meetActive || t.status === "COMPLETED"} />
@@ -135,7 +141,7 @@ export function TaskDetailSheet({
           {t.finishRequestedAt ? <Row k="Finish requested" v={fmtDateTime(new Date(t.finishRequestedAt), tz)} /> : null}
           <Row k="Priority" v={t.priority.toLowerCase()} />
           <Row
-            k="Assignees"
+            k={t.type === "MEETING" ? "People" : "Assignees"}
             v={
               <span className="flex flex-wrap justify-end gap-1">
                 {t.assignees.map((a) => (
@@ -147,6 +153,30 @@ export function TaskDetailSheet({
               </span>
             }
           />
+          {t.type === "MEETING" ? (
+            <>
+              <Row
+                k="Guests"
+                v={
+                  <span className="flex flex-wrap justify-end gap-1">
+                    {t.guestEmails.length ? (
+                      t.guestEmails.map((e) => (
+                        <span key={e} className="glass-chip inline-flex items-center rounded-full px-2 py-0.5 text-xs">
+                          {e}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-gray-500">No outside guests</span>
+                    )}
+                  </span>
+                }
+              />
+              {t.meetingOptions?.location ? <Row k="Location" v={t.meetingOptions.location} /> : null}
+              {t.meetingOptions?.allDay ? <Row k="All day" v="yes" /> : null}
+              {t.meetingOptions && t.meetingOptions.timeZone && t.meetingOptions.timeZone !== tz ? <Row k="Time zone" v={t.meetingOptions.timeZone.replace(/_/g, " ")} /> : null}
+              {t.meetingOptions && !t.meetingOptions.withMeet ? <Row k="Google Meet" v="off" /> : null}
+            </>
+          ) : null}
           {t.teams.length ? <Row k="Teams" v={t.teams.map((x) => x.name).join(", ")} /> : null}
           {t.tags.length ? (
             <Row

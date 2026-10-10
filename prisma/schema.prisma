@@ -459,6 +459,12 @@ model Task {
   deletedAt            DateTime?
   deletedById          String?
   integrationError     String? // last failed Google step, shown as row badge
+  /// Meetings: external guests (the client's email + typed addresses), lowercased and deduped (ADR 0012).
+  /// Internal people are assignees (TaskAssignee) so they see the meeting on their dashboard.
+  guestEmails          String[]         @default([])
+  /// Meetings: Google Calendar options (reminders, guest permissions, location, busy/free, visibility, colour,
+  /// all day, time zone, Meet on/off) — validated by `meetingOptionsSchema` (ADR 0012).
+  meetingOptions       Json?
   sessions             TaskSession[]
   attachments          TaskAttachment[]
   requests             Request[]

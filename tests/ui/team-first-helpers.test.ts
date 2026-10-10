@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   effectiveAssignees,
   emptyForm,
-  inventoryScope,
+  fmtShortHours,
+  headerTeamIds,
   specialistsFirst,
   syncWorkType,
   toTaskInput,
@@ -60,18 +61,23 @@ describe("team-first add-task helpers (ADR 0008)", () => {
   it("effectiveAssignees: Admin → the teams' TLs; TL → picks or the whole team; Exec → self", () => {
     expect(effectiveAssignees({ type: "WORK", teamIds: ["social"], assigneeIds: [] }, data("admin"))).toEqual(["priya"]);
     expect(effectiveAssignees({ type: "WORK", teamIds: ["social", "graphic"], assigneeIds: ["arjun"] }, data("admin"))).toEqual(["priya", "karan"]);
-    expect(effectiveAssignees({ type: "MEETING", teamIds: ["social"], assigneeIds: ["sana"] }, data("admin"))).toEqual(["priya", "sana"]);
+    // Meetings (ADR 0012): me + the invited teams' Team Leaders (not their executives) + picked people
+    expect(effectiveAssignees({ type: "MEETING", teamIds: ["social"], assigneeIds: ["sana"] }, data("admin"))).toEqual(["admin", "priya", "sana"]);
     expect(effectiveAssignees({ type: "WORK", teamIds: [], assigneeIds: [] }, data("priya"))).toEqual(["arjun", "neha"]);
     expect(effectiveAssignees({ type: "WORK", teamIds: [], assigneeIds: ["priya", "neha"] }, data("priya"))).toEqual(["priya", "neha"]);
     expect(effectiveAssignees({ type: "WORK", teamIds: [], assigneeIds: ["arjun"] }, data("arjun"))).toEqual(["arjun"]);
   });
 
-  it("inventoryScope: Admin → preferences, else the teams' executives", () => {
-    const f = { teamIds: ["social"], assigneeIds: [], preferredAssigneeIds: [] as string[] };
-    expect(inventoryScope(f, data("admin"))).toEqual(["arjun", "neha"]);
-    expect(inventoryScope({ ...f, preferredAssigneeIds: ["neha"] }, data("admin"))).toEqual(["neha"]);
-    expect(inventoryScope({ ...f, assigneeIds: ["arjun"] }, data("priya"))).toEqual(["arjun"]);
-    expect(inventoryScope(f, data("arjun"))).toEqual([]);
+  it("headerTeamIds: Admin → the picked teams (none = header hidden); TL / Exec → their own team", () => {
+    expect(headerTeamIds({ teamIds: [] }, data("admin"))).toEqual([]);
+    expect(headerTeamIds({ teamIds: ["social", "graphic"] }, data("admin"))).toEqual(["social", "graphic"]);
+    expect(headerTeamIds({ teamIds: ["graphic"] }, data("priya"))).toEqual(["social"]);
+    expect(headerTeamIds({ teamIds: [] }, data("sana"))).toEqual(["graphic"]);
+    expect(headerTeamIds({ teamIds: [] }, { me: { id: "x", role: "EXECUTIVE", teamId: null } })).toEqual([]);
+  });
+
+  it("fmtShortHours: compact header hours (whole hours from 10h)", () => {
+    expect([0, 20, 90, 570, 600, 8430, 37260].map(fmtShortHours)).toEqual(["0h", "0.3h", "1.5h", "9.5h", "10h", "141h", "621h"]);
   });
 
   it("specialistsFirst is a stable sort", () => {
@@ -87,7 +93,9 @@ describe("team-first add-task helpers (ADR 0008)", () => {
     const noWork = validateForm({ ...emptyForm("WORK", "admin", "ADMIN"), title: "x", teamIds: ["social"], clientId: "c" }, admin);
     expect(noWork).toEqual({ tagIds: "Pick a work type in the green area" });
     const seo = validateForm({ ...emptyForm("MEETING", "admin", "ADMIN"), title: "x", teamIds: ["seo"], clientId: "c" }, admin);
-    expect(seo).toEqual({ assigneeIds: "That team has no Team Leader yet (Menu → Add teamleader)" });
+    // Meetings need no Team Leader (ADR 0012), but someone besides the organiser: an empty team invites nobody.
+    expect(seo).toEqual({ assigneeIds: "Invite someone: pick a team, people or add a guest email" });
+    expect(validateForm({ ...emptyForm("MEETING", "admin", "ADMIN"), title: "x", clientId: "c", guestEmails: ["a@b.co"] }, admin)).toEqual({});
     const ok = validateForm({ ...emptyForm("WORK", "admin", "ADMIN"), title: "x", teamIds: ["social"], tagIds: ["reels"], clientId: "c" }, admin);
     expect(ok).toEqual({});
     expect(validateForm({ ...emptyForm("WORK", "admin", "ADMIN"), title: "x", teamIds: ["social"], tagIds: ["reels"] }, admin)).toEqual({ clientId: "Pick a client in the green area" });

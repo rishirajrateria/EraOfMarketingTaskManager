@@ -2,6 +2,7 @@
 import { CalendarDays, X } from "lucide-react";
 import { clsx } from "@/lib/clsx";
 import { shortcutStart, type AddTaskForm, type TaskMode } from "@/components/tasks/add-task-helpers";
+import { isShortcutDay } from "@/components/tasks/meeting-helpers";
 
 export type Shortcut = "upnext" | "tomorrow" | "today";
 
@@ -52,7 +53,9 @@ export function AddTaskBottomBar({
   onOpenSchedule: () => void;
   onClose: () => void;
 }) {
-  const startIs = (kind: "tomorrow" | "today") => !!form.scheduledStart && form.scheduledStart === shortcutStart(kind, new Date(), tz);
+  // Meetings: Tom / today mark the chosen day (the START row sets the time); tasks: the shortcut's exact start.
+  const startIs = (kind: "tomorrow" | "today") =>
+    type === "MEETING" ? isShortcutDay(kind, form.scheduledStart, new Date(), tz) : !!form.scheduledStart && form.scheduledStart === shortcutStart(kind, new Date(), tz);
   return (
     <div className="flex h-14 shrink-0 items-stretch pb-[env(safe-area-inset-bottom)]">
       <div className="bg-green-bar scrollbar-none flex w-[62%] items-center gap-2 overflow-x-auto px-3 text-white">

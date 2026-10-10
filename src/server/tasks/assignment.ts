@@ -12,6 +12,7 @@ export const MSG = {
   pickTeam: "Pick a team in the green area",
   pickWork: "Pick a work type in the green area",
   noLeader: "That team has no Team Leader yet (Menu → Add teamleader)",
+  noGuests: "Invite someone: pick a team, people or add a guest email",
   prefOutsideTeam: "Preferred executives must be executives of the chosen team",
 } as const;
 
@@ -41,6 +42,35 @@ export async function teamLeaderIds(teamIds: string[]): Promise<string[]> {
 
 const unique = (ids: string[]) => Array.from(new Set(ids.filter(Boolean)));
 
+/** Everyone in the given teams: active Team Leader(s) and executives (the add-task capacity header, ADR 0012). */
+export async function teamMemberIds(teamIds: string[]): Promise<string[]> {
+  if (!teamIds.length) return [];
+  const [leaders, execs] = await Promise.all([
+    teamLeaderIds(teamIds),
+    prisma.user.findMany({ where: { role: "EXECUTIVE", active: true, teamId: { in: teamIds } }, select: { id: true }, orderBy: { name: "asc" } }),
+  ]);
+  return unique([...leaders, ...execs.map((e) => e.id)]);
+}
+
+/**
+ * Meetings (ADR 0012), any dashboard role: the organiser + the Team Leader(s) of the invited teams + the people picked
+ * in the Guests sheet (anyone with a dashboard may invite anyone; executives are only invited one by one). Teams must
+ * exist and be active. External guests are `guestEmails`; at least one invitee besides the organiser is needed.
+ */
+async function planMeeting(user: SessionUser, input: TaskInput, validate: (ids: string[], type: "WORK" | "MEETING") => Promise<unknown>): Promise<AssignmentPlan> {
+  const teamIds = unique(input.teamIds);
+  if (teamIds.length) {
+    const teams = await prisma.team.count({ where: { id: { in: teamIds }, active: true } });
+    if (teams !== teamIds.length) throw new Error("Unknown or inactive team");
+  }
+  const picked = unique(input.assigneeIds);
+  if (picked.length) await validate(picked, "MEETING");
+  const assigneeIds = unique([user.id, ...(await teamLeaderIds(teamIds)), ...picked]);
+  if (assigneeIds.length === 1 && !input.guestEmails.length) throw new Error(MSG.noGuests);
+  const visibleTeams = teamIds.length || user.role === "ADMIN" ? teamIds : user.teamId ? [user.teamId] : [];
+  return { assigneeIds, teamIds: visibleTeams, tagIds: [], preferredAssigneeIds: [] };
+}
+
 /** WORK tasks need a work type that the relevant teams do. */
 async function assertWorkType(tagIds: string[], teamIds: string[]) {
   if (!tagIds.length) throw new Error(MSG.pickWork);
@@ -65,6 +95,7 @@ export async function planAssignment(
   input: TaskInput,
   validate: (ids: string[], type: "WORK" | "MEETING") => Promise<unknown>,
 ): Promise<AssignmentPlan> {
+  if (input.type === "MEETING") return planMeeting(user, input, validate);
   const work = input.type === "WORK";
   const tagIds = work ? unique(input.tagIds) : [];
   if (user.role === "ADMIN") {

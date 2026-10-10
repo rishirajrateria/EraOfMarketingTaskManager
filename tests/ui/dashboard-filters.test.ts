@@ -43,6 +43,8 @@ function task(p: Partial<TaskRow> = {}): TaskRow {
     driveFolderUrl: null,
     meetLink: null,
     meetActive: false,
+    guestEmails: [],
+    meetingOptions: null,
     chatSpaceUrl: null,
     calendarEventId: null,
     integrationError: null,

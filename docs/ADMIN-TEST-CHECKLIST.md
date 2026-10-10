@@ -24,6 +24,10 @@ Sign in as **Admin** from the demo chooser. Everything below is in the order a r
   counted) and **Finance person's email** (where the monthly GST pack goes).
 
 ## 2. Tasks (dashboard)
+- **Capacity header**: Admin **+** opens full screen with **no** cyan header. Tap a team → a slim cyan strip slides in:
+  four cells **TODAY / TOM / WEEK / MONTH**, each "13h left" (bold) and "2h booked" (muted) for everyone in that team
+  (Team Leader + executives); pick a second team → the numbers add up; untap all teams → it slides away. Team Leader /
+  Executive: the strip shows their own team straight away (none if they have no team).
 - **+** → task: title, description (small mic in the toolbar = dictation). The body has **no date / time inputs**: under the
   pills it reads "📅 Next free slot: Tom 10:00am · 2h · change with the calendar icon below".
   - **How long**: tap ½h … 8h (selected pill is dark in light mode, light in dark mode), − / + steps 15 minutes, never
@@ -43,7 +47,7 @@ Sign in as **Admin** from the demo chooser. Everything below is in the order a r
   green area". Tap **Social** → **WORK** (Social's work types, first one selected) and **PREFER** appear above TEAM;
   the card reads "Goes to Neha (TL, Social)" · "No executive preference · tap names in the PREFER row" ·
   "✓ Content specialists: Isha". Tap **Arjun** in PREFER → "★ Arjun", card "Your preference: Arjun · the Team Leader
-  decides"; the cyan header now shows Arjun's free hours. Tap **SEO** only → "— no Team Leader in this team yet", Save →
+  decides". Tap **SEO** only → "— no Team Leader in this team yet", Save →
   "That team has no Team Leader yet (Menu → Add teamleader)". Pick Graphic + Logo + a client, leave it on upnext →
   Save. The row shows an amber **pref: arush** chip next to the client.
 - Switch to **Team Leader** (Rishi) → the "[demo] Festive logo refresh" row shows "pref: arush" → long-press →
@@ -57,8 +61,33 @@ Sign in as **Admin** from the demo chooser. Everything below is in the order a r
 - Switch to **Team Leader** (Demo chip) → long-press → **Raise doubt** (yellow) and **Review request** (red dot); back as
   Admin → Requests inbox → Unflag / Edit.
 - Bottom green rows filter by team/client; the white strip filters restarted / completed / recurring / paused / colours.
-- Meet icon in the bar → schedule a meeting (Calendar + Meet row, no Drive/Chat; the people glyph next to **Schedule**
-  picks attendees).
+- **Meetings (ADR 0012)** — Meet icon in the bar:
+  - [ ] The body has **no ★ Important** and **no voice-note mic** (the toolbar dictation mic stays); ⟳ Recurring,
+    👥 Guests and ⚙ Options are there; the description placeholder says it is the
+    agenda. **Duration** pills 15m 30m 45m 1h 1½h 2h (30m selected) + − / + in 15 minutes.
+  - [ ] Green rows: **TEAM** (multi-select = invite that team's Team Leader only) · **CLIENT** · **START** (9 am … 8 pm every 30
+    minutes, then **Custom…** opens the time picker). Tap **4 pm** → **upnext** turns off and the line reads
+    "📅 Today 4:00pm–4:30pm · 30m · 3 guests" (tomorrow when 4 pm has passed); **Tom** keeps 4 pm and moves the day.
+  - [ ] Pick **Repo** → its email appears under "Guests:" in the card and the people glyph badge counts it; a client with
+    no email shows "<client> has no email — add one in Clients". Pick **Graphic** → only its Team Leader is invited
+    ("Inviting me, Rishi · Graphic (Team Leader)"); with no client and no team the card shows no "null" text.
+  - [ ] **👥 Guests** (or the people glyph): "From client" chip (✕ removes), "From teams · Graphic" with
+    "Rishi Kumar · Team leader" (✕ un-invites the team), **Your people** (you are "(organiser)"; executives unselected
+    until tapped), **Add guests**: type an address + Enter,
+    or paste "a@x.co, b@y.co" → two chips; "bad" → toast "Not an email: bad".
+  - [ ] **⚙ Options**: Add Google Meet (off → the chip says "· no Meet" and the saved meeting has no Meet link), All day
+    (hides START and Duration; line "📅 Tom · all day · …"), Notifications (Notification / Email, number, min / hours /
+    days / weeks; "+ Add notification" disappears at 5), Guest permissions (Modify off, Invite others on, See guest list
+    on), Location, Busy / Free, Default / Public / Private, 11 colour swatches + Calendar colour, Time zone (company zone
+    marked; another zone is named at the end of the line and the start time is in that zone).
+  - [ ] **Find a time** (from Guests or Options): each internal guest's busy bars between 8 am and 9 pm, a green "Free"
+    lane and the first three free slots; tap one → START shows that time. Hint: outside guests aren't checked.
+  - [ ] **Schedule** → toast "Meeting scheduled". Open it (i): **Meeting details** with **Join Google Meet**, People,
+    Guests (emails), Location. Long-press → **Edit** → "Edit meeting" shows **Outside guests** chips and **Meeting
+    options**; change them → Save → "Meeting updated · Google Calendar emails the guests".
+  - [ ] With real Google (GOOGLE_MOCK off): the event is on the company calendar with the Meet link, reminders, colour,
+    location, visibility and guest permissions; every guest gets the Calendar invite email.
+  - [ ] Team Leader: the Meet icon works the same (TEAM row instead of EXEC, header = own team).
 - **Look (glass refresh)**: rows are floating glass cards with a coloured left edge (green ongoing, amber doubt, red
   overdue, grey done); chips wrap instead of being cut off. Switch the phone / browser to **dark mode** → every screen
   (dashboard, add task, sheets, menu, admin lists) turns dark glass, selected pills stay readable.

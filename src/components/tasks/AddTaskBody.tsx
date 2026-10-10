@@ -8,6 +8,7 @@ import { DictationButton } from "@/components/tasks/DictationButton";
 import { VoiceNoteRecorder, type VoiceNote } from "@/components/tasks/VoiceRecorder";
 import { HOUR_PRESETS, fmtHours, stepHours, type AddTaskForm } from "@/components/tasks/add-task-helpers";
 import { describeRule } from "@/server/tasks/repeat-rule";
+import { DURATION_PRESETS, fmtDuration } from "@/components/tasks/meeting-helpers";
 
 type Props = {
   form: AddTaskForm;
@@ -17,6 +18,10 @@ type Props = {
   /** Meetings: the people glyph next to Save opens the attendee chooser. */
   canPickAssignees: boolean;
   onOpenAssignees: () => void;
+  /** Meetings: the ⚙ Options chip (Google Calendar options, ADR 0012). */
+  onOpenOptions?: () => void;
+  /** Meetings: invited people besides me + external guests (badge on the people glyph). */
+  guestCount?: number;
   onOpenRepeat: () => void;
   onSubmit: () => void;
   voiceNotes: VoiceNote[];
@@ -38,7 +43,7 @@ type Props = {
  * scheduling happens from the bottom bar (calendar icon, upnext / Tom / today).
  */
 export function AddTaskBody(p: Props) {
-  const { form, patch, titleError, hoursError, canPickAssignees, onOpenAssignees, onOpenRepeat, onSubmit, voiceNotes, setVoiceNotes, files, setFiles, busy, onError, onToast, scheduleText, summary } = p;
+  const { form, patch, titleError, hoursError, canPickAssignees, onOpenAssignees, onOpenOptions, guestCount = 0, onOpenRepeat, onSubmit, voiceNotes, setVoiceNotes, files, setFiles, busy, onError, onToast, scheduleText, summary } = p;
   const editor = useRef<RichTextEditorHandle>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const meeting = form.type === "MEETING";
@@ -66,19 +71,30 @@ export function AddTaskBody(p: Props) {
         className="mt-1"
         value={form.description}
         onChange={(description) => patch({ description })}
-        placeholder="Describe the work. Rich text, links and dictation."
+        placeholder={meeting ? "Agenda — sent as the Calendar event description." : "Describe the work. Rich text, links and dictation."}
         minHeightClass="min-h-[72px]"
         toolbarExtra={<DictationButton compact onText={(t) => editor.current?.insertText(t)} />}
       />
 
       <div className="mt-2 flex flex-wrap gap-2">
-        <ChipButton on={form.important} onClick={() => patch({ important: !form.important })} onClass="border-transparent bg-[#fde68a] text-[#3b2a00]">
-          ★ Important
-        </ChipButton>
-        {!meeting ? (
-          <ChipButton on={!!form.recurrence} onClick={onOpenRepeat} onClass="border-transparent bg-[#bfdbfe] text-[#0b1b2b]" label={form.recurrence ? `Repeats: ${describeRule(form.recurrence)}` : "Recurring"}>
-            ⟳ {form.recurrence ? describeRule(form.recurrence) : "Recurring"}
+        {/* Meetings: no ★ Important (owner's revision); Recurring, Guests and Options instead. */}
+        {meeting ? null : (
+          <ChipButton on={form.important} onClick={() => patch({ important: !form.important })} onClass="border-transparent bg-[#fde68a] text-[#3b2a00]">
+            ★ Important
           </ChipButton>
+        )}
+        <ChipButton on={!!form.recurrence} onClick={onOpenRepeat} onClass="border-transparent bg-[#bfdbfe] text-[#0b1b2b]" label={form.recurrence ? `Repeats: ${describeRule(form.recurrence)}` : "Recurring"}>
+          ⟳ {form.recurrence ? describeRule(form.recurrence) : "Recurring"}
+        </ChipButton>
+        {meeting ? (
+          <>
+            <ChipButton onClick={onOpenAssignees} label={`Guests (${guestCount})`}>
+              👥 Guests · {guestCount}
+            </ChipButton>
+            <ChipButton onClick={() => onOpenOptions?.()} label="Meeting options">
+              ⚙ Options{form.meeting?.withMeet === false ? " · no Meet" : ""}
+            </ChipButton>
+          </>
         ) : null}
         <ChipButton onClick={() => fileInput.current?.click()} label="Attach files">
           📎 Files{files.length ? ` · ${files.length}` : ""}
@@ -86,20 +102,23 @@ export function AddTaskBody(p: Props) {
         <input ref={fileInput} type="file" multiple hidden onChange={(e) => setFiles([...files, ...Array.from(e.target.files ?? [])])} />
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2" role="group" aria-label="How long">
-        <span className="mr-0.5 text-xs text-muted">How long</span>
-        {HOUR_PRESETS.map((h) => (
-          <ChipButton key={h} on={form.hours === h} onClick={() => patch({ hours: h })}>
-            {fmtHours(h)}
-          </ChipButton>
-        ))}
-        <Stepper onMinus={() => patch({ hours: stepHours(form.hours, -1) })} onPlus={() => patch({ hours: stepHours(form.hours, 1) })} minusLabel="15 minutes less" plusLabel="15 minutes more">
-          {fmtHours(form.hours)}
-        </Stepper>
-      </div>
+      {meeting && form.meeting?.allDay ? null : (
+        <div className="mt-4 flex flex-wrap items-center gap-2" role="group" aria-label={meeting ? "Duration" : "How long"}>
+          <span className="mr-0.5 text-xs text-muted">{meeting ? "Duration" : "How long"}</span>
+          {(meeting ? DURATION_PRESETS : HOUR_PRESETS).map((h) => (
+            <ChipButton key={h} on={form.hours === h} onClick={() => patch({ hours: h })}>
+              {meeting ? fmtDuration(h) : fmtHours(h)}
+            </ChipButton>
+          ))}
+          <Stepper onMinus={() => patch({ hours: stepHours(form.hours, -1) })} onPlus={() => patch({ hours: stepHours(form.hours, 1) })} minusLabel="15 minutes less" plusLabel="15 minutes more">
+            {meeting ? fmtDuration(form.hours) : fmtHours(form.hours)}
+          </Stepper>
+        </div>
+      )}
       {hoursError ? <span className="mt-1 block text-[11px] text-red-500">{hoursError}</span> : null}
 
-      <VoiceNoteRecorder notes={voiceNotes} onChange={setVoiceNotes} disabled={disabled} onError={onError} onAttached={() => onToast("Voice note attached")} />
+      {/* Meetings take no voice note: the description is the agenda (ADR 0012). */}
+      {meeting ? null : <VoiceNoteRecorder notes={voiceNotes} onChange={setVoiceNotes} disabled={disabled} onError={onError} onAttached={() => onToast("Voice note attached")} />}
 
       {files.length ? (
         <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Files">
@@ -122,8 +141,13 @@ export function AddTaskBody(p: Props) {
 
       <div className="pointer-events-none sticky bottom-3 mt-auto flex items-center justify-between pb-0 pt-3">
         {canPickAssignees ? (
-          <button type="button" onClick={onOpenAssignees} aria-label="Choose attendees" className="glass pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full text-ink">
+          <button type="button" onClick={onOpenAssignees} aria-label={`Guests (${guestCount})`} className="glass pointer-events-auto relative flex h-10 w-10 items-center justify-center rounded-full text-ink">
             <Users size={20} strokeWidth={1.9} aria-hidden />
+            {guestCount ? (
+              <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[10.5px] font-bold leading-none text-primary-ink" aria-hidden>
+                {guestCount}
+              </span>
+            ) : null}
           </button>
         ) : (
           <span />
