@@ -625,6 +625,22 @@ select.in{padding-right:10px}
 .sumc{border:0;font:inherit;text-align:left;cursor:pointer;scroll-snap-align:start}
 .sumc .capl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:none;letter-spacing:0;font-size:12.5px;font-weight:700;opacity:.95}
 .sumc.on{background:rgba(255,255,255,.85);color:#06303d;box-shadow:inset 0 0 0 2px var(--z1ring)}
+/* doubt = purple */
+:root{--row-purple:rgba(237,233,254,.8);--acc-purple:#8b5cf6}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--row-purple:rgba(139,92,246,.2)}}
+:root[data-theme="dark"]{--row-purple:rgba(139,92,246,.2)}
+.row.purple{background:var(--row-purple)}.row.purple::before{background:var(--acc-purple)}
+.doubtTag{background:#8b5cf6!important;color:#fff!important}
+.strip .sw{width:34px}
+.sw[aria-label^="Doubt"]{display:grid;place-items:center;font-weight:900;color:#6d28d9;font-size:14px}
+.sw[aria-label^="Doubt"]::after{content:"?"}
+/* filter rows: neutral glass, one row each (replaces green) */
+#s-dash .greenarea{display:block!important;background:var(--glass)!important;backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:none!important;border-top:1px solid var(--hair);padding:4px 0 2px!important}
+#s-dash .prow{height:42px;padding:0 12px;gap:6px}
+.plab{flex-shrink:0;width:52px;font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+#s-dash .bar{border-top:0!important}
+#s-dash .bar .g .dk{height:32px}
+#s-dash .prow .dk,#s-dash .bar .g .dk{max-width:none;white-space:nowrap;height:32px;font-weight:600}
 </style><div class="phone" id="phone">
   <!-- role picker -->
   <section class="screen" id="s-login">
@@ -873,8 +889,8 @@ const dayOff=iso=>Math.round((new Date(iso).setHours(0,0,0,0)-today0().getTime()
 const dateChip=iso=>fmtD(iso);
 /* Actual-time pill: green when started on time / finished inside the slot, red when started late or running past the end. */
 const actualTone=t=>{if(!t.actualStart)return "";const late=new Date(t.actualStart)>new Date(t.start);if(t.status==="COMPLETED")return t.actualEnd&&new Date(t.actualEnd)<=new Date(t.end)?"ok":"od";if(new Date()>new Date(t.end))return "od";return late?"od":"ok";};
-/* Row colour: completed = faded, paused = yellow, started = green, not started after its start time = red. */
-const rowColour=t=>t.status==="COMPLETED"?"grey":t.paused?"yellow":(t.status==="STARTED"||t.status==="FINISH_REQUESTED")?"green":new Date(t.start)<new Date()?"red":"white";
+/* Row colour: completed = faded, doubt (?) = purple, paused = yellow, started = green, not started after its start time = red. */
+const rowColour=t=>t.status==="COMPLETED"?"grey":t.doubt?"purple":t.paused?"yellow":(t.status==="STARTED"||t.status==="FINISH_REQUESTED")?"green":new Date(t.start)<new Date()?"red":"white";
 const toastEl=$("#toast");let toastT=null;
 function toast(msg,kind){toastEl.textContent=msg;toastEl.className="toast"+(kind==="err"?" err":"");toastEl.style.pointerEvents="";toastEl.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>toastEl.hidden=true,2200);}
 /* Google-Tasks style toast with Undo (5s). */
@@ -958,22 +974,22 @@ function renderDash(){
   el("button",{class:"itog"+(f.icons.includes("restarted")?" on":""),title:"Restarted tasks",onclick:()=>{f.icons=tog(f.icons,"restarted");save();renderDash();}},svg(I.restart,15,2.5)),
   el("button",{class:"comp"+(f.completed?" on":""),onclick:()=>{f.completed=!f.completed;save();renderDash();}},"completed"),
   el("button",{class:"itog"+(f.icons.includes("recurring")?" on":""),title:"Recurring tasks",onclick:()=>{f.icons=tog(f.icons,"recurring");save();renderDash();}},svg(I.repeat,15,2.5)),
-  ...[["red","#F8CACA","Not started · start time passed"],["yellow","#F6E7B4","Paused"],["green","#CBEFCB","Started"]].map(([k,hex,l])=>el("button",{class:"sw"+(f.colours.includes(k)?" on":""),style:"background:"+hex,title:l,"aria-label":l,onclick:()=>{f.colours=tog(f.colours,k);save();renderDash();}})),
+  ...[["red","#F8CACA","Not started · start time passed"],["yellow","#F6E7B4","Paused"],["green","#CBEFCB","Started"],["purple","#E4D7FB","Doubt raised (?)"]].map(([k,hex,l])=>el("button",{class:"sw"+(f.colours.includes(k)?" on":""),style:"background:"+hex,title:l,"aria-label":l,onclick:()=>{f.colours=tog(f.colours,k);save();renderDash();}})),
   el("button",{class:"rdbtn"+(f.icons.includes("review")?" on":""),title:"Review requested",onclick:()=>{f.icons=tog(f.icons,"review");save();renderDash();}},el("i")));
  // bottom dock: Team / Client / Day pickers (neutral glass, one row) + Meet and + buttons
  const vis=visibleTasks();
  const row1=r==="ADMIN"?S.teams.map(t=>({id:"team:"+t.id,label:t.name})):r==="TEAM_LEADER"?S.users.filter(u=>u.role==="EXECUTIVE"&&u.teamId===m.teamId).map(u=>({id:"user:"+u.id,label:first(u.name)})):S.clients.filter(c=>vis.some(t=>t.client===c.id)).map(c=>({id:"client:"+c.id,label:c.name}));
  const row2=r==="EXECUTIVE"?workFor([m.teamId]).map(w=>({id:"work:"+w.id,label:w.name})):S.clients.filter(c=>vis.some(t=>t.client===c.id)).map(c=>({id:"client:"+c.id,label:c.name}));
- const n1=r==="ADMIN"?["Team","Teams"]:r==="TEAM_LEADER"?["Person","People"]:["Client","Clients"];
- const n2=r==="EXECUTIVE"?["Work","Work"]:["Client","Clients"];
- const pick=(title,items,key,allLabel)=>openSheet(title,el("div",{class:"seg",style:"margin:0 0 12px;flex-wrap:wrap"},el("button",{class:f[key]===null?"on":"",onclick:()=>{f[key]=null;f.pill=null;save();closeSheet();renderDash();}},"All "+allLabel.toLowerCase()),...items.map(it=>el("button",{class:f[key]===it.id?"on":"",onclick:()=>{f[key]=it.id;f.pill=null;save();closeSheet();renderDash();}},it.label))));
- const chip=(label,active,on,clear)=>el("button",{class:"dk"+(active?" on":""),onclick:on},el("span",{},label),active&&clear?el("i",{class:"x","aria-label":"Clear",onclick:e=>{e.stopPropagation();clear();}},"×"):el("i",{},"▾"));
- const dayLabel=f.date?fmtD(f.date):f.quick==="today"?"Today":f.quick==="tomorrow"?"Tom":"Day";
+ // one neutral glass row per filter (as before, not green): Teams / Clients pills, then day pills + add buttons
+ const lab1=r==="ADMIN"?"Teams":r==="TEAM_LEADER"?"People":"Clients",lab2=r==="EXECUTIVE"?"Work":"Clients";
+ const prow=(host,label,items,key)=>host.replaceChildren(el("span",{class:"plab"},label),el("button",{class:"dk"+(f[key]===null?" on":""),onclick:()=>{f[key]=null;f.pill=null;save();renderDash();}},"All"),...items.map(it=>el("button",{class:"dk"+(f[key]===it.id?" on":""),onclick:()=>{f[key]=f[key]===it.id?null:it.id;f.pill=null;save();renderDash();}},it.label)));
+ prow($("#prow1"),lab1,row1,"row1");prow($("#prow2"),lab2,row2,"row2");
+ const quick=q=>{f.quick=f.quick===q?null:q;f.date=null;f.pill=null;save();renderDash();};
  $("#barg").replaceChildren(
-  chip(f.row1?dockName(f.row1):n1[1],!!f.row1,()=>pick(n1[0],row1,"row1",n1[1]),()=>{f.row1=null;f.pill=null;save();renderDash();}),
-  chip(f.row2?dockName(f.row2):n2[1],!!f.row2,()=>pick(n2[0],row2,"row2",n2[1]),()=>{f.row2=null;f.pill=null;save();renderDash();}),
-  chip(dayLabel+(f.quick==="asc"?" · ↑":""),!!(f.date||f.quick),daySheet,()=>{f.date=null;f.quick=null;save();renderDash();}));
- $("#prow1").replaceChildren();$("#prow2").replaceChildren();
+  el("button",{class:"dk"+(f.date?" on":""),title:"Pick a date","aria-label":"Pick a date",onclick:daySheet},svg(I.cal,16,2.25),f.date?el("span",{},fmtD(f.date)):null),
+  el("button",{class:"dk"+(f.quick==="today"?" on":""),onclick:()=>quick("today")},"Today"),
+  el("button",{class:"dk"+(f.quick==="tomorrow"?" on":""),onclick:()=>quick("tomorrow")},"Tomorrow"),
+  el("button",{class:"dk"+(f.quick==="asc"?" on":""),onclick:()=>quick("asc")},"Oldest"));
 }
 const hh=m=>{const h=m/60;return (Number.isInteger(h)?h:h.toFixed(1))+"h";};
 function dockName(id){const [k,v]=id.split(":");if(k==="team")return (S.teams.find(t=>t.id===v)||{}).name||"Team";if(k==="user")return first((userById(v)||{name:"?"}).name);if(k==="client")return (clientById(v)||{}).name||"Client";if(k==="work")return (S.workTypes.find(w=>w.id===v)||{}).name||"Work";return id;}
