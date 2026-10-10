@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { AlertTriangle, CalendarDays, FolderOpen, Info, MessageSquare, Mic, Pause, Repeat, RotateCcw, Video } from "lucide-react";
+import { AlertTriangle, FolderOpen, Info, MessageSquare, Mic, Pause, Phone, Repeat, RotateCcw, Video } from "lucide-react";
 import { clsx } from "@/lib/clsx";
 import type { DashboardData, TaskRow as Row } from "@/server/tasks/types";
 import { useLongPress } from "@/components/ui/useLongPress";
@@ -9,7 +9,8 @@ import { ensureTaskDriveFolder } from "@/server/tasks/manage";
 import { teamChipLabel } from "@/components/dashboard/format";
 import { ActualPill, CompletionCircle, DateHoursPills, IconBtn, TimePill, stop } from "@/components/dashboard/RowParts";
 import type { ReviewField } from "@/server/tasks/review-fields";
-import { formatInTimeZone } from "date-fns-tz";
+import { WhatsAppIcon } from "@/components/shell/TopIcons";
+import type { ContactMode } from "@/components/dashboard/contacts";
 
 export type RowHandlers = {
   onOpen: (t: Row) => void;
@@ -21,6 +22,8 @@ export type RowHandlers = {
   onRetry: (t: Row) => void;
   /** Hold / right-click on the date, hours or start-time pill → the review menu for that pill (ADR 0015). */
   onPillMenu: (t: Row, field: ReviewField) => void;
+  /** Phone / WhatsApp icons → the Call / WhatsApp sheet (client + Team Leader, ADR 0017). */
+  onContact: (t: Row, mode: ContactMode) => void;
 };
 
 /** Opens a URL in a new tab. (For URLs resolved asynchronously — see openDrive — the tab is opened first so popup blockers allow it.) */
@@ -65,9 +68,6 @@ export function TaskRow({ t, data, h, pendingDone }: { t: Row; data: DashboardDa
     else openExternal(res.data.url);
   };
 
-  const calendarUrl = t.scheduledStart
-    ? `https://calendar.google.com/calendar/u/0/r/day/${formatInTimeZone(new Date(t.scheduledStart), data.tz, "yyyy/M/d")}`
-    : "https://calendar.google.com/calendar/u/0/r";
 
   const open = () => h.onOpen(t);
   const pillMenu = (field: ReviewField) => h.onPillMenu(t, field);
@@ -161,8 +161,11 @@ export function TaskRow({ t, data, h, pendingDone }: { t: Row; data: DashboardDa
           <IconBtn label="Chat space" onClick={() => t.chatSpaceUrl && openExternal(t.chatSpaceUrl)} disabled={!t.chatSpaceUrl}>
             <MessageSquare size={19} strokeWidth={1.75} />
           </IconBtn>
-          <IconBtn label="Calendar" onClick={() => openExternal(calendarUrl)}>
-            <CalendarDays size={19} strokeWidth={1.75} />
+          <IconBtn label="Call" onClick={() => h.onContact(t, "call")}>
+            <Phone size={18} strokeWidth={1.75} />
+          </IconBtn>
+          <IconBtn label="WhatsApp" onClick={() => h.onContact(t, "wa")}>
+            <WhatsAppIcon size={19} strokeWidth={1.75} />
           </IconBtn>
           {hasVoice ? (
             <IconBtn label="Voice notes" onClick={() => h.onOpenAttachments(t)}>

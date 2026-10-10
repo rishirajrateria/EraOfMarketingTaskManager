@@ -8,6 +8,8 @@ import { dateKey, zonedStartOfDay } from "@/lib/time";
 import { findSlot, type Interval, type WorkingConfig } from "@/lib/working-time";
 import { freeBusy } from "@/google/calendar";
 import { notify, publishTaskChanged } from "@/lib/notify";
+import { whenPhrase } from "@/lib/notification-text";
+import { taskDeepLink } from "@/lib/notification-kinds";
 import { audit } from "@/lib/audit";
 import { ACTIVE_STATUSES } from "@/server/tasks/state";
 
@@ -147,9 +149,9 @@ export async function shiftTaskToNextSlot(taskId: string, actorId: string, reaso
   await notify({
     userIds: [...ids, ...leaders.map((l) => l.teamLeaderId).filter((x): x is string => !!x)],
     kind: "TASK_SHIFTED",
-    title: `Task rescheduled: ${task.title}`,
+    title: `Moved to ${whenPhrase(slot.start, new Date(), (await getSettings()).timezone)}`,
     body: reason,
-    href: `/dashboard?task=${task.id}`,
+    href: taskDeepLink(task.id),
     taskId: task.id,
   });
   void publishTaskChanged(task.id);

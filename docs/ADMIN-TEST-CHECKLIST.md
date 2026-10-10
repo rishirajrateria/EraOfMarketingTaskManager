@@ -97,7 +97,14 @@ Sign in as **Admin** from the demo chooser. Everything below is in the order a r
 ### Task card & Google lifecycle (ADR 0015)
 - [ ] **Card** (compact, ≈120 px): title (2 lines max) + badges and the circle · client + teal **team chip** · date pill
   "08 Oct" (never Today / Tom — also for tasks added with Tom / upnext) + "4hrs" (meetings "🎥 30m", no Meeting chip) ·
-  icons · "11:00am – 3:00pm" · once started "▶ 11:05am – …". No person, no pref chip, no star. Light + dark at 390 px.
+  icons (i · Drive · Meet · Chat · Call · WhatsApp, + mic with voice notes; no Calendar — it's in the (i) sheet) ·
+  "11:00am – 3:00pm" · once started "▶ 11:05am – …". No person, no pref chip, no star. Light + dark at 390 px.
+- [ ] **Call / WhatsApp** (ADR 0017): Call → "Call client · <contact> · +91…" and "Call team leader · <TL> · +91…"
+  (tel: links); WhatsApp → the same rows opening wa.me with "Hi <first name>, about “<task>”: ". As Team Leader the second
+  row is the Admin. A row without a number is greyed "no number saved"; as Admin it has **Add number** → the client form
+  (`/admin/clients?edit=…`) or the person's form. Demo: Pharma Bag Co has no number, Sunrise only WhatsApp.
+- [ ] People form has **Mobile / WhatsApp** ("Used by the Call and WhatsApp buttons on task cards"); fewer than 10 digits
+  is refused; a 10-digit mobile is saved as +91…; the people list shows the number or "no number".
 - [ ] **Top summary**: "OPEN HOURS · all tasks", then one line per group — TEAMS / CLIENTS chips "Graphic 20.5h (6)",
   swipe sideways for more; tap a
   chip → list filtered (tap again clears). Bottom (neutral glass, not green): TEAMS row → tap **Graphic** →
@@ -246,3 +253,27 @@ Sign in as Admin (demo: second button). Check at 390px (and the top bar at 360px
 - [ ] Tabs All · Finance n · Work n · HR n. Finance: approvals (→ approve sheet), client invoices "n days late" (→ invoice), bills overdue (red) or due this week (→ Mark paid); second row All · Approvals · Payments · Expenses filters them.
 - [ ] Work: finish, doubt, review (with the pill: "Review request · Start time"), time change, fix requests with their actions. HR: leave requests and changes to approved leave → Open leave.
 - [ ] "Show handled requests" adds resolved ones. Bottom: Task list · Dashboards (Finance / Tasks / HR view matching the tab).
+
+## Notifications vs Requests (ADR 0017)
+- [ ] Top bar: the inbox (Requests) badge is **red** (open requests), the bell badge is **blue** (unread updates).
+- [ ] `/notifications` caption: "Updates on tasks, people and money. Things that need your decision are in **Requests**." (link).
+  `/admin/requests` caption: "Waiting for your decision — approve, decline or act. Updates that need nothing from you are in
+  **Notifications**." HR's leave inbox shows the same.
+- [ ] Feed grouped Today / Yesterday / date. Each row: 3px left edge + round icon in the card colour (green started / done
+  / payment in · red started late / not started / past end / TDS / work on hold · yellow paused · purple doubt · grey
+  completed · blue assigned / info · amber leave); line 1 the task title (one line), line 2 the short phrase ("Neha started
+  it 25 min late", "Paused by Admin · reason", "Not started · was due at 10:00am"), line 3 "kind · client · team · time";
+  blue dot when unread, › when it opens something; read rows dimmed. Light + dark at 390 px, no sideways scroll.
+- [ ] SHOW All · Unread n · Tasks · People · Money (URL `?show=`); **Mark all read** clears the dots and the bell;
+  **Task list** opens the dashboard.
+- [ ] Tap a task row → marked read, the dashboard scrolls to that card, it flashes blue and its (i) sheet opens; the URL
+  goes back to `/dashboard`. A completed task's row shows completed tasks too. A deleted task's row opens nothing.
+  Leave rows → Requests · HR; payment rows → the invoice / payments.
+- [ ] Events: Start → Admin + the team's TL (not the starter), "on time" or "n min late" (red). A task whose start passes
+  unstarted → one "Not started" (Admin, TL, assignees); past its end and not done → one "Still not finished"; never twice.
+  Circle / Approve → "Completed · n min early/late" to the assignees + TL; done from their side → Admin. Pause all with a
+  reason → "Paused by Admin · reason". Leave approved / declined → the employee ("Your leave on 17–18 Oct was approved") and
+  Admin / HR ("Arush's leave on 17–18 Oct was approved · 2 tasks to move"); after Shift tasks "· 2 tasks moved". A part
+  payment → "₹10,000 received from Repo · ₹13,600 still due".
+- [ ] Bills due / overdue and invoices awaiting approval never appear in the bell — they are in Requests → Finance (push /
+  email reminders still go out).

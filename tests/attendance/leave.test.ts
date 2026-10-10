@@ -63,7 +63,12 @@ describe("leave flow", () => {
     expect(resolved.status).toBe("APPROVED");
     expect(resolved.resolvedById).toBe(seed.hr.id);
     expect(resolved.resolvedAt).not.toBeNull();
-    expect(await testDb.notification.count({ where: { userId: seed.exec.id, kind: "LEAVE_APPROVED" } })).toBe(1);
+    // ADR 0017: the employee and Admin / HR hear it — not HR, who decided
+    const told = await testDb.notification.findMany({ where: { kind: "LEAVE_APPROVED" }, orderBy: { userId: "asc" } });
+    expect(Object.fromEntries(told.map((n) => [n.userId, n.title]))).toEqual({
+      [seed.exec.id]: "Your leave on 21–22 Sep was approved",
+      [seed.admin.id]: "Arush's leave on 21–22 Sep was approved · no tasks affected",
+    });
     expect(await testDb.notification.count({ where: { kind: "GENERIC" } })).toBe(0);
     // cannot approve twice
     const twice = await hrApprove(leave.id);
@@ -80,9 +85,10 @@ describe("leave flow", () => {
     session.set(seed.admin);
     const a = await hrApprove(r.data.leaveId);
     expect(a.ok && a.data).toEqual({ status: "ADMIN_APPROVED", affectedTasks: 1 });
-    const prompt = await testDb.notification.findFirst({ where: { kind: "GENERIC", userId: seed.admin.id } });
-    expect(prompt?.title).toBe("Leave approved — 1 task needs shifting");
-    expect(prompt?.href).toBe(`/requests/leave?leaveId=${r.data.leaveId}`);
+    const prompt = await testDb.notification.findFirstOrThrow({ where: { kind: "LEAVE_APPROVED", userId: seed.hr.id } });
+    expect(prompt.title).toBe("Rishi's leave on 21–22 Sep was approved · 1 task to move");
+    expect(prompt.href).toBe(`/requests/leave?leaveId=${r.data.leaveId}`);
+    expect(await testDb.notification.count({ where: { userId: seed.admin.id, kind: "LEAVE_APPROVED" } })).toBe(0); // Admin decided it
 
     const inbox = await leaveInbox();
     expect(inbox.pending).toHaveLength(0);
@@ -99,6 +105,8 @@ describe("leave flow", () => {
     const after = await testDb.leave.findUniqueOrThrow({ where: { id: r.data.leaveId } });
     expect(after.tasksShiftedAt).not.toBeNull();
     expect((await leaveInbox()).needsShift).toHaveLength(0);
+    const moved = await testDb.notification.findFirstOrThrow({ where: { userId: seed.hr.id, title: { contains: "moved" } } });
+    expect(moved).toMatchObject({ kind: "LEAVE_APPROVED", title: "Rishi's leave on 21–22 Sep · 1 task moved" });
   });
 
   it("HR rejects with a note; user is notified", async () => {
@@ -144,7 +152,8 @@ describe("leave flow", () => {
     if (!c.ok) return;
     const req = await testDb.request.findUniqueOrThrow({ where: { id: c.data.requestId } });
     expect(req).toMatchObject({ type: "APPROVED_CHANGE", targetRole: "ADMIN", status: "OPEN" });
-    expect(await testDb.notification.count({ where: { userId: seed.admin.id, kind: "GENERIC" } })).toBe(1);
+    const asked = await testDb.notification.findFirstOrThrow({ where: { userId: seed.admin.id, kind: "LEAVE_REQUESTED", title: { contains: "change" } } });
+    expect(asked.title).toBe("Arush asked to change their leave on 21–22 Sep");
     // only one pending change at a time
     expect((await requestLeaveChange(r.data.leaveId, { cancel: true })).ok).toBe(false);
 

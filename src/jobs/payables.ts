@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
-import { adminIds, notify } from "@/lib/notify";
+import { adminIds, remind as sendReminder } from "@/lib/notify";
 import { dateKey } from "@/lib/time";
 import { formatCurrency } from "@/server/finance/money";
 import { addDaysKey } from "@/server/finance/repeat";
@@ -67,7 +67,8 @@ async function remind(today: string, tz: string): Promise<number> {
     if (days > o.expense.remindDays) continue;
     const claimed = await prisma.expenseOccurrence.updateMany({ where: { id: o.id, notifiedAt: null, status: "DUE" }, data: { notifiedAt: new Date() } });
     if (claimed.count === 0) continue;
-    await notify({ userIds: admins, kind: "PAYMENT_DUE", title: reminderTitle(days, o.expense.vendor ?? "Payee", o.amount.toNumber(), o.label, o.expense.category), body: "", href: "/admin/expenses" });
+    // A bill to pay is a decision (Requests → Finance): push / email reminder only, no feed row (ADR 0017).
+    await sendReminder({ userIds: admins, kind: "PAYMENT_DUE", title: reminderTitle(days, o.expense.vendor ?? "Payee", o.amount.toNumber(), o.label, o.expense.category), body: "", href: "/admin/expenses" });
     reminded++;
   }
   return reminded;

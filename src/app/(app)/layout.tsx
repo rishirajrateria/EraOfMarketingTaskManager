@@ -3,12 +3,13 @@ import { currentUser } from "@/lib/rbac";
 import { AppFrame } from "@/components/shell/AppFrame";
 import { ToastProvider } from "@/components/ui/Toast";
 import { prisma } from "@/lib/db";
+import { unreadNotificationCount } from "@/server/notification-feed";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await currentUser();
   if (!user) redirect("/login");
   const [unread, openRequests] = await Promise.all([
-    prisma.notification.count({ where: { userId: user.id, readAt: null } }),
+    unreadNotificationCount(user.id),
     user.role === "ADMIN"
       ? prisma.request.count({ where: { status: "OPEN", targetRole: "ADMIN" } })
       : user.role === "HR"

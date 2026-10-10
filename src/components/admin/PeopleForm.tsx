@@ -21,6 +21,7 @@ function initial(user: PersonRow | null, role: Role): PeopleFormValues {
     email: user?.email ?? "",
     name: user?.name ?? "",
     role: user?.role ?? role,
+    phone: user?.phone ?? "",
     teamId: user?.teamId ?? null,
     teamLeaderId: user?.teamLeaderId ?? null,
     dailyCapacityMinutes: user?.dailyCapacityMinutes ?? null,
@@ -85,6 +86,9 @@ export function PeopleForm({
       </Field>
       <Field label="Name">
         <input className={inputCls} required value={v.name} onChange={(e) => patch({ name: e.target.value })} />
+      </Field>
+      <Field label="Mobile / WhatsApp" hint="Used by the Call and WhatsApp buttons on task cards">
+        <input className={inputCls} type="tel" inputMode="tel" autoComplete="off" value={v.phone ?? ""} onChange={(e) => patch({ phone: e.target.value })} placeholder="+91 98300 11122" />
       </Field>
       <Field label="Role" hint={roleHint}>
         <select className={inputCls} value={v.role} onChange={(e) => patch({ role: e.target.value as Role })}>

@@ -61,7 +61,7 @@ describe("Admin add-task: team first, the Team Leader decides (ADR 0008)", () =>
     expect(t.teams.map((x) => x.teamId)).toEqual([s.team.id]);
     expect(t.tags.map((x) => x.workTypeId)).toEqual([s.work.id]);
     const notes = await testDb.notification.findMany({ where: { taskId: t.id } });
-    expect(notes.map((n) => [n.userId, n.title])).toEqual([[s.tl.id, "New task from Admin: Festive reel scripts · prefers Arjun — assign it from the task"]]);
+    expect(notes.map((n) => [n.userId, n.title])).toEqual([[s.tl.id, "New task from Admin · prefers Arjun — assign it from the task"]]);
   });
 
   it("without preferences the TL hears a plain 'New task from …'", async () => {
@@ -71,7 +71,7 @@ describe("Admin add-task: team first, the Team Leader decides (ADR 0008)", () =>
     expect(res.ok).toBe(true);
     if (!res.ok) return;
     const notes = await testDb.notification.findMany({ where: { taskId: res.data.taskId } });
-    expect(notes.map((n) => n.title)).toEqual(["New task from Admin: Festive reel scripts"]);
+    expect(notes.map((n) => n.title)).toEqual(["New task from Admin"]); // the feed shows the task title on its own line (ADR 0017)
   });
 
   it("rejects preferences outside the chosen team and teams without a Team Leader", async () => {
@@ -171,8 +171,8 @@ describe("assignExecutives (long-press → Assign executive)", () => {
     expect(t.preferredAssigneeIds).toEqual([s.exec2.id]);
     expect(t.assignedById).toBe(s.tl.id);
     const notes = await testDb.notification.findMany({ where: { taskId: id, userId: s.exec2.id } });
-    expect(notes.map((n) => n.title)).toEqual(["New task from Rishi: Festive reel scripts"]);
-    expect(await testDb.notification.count({ where: { taskId: id, userId: s.tl.id, title: { startsWith: "New task from Rishi" } } })).toBe(0);
+    expect(notes.map((n) => n.title)).toEqual(["Assigned to you by Rishi"]);
+    expect(await testDb.notification.count({ where: { taskId: id, userId: s.tl.id, title: { startsWith: "Assigned to you" } } })).toBe(0);
     const kinds = (await testDb.integrationJob.findMany({ where: { taskId: id } })).map((j) => j.kind);
     expect(kinds).toEqual(expect.arrayContaining(["CALENDAR_UPDATE", "DRIVE_SHARE", "CHAT_MEMBERS"]));
     expect(await testDb.auditLog.count({ where: { entityId: id, action: "task.assignExecutives" } })).toBe(1);

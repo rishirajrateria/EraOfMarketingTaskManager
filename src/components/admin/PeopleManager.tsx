@@ -30,6 +30,7 @@ export function PeopleManager({
   initialRole,
   workspaceDomain,
   meId,
+  editId = null,
 }: {
   users: PersonRow[];
   teams: TeamOption[];
@@ -38,10 +39,12 @@ export function PeopleManager({
   initialRole: Role;
   workspaceDomain: string;
   meId: string;
+  /** `?edit=<id>` (the card's "Add number", ADR 0017): open that person's form straight away. */
+  editId?: string | null;
 }) {
   const { busy, run } = useAdminAction();
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<PersonRow | null>(null);
+  const [editing, setEditing] = useState<PersonRow | null>(() => users.find((u) => u.id === editId) ?? null);
+  const [open, setOpen] = useState(() => !!editing);
   const [filter, setFilter] = useState<Role | null>(null);
   const close = () => {
     setOpen(false);
@@ -100,7 +103,7 @@ export function PeopleManager({
                 title={u.name}
                 subtitle={
                   <>
-                    {[u.email, u.team?.name, u.role === "EXECUTIVE" && u.teamLeader ? `→ ${u.teamLeader.name}` : null].filter(Boolean).join(" · ")}
+                    {[u.email, u.phone ?? "no number", u.team?.name, u.role === "EXECUTIVE" && u.teamLeader ? `→ ${u.teamLeader.name}` : null].filter(Boolean).join(" · ")}
                     {u.role === "EXECUTIVE" || u.role === "TEAM_LEADER" ? <SpecialityChips names={u.specialities.map((w) => w.name)} /> : null}
                   </>
                 }

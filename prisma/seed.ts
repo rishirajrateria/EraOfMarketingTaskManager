@@ -6,6 +6,7 @@ import { PrismaClient } from "@prisma/client";
 import { addDays, addHours, addMinutes, subDays, subHours } from "date-fns";
 import { readFileSync } from "fs";
 import path from "path";
+import { clearDemoNotifications, seedDemoContacts, seedDemoNotifications } from "./seed-notifications";
 
 const prisma = new PrismaClient();
 const DOMAIN = process.env.GOOGLE_WORKSPACE_DOMAIN || "eraofmarketing.com";
@@ -156,7 +157,10 @@ async function main() {
     await prisma.user.update({ where: { id: u.id }, data: { specialities: { set: names.map((n) => ({ id: workTypes[wt(n)]!.id })) } } });
   }
 
-  // Reset demo tasks
+  // Reset demo tasks (and their notifications, ADR 0017)
+  const demoUsers = { admin, rishi, neha, arush, dev, isha, arjun };
+  await seedDemoContacts(prisma, demoUsers, clients);
+  await clearDemoNotifications(prisma);
   await prisma.task.deleteMany({ where: { title: { startsWith: "[demo]" } } });
 
   const now = new Date();
@@ -251,6 +255,8 @@ async function main() {
       });
     }
   }
+
+  await seedDemoNotifications(prisma, demoUsers);
 
   // Attendance for the last 5 days + a pending leave
   for (const u of [rishi, arush, dev, neha, isha, arjun]) {

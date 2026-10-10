@@ -26,18 +26,27 @@ function DriveIcon() {
   );
 }
 
-function WhatsAppIcon() {
+/** WhatsApp-like speech bubble with a handset (outline, follows `currentColor`); also on the task card (ADR 0017). */
+export function WhatsAppIcon({ size = 18, strokeWidth = 2.1 }: { size?: number; strokeWidth?: number }) {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M3 21l1.6-4.6A8.5 8.5 0 1 1 7.7 19.5z" />
       <path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1-1.5-2-1-1 .8a3.5 3.5 0 0 1-2-2l.8-1-1-2z" />
     </svg>
   );
 }
 
-function Count({ n }: { n: number }) {
+/** Badge: red = requests waiting for a decision, blue = unread updates (ADR 0017). */
+function Count({ n, tone }: { n: number; tone: "red" | "blue" }) {
   if (n <= 0) return null;
-  return <span className="absolute right-0.5 top-0.5 min-w-[15px] rounded-full bg-red-500 px-1 text-center text-[9px] font-bold leading-[15px] text-white">{n > 99 ? "99+" : n}</span>;
+  return (
+    <span
+      data-badge={tone}
+      className={clsx("absolute right-0.5 top-0.5 min-w-[15px] rounded-full px-1 text-center text-[9px] font-bold leading-[15px] text-white", tone === "red" ? "bg-red-500" : "bg-[var(--n-blue)]")}
+    >
+      {n > 99 ? "99+" : n}
+    </span>
+  );
 }
 
 export function TopIcons({
@@ -74,12 +83,12 @@ export function TopIcons({
       {requestsHref ? (
         <Link href={requestsHref} aria-label={requests ? `Requests, ${requests} open` : "Requests"} title="Requests" className={cls}>
           <Inbox size={18} strokeWidth={2.1} />
-          <Count n={requests} />
+          <Count n={requests} tone="red" />
         </Link>
       ) : null}
       <Link href="/notifications" aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"} title="Notifications" className={cls}>
         <Bell size={18} strokeWidth={2.1} />
-        <Count n={unread} />
+        <Count n={unread} tone="blue" />
       </Link>
       <Link href="/me" aria-label="Profile" title="Profile" className={clsx(ico, "rounded-full")}>
         <span className="flex rounded-full shadow-[0_0_0_2px_rgba(255,255,255,.35)]">

@@ -4,6 +4,7 @@ import { addMonths, lastDayOfMonth } from "date-fns";
 import { resetDb, seedBasics, testDb } from "../helpers/db";
 import { mockSession } from "../helpers/mock-session";
 import { financialYearKey } from "@/server/finance/numbering";
+import { reminderLog } from "@/lib/notify";
 
 const session = mockSession();
 type Seed = Awaited<ReturnType<typeof seedBasics>>;
@@ -189,9 +190,11 @@ describe("invoicing v2", () => {
     expect((await testDb.invoice.findUniqueOrThrow({ where: { id: created.data.id } })).remindAt).toEqual(remindAt);
     const r = await run(new Date(remindAt.getTime() + 1000));
     expect(r.reminded).toBe(1);
-    const notes = await testDb.notification.findMany({ where: { kind: "INVOICE_APPROVAL_DUE" } });
+    // ADR 0017: an invoice to approve is a decision → push / email reminder, never a feed row
+    const notes = reminderLog.filter((n) => n.kind === "INVOICE_APPROVAL_DUE");
     expect(notes).toHaveLength(1);
-    expect(notes[0]).toMatchObject({ userId: seed.admin.id, href: `/admin/invoices/${created.data.id}` });
+    expect(notes[0]).toMatchObject({ userIds: [seed.admin.id], href: `/admin/invoices/${created.data.id}` });
+    expect(await testDb.notification.count({ where: { kind: "INVOICE_APPROVAL_DUE" } })).toBe(0);
     expect((await testDb.invoice.findUniqueOrThrow({ where: { id: created.data.id } })).remindAt).toBeNull();
     expect((await run(new Date(remindAt.getTime() + 2000))).reminded).toBe(0);
   });
@@ -220,8 +223,9 @@ describe("invoicing v2", () => {
     expect(sentMailLog).toHaveLength(1); // the job never sends
     expect(all[1].emailSentAt).toBeNull();
     expect(all[1].whatsappSentAt).toBeNull();
-    const notes = await testDb.notification.findMany({ where: { kind: "INVOICE_APPROVAL_DUE" } });
+    const notes = reminderLog.filter((n) => n.kind === "INVOICE_APPROVAL_DUE");
     expect(notes.map((n) => n.href)).toEqual([`/admin/invoices/${all[1].id}`]);
+    expect(await testDb.notification.count({ where: { kind: "INVOICE_APPROVAL_DUE" } })).toBe(0);
     expect(notes[0].title).toBe("Invoice for Repo is ready — approve to send");
     const after = await testDb.recurrenceRule.findUniqueOrThrow({ where: { id: rule.id } });
     expect(after.nextRunAt!.getTime()).toBeGreaterThan(runAt.getTime());
@@ -281,7 +285,8 @@ describe("invoicing v2", () => {
     expect((await run()).reminded).toBe(0);
     const r = await run(new Date(remindAt.getTime() + 1000));
     expect(r.reminded).toBe(2);
-    const notes = await testDb.notification.findMany({ where: { kind: "INVOICE_APPROVAL_DUE" }, orderBy: { createdAt: "asc" } });
+    const notes = reminderLog.filter((n) => n.kind === "INVOICE_APPROVAL_DUE");
+    expect(await testDb.notification.count({ where: { kind: "INVOICE_APPROVAL_DUE" } })).toBe(0);
     expect(notes.map((n) => n.title)).toEqual(["Reminder: approve and send invoice for Repo", "Reminder: approve and send invoice for Repo"]);
     expect(notes[0].body).toMatch(/^Draft · INR/);
     const after = await testDb.invoice.findUniqueOrThrow({ where: { id: created.data.id } });

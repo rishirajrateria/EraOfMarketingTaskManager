@@ -71,9 +71,10 @@ export type DashboardData = {
   /** `teamIds` empty = legacy work type available to every team (ADR 0008). */
   workTypes: { id: string; name: string; colour: string; teamIds: string[] }[];
   /** `emails`: the client's addresses a meeting invites automatically (email + contact when it is one, ADR 0012). */
-  clients: { id: string; name: string; emails?: string[] }[];
-  teams: { id: string; name: string; colour: string }[];
-  people: { id: string; name: string; role: string; teamId: string | null; teamLeaderId: string | null; specialityIds: string[] }[];
+  clients: { id: string; name: string; emails?: string[]; contact?: string | null; phone?: string | null; whatsapp?: string | null }[];
+  teams: { id: string; name: string; colour: string; leaderId?: string | null }[];
+  /** `phone` feeds the card's Call / WhatsApp sheet (ADR 0017). */
+  people: { id: string; name: string; role: string; teamId: string | null; teamLeaderId: string | null; specialityIds: string[]; phone?: string | null }[];
   me: { id: string; role: string; teamId: string | null };
   tz: string;
   /** yyyy-MM-dd of the user's next approved leave (drives the B4Leave pill filter). */

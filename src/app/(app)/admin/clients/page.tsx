@@ -5,8 +5,8 @@ import { companyStateCode } from "@/server/finance/tax";
 import { ClientsManager } from "@/components/admin/ClientsManager";
 
 /** Add Client (SPEC §11.1). */
-export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ add?: string }> }) {
+export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ add?: string; edit?: string }> }) {
   await requireAdminPage();
   const [clients, sp, settings] = await Promise.all([listClients(), searchParams, getSettings()]);
-  return <ClientsManager clients={clients} openAdd={sp.add === "1"} companyStateCode={companyStateCode(settings)} />;
+  return <ClientsManager clients={clients} openAdd={sp.add === "1"} editId={sp.edit ?? null} companyStateCode={companyStateCode(settings)} />;
 }

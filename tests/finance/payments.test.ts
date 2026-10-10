@@ -55,7 +55,10 @@ describe("payments, receipts, hold work and the dashboard", () => {
       ["CASH", 11600, 2000, 10],
     ]);
     expect(inv.payments.every((p) => p.receiptPdfData && p.receiptPdfId && !p.receiptSentAt)).toBe(true);
-    expect(await testDb.notification.count({ where: { kind: "INVOICE_PAID" } })).toBe(1);
+    expect(await testDb.notification.count({ where: { kind: "INVOICE_PAID", invoiceId: id } })).toBe(1);
+    // ADR 0017: the part payment before it was an update too — "₹10,000 received from Repo · ₹13,600 still due"
+    const part = await testDb.notification.findFirstOrThrow({ where: { kind: "PAYMENT_RECEIVED" } });
+    expect(part).toMatchObject({ invoiceId: id, title: "₹10,000 received from Repo · ₹13,600 still due" });
     expect((await recordPayment({ invoiceId: id, amount: 5 })).ok).toBe(false); // already paid
 
     const sent = await sendReceipt(inv.payments[1].id, { email: true, whatsapp: true });

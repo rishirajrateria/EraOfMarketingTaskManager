@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { dateKey, parseDateKey } from "@/lib/time";
 import { hrIds, notify } from "@/lib/notify";
+import { first, leaveDays } from "@/lib/notification-text";
 import { audit } from "@/lib/audit";
 import { bus } from "@/lib/events";
 import { listLeaveEvents, type OutOfOfficeEvent } from "@/google/calendar";
@@ -45,8 +46,8 @@ export async function importLeaveEvents(userId: string, events: OutOfOfficeEvent
     await notify({
       userIds: await hrIds(),
       kind: "LEAVE_REQUESTED",
-      title: `Leave requested (calendar) — ${user?.name ?? ""}`,
-      body: `${from} → ${to}: ${e.summary}`,
+      title: `${first(user?.name)} blocked leave on ${leaveDays(from, to)} in Google Calendar`,
+      body: e.summary,
       href: `/requests/leave?leaveId=${leave.id}`,
     });
     bus.publish({ type: "requests.changed" });

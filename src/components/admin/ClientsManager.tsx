@@ -13,10 +13,11 @@ import type { ClientInput } from "@/server/admin/schemas";
 type Filter = "ALL" | "ACTIVE" | "HOLD" | "INACTIVE";
 
 /** /admin/clients — "Add Client" (SPEC §11.1). Each row links to the client kit (ADR 0014) and the vault (/admin/vault). */
-export function ClientsManager({ clients, openAdd = false, companyStateCode }: { clients: ClientRow[]; openAdd?: boolean; companyStateCode: string | null }) {
+export function ClientsManager({ clients, openAdd = false, editId = null, companyStateCode }: { clients: ClientRow[]; openAdd?: boolean; editId?: string | null; companyStateCode: string | null }) {
   const { busy, run } = useAdminAction();
-  const [editing, setEditing] = useState<ClientRow | null>(null);
-  const [open, setOpen] = useState(openAdd);
+  // `?edit=<id>` (the card's "Add number", ADR 0017) opens that client's form straight away.
+  const [editing, setEditing] = useState<ClientRow | null>(() => clients.find((c) => c.id === editId) ?? null);
+  const [open, setOpen] = useState(() => openAdd || !!editing);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("ALL");
   const close = () => {

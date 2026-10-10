@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { strFromU8, unzipSync } from "fflate";
 import { resetDb, seedBasics, testDb } from "../helpers/db";
 import { mockSession } from "../helpers/mock-session";
+import { reminderLog } from "@/lib/notify";
 
 /** ADR 0009: vendor bills + GST, the monthly GST pack, Finance/YYYY-MM Drive folders and the payables job. Asia/Kolkata. */
 const session = mockSession();
@@ -150,7 +151,8 @@ describe("GST, bills and monthly Drive folders", () => {
     expect(parts.id).toBeTruthy();
     const r1 = await run(now);
     expect(r1).toEqual({ created: 0, reminded: 3 });
-    const titles = (await testDb.notification.findMany({ where: { kind: "PAYMENT_DUE" }, orderBy: { title: "asc" } })).map((n) => n.title);
+    const titles = reminderLog.filter((n) => n.kind === "PAYMENT_DUE").map((n) => n.title).sort();
+    expect(await testDb.notification.count({ where: { kind: "PAYMENT_DUE" } })).toBe(0); // bills are decisions (ADR 0017)
     expect(titles).toEqual(["Overdue: Late Co ₹500 · Office", "Payment due in 3 days: Skyline Spaces ₹25,000 · Rent", "Payment due tomorrow: Studio ₹1,000 (Part 1 of 2) · Rent"]);
     expect(await run(now)).toEqual({ created: 0, reminded: 0 }); // idempotent
 

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { audit } from "@/lib/audit";
 import { notify, publishTaskChanged } from "@/lib/notify";
+import { taskDeepLink } from "@/lib/notification-kinds";
 import { queueTaskCreation } from "@/google/task-integrations";
 import { nextRunAt } from "@/server/tasks/recurrence";
 import { findSlot } from "@/lib/working-time";
@@ -68,7 +69,7 @@ export async function spawnNextOccurrence(taskId: string, actorId: string | null
   await prisma.recurrenceRule.update({ where: { id: rule.id }, data: { nextRunAt: nextRunAt(rule, next, settings.timezone, done + 1) } });
   await audit(actorId, "task.recur", "Task", occurrence.id, { from: t.id }, occurrence);
   await queueTaskCreation(occurrence.id, t.type);
-  await notify({ userIds: t.assignees.map((a) => a.userId), kind: "TASK_ASSIGNED", title: `Recurring task: ${t.title}`, href: `/dashboard?task=${occurrence.id}`, taskId: occurrence.id, chat: false });
+  await notify({ userIds: t.assignees.map((a) => a.userId), kind: "TASK_ASSIGNED", title: "The next repeat is ready", href: taskDeepLink(occurrence.id), taskId: occurrence.id, chat: false });
   void publishTaskChanged(occurrence.id);
   return occurrence.id;
 }

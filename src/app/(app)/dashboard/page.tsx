@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { unreadNotificationCount } from "@/server/notification-feed";
 import { requireUser } from "@/lib/rbac";
 import { dashboardData } from "@/server/tasks/queries";
 import { Dashboard } from "@/components/dashboard/Dashboard";
@@ -15,7 +16,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const [data, prefs, unread, openRequests] = await Promise.all([
     dashboardData(user),
     prisma.user.findUnique({ where: { id: user.id }, select: { filterPrefs: true } }),
-    prisma.notification.count({ where: { userId: user.id, readAt: null } }),
+    unreadNotificationCount(user.id),
     user.role === "ADMIN" ? prisma.request.count({ where: { status: "OPEN", targetRole: "ADMIN" } }) : Promise.resolve(0),
   ]);
   return (

@@ -23,6 +23,9 @@ import { AssignExecutiveSheet } from "@/components/dashboard/AssignExecutiveShee
 import { PillReviewSheet, type PillReviewChoice } from "@/components/dashboard/PillReviewSheet";
 import { PauseAllSheet } from "@/components/dashboard/PauseAllSheet";
 import { summaryCaption } from "@/components/dashboard/summary";
+import { ContactSheet } from "@/components/dashboard/ContactSheet";
+import type { ContactMode } from "@/components/dashboard/contacts";
+import { FLASH_MS, OPEN_AFTER_MS, planDeepLink, strippedDashboardUrl } from "@/components/dashboard/deep-link";
 import { pauseResumeMany } from "@/server/tasks/bulk";
 import { requestPillReview, resolvePillReview, withdrawPillReview } from "@/server/tasks/review";
 import { REVIEW_FIELD_NAME, type ReviewField } from "@/server/tasks/review-fields";
@@ -52,7 +55,7 @@ export function Dashboard({
   const router = useRouter();
   const { run, busy, refresh, toast } = useTaskAction();
   const [filters, setFilters] = useState<DashboardFilters>(() => (showCompleted ? { ...initialFilters, completed: true } : initialFilters));
-  const [detailId, setDetailId] = useState<string | null>(initialTaskId);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [scrollToAttachments, setScrollToAttachments] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
@@ -64,6 +67,7 @@ export function Dashboard({
   const [pill, setPill] = useState<{ taskId: string; field: ReviewField } | null>(null);
   const [pillNote, setPillNote] = useState<{ taskId: string; field: ReviewField } | null>(null);
   const [pauseAllOpen, setPauseAllOpen] = useState(false);
+  const [contact, setContact] = useState<{ taskId: string; mode: ContactMode } | null>(null);
 
   const byId = useMemo(() => new Map(data.tasks.map((t) => [t.id, t])), [data.tasks]);
   const tasks = useMemo(() => applyFilters(data.tasks, filters, { role: data.role, meId: data.me.id, tz: data.tz, nextLeaveKey: data.nextLeaveKey }), [data, filters]);
@@ -92,12 +96,28 @@ export function Dashboard({
     return () => cancelAnimationFrame(h);
   }, [scrollToAttachments, detailId]);
 
-  // Deep link `?task=<id>`: strip the param once consumed so a refresh does not re-open it.
+  // Deep link `?task=<id>` (ADR 0017): scroll to the card, flash it, open its (i) sheet; strip the param once consumed.
+  const listRef = useRef({ byId, tasks });
+  listRef.current = { byId, tasks };
   useEffect(() => {
-    if (initialTaskId && typeof window !== "undefined" && window.location.search) {
-      window.history.replaceState(null, "", window.location.pathname);
-    }
-  }, [initialTaskId]);
+    if (!initialTaskId) return;
+    window.history.replaceState(window.history.state, "", strippedDashboardUrl(window.location.pathname, window.location.search));
+    const { byId: known, tasks: shown } = listRef.current;
+    const plan = planDeepLink(initialTaskId, new Set(known.keys()), new Set(shown.map((t) => t.id)));
+    if (!plan) return;
+    if (plan.kind === "missing") return void toast("That task is no longer on your list", "err");
+    if (!plan.flash) return void setDetailId(initialTaskId);
+    const card = document.querySelector<HTMLElement>(`[data-task-id="${CSS.escape(initialTaskId)}"]`);
+    card?.scrollIntoView({ block: "center" });
+    card?.classList.add("task-flash");
+    const open = setTimeout(() => setDetailId(initialTaskId), OPEN_AFTER_MS);
+    const unflash = setTimeout(() => card?.classList.remove("task-flash"), FLASH_MS);
+    return () => {
+      clearTimeout(open);
+      clearTimeout(unflash);
+      card?.classList.remove("task-flash");
+    };
+  }, [initialTaskId, toast]);
 
   // Completion circle (ADR 0015): a tap is committed after the Undo window; Undo cancels it. Pending taps show ticked.
   const commits = useMemo(() => new PendingCommits(), []);
@@ -275,6 +295,7 @@ export function Dashboard({
           onRestart,
           onRetry,
           onPillMenu: (t, field) => setPill({ taskId: t.id, field }),
+          onContact: (t, mode) => setContact({ taskId: t.id, mode }),
         }}
       />
       <BottomBar data={data} filters={filters} onChange={setFilters} onAdd={setAddMode} onPauseAll={() => setPauseAllOpen(true)} />
@@ -315,6 +336,7 @@ export function Dashboard({
           }}
         />
       ) : null}
+      <ContactSheet task={contact ? byId.get(contact.taskId) ?? null : null} mode={contact?.mode ?? null} data={data} onClose={() => setContact(null)} />
       <PillReviewSheet task={pill ? byId.get(pill.taskId) ?? null : null} field={pill?.field ?? null} data={data} onPick={onPillPick} onClose={() => setPill(null)} />
       <NoteSheet
         open={!!pillNote && byId.has(pillNote.taskId)}

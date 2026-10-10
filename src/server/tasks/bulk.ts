@@ -9,6 +9,8 @@ import { prisma } from "@/lib/db";
 import { requireUser, can, ForbiddenError } from "@/lib/rbac";
 import { wrap, type ActionResult } from "@/lib/action-result";
 import { audit } from "@/lib/audit";
+import { first } from "@/lib/notification-text";
+import { taskDeepLink } from "@/lib/notification-kinds";
 import { notify, taskStakeholderIds, publishTaskChanged } from "@/lib/notify";
 import { safeRevalidate } from "@/lib/revalidate";
 import { scopeWhere } from "@/server/tasks/queries";
@@ -47,9 +49,9 @@ export async function pauseResumeMany(raw: { taskIds: string[]; action: "PAUSE" 
       await notify({
         userIds: await taskStakeholderIds(t.id, { includeAdmins: false }),
         kind: action === "PAUSE" ? "TASK_PAUSED" : "TASK_RESUMED",
-        title: `${action === "PAUSE" ? "Paused" : "Resumed"}: ${t.title}`,
-        body: reason || undefined,
-        href: `/dashboard?task=${t.id}`,
+        // ADR 0017: "Paused by Admin · client call" — the reason is part of the phrase.
+        title: `${action === "PAUSE" ? "Paused" : "Resumed"} by ${first(user.name)}${reason ? ` · ${reason}` : ""}`,
+        href: taskDeepLink(t.id),
         taskId: t.id,
       });
       void publishTaskChanged(t.id);

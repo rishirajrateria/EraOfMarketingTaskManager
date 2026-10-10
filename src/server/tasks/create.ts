@@ -62,15 +62,14 @@ async function notifyNewTask(
     const names = plan.preferredAssigneeIds.map((id) => firstName(prefs.find((p) => p.id === id)?.name)).join(", ");
     const kind = type === "MEETING" ? "meeting" : "task";
     const suffix = names ? ` · prefers ${names} — assign it from the task` : "";
-    await notify({ userIds: others, kind: "TASK_ASSIGNED", title: `New ${kind} from ${firstName(user.name)}: ${title}${suffix}`, href, taskId, chat: false });
+    await notify({ userIds: others, kind: "TASK_ASSIGNED", title: `New ${kind} from ${firstName(user.name)}${suffix}`, href, taskId, chat: false });
     return;
   }
   const leaders = assignees.map((a) => a.teamLeaderId).filter((x): x is string => !!x && x !== user.id);
   await notify({
     userIds: [...others, ...leaders],
     kind: "TASK_ASSIGNED",
-    title: `${type === "MEETING" ? "Meeting" : "Task"} assigned: ${title}`,
-    body: `by ${user.name ?? "someone"}`,
+    title: `New ${type === "MEETING" ? "meeting" : "task"} from ${firstName(user.name)}`,
     href,
     taskId,
     chat: false,

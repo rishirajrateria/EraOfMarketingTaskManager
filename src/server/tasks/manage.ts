@@ -9,6 +9,7 @@ import { safeRevalidate } from "@/lib/revalidate";
 import { canView } from "@/server/tasks/queries";
 import { assignExecutivesSchema, taskUpdateSchema } from "@/server/tasks/schema";
 import { assignableMembers, firstName } from "@/server/tasks/assignment";
+import { taskDeepLink } from "@/lib/notification-kinds";
 import { validateAssignees } from "@/server/tasks/create";
 import { queueTaskPropagation, teardownTask } from "@/google/task-integrations";
 import { retryFailedForTask } from "@/google/queue";
@@ -98,7 +99,7 @@ export async function updateTask(raw: unknown): Promise<ActionResult<undefined>>
     await audit(user.id, "task.update", "Task", t.id, t, input);
     await queueTaskPropagation(t.id);
     const added = (input.assigneeIds ?? []).filter((id) => !t.assignees.some((a) => a.userId === id));
-    if (added.length) await notify({ userIds: added, kind: "TASK_ASSIGNED", title: `Task assigned: ${input.title ?? t.title}`, href: `/dashboard?task=${t.id}`, taskId: t.id, chat: false });
+    if (added.length) await notify({ userIds: added, kind: "TASK_ASSIGNED", title: `Assigned to you by ${firstName(user.name)}`, href: taskDeepLink(t.id), taskId: t.id, chat: false });
     void import("@/google/queue").then((q) => q.processPending()).catch(() => undefined);
     void publishTaskChanged(t.id);
     bus.publish({ type: "requests.changed" });
@@ -139,7 +140,7 @@ export async function assignExecutives(taskId: string, userIds: string[]): Promi
     await queueTaskPropagation(t.id); // Calendar attendees, Drive sharing, Chat members
     const added = ids.filter((id) => id !== user.id && !before.includes(id));
     if (added.length) {
-      await notify({ userIds: added, kind: "TASK_ASSIGNED", title: `New task from ${firstName(user.name)}: ${t.title}`, href: `/dashboard?task=${t.id}`, taskId: t.id, chat: false });
+      await notify({ userIds: added, kind: "TASK_ASSIGNED", title: `Assigned to you by ${firstName(user.name)}`, href: taskDeepLink(t.id), taskId: t.id, chat: false });
     }
     void import("@/google/queue").then((q) => q.processPending()).catch(() => undefined);
     void publishTaskChanged(t.id);
@@ -331,7 +332,7 @@ export async function notifyTaskStakeholders(taskId: string, message: string): P
     const user = await requireUser();
     if (!can.editTask(user)) throw new ForbiddenError();
     const text = noteSchema.min(1).parse(message);
-    await notify({ userIds: await taskStakeholderIds(taskId, { includeAdmins: false }), kind: "GENERIC", title: text, taskId, href: `/dashboard?task=${taskId}` });
+    await notify({ userIds: await taskStakeholderIds(taskId, { includeAdmins: false }), kind: "GENERIC", title: `${firstName(user.name)}: ${text}`, taskId, href: taskDeepLink(taskId) });
     return undefined;
   });
 }

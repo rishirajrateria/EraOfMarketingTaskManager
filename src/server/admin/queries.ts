@@ -16,6 +16,7 @@ export async function listPeople() {
       name: true,
       avatar: true,
       role: true,
+      phone: true,
       teamId: true,
       teamLeaderId: true,
       dailyCapacityMinutes: true,

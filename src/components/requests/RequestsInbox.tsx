@@ -161,6 +161,7 @@ export function RequestsInbox({ inbox, tab, fin, showAll, tz }: { inbox: Request
   return (
     <Screen zone={zone}>
       <div aria-busy={navPending} className={clsx("pb-4 transition-opacity", navPending && "opacity-55")}>
+        <RequestsCaption />
         {showFin && finItems.length ? (
           <>
             <h2 className={sectionHead}>
@@ -218,5 +219,18 @@ export function RequestsInbox({ inbox, tab, fin, showAll, tz }: { inbox: Request
         </div>
       </Sheet>
     </Screen>
+  );
+}
+
+/** Mirror of the feed's caption (ADR 0017): Requests = decisions, Notifications = updates. */
+export function RequestsCaption() {
+  return (
+    <p className="px-4 pb-1 pt-3 text-[12.5px] leading-[1.45] text-muted">
+      Waiting for your decision — approve, decline or act. Updates that need nothing from you are in{" "}
+      <Link href="/notifications" className="font-bold text-ink underline underline-offset-2">
+        Notifications
+      </Link>
+      .
+    </p>
   );
 }

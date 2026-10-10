@@ -19,6 +19,7 @@ export function publicUser(u: User) {
     email: u.email,
     name: u.name,
     role: u.role,
+    phone: u.phone,
     teamId: u.teamId,
     teamLeaderId: u.teamLeaderId,
     dailyCapacityMinutes: u.dailyCapacityMinutes,

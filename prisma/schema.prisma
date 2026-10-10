@@ -191,21 +191,34 @@ enum LeaveStatus {
 enum NotificationKind {
   TASK_ASSIGNED
   TASK_STARTED
+  /// Started after the scheduled start ("Arjun started it 5 min late", ADR 0017)
+  TASK_STARTED_LATE
   TASK_PAUSED
   TASK_RESUMED
   FINISH_REQUESTED
+  /// Legacy (before ADR 0017): completion is TASK_COMPLETED
   FINISH_APPROVED
   FINISH_REJECTED
   DOUBT_RAISED
   DOUBT_RESOLVED
   REVIEW_REQUESTED
+  /// Legacy (before ADR 0017): split into TASK_NOT_STARTED / TASK_PAST_END
   TASK_OVERDUE
+  /// The scheduled start passed without a start (once per task, ADR 0017)
+  TASK_NOT_STARTED
+  /// The scheduled end passed and it isn't finished (once per task, ADR 0017)
+  TASK_PAST_END
+  /// Completed — Admin's approval or direct complete (ADR 0017)
+  TASK_COMPLETED
   TASK_SHIFTED
   LEAVE_REQUESTED
   LEAVE_APPROVED
   LEAVE_REJECTED
   INVOICE_SENT
   INVOICE_PAID
+  /// A part payment on an invoice (INVOICE_PAID = paid in full)
+  PAYMENT_RECEIVED
+  /// A decision, not an update: push / email reminder only, never a feed row (ADR 0017)
   INVOICE_APPROVAL_DUE
   WORK_ON_HOLD
   WORK_RESUMED
@@ -213,6 +226,7 @@ enum NotificationKind {
   VAULT_ACCESS_EXPIRING
   INTEGRATION_FAILED
   TDS_THRESHOLD
+  /// A decision, not an update: push / email reminder only, never a feed row (ADR 0017)
   PAYMENT_DUE
   GENERIC
 }
@@ -268,6 +282,8 @@ model User {
   email                String    @unique
   name                 String
   avatar               String?
+  /// E.164 mobile (+91…) for the card's Call / WhatsApp sheet (ADR 0017)
+  phone                String?
   role                 Role      @default(EXECUTIVE)
   teamId               String?
   team                 Team?     @relation("TeamMembers", fields: [teamId], references: [id])
@@ -441,7 +457,10 @@ model Task {
   statusBeforePause    TaskStatus?
   overdue              Boolean           @default(false) // red overlay, set by scheduler
   overdueNotifiedAt    DateTime?
-  important            Boolean           @default(false)
+  /// ADR 0017: the one-time "Not started" / "Still not finished" notifications went out
+  notStartedNotifiedAt DateTime?
+  pastEndNotifiedAt    DateTime?
+  important           Boolean           @default(false)
   tags                 TaskTag[]
   priority             Priority          @default(NORMAL)
   selfAssigned         Boolean           @default(false)
@@ -1034,11 +1053,14 @@ model Notification {
   body      String           @default("")
   href      String?
   taskId    String?
+  /// Invoice the update is about (payment in, sent …): tapping opens it (ADR 0017)
+  invoiceId String?
   readAt    DateTime?
   pushedAt  DateTime?
   createdAt DateTime         @default(now())
 
   @@index([userId, readAt])
+  @@index([userId, createdAt])
 }
 
 model PushSubscription {

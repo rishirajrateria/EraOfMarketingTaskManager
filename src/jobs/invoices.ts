@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { adminIds, notify } from "@/lib/notify";
+import { adminIds, remind } from "@/lib/notify";
 import { getSettings } from "@/lib/settings";
 import { formatINRPlain } from "@/server/finance/money";
 import { cloneRecurringOccurrence } from "@/server/finance/invoice-core";
@@ -17,8 +17,9 @@ export type InvoiceJobResult = { issued: number; cloned: number; reminded: numbe
  *  (c) `remindAt` reminders ("push forward") notify admins and are cleared;
  *  (d) SENT / PARTIALLY_PAID invoices past their due date become OVERDUE.
  */
+/** An invoice waiting for approval is a decision (Requests → Finance), so admins get a push / email reminder, no feed row (ADR 0017). */
 async function tellAdmins(title: string, body: string, invoiceId: string) {
-  await notify({ userIds: await adminIds(), kind: "INVOICE_APPROVAL_DUE", title, body, href: `/admin/invoices/${invoiceId}` });
+  await remind({ userIds: await adminIds(), kind: "INVOICE_APPROVAL_DUE", title, body, href: `/admin/invoices/${invoiceId}`, invoiceId });
 }
 
 async function issueDueParts(now: Date): Promise<number> {

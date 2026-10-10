@@ -3,7 +3,9 @@ import { prisma } from "@/lib/db";
 import { requireUser, can, ForbiddenError, type SessionUser } from "@/lib/rbac";
 import { wrap, type ActionResult } from "@/lib/action-result";
 import { audit } from "@/lib/audit";
-import { notify, taskStakeholderIds, adminIds, publishTaskChanged } from "@/lib/notify";
+import { notify, taskStakeholderIds, taskOverseerIds, adminIds, publishTaskChanged } from "@/lib/notify";
+import { completedPhrase, first, startPhrase } from "@/lib/notification-text";
+import { taskDeepLink } from "@/lib/notification-kinds";
 import { bus } from "@/lib/events";
 import { safeRevalidate } from "@/lib/revalidate";
 import { canView } from "@/server/tasks/queries";
@@ -44,7 +46,9 @@ export async function startTask(taskId: string): Promise<ActionResult<undefined>
       prisma.taskSession.create({ data: { taskId: t.id, startedAt: now } }),
     ]);
     await audit(user.id, "task.start", "Task", t.id, { status: t.status }, { status });
-    await notify({ userIds: (await taskStakeholderIds(t.id)).filter((id) => id !== user.id), kind: "TASK_STARTED", title: `Started: ${t.title}`, href: `/dashboard?task=${t.id}`, taskId: t.id });
+    // ADR 0017: Admin + the team's Team Leader hear about it (not whoever pressed Start); late = after the scheduled start.
+    const started = startPhrase(user.name, t.scheduledStart, t.actualStart ?? now);
+    await notify({ userIds: (await taskOverseerIds(t.id)).filter((id) => id !== user.id), kind: started.late ? "TASK_STARTED_LATE" : "TASK_STARTED", title: started.text, href: taskDeepLink(t.id), taskId: t.id });
     done(t.id);
     return undefined;
   });
@@ -59,7 +63,7 @@ export async function pauseTask(taskId: string): Promise<ActionResult<undefined>
     const { status, ops } = pauseOps(t, new Date());
     await prisma.$transaction(ops);
     await audit(user.id, "task.pause", "Task", t.id, { status: t.status }, { status });
-    await notify({ userIds: (await taskStakeholderIds(t.id, { includeAdmins: false })), kind: "TASK_PAUSED", title: `Paused: ${t.title}`, href: `/dashboard?task=${t.id}`, taskId: t.id });
+    await notify({ userIds: (await taskStakeholderIds(t.id, { includeAdmins: false })), kind: "TASK_PAUSED", title: `Paused by ${first(user.name)}`, href: taskDeepLink(t.id), taskId: t.id });
     done(t.id);
     return undefined;
   });
@@ -74,7 +78,7 @@ export async function resumeTask(taskId: string): Promise<ActionResult<undefined
     await prisma.$transaction(ops);
     await audit(user.id, "task.resume", "Task", t.id, { status: t.status }, { status, pausedMin });
     await queueTaskPropagation(t.id);
-    await notify({ userIds: (await taskStakeholderIds(t.id, { includeAdmins: false })), kind: "TASK_RESUMED", title: `Resumed: ${t.title}`, href: `/dashboard?task=${t.id}`, taskId: t.id });
+    await notify({ userIds: (await taskStakeholderIds(t.id, { includeAdmins: false })), kind: "TASK_RESUMED", title: `Resumed by ${first(user.name)}`, href: taskDeepLink(t.id), taskId: t.id });
     done(t.id);
     return undefined;
   });
@@ -92,7 +96,7 @@ async function doRequestFinish(user: SessionUser, taskId: string) {
     prisma.request.create({ data: { type: "FINISH", taskId: t.id, raisedById: user.id, targetRole: "ADMIN", note: "" } }),
   ]);
   await audit(user.id, "task.request_finish", "Task", t.id, { status: t.status }, { status });
-  await notify({ userIds: await adminIds(), kind: "FINISH_REQUESTED", title: `Finish requested: ${t.title}`, body: `by ${user.name ?? ""}`, href: `/requests`, taskId: t.id });
+  await notify({ userIds: (await adminIds()).filter((id) => id !== user.id), kind: "FINISH_REQUESTED", title: `${first(user.name)} marked it done from their side`, href: taskDeepLink(t.id), taskId: t.id });
   bus.publish({ type: "requests.changed" });
   done(t.id);
 }
@@ -116,7 +120,10 @@ async function doApproveFinish(user: SessionUser, taskId: string) {
     prisma.request.updateMany({ where: { taskId: t.id, type: "FINISH", status: "OPEN" }, data: { status: "APPROVED", resolvedById: user.id, resolvedAt: now } }),
   ]);
   await audit(user.id, "task.approve_finish", "Task", t.id, { status: t.status }, { status });
-  await notify({ userIds: (await taskStakeholderIds(t.id, { includeAdmins: false })), kind: "FINISH_APPROVED", title: `Completed: ${t.title}`, href: `/dashboard?task=${t.id}&completed=1`, taskId: t.id });
+  // ADR 0017: assignees + Team Leaders; early / late against the scheduled end (their "done" time counts if they marked it).
+  const finishedAt = t.status === "FINISH_REQUESTED" && t.finishRequestedAt ? t.finishRequestedAt : now;
+  const people = (await taskStakeholderIds(t.id, { includeAdmins: false })).filter((id) => id !== user.id);
+  await notify({ userIds: people, kind: "TASK_COMPLETED", title: completedPhrase(t.scheduledEnd, finishedAt), href: taskDeepLink(t.id, { completed: true }), taskId: t.id });
   if (t.recurrenceRule && t.recurrenceRule.trigger === "ON_COMPLETE" && !t.recurrenceRule.stopped) {
     const { spawnNextOccurrence } = await import("@/server/tasks/recurring");
     await spawnNextOccurrence(t.id, user.id);
@@ -161,7 +168,7 @@ export async function rejectFinish(taskId: string, rawNote: string): Promise<Act
       prisma.request.updateMany({ where: { taskId: t.id, type: "FINISH", status: "OPEN" }, data: { status: "REJECTED", resolvedById: user.id, resolvedAt: now, resolutionNote: note } }),
     ]);
     await audit(user.id, "task.reject_finish", "Task", t.id, { status: t.status }, { status, note });
-    await notify({ userIds: (await taskStakeholderIds(t.id, { includeAdmins: false })), kind: "FINISH_REJECTED", title: `Finish rejected: ${t.title}`, body: note, href: `/dashboard?task=${t.id}`, taskId: t.id });
+    await notify({ userIds: (await taskStakeholderIds(t.id, { includeAdmins: false })), kind: "FINISH_REJECTED", title: `${first(user.name)} sent it back · not finished yet`, body: note, href: taskDeepLink(t.id), taskId: t.id });
     bus.publish({ type: "requests.changed" });
     done(t.id);
     return undefined;
@@ -180,7 +187,7 @@ export async function raiseDoubt(taskId: string, rawNote: string): Promise<Actio
       prisma.request.create({ data: { type: "DOUBT", taskId: t.id, raisedById: user.id, targetRole: "ADMIN", note } }),
     ]);
     await audit(user.id, "task.raise_doubt", "Task", t.id, null, { note });
-    await notify({ userIds: await adminIds(), kind: "DOUBT_RAISED", title: `Doubt: ${t.title}`, body: note, href: `/requests`, taskId: t.id });
+    await notify({ userIds: await adminIds(), kind: "DOUBT_RAISED", title: `${first(user.name)} raised a doubt`, body: note, href: taskDeepLink(t.id), taskId: t.id });
     bus.publish({ type: "requests.changed" });
     done(t.id);
     return undefined;
@@ -200,7 +207,7 @@ export async function resolveDoubt(taskId: string, rawNote = ""): Promise<Action
       prisma.request.updateMany({ where: { taskId: t.id, type: "DOUBT", status: "OPEN" }, data: { status: "RESOLVED", resolvedById: user.id, resolvedAt: now, resolutionNote: note } }),
     ]);
     await audit(user.id, "task.resolve_doubt", "Task", t.id, { doubtNote: t.doubtNote }, { note });
-    await notify({ userIds: (await taskStakeholderIds(t.id, { includeAdmins: false })), kind: "DOUBT_RESOLVED", title: `Doubt resolved: ${t.title}`, body: note, href: `/dashboard?task=${t.id}`, taskId: t.id });
+    await notify({ userIds: (await taskStakeholderIds(t.id, { includeAdmins: false })), kind: "DOUBT_RESOLVED", title: `Doubt cleared by ${first(user.name)}`, body: note, href: taskDeepLink(t.id), taskId: t.id });
     bus.publish({ type: "requests.changed" });
     done(t.id);
     return undefined;
@@ -222,7 +229,7 @@ export async function raiseReviewRequest(taskId: string, rawKind: "REVIEW" | "TI
       prisma.request.create({ data: { type: kind, field, taskId: t.id, raisedById: user.id, targetRole: "ADMIN", note } }),
     ]);
     await audit(user.id, "task.raise_review", "Task", t.id, null, { kind, note });
-    await notify({ userIds: await adminIds(), kind: "REVIEW_REQUESTED", title: `${kind === "REVIEW" ? "Review" : "Time change"} requested: ${t.title}`, body: note, href: `/requests`, taskId: t.id });
+    await notify({ userIds: await adminIds(), kind: "REVIEW_REQUESTED", title: `${first(user.name)} asked ${kind === "REVIEW" ? "for a review of the time allotted" : "to change the start time"}`, body: note, href: taskDeepLink(t.id), taskId: t.id });
     bus.publish({ type: "requests.changed" });
     done(t.id);
     return undefined;
@@ -239,7 +246,7 @@ export async function requestFixSelfTask(taskId: string, rawNote: string): Promi
     if (!t.selfAssigned || !t.assignees.some((a) => a.userId === user.id)) throw new ForbiddenError("Only your own self-assigned tasks");
     await prisma.request.create({ data: { type: "FIX_SELF_TASK", taskId: t.id, raisedById: user.id, targetRole: "ADMIN", note } });
     await audit(user.id, "task.request_fix", "Task", t.id, null, { note });
-    await notify({ userIds: await adminIds(), kind: "REVIEW_REQUESTED", title: `Fix request: ${t.title}`, body: note, href: `/requests`, taskId: t.id, chat: false });
+    await notify({ userIds: await adminIds(), kind: "REVIEW_REQUESTED", title: `${first(user.name)} asked to fix it in place`, body: note, href: taskDeepLink(t.id), taskId: t.id, chat: false });
     bus.publish({ type: "requests.changed" });
     done(t.id);
     return undefined;
@@ -287,7 +294,7 @@ export async function restartTask(taskId: string): Promise<ActionResult<{ taskId
     });
     await audit(user.id, "task.restart", "Task", dup.id, { parentTaskId: t.id }, dup);
     await queueTaskCreation(dup.id, t.type);
-    await notify({ userIds: ids.filter((id) => id !== user.id), kind: "TASK_ASSIGNED", title: `Restarted: ${t.title}`, href: `/dashboard?task=${dup.id}`, taskId: dup.id, chat: false });
+    await notify({ userIds: ids.filter((id) => id !== user.id), kind: "TASK_ASSIGNED", title: `Restarted by ${first(user.name)} · a fresh copy`, href: taskDeepLink(dup.id), taskId: dup.id, chat: false });
     void import("@/google/queue").then((q) => q.processPending()).catch(() => undefined);
     done(dup.id);
     done(t.id);

@@ -46,7 +46,7 @@ describe("Admin Pause all / Resume all (ADR 0015)", () => {
     expect(tb.statusBeforePause).toBe("STARTED");
     expect(tb.sessions.every((s) => s.endedAt !== null)).toBe(true);
     const note = await testDb.notification.findFirstOrThrow({ where: { taskId: b, kind: "TASK_PAUSED", userId: exec.id } });
-    expect(note.body).toBe("Office closed for Diwali");
+    expect(note.title).toBe("Paused by Admin · Office closed for Diwali"); // the reason is in the phrase (ADR 0017)
     expect(await testDb.auditLog.count({ where: { action: "task.pause_all" } })).toBe(2);
 
     // pausing again: nothing eligible

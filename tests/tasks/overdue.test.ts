@@ -22,7 +22,7 @@ describe("jobs/overdue", () => {
     await settle(150); // let createTask's fire-and-forget queue drain before the next resetDb()
   });
 
-  it("flags a task whose scheduledStart passed without a start, and notifies stakeholders once", async () => {
+  it("flags a task whose scheduledStart passed without a start; 'Not started' and 'Still not finished' go out once each", async () => {
     const { admin, tl, client } = await seedBasics();
     session.set(admin);
     const id = await pastTask(client.id, [tl.id]);
@@ -34,13 +34,23 @@ describe("jobs/overdue", () => {
     expect(t.overdue).toBe(true);
     expect(t.overdueNotifiedAt).not.toBeNull();
     expect(t.status).toBe("ASSIGNED"); // status unchanged, colour overlay only
-    const notes = await testDb.notification.findMany({ where: { taskId: id, kind: "TASK_OVERDUE" } });
-    expect(notes.map((n) => n.userId).sort()).toEqual([admin.id, tl.id].sort());
+    expect(r1).toMatchObject({ notStarted: 1, pastEnd: 1 });
+    expect(t.notStartedNotifiedAt).not.toBeNull();
+    expect(t.pastEndNotifiedAt).not.toBeNull();
+    // ADR 0017: Admin + the Team Leader + the assignees (here the TL is the assignee)
+    const notStarted = await testDb.notification.findMany({ where: { taskId: id, kind: "TASK_NOT_STARTED" } });
+    expect(notStarted.map((n) => n.userId).sort()).toEqual([admin.id, tl.id].sort());
+    expect(notStarted[0].title).toMatch(/^Not started · was due at \d{1,2}:\d{2}(am|pm)$/);
+    expect(notStarted[0].href).toBe(`/dashboard?task=${id}`);
+    const pastEnd = await testDb.notification.findMany({ where: { taskId: id, kind: "TASK_PAST_END" } });
+    expect(pastEnd).toHaveLength(2);
+    expect(pastEnd[0].title).toMatch(/^Still not finished · was due to end at /);
+    expect(await testDb.notification.count({ where: { kind: "TASK_OVERDUE" } })).toBe(0); // legacy kind no longer sent
 
     // idempotent: a second run neither re-flags nor re-notifies
     const r2 = await run();
-    expect(r2.flagged).toBe(0);
-    expect(await testDb.notification.count({ where: { taskId: id, kind: "TASK_OVERDUE" } })).toBe(2);
+    expect(r2).toMatchObject({ flagged: 0, notStarted: 0, pastEnd: 0 });
+    expect(await testDb.notification.count({ where: { taskId: id, kind: { in: ["TASK_NOT_STARTED", "TASK_PAST_END"] } } })).toBe(4);
   });
 
   it("does not flag future tasks or meetings", async () => {
@@ -114,7 +124,7 @@ describe("jobs/overdue", () => {
     let t = await loadTask(id);
     expect(t.status).toBe("PAUSED");
     expect(t.overdue).toBe(false);
-    expect(await testDb.notification.count({ where: { taskId: id, kind: "TASK_OVERDUE" } })).toBe(0);
+    expect(await testDb.notification.count({ where: { taskId: id, kind: { in: ["TASK_NOT_STARTED", "TASK_PAST_END"] } } })).toBe(0);
 
     // a stale flag on a paused task is cleared by the job
     await testDb.task.update({ where: { id }, data: { overdue: true } });
@@ -134,5 +144,25 @@ describe("jobs/overdue", () => {
     expect((await run()).flagged).toBe(0);
     expect((await loadTask(deleted)).overdue).toBe(false);
     expect((await loadTask(completed)).overdue).toBe(false);
+  });
+
+  it("a started task gets only 'Still not finished', once, after its end; done from their side gets nothing", async () => {
+    const { admin, tl, exec, client } = await seedBasics();
+    session.set(tl); // Admin assigns executives only through their Team Leader (ADR 0008)
+    const id = await createTaskAs(client.id, [exec.id], { title: "running", scheduledStart: new Date(Date.now() + 1 * H).toISOString() });
+    const done = await createTaskAs(client.id, [exec.id], { title: "done", scheduledStart: new Date(Date.now() + 1 * H).toISOString() });
+    const { startTask, requestFinish } = await import("@/server/tasks/lifecycle");
+    await startTask(id);
+    await startTask(done);
+    session.set(exec);
+    expect((await requestFinish(done)).ok).toBe(true);
+    const past = { scheduledStart: new Date(Date.now() - 3 * H), scheduledEnd: new Date(Date.now() - 60_000) };
+    await testDb.task.updateMany({ where: { id: { in: [id, done] } }, data: past });
+    const { run } = await import("@/jobs/overdue");
+    expect(await run()).toMatchObject({ notStarted: 0, pastEnd: 1 });
+    expect(await run()).toMatchObject({ notStarted: 0, pastEnd: 0 });
+    const notes = await testDb.notification.findMany({ where: { kind: "TASK_PAST_END" } });
+    expect(notes.every((n) => n.taskId === id)).toBe(true);
+    expect(notes.map((n) => n.userId).sort()).toEqual([admin.id, tl.id, exec.id].sort()); // Admin, TL, assignee
   });
 });

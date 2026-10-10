@@ -8,6 +8,7 @@ import { wrap, type ActionResult } from "@/lib/action-result";
 import type { Role } from "@prisma/client";
 import { toDbDate } from "@/server/inventory/compute";
 import { APPROVED_LEAVE } from "@/server/leave/queries";
+import { unreadNotificationCount } from "@/server/notification-feed";
 
 /** Live numbers shown on the Admin menu rows (ADR 0011). Cheap counts only; read when the menu opens. */
 export type MenuCounts = {
@@ -66,7 +67,7 @@ export async function menuCounts(): Promise<ActionResult<MenuCounts>> {
       prisma.team.findMany({ where: { active: true }, select: { name: true }, orderBy: { name: "asc" } }),
       prisma.workType.count({ where: { active: true } }),
       prisma.request.count({ where: { status: "OPEN", targetRole: "ADMIN" } }),
-      prisma.notification.count({ where: { userId: user.id, readAt: null } }),
+      unreadNotificationCount(user.id),
       prisma.attendance.findMany({ where: { date: todayDb, user: staff }, select: { userId: true, status: true } }),
       prisma.leave.findMany({ where: { status: { in: APPROVED_LEAVE }, from: { lte: todayDb }, to: { gte: todayDb }, user: staff }, select: { userId: true } }),
       prisma.task.count({ where: { deletedAt: null, status: { not: "COMPLETED" } } }),

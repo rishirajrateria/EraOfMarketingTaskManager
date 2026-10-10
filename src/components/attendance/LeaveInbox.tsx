@@ -10,6 +10,7 @@ import { clsx } from "@/lib/clsx";
 import { BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
 import { Screen, ScreenHeader } from "@/components/admin/AdminUi";
 import { LeaveStatusPill, fmtLeaveRange } from "@/components/attendance/LeaveList";
+import { RequestsCaption } from "@/components/requests/RequestsInbox";
 
 type Result = { ok: true; data: unknown } | { ok: false; error: string };
 
@@ -74,6 +75,7 @@ export function LeaveInbox({ inbox, isAdmin, highlightLeaveId }: { inbox: Inbox;
       zone={zone}
       className="pb-3"
     >
+      <RequestsCaption />
       {show("pending") ? (
         <Section title="Leave requests" empty={inbox.pending.length === 0 ? "Nothing pending." : undefined}>
         {inbox.pending.map((l) => (

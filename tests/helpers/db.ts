@@ -12,6 +12,8 @@ export async function resetDb() {
   const tables = await testDb.$queryRaw<{ tablename: string }[]>`SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`;
   const names = tables.map((t) => `"public"."${t.tablename}"`).join(", ");
   if (names) await testDb.$executeRawUnsafe(`TRUNCATE TABLE ${names} RESTART IDENTITY CASCADE`);
+  const { reminderLog } = await import("@/lib/notify"); // feed-less reminders (ADR 0017) start empty too
+  reminderLog.length = 0;
 }
 
 export async function seedBasics() {

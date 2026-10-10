@@ -49,6 +49,15 @@ export const userInputSchema = z.object({
   email: z.email("Enter a valid email").transform((e) => e.trim().toLowerCase()),
   name: z.string().trim().min(1, "Name is required").max(120),
   role: assignableRoleSchema,
+  /** Mobile for the card's Call / WhatsApp sheet (ADR 0017), stored E.164; "" clears it, left out keeps it. */
+  phone: z
+    .string()
+    .trim()
+    .max(30)
+    .nullable()
+    .optional()
+    .refine((v) => !v || (v.replace(/\D/g, "").length >= 10 && normalizeE164(v) !== null), "Mobile needs at least 10 digits, e.g. +91 98300 11122")
+    .transform((v) => (v === undefined ? undefined : normalizeE164(v))),
   teamId: optionalId,
   teamLeaderId: optionalId,
   dailyCapacityMinutes: z.number().int().min(0).max(1440).optional().nullable(),

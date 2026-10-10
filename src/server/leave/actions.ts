@@ -20,6 +20,25 @@ import { createEvent, deleteEvent, updateEvent } from "@/google/calendar";
 import { fromDbDate, toDbDate } from "@/server/inventory/compute";
 import { shiftTasksForLeave, tasksAffectedByLeave } from "@/server/scheduling/shift";
 import { APPROVED_LEAVE, type LeaveChangePayload } from "@/server/leave/queries";
+import { first, leaveDays, plural } from "@/lib/notification-text";
+
+/**
+ * Leave updates (ADR 0017): the employee hears "Your leave on 17–18 Oct was approved"; Admin / HR (except whoever
+ * decided) hear "Arush's leave on 17–18 Oct was approved · 2 tasks need moving".
+ */
+async function tellLeaveOutcome(
+  leave: { id: string; userId: string; from: Date; to: Date; user: { name: string } },
+  actorId: string,
+  kind: "LEAVE_APPROVED" | "LEAVE_REJECTED",
+  opts: { what?: string; extra?: string; body?: string } = {},
+) {
+  const days = leaveDays(fromDbDate(leave.from), fromDbDate(leave.to));
+  const verb = kind === "LEAVE_APPROVED" ? "approved" : "declined";
+  const what = opts.what ?? "leave";
+  await notify({ userIds: [leave.userId], kind, title: `Your ${what} on ${days} was ${verb}`, body: opts.body, href: "/leave" });
+  const office = (await hrIds()).filter((id) => id !== actorId && id !== leave.userId);
+  await notify({ userIds: office, kind, title: `${first(leave.user.name)}'s ${what} on ${days} was ${verb}${opts.extra ? ` · ${opts.extra}` : ""}`, body: opts.body, href: `/requests/leave?leaveId=${leave.id}` });
+}
 
 const LEAVE_PATHS = ["/leave", "/requests/leave", "/attendance", "/admin/inventory", "/dashboard", "/admin/requests"];
 
@@ -73,10 +92,10 @@ export async function requestLeave(input: LeaveRangeInput): Promise<ActionResult
       return l;
     });
     await notify({
-      userIds: await hrIds(),
+      userIds: (await hrIds()).filter((id) => id !== u.id),
       kind: "LEAVE_REQUESTED",
-      title: `Leave requested — ${me.name}`,
-      body: `${fmtRange(data.from, data.to)}${data.reason ? ": " + data.reason : ""}`,
+      title: `${first(me.name)} asked for leave on ${leaveDays(data.from, data.to)}`,
+      body: data.reason,
       href: `/requests/leave?leaveId=${leave.id}`,
     });
     bus.publish({ type: "requests.changed" });
@@ -109,21 +128,10 @@ export async function hrApprove(leaveId: string): Promise<ActionResult<{ status:
       await audit(actor.id, "leave.approve", "Leave", leaveId, leave, l, tx);
       return l;
     });
-    const range = fmtRange(fromDbDate(leave.from), fromDbDate(leave.to));
-    await notify({ userIds: [leave.userId], kind: "LEAVE_APPROVED", title: "Leave approved", body: range, href: "/leave" });
+    const affected = await tasksAffectedByLeave(leaveId);
+    await tellLeaveOutcome(leave, actor.id, "LEAVE_APPROVED", { extra: affected.length ? `${plural(affected.length, "task")} to move` : "no tasks affected" });
     bus.publish({ type: "leave.changed", userId: leave.userId });
     bus.publish({ type: "requests.changed" });
-
-    const affected = await tasksAffectedByLeave(leaveId);
-    if (affected.length) {
-      await notify({
-        userIds: await adminIds(),
-        kind: "GENERIC",
-        title: `Leave approved — ${affected.length} ${affected.length === 1 ? "task needs" : "tasks need"} shifting`,
-        body: `${leave.user.name}, ${range}`,
-        href: `/requests/leave?leaveId=${leaveId}`,
-      });
-    }
     safeRevalidate(...LEAVE_PATHS);
     return { status: updated.status, affectedTasks: affected.length };
   });
@@ -141,13 +149,7 @@ export async function hrReject(leaveId: string, note = ""): Promise<ActionResult
       await audit(actor.id, "leave.reject", "Leave", leaveId, leave, l, tx);
       return l;
     });
-    await notify({
-      userIds: [leave.userId],
-      kind: "LEAVE_REJECTED",
-      title: "Leave rejected",
-      body: `${fmtRange(fromDbDate(leave.from), fromDbDate(leave.to))}${reason ? ": " + reason : ""}`,
-      href: "/leave",
-    });
+    await tellLeaveOutcome(leave, actor.id, "LEAVE_REJECTED", { body: reason });
     bus.publish({ type: "leave.changed", userId: leave.userId });
     bus.publish({ type: "requests.changed" });
     safeRevalidate(...LEAVE_PATHS);
@@ -164,6 +166,10 @@ export async function shiftLeaveTasks(leaveId: string): Promise<ActionResult<{ s
     const result = await shiftTasksForLeave(leaveId, actor.id);
     const after = await prisma.leave.update({ where: { id: leaveId }, data: { tasksShiftedAt: new Date() } });
     await audit(actor.id, "leave.shiftTasks", "Leave", leaveId, leave, { ...after, shifted: result.shifted });
+    if (result.shifted) {
+      const days = leaveDays(fromDbDate(leave.from), fromDbDate(leave.to));
+      await notify({ userIds: (await hrIds()).filter((id) => id !== actor.id), kind: "LEAVE_APPROVED", title: `${first(leave.user.name)}'s leave on ${days} · ${plural(result.shifted, "task")} moved`, href: `/requests/leave?leaveId=${leaveId}` });
+    }
     bus.publish({ type: "requests.changed" });
     safeRevalidate(...LEAVE_PATHS);
     return result;
@@ -186,9 +192,9 @@ export async function requestLeaveChange(leaveId: string, change: LeaveChangeInp
     });
     await audit(u.id, "leave.requestChange", "Leave", leaveId, leave, payload);
     await notify({
-      userIds: await adminIds(),
-      kind: "GENERIC",
-      title: `Approved leave change — ${leave.user.name}`,
+      userIds: (await adminIds()).filter((id) => id !== u.id),
+      kind: "LEAVE_REQUESTED",
+      title: `${first(leave.user.name)} asked to ${"cancel" in payload ? "cancel" : "change"} their leave on ${leaveDays(fromDbDate(leave.from), fromDbDate(leave.to))}`,
       body: note,
       href: `/requests/leave?leaveId=${leaveId}`,
     });
@@ -232,13 +238,7 @@ export async function resolveLeaveChange(requestId: string, approve: boolean): P
     const status = approve ? "APPROVED" : "REJECTED";
     await prisma.request.update({ where: { id: requestId }, data: { status, resolvedById: actor.id, resolvedAt: new Date() } });
     await audit(actor.id, `leave.change.${status.toLowerCase()}`, "Leave", leave.id, leave, after);
-    await notify({
-      userIds: [leave.userId],
-      kind: approve ? "LEAVE_APPROVED" : "LEAVE_REJECTED",
-      title: approve ? "Leave change approved" : "Leave change rejected",
-      body: req.note,
-      href: "/leave",
-    });
+    await tellLeaveOutcome(leave, actor.id, approve ? "LEAVE_APPROVED" : "LEAVE_REJECTED", { what: "leave change", body: req.note });
     bus.publish({ type: "leave.changed", userId: leave.userId });
     bus.publish({ type: "requests.changed" });
     safeRevalidate(...LEAVE_PATHS);

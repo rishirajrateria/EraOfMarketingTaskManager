@@ -127,7 +127,7 @@ export async function approveAndSendCore(id: string, opts: ApproveOptions, actor
   await audit(actorId, "invoice.send", "Invoice", id, { status: inv.status }, { status, emailed: !!d.emailSentAt, whatsapped: !!d.whatsappSentAt, errors: d.errors, clientFileId, backendFileId });
   if (delivered) {
     const via = [d.emailSentAt && "email", d.whatsappSentAt && "WhatsApp"].filter(Boolean).join(" + ");
-    await notify({ userIds: await adminIds(), kind: "INVOICE_SENT", title: `${DOC_LABEL[inv.docType]} ${inv.number} sent to ${inv.client.name}`, body: `${formatINRPlain(inv.total.toNumber())} via ${via}`, href: `/admin/invoices/${id}` });
+    await notify({ userIds: await adminIds(), kind: "INVOICE_SENT", title: `${DOC_LABEL[inv.docType]} ${inv.number} sent to ${inv.client.name}`, body: `${formatINRPlain(inv.total.toNumber())} via ${via}`, href: `/admin/invoices/${id}`, invoiceId: id });
   }
   if ((opts.email || opts.whatsapp) && !delivered) throw new Error(`${inv.number} is approved but could not be sent: ${d.errors.join("; ")}`);
   return { id, number: inv.number, status, emailed: !!d.emailSentAt, whatsapped: !!d.whatsappSentAt, errors: d.errors, publicUrl: publicInvoiceUrl(inv.publicToken) };

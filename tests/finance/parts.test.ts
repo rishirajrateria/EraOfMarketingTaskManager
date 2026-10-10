@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { resetDb, seedBasics, testDb } from "../helpers/db";
 import { mockSession } from "../helpers/mock-session";
+import { reminderLog } from "@/lib/notify";
 import { financialYearKey } from "@/server/finance/numbering";
 
 const session = mockSession();
@@ -99,7 +100,8 @@ describe("part-payment plans", () => {
     expect(inv4).toMatchObject({ status: "AWAITING_APPROVAL", partSeq: 4, planId });
     expect(inv4.total.toNumber()).toBe(5900);
     expect(sentMailLog).toHaveLength(0);
-    expect((await testDb.notification.findMany({ where: { kind: "INVOICE_APPROVAL_DUE" } }))[0]).toMatchObject({ userId: seed.admin.id, href: `/admin/invoices/${inv4.id}` });
+    expect(reminderLog.find((n) => n.kind === "INVOICE_APPROVAL_DUE")).toMatchObject({ userIds: [seed.admin.id], href: `/admin/invoices/${inv4.id}` });
+    expect(await testDb.notification.count({ where: { kind: "INVOICE_APPROVAL_DUE" } })).toBe(0); // a decision: Requests, not the feed
     expect((await run(new Date(Date.now() + 21 * 86_400_000))).issued).toBe(0); // idempotent
 
     // issue part 5 early, then nothing is left to merge

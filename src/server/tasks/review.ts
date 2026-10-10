@@ -10,6 +10,8 @@ import { requireUser, can, ForbiddenError, type SessionUser } from "@/lib/rbac";
 import { wrap, type ActionResult } from "@/lib/action-result";
 import { audit } from "@/lib/audit";
 import { notify, adminIds, publishTaskChanged } from "@/lib/notify";
+import { taskDeepLink } from "@/lib/notification-kinds";
+import { first } from "@/lib/notification-text";
 import { bus } from "@/lib/events";
 import { safeRevalidate } from "@/lib/revalidate";
 import { canView } from "@/server/tasks/queries";
@@ -57,7 +59,7 @@ export async function requestPillReview(taskId: string, rawField: string, rawNot
     await setFields(t.id, fields, user.role === "ADMIN" ? undefined : note || null);
     if (user.role !== "ADMIN") {
       await prisma.request.create({ data: { type: "REVIEW", field, taskId: t.id, raisedById: user.id, targetRole: "ADMIN", note } });
-      await notify({ userIds: await adminIds(), kind: "REVIEW_REQUESTED", title: `Review the ${REVIEW_FIELD_NAME[field]}: ${t.title}`, body: note, href: "/admin/requests", taskId: t.id });
+      await notify({ userIds: await adminIds(), kind: "REVIEW_REQUESTED", title: `${first(user.name)} asked for a review of the ${REVIEW_FIELD_NAME[field]}`, body: note, href: taskDeepLink(t.id), taskId: t.id });
     }
     await audit(user.id, user.role === "ADMIN" ? "task.flag_review" : "task.request_review", "Task", t.id, { reviewFields: current }, { reviewFields: fields, field, note });
     changed(t.id);
@@ -102,7 +104,7 @@ export async function resolvePillReview(taskId: string, rawField: string, rawNot
     if (open.length) {
       await prisma.request.updateMany({ where: { id: { in: open.map((r) => r.id) } }, data: { status: "RESOLVED", resolvedById: user.id, resolvedAt: new Date(), resolutionNote: note || "Reviewed" } });
       const raisers = Array.from(new Set(open.map((r) => r.raisedById)));
-      await notify({ userIds: raisers, kind: "GENERIC", title: `Reviewed: the ${REVIEW_FIELD_NAME[field]} of ${t.title}`, body: note, href: `/dashboard?task=${t.id}`, taskId: t.id, chat: false });
+      await notify({ userIds: raisers, kind: "GENERIC", title: `${first(user.name)} reviewed the ${REVIEW_FIELD_NAME[field]}`, body: note, href: taskDeepLink(t.id), taskId: t.id, chat: false });
     }
     if (fields.length !== current.length || open.length) {
       await audit(user.id, "task.resolve_review", "Task", t.id, { reviewFields: current }, { reviewFields: fields, field, resolved: open.length });

@@ -1,0 +1,36 @@
+/* Notifications feed (ADR 0017, prototype `.nrow` / `.nic` / `.nhint`). Each row wears the colour of the task card it is
+   about via --nc; blue (info / assigned / the unread dot and bell badge) and amber (leave, bill soon) are feed-only. */
+:root {
+  --n-blue: #2563eb;
+  --n-amber: #ea7a0c;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --n-blue: #3b82f6;
+    --n-amber: #fb923c;
+  }
+}
+:root[data-theme="dark"] {
+  --n-blue: #3b82f6;
+  --n-amber: #fb923c;
+}
+.n-green { --nc: var(--acc-green); }
+.n-red { --nc: var(--acc-red); }
+.n-yellow { --nc: var(--acc-yellow); }
+.n-purple { --nc: var(--acc-purple); }
+.n-grey { --nc: var(--acc-grey); }
+.n-blue { --nc: var(--n-blue); }
+.n-amber { --nc: var(--n-amber); }
+.nrow { border-left: 3px solid var(--nc); }
+.nic { background: var(--nc); color: #fff; }
+.n-yellow .nic { color: #111; }
+
+/* Deep link from a notification: the task card flashes while it scrolls into view. */
+@keyframes task-flash {
+  0%, 100% { box-shadow: var(--shadow); }
+  30%, 70% { box-shadow: 0 0 0 3px var(--n-blue), var(--shadow); }
+}
+.task-card.task-flash { animation: task-flash 1.6s ease-in-out; }
+@media (prefers-reduced-motion: reduce) {
+  .task-card.task-flash { animation: none; outline: 3px solid var(--n-blue); outline-offset: -3px; }
+}

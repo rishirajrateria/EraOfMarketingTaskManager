@@ -137,4 +137,23 @@ describe("admin people actions", () => {
     const actions2 = await testDb.auditLog.findMany({ where: { entityId: exec.id }, select: { action: true } });
     expect(actions2.map((a) => a.action).sort()).toEqual(["user.deactivate", "user.reactivate"]);
   });
+
+  it("stores a mobile for Call / WhatsApp in E.164; '' clears it, leaving it out keeps it (ADR 0017)", async () => {
+    const { admin, tl, team } = await seedBasics();
+    session.set(admin);
+    const actions = await load();
+    const bad = await actions.createUser({ email: "p1@test.local", name: "Phone One", role: "HR", phone: "12ab" });
+    expect(bad.ok).toBe(false);
+    const short = await actions.createUser({ email: "p1@test.local", name: "Phone One", role: "HR", phone: "+44 1234 56" });
+    expect(short.ok).toBe(false);
+    if (!short.ok) expect(short.error).toMatch(/at least 10 digits/);
+    const ok = await actions.createUser({ email: "p1@test.local", name: "Phone One", role: "EXECUTIVE", teamId: team.id, teamLeaderId: tl.id, phone: "98300 11122" });
+    if (!ok.ok) throw new Error(ok.error);
+    expect((await testDb.user.findUniqueOrThrow({ where: { id: ok.data.id } })).phone).toBe("+919830011122");
+    const base = { id: ok.data.id, email: "p1@test.local", name: "Phone One", role: "EXECUTIVE" as const, teamId: team.id, teamLeaderId: tl.id };
+    expect((await actions.updateUser(base)).ok).toBe(true);
+    expect((await testDb.user.findUniqueOrThrow({ where: { id: ok.data.id } })).phone).toBe("+919830011122");
+    expect((await actions.updateUser({ ...base, phone: "" })).ok).toBe(true);
+    expect((await testDb.user.findUniqueOrThrow({ where: { id: ok.data.id } })).phone).toBeNull();
+  });
 });

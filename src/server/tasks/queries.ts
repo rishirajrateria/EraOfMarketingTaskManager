@@ -129,12 +129,12 @@ export async function dashboardData(user: SessionUser): Promise<DashboardData> {
   const [tasks, workTypeRows, clients, teams, peopleRows] = await Promise.all([
     listTasks(user, { includeCompleted: true }),
     prisma.workType.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, colour: true, teams: { select: { id: true } } } }),
-    prisma.client.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, visibleInFilters: true, email: true, contact: true } }),
-    prisma.team.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, colour: true } }),
+    prisma.client.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, visibleInFilters: true, email: true, contact: true, phone: true, whatsapp: true } }),
+    prisma.team.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, colour: true, leaderId: true } }),
     prisma.user.findMany({
       where: { active: true, role: { in: ["ADMIN", "TEAM_LEADER", "EXECUTIVE"] } },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, role: true, teamId: true, teamLeaderId: true, specialities: { select: { id: true } } },
+      select: { id: true, name: true, role: true, teamId: true, teamLeaderId: true, phone: true, specialities: { select: { id: true } } },
     }),
   ]);
   const workTypes = workTypeRows.map(({ teams: wt, ...w }) => ({ ...w, teamIds: wt.map((t) => t.id) }));
@@ -169,7 +169,7 @@ export async function dashboardData(user: SessionUser): Promise<DashboardData> {
     row1,
     row2,
     workTypes,
-    clients: clients.map((c) => ({ id: c.id, name: c.name, emails: clientGuestEmails(c) })),
+    clients: clients.map((c) => ({ id: c.id, name: c.name, emails: clientGuestEmails(c), contact: c.contact, phone: c.phone, whatsapp: c.whatsapp })),
     teams,
     people,
     me: { id: user.id, role: user.role, teamId: user.teamId },

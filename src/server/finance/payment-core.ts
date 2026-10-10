@@ -5,7 +5,7 @@ import { adminIds, notify } from "@/lib/notify";
 import { sendMail } from "@/google/gmail";
 import { sendWhatsapp } from "@/integrations/whatsapp";
 import { allocateReceiptNumber } from "@/server/finance/numbering";
-import { formatINRPlain, round2 } from "@/server/finance/money";
+import { formatCurrency, formatINRPlain, round2 } from "@/server/finance/money";
 import { renderReceiptPdf } from "@/server/finance/pdf";
 import { loadCompany } from "@/server/finance/document-core";
 import { storeForClientAndFinance, toBytes } from "@/server/finance/drive-store";
@@ -80,6 +80,10 @@ export async function recordPaymentCore(input: PaymentInput, actorId: string | n
   const { clientFileId, backendFileId } = await storeForClientAndFinance(inv.client, "Receipts", { name: `${payment.receiptNumber}.pdf`, mimeType: "application/pdf", data: pdf });
   const saved = await prisma.payment.update({ where: { id: payment.id }, data: { receiptPdfData: toBytes(pdf), receiptPdfId: clientFileId, receiptBackendPdfId: backendFileId } });
   if (status === "PAID") await afterInvoicePaid(inv.id, actorId);
+  else {
+    const money = (n: number) => formatCurrency(n, inv.currency);
+    await notify({ userIds: await adminIds(), kind: "PAYMENT_RECEIVED", title: `${money(payment.amount.toNumber())} received from ${inv.client.name} · ${money(settlement.balance)} still due`, body: inv.number, href: `/admin/invoices/${inv.id}`, invoiceId: inv.id });
+  }
   return { payment: saved, status, balance: settlement.balance, totalReceived: settlement.received, tds: settlement.tds };
 }
 
@@ -87,7 +91,7 @@ export async function recordPaymentCore(input: PaymentInput, actorId: string | n
 export async function afterInvoicePaid(invoiceId: string, actorId: string | null): Promise<void> {
   const inv = await prisma.invoice.findUnique({ where: { id: invoiceId }, select: { id: true, number: true, total: true, clientId: true, client: { select: { name: true, workOnHold: true, holdInvoiceId: true } } } });
   if (!inv) return;
-  await notify({ userIds: await adminIds(), kind: "INVOICE_PAID", title: `Invoice ${inv.number} paid in full by ${inv.client.name}`, body: formatINRPlain(inv.total.toNumber()), href: `/admin/invoices/${inv.id}` });
+  await notify({ userIds: await adminIds(), kind: "INVOICE_PAID", title: `Invoice ${inv.number} paid in full by ${inv.client.name}`, body: formatINRPlain(inv.total.toNumber()), href: `/admin/invoices/${inv.id}`, invoiceId: inv.id });
   if (inv.client.workOnHold && inv.client.holdInvoiceId === inv.id) {
     await resumeWorkCore(inv.clientId, actorId).catch((e) => console.error("[finance] auto-resume failed", inv.clientId, e));
   }

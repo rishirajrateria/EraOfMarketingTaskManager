@@ -44,7 +44,8 @@ describe("task lifecycle", () => {
     expect(t.sessions).toHaveLength(1);
     expect(t.sessions[0].endedAt).toBeNull();
     const started = await testDb.notification.findMany({ where: { taskId, kind: "TASK_STARTED" } });
-    expect(started.map((n) => n.userId)).toEqual([admin.id]); // stakeholders minus the actor
+    expect(started.map((n) => n.userId)).toEqual([admin.id]); // Admin + the team's TL, minus whoever started it (ADR 0017)
+    expect(started[0].title).toBe("Rishi started it on time"); // started before its scheduled start
 
     // TL cannot pause; Admin can
     expect((await lc.pauseTask(taskId)).ok).toBe(false);
@@ -95,7 +96,11 @@ describe("task lifecycle", () => {
     expect(t.meetLink).not.toBeNull();
     expect(t.sessions.every((s) => s.endedAt !== null)).toBe(true);
     expect(t.requests.find((r) => r.type === "FINISH")!.status).toBe("APPROVED");
-    expect(await testDb.notification.count({ where: { taskId, kind: "FINISH_APPROVED", userId: tl.id } })).toBe(1);
+    const completed = await testDb.notification.findMany({ where: { taskId, kind: "TASK_COMPLETED" } });
+    expect(completed.map((n) => n.userId)).toContain(tl.id);
+    expect(completed.map((n) => n.userId)).not.toContain(admin.id); // Admin did it
+    expect(completed[0].title).toMatch(/^Completed · .+ early$/); // finished before the scheduled end
+    expect(completed[0].href).toBe(`/dashboard?task=${taskId}&completed=1`);
 
     // cannot start a completed task
     session.set(tl);
