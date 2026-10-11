@@ -135,6 +135,19 @@ apply migrations to it once with `DATABASE_URL=<test url> npx prisma migrate dep
    admin is then an external user for Google calls: invites, Calendar attendance and email work; their own calendar is
    not read for leave sync, and Chat / Drive sharing with them depends on the Workspace's external-sharing settings.
 
+   **Era of Marketing's setup (confirmed 11 Oct 2026): two separate Workspaces.** `theeraofmarketing.com` (staff,
+   finance) is the company Workspace: create the Cloud project, service account and domain-wide delegation there.
+   `eraofmarketing.com` (the admin, `contact@eraofmarketing.com`) is a different Workspace and is treated as external.
+   - `GOOGLE_WORKSPACE_DOMAIN=theeraofmarketing.com,eraofmarketing.com` (staff domain first).
+   - `GOOGLE_IMPERSONATE_USER` and `GOOGLE_FINANCE_SENDER` must both be `@theeraofmarketing.com` users (e.g.
+     `ops@…` and `finance@…`) — never `contact@eraofmarketing.com`, which delegation cannot act as.
+   - `BOOTSTRAP_ADMIN_EMAILS=contact@eraofmarketing.com`.
+   - OAuth consent screen: *External*, published.
+   - theeraofmarketing.com Admin console → Drive and Docs → Sharing settings: allow sharing outside the organisation
+     (the admin and every client — client kits and the client tracking link's Drive folder — are external).
+   - Google Chat → External chat settings: on in **both** Workspaces, or the admin can't join task Chat spaces.
+   - The admin's leave is raised in the app; their Google Calendar isn't read for leave sync.
+
 ## Deployment
 
 ### Recommended: one always-on container + managed Postgres (Render, Railway, Fly, or any Docker host)

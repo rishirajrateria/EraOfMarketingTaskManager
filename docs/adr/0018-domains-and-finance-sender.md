@@ -82,6 +82,13 @@ Then the admin (`contact@eraofmarketing.com`) is an **external-domain user for e
 If eraofmarketing.com is instead a secondary domain of the same Workspace, everything above just works (delegation
 covers it), and nothing is skipped.
 
+### Confirmed (11 Oct 2026): separate Workspaces
+The owner confirmed `eraofmarketing.com` and `theeraofmarketing.com` are **separate Google Workspaces** (different
+plans). The "separate Google Workspace" path above is the live one: delegation lives in the `theeraofmarketing.com`
+Workspace, `GOOGLE_IMPERSONATE_USER` and `GOOGLE_FINANCE_SENDER` are `@theeraofmarketing.com` users, and
+`contact@eraofmarketing.com` is an external user (bootstrap admin). No code change was needed; README "Google Cloud
+setup" step 8 lists the exact settings.
+
 ## Consequences
 - One code path for both setups; nothing to switch when the domains are merged later.
 - The finance mailbox needs a Gmail licence (it is a real user).
