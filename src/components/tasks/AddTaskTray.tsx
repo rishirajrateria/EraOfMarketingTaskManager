@@ -1,0 +1,171 @@
+"use client";
+import { Building2, CalendarDays, ListTodo } from "lucide-react";
+import { clsx } from "@/lib/clsx";
+import type { DashboardData } from "@/server/tasks/types";
+import { isDateOnly, isDeadline, shortcutStart, type AddTaskForm, type TaskKind } from "@/components/tasks/add-task-helpers";
+import { isShortcutDay } from "@/components/tasks/meeting-helpers";
+import { deadlinePill, detailsCaption, whenCaption, type SlotPreview } from "@/components/tasks/details-caption";
+import { AddTaskGreenRows, TagPill } from "@/components/tasks/AddTaskRows";
+import { MeetIcon } from "@/components/dashboard/GoogleIcons";
+import { MinimisableTray } from "@/components/dashboard/FilterTray";
+
+export type Shortcut = "upnext" | "tomorrow" | "today";
+
+/** One half of the type switch (prototype `.tyb`): selected = raised glass, ink label; the other muted. */
+function TypeButton({ on, onClick, disabled, children }: { on: boolean; onClick: () => void; disabled?: boolean; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-pressed={on}
+      className={clsx(
+        "no-select inline-flex h-[34px] items-center gap-1.5 rounded-[11px] border px-3 text-[13px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] disabled:opacity-60",
+        on ? "glass-strong text-ink" : "border-transparent text-muted",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+/**
+ * Task | For client | Meeting (prototype `.typeseg`, ADR 0016 addendum): a small segmented switch at the top of the
+ * form, above the title; the + speed dial picks the starting one. "For client" (Admin only, `tClientBtn`) is something
+ * needed FROM the client: no team, work type or hours — just the client and the day it is needed by.
+ */
+export function TypeSwitch({ type, onType, disabled, clientTasks }: { type: TaskKind | null; onType: (type: TaskKind) => void; disabled?: boolean; clientTasks?: boolean }) {
+  return (
+    <div role="group" aria-label="Type" className="mb-2.5 inline-flex max-w-full gap-1 self-start overflow-x-auto rounded-[14px] border border-hair bg-chip p-[3px] [scrollbar-width:none]">
+      <TypeButton on={type === "WORK"} onClick={() => onType("WORK")} disabled={disabled}>
+        <ListTodo size={18} strokeWidth={2.2} aria-hidden className={type === "WORK" ? "text-[var(--nav-on)]" : undefined} />
+        Task
+      </TypeButton>
+      {clientTasks ? (
+        <TypeButton on={type === "CLIENT"} onClick={() => onType("CLIENT")} disabled={disabled}>
+          <Building2 size={18} strokeWidth={2.2} aria-hidden className={type === "CLIENT" ? "text-[#2563eb] dark:text-[#93c5fd]" : undefined} />
+          For client
+        </TypeButton>
+      ) : null}
+      <TypeButton on={type === "MEETING"} onClick={() => onType("MEETING")} disabled={disabled}>
+        <MeetIcon size={18} />
+        Meeting
+      </TypeButton>
+    </div>
+  );
+}
+
+/**
+ * The "Deadline" pill (prototype `.gpk.dl`): amber when on — "Due 13 Oct" (client tasks: "Needed by 13 Oct"); off it
+ * reads "Deadline" ("Needed by…"). Opens the deadline sheet.
+ */
+function DeadlinePill({ form, onClick }: { form: AddTaskForm; onClick: () => void }) {
+  const on = isDeadline(form) && isDateOnly(form.scheduledStart);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={on}
+      className={clsx(
+        "no-select h-8 shrink-0 whitespace-nowrap rounded-[12px] border px-[11px] text-[12.5px] font-semibold leading-none transition",
+        on ? "border-transparent bg-[linear-gradient(150deg,#f59e0b,#d97706)] text-white" : "glass-chip border-hair text-ink",
+      )}
+    >
+      {deadlinePill(form)}
+    </button>
+  );
+}
+
+/**
+ * 📅 When should it start? · Up next · Today · Tomorrow · Deadline — the tray's lowest row, nearest the thumb. Today /
+ * Tomorrow (and a date picked without a time) mean "the next free time on that day"; the resolved time shows in a line
+ * under the pills once the server's preview is in (ADR 0010 addendum). Deadline (not for meetings) picks a "done by"
+ * day with no time; a client task has only "Needed by…".
+ */
+function TimeRow({ form, type, tz, preview, onShortcut, onOpenSchedule, onOpenDeadline }: { form: AddTaskForm; type: TaskKind | null; tz: string; preview?: SlotPreview | null; onShortcut: (kind: Shortcut) => void; onOpenSchedule: () => void; onOpenDeadline: () => void }) {
+  // Meetings: Today / Tomorrow mark the chosen day (the START row sets the time); tasks: the shortcut's day, no time.
+  const startIs = (kind: "tomorrow" | "today") =>
+    type === "MEETING" ? isShortcutDay(kind, form.scheduledStart, new Date(), tz) : !!form.scheduledStart && form.scheduledStart === shortcutStart(kind, new Date(), tz);
+  const deadline = isDeadline(form);
+  const client = type === "CLIENT";
+  const dayOnly = isDateOnly(form.scheduledStart) && !deadline && !(type === "MEETING" && form.meeting?.allDay);
+  return (
+    <>
+      <div className="scrollbar-none flex h-14 items-center gap-1.5 overflow-x-auto px-3 text-ink" role="group" aria-label="Start">
+        <button
+          type="button"
+          onClick={client ? onOpenDeadline : onOpenSchedule}
+          aria-label={client ? "Needed by" : "When should it start?"}
+          title={client ? "Needed by" : "When should it start?"}
+          className="flex h-8 w-7 shrink-0 items-center justify-center"
+        >
+          <CalendarDays size={22} aria-hidden />
+        </button>
+        {client ? null : (
+          <>
+            <TagPill active={!form.scheduledStart && !deadline} onClick={() => onShortcut("upnext")}>
+              Up next
+            </TagPill>
+            <TagPill active={!deadline && startIs("today")} onClick={() => onShortcut("today")}>
+              Today
+            </TagPill>
+            <TagPill active={!deadline && startIs("tomorrow")} onClick={() => onShortcut("tomorrow")}>
+              Tomorrow
+            </TagPill>
+          </>
+        )}
+        {type === "MEETING" ? null : <DeadlinePill form={form} onClick={onOpenDeadline} />}
+      </div>
+      {deadline ? (
+        <p data-deadline-caption className="-mt-2 truncate px-3 pb-2 text-[12px] text-muted" aria-live="polite">
+          {whenCaption(form, new Date(), tz, null)}
+        </p>
+      ) : null}
+      {dayOnly ? (
+        <p data-slot-preview className={clsx("-mt-2 truncate px-3 pb-2 text-[12px]", preview?.error ? "text-red-600" : "text-muted")} aria-live="polite">
+          {whenCaption(form, new Date(), tz, preview)}
+          {preview?.day?.requestedDay === form.scheduledStart ? "" : "…"}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * Bottom of the add-task screen (prototype `#addTray`, ADR 0016 addendum): "the same thing as the dashboard" — the
+ * pill rows (Prefer · Work · Team / Exec / Invite · Client · Start) and the time row in a minimisable details tray
+ * (MinimisableTray: chevron tab on its top edge; minimised = a 40px bar "⌃ Details · Social · Acme · Up next",
+ * remembered per user under its own key). The shell's bottom nav sits right below it, its centre button the ×.
+ */
+export function AddTaskTray({
+  form,
+  patch,
+  data,
+  type,
+  tz,
+  preview,
+  onShortcut,
+  onOpenSchedule,
+  onOpenDeadline,
+}: {
+  form: AddTaskForm;
+  patch: (p: Partial<AddTaskForm>) => void;
+  data: DashboardData;
+  type: TaskKind | null;
+  /** The zone starts are picked in (the meeting's own for meetings). */
+  tz: string;
+  /** The server's next free time for a date-only start (debounced `previewSlot`), null while unknown. */
+  preview?: SlotPreview | null;
+  onShortcut: (kind: Shortcut) => void;
+  onOpenSchedule: () => void;
+  onOpenDeadline: () => void;
+}) {
+  return (
+    <MinimisableTray kind="details" userId={data.me.id} label={detailsCaption(form, data, new Date(), tz, preview)}>
+      <div className="strip-glass pt-1">
+        <AddTaskGreenRows form={form} patch={patch} data={data} />
+        <TimeRow form={form} type={type} tz={tz} preview={preview} onShortcut={onShortcut} onOpenSchedule={onOpenSchedule} onOpenDeadline={onOpenDeadline} />
+      </div>
+    </MinimisableTray>
+  );
+}

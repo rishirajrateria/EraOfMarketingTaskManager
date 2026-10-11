@@ -95,7 +95,9 @@ Shows **assigned (allocated) hours** as pills. Every pill is tappable and filter
 - **Executive:** by Date (Today, Tomorrow, B4Leave, All time) and by Client.
 - "B4Leave" = hours assigned before the user's next approved leave.
 - Above the pills sits a **filter strip** for row colour (grey/green/white/yellow/red) and icon states (paused, doubt, review-requested, important). Do not omit this.
-- Values are the sum of `allocatedMinutes` of non-completed tasks in the current filter scope. **[ASSUMPTION]** default period = all open tasks; the date pills narrow it.
+- Values are the sum of `allocatedMinutes` of non-completed tasks in the current filter scope.
+- > **Owner's revision (ADR 0015):** two groups of tiles — Admin Teams (or a picked team's people) + Clients, Team
+  > Leader People + Clients, Executive Days + Clients — each tile "name · 11.8h · 5 tasks", following the bottom dock. **[ASSUMPTION]** default period = all open tasks; the date pills narrow it.
 
 ### 5.2 Middle — task list rows
 Each row shows: title; client chip; team/assignee chip (e.g. "Me", "GR", "we" for multi-team); the `i` icon (opens task detail); Drive icon (opens task Drive folder); Meet icon (opens task Meet link, disabled once closed); Chat icon (opens task Chat space); Calendar/Meet icon; allocated time ("4hrs"); scheduled start and stop times (a second line shows actual start/stop once recorded); date chip (Today / Yestr / date); the **completion circle** on the right. On Team Leader dashboard the assignee's name is printed beside the row.
@@ -106,6 +108,14 @@ Row colour = task state:
 - **Yellow** — doubt raised by Team Leader (awaiting Admin).
 - **Red** — overdue: scheduled start passed without starting, or scheduled end passed without finish.
 - **Grey** — completed (approved). Shows the purple circular-arrow **Restart** button in place of the circle.
+
+> **Owner's revision (ADR 0015):** the card shows title · client chip · **team chip** · (i) Drive Meet Chat Calendar ·
+> hours / scheduled / actual / **date ("08 Oct", never Today/Tom)** pills · circle. No assignee chip, no `pref:` chip, no
+> Team Leader names, no star — who it's with is in the (i) sheet. Row colours: completed = faded card > doubt = purple
+> (with a "?") > paused = yellow > started = green > not started past its start = red > neutral. The actual-time pill is green
+> when on time and red when started late / running past the end / finished after the end. Tapping the circle marks the
+> task done from my side (Admin completes; TL / Executive request finish) with a 5 s Undo; long-press / right-click the
+> circle or right-click the card opens the action menu. Meet / Drive / Chat stay active on completed tasks.
 
 Row icons/badges:
 - **Pause icon (⏸)** — task is paused by Admin. Everyone assigned sees it.
@@ -124,6 +134,10 @@ Two rows of pills + a bottom bar exactly as designed:
 - Row 2: **All + Clients** (clients appear only once at least one task exists for them) — for Executive this row shows work types.
 - Bottom bar: calendar icon (date picker), quick pills **Ascending / Tomorrow / Today**, a **"completed"** toggle, a recurring-tasks toggle, pause filter, colour swatches, then the **Google Meet icon** (opens Add flow pre-set to Meeting), **Work** (opens Add flow pre-set to Work), and **+** (opens Add flow with the Work/Meeting choice).
 - Filters combine (AND) across rows and persist per user.
+- > **Owner's revision (ADR 0015):** the rows and bar are neutral glass (not green): TEAMS / CLIENTS one-tap rows (TL:
+  > PEOPLE; Exec: CLIENTS / WORK), then 📅 Today Tomorrow Oldest, the Meet icon (meeting) and a blue + (task); no
+  > "Work" pill. Long-press / right-click the date, hours or start-time pill to request (TL / Exec) or mark (Admin) a review
+  > of that pill — a red dot sits on it until reviewed.
 
 ---
 
@@ -135,6 +149,8 @@ Full-screen sheet matching the "after clicking +" design:
 - Fields: Title; big **description box** (rich text) with mic → voice-to-text; separate **voice notes** recorded via mic (shown as the "20s" waveform bars, multiple allowed, playback inline); **Star** (important); **Loop** (recurrence: Daily / Weekly / Monthly / Custom; end date or Infinite); **Upload** (creates the task's Drive folder immediately if not yet created and opens a picker to upload into it); Client (mandatory); Assignee(s) (mandatory — Admin picks Team Leaders, Team Leader picks Executives, anyone may pick self); Team(s); allocated time; scheduled date + start/stop time (optional → auto "next available slot"); priority; send button (paper plane) creates the task.
 - Bottom green area switches to **tag mode**: the pills are now Admin-defined tags/labels — Work types, Teams, Clients — tapping toggles them onto the task. Bottom bar shows date shortcuts **Upnext / Tom / Today**, and the **X** to cancel.
 - **Work** creates the full set (Section 8). **Meeting** creates only a Calendar event with Meet link for the chosen attendees and time — no Drive folder, no Chat space, no task row time-tracking (it still appears in the list as a meeting row).
+  > **ADR 0015:** meetings also get a Drive folder (with "Meeting notes") so Gemini notes have a home; still no Chat space.
+  > The ★ Important chip, the schedule line and the "Goes to …" / "Inviting …" cards are gone from the add sheet.
 - Multi-assignee / multi-team tasks are one record shown on every assignee's dashboard with a single shared completion state.
 
 ---
@@ -151,6 +167,9 @@ DRAFT → ASSIGNED(white) → STARTED(green) → FINISH_REQUESTED → COMPLETED(
 - **Start:** Team Leader (or Admin) long-presses → Start. `actualStart` recorded, a `TaskSession` opens, row turns green.
 - **Pause (Admin only):** closes the session, freezes the clock, marks paused; Executive and Team Leader are notified. Resume opens a new session. Paused time is excluded from actual duration; scheduled end shifts forward by paused duration.
 - **Finish:** Team Leader taps the circle → status FINISH_REQUESTED, Admin gets it in the Requests inbox and as a badge on the row. Admin approves → COMPLETED, `actualEnd` recorded, row grey, Meet link deactivated, Chat space kept (until deletion). Admin may reject → back to STARTED with a note.
+  > **Owner's revision (ADR 0015):** the Meet link is **not** deactivated on completion — Meet, Drive and Chat all stay
+  > until the task is deleted. The circle tap is "done from my side" (TL / Executive → finish request, also from
+  > ASSIGNED; Admin → completed directly).
 - **Doubt:** Team Leader long-press → Raise doubt with note; row yellow; Admin replies (chat/call/edit) and taps Unflag; can be raised again.
 - **Review / time-change request:** long-press → request with note; red dot on row; Admin edits task (times etc.), which clears the dot.
 - **Restart (completed tasks):** creates a duplicate with the same title, description, client, assignees, tags, allocated time; times reset (scheduled to next available slot); new Drive folder, Meet and Chat space **[ASSUMPTION]**; the old task keeps its purple restart button and links to the duplicate via `parentTaskId`.
@@ -168,6 +187,14 @@ On creation of a Work task, server-side:
 Task edits (time/assignee) propagate to the Calendar event, Chat membership, and Drive sharing.
 
 **Meeting-type tasks** only run step 2.
+
+> **ADR 0015:** every task (work and meeting) gets a Drive folder named after the title (id suffix only on a clash) with
+> a "Meeting notes" subfolder; meetings get no Chat space. After the event is created the Meet space is configured with
+> the Meet REST API v2: anyone with the link joins without knocking (OPEN) and Gemini "Take notes for me" + transcripts
+> are switched on (needs a Gemini-capable Workspace edition for the organiser; refusals are warnings). A 30-minute job
+> files the notes Docs into "Meeting notes". Chat members / Drive sharing = assigned + the team's Team Leader + all the
+> team's executives + creator. The Meet link stays active until the task is deleted (step 2's "after approval" no longer
+> applies).
 
 ---
 
@@ -254,6 +281,10 @@ Confirmation sheet with checkboxes, all pre-checked, individually deselectable:
 - ☑ Delete task data (history, sessions, requests)
 - (Calendar event / Meet is always removed.)
 Unchecked items are left intact and the task is marked deleted (soft delete) so links remain resolvable.
+
+> **Owner's revision (ADR 0015):** no checkboxes — **Delete everything**. The sheet lists what goes: Calendar event,
+> Meet link (call ended and the link locked, since Google can't delete a link), Drive folder (to the Drive trash), Chat
+> space, and the task's data. The row remains only as an invisible tombstone for the audit log.
 
 ---
 

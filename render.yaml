@@ -1,0 +1,64 @@
+# Render blueprint — one always-on web service (Docker) + managed Postgres.
+# Real-time updates (SSE) and the inline job scheduler both need a single long-running process, which this gives.
+#
+# TEST DEPLOYMENT (default below): demo sign-in on, Google integrations mocked, sample data seeded.
+# PRODUCTION: set DEMO_LOGIN=false, SEED_DEMO=false, GOOGLE_MOCK=false and fill the Google/Twilio/VAPID vars.
+services:
+  - type: web
+    name: eom-task-manager
+    runtime: docker
+    plan: free # upgrade to "starter" for production (no spin-down, more RAM)
+    region: singapore
+    healthCheckPath: /login
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: eom-postgres
+          property: connectionString
+      - key: JOBS_INLINE
+        value: "true"
+      - key: DEMO_LOGIN
+        value: "true"
+      - key: SEED_DEMO
+        value: "true"
+      - key: GOOGLE_MOCK
+        value: "true"
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: VAULT_ENCRYPTION_KEY
+        generateValue: true
+      - key: CRON_SECRET
+        generateValue: true
+      - key: AUTH_TRUST_HOST
+        value: "true"
+      # Optional for a test deployment; required for real Google sign-in and integrations:
+      - key: AUTH_GOOGLE_ID
+        sync: false
+      - key: AUTH_GOOGLE_SECRET
+        sync: false
+      - key: GOOGLE_WORKSPACE_DOMAIN
+        sync: false
+      - key: BOOTSTRAP_ADMIN_EMAILS
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT_KEY_BASE64
+        sync: false
+      - key: GOOGLE_IMPERSONATE_USER
+        sync: false
+      - key: GOOGLE_FINANCE_SENDER
+        sync: false
+      - key: NEXT_PUBLIC_VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_WHATSAPP_FROM
+        sync: false
+databases:
+  - name: eom-postgres
+    plan: free # free Postgres expires after 30 days; use "basic-256mb" for production
+    region: singapore
