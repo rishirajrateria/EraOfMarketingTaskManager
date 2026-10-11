@@ -8,12 +8,11 @@ import { LeaveForm } from "@/components/attendance/LeaveForm";
 import { LeaveList } from "@/components/attendance/LeaveList";
 
 /** /leave — own leaves in the middle; "+ Request leave" in the bottom bar opens the form as a sheet. */
-export function LeaveScreen({ leaves, defaultDate, isAdmin }: { leaves: LeaveSummary[]; defaultDate: string; isAdmin: boolean }) {
+export function LeaveScreen({ leaves, defaultDate }: { leaves: LeaveSummary[]; defaultDate: string }) {
   const [open, setOpen] = useState(false);
   const pending = leaves.filter((l) => l.status === "REQUESTED").length;
   const zone = (
     <BottomZone
-      menu={isAdmin}
       right={
         <BarChip label="Request leave" onClick={() => setOpen(true)}>
           + Request leave

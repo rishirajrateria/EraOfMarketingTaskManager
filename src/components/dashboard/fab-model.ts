@@ -53,7 +53,7 @@ export function fabMenu(role: DashboardData["role"]): FabMenu {
 /** Every item bottom → top (the DOM / focus order). */
 export const fabOrder = (m: FabMenu): FabItem[] => [...m.main, ...m.more];
 
-/** Icon squares — the Admin menu's category colours (money green, team yellow, clients blue); Task blue, Meet white. */
+/** Icon squares — the category colours (money green, team yellow, clients blue); Task blue, Meet white. */
 export const FAB_TONE: Record<FabTone, string> = {
   task: "bg-[linear-gradient(150deg,#3b82f6,#1d4ed8)] text-white",
   meet: "border border-[rgba(15,23,42,.14)] bg-white",

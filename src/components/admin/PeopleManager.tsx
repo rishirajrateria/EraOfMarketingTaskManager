@@ -94,7 +94,6 @@ export function PeopleManager({
     <PeekZone label={PEEK[initialRole] ?? "Add person"} onExpand={add.show} rows={rolePills} />
   ) : (
     <BottomZone
-      menu
       rows={rolePills}
       right={
         <BarChip label={title} onClick={add.show}>

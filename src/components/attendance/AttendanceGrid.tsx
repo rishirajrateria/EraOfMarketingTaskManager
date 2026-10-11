@@ -24,7 +24,6 @@ export function AttendanceGrid({
   filterUsers,
   selectedUserId,
   hint,
-  isAdmin,
 }: {
   grid: MonthGrid;
   /** HR/Admin: tapping a cell opens the marking sheet. */
@@ -34,8 +33,6 @@ export function AttendanceGrid({
   selectedUserId?: string;
   /** One-line explanation shown under the title. */
   hint: string;
-  /** Shows the ☰ menu button in the bar. */
-  isAdmin: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -60,7 +57,6 @@ export function AttendanceGrid({
 
   const zone = (
     <BottomZone
-      menu={isAdmin}
       rows={
         filterUsers.length > 0 ? (
           <ZoneRow label="Person">

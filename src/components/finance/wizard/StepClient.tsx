@@ -14,7 +14,7 @@ export function StepClient({ form, set, errors, clients, tax, query }: StepProps
     <div className="space-y-4 px-4 py-4">
       <div>
         <div className="mb-2 text-xs font-medium text-gray-600">{form.partEdit ? "Part payments stay with their client. To bill someone else, delete the draft and create it again." : "Who is this invoice for?"}</div>
-        {shown.length === 0 ? <p className="text-sm text-gray-500">{clients.length === 0 ? "Add a client first (Admin menu → Add Client)." : "No clients match."}</p> : null}
+        {shown.length === 0 ? <p className="text-sm text-gray-500">{clients.length === 0 ? "Add a client first (the + → Client)." : "No clients match."}</p> : null}
         <div className="flex flex-wrap gap-2">
           {shown.map((c) => {
             const active = c.id === form.clientId;

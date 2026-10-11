@@ -38,7 +38,6 @@ export function TeamsManager({ teams, leaders, openAdd = false }: { teams: TeamR
     <PeekZone label={LIST_FLOWS.TEAM.peek} onExpand={add.show} />
   ) : (
     <BottomZone
-      menu
       right={
         <BarChip label="Add designation" onClick={add.show}>
           + Add

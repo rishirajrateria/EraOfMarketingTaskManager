@@ -102,4 +102,41 @@ describe("notifications feed (ADR 0017)", () => {
     expect((await markAllRead()).ok).toBe(true);
     expect((await loadFeed(admin, "UNREAD", TZ, now)).total).toBe(0);
   });
+
+  it("TEAMS / CLIENTS: filtered in the database before the row limit; pills count unread per team and client", async () => {
+    const { admin, team, client } = await seedBasics();
+    const video = await testDb.team.create({ data: { name: "Video" } });
+    const zen = await testDb.client.create({ data: { name: "Zen" } });
+    const mkTask = (title: string, clientId: string, teamIds: string[]) =>
+      testDb.task.create({ data: { title, clientId, createdById: admin.id, teams: { create: teamIds.map((teamId) => ({ teamId })) } } });
+    const old = await mkTask("old graphic job", client.id, [team.id]);
+    const busy = await mkTask("busy video job", zen.id, [video.id]);
+    const both = await mkTask("joint job", client.id, [team.id, video.id]);
+    const inv = await testDb.invoice.create({ data: { number: "EOM/26-27/0001", clientId: client.id, status: "SENT", subtotal: 100, gstAmount: 0, gstPercent: 0, total: 100 } as never });
+    const now = new Date();
+    const at = (minAgo: number) => new Date(now.getTime() - minAgo * 60_000);
+    // the matching row is older than FEED_LIMIT rows about another team: a filter after the limit would lose it
+    const { FEED_LIMIT, loadFeed, loadScopeOptions } = await import("@/server/notification-feed");
+    await testDb.notification.create({ data: { userId: admin.id, kind: "TASK_STARTED", title: "old start", taskId: old.id, createdAt: at(10_000), readAt: now } });
+    await testDb.notification.createMany({
+      data: Array.from({ length: FEED_LIMIT + 5 }, (_, i) => ({ userId: admin.id, kind: "TASK_PAUSED" as const, title: `pause ${i}`, taskId: busy.id, createdAt: at(i + 1) })),
+    });
+    await testDb.notification.create({ data: { userId: admin.id, kind: "TASK_ASSIGNED", title: "joint", taskId: both.id, createdAt: at(500) } });
+    await testDb.notification.create({ data: { userId: admin.id, kind: "PAYMENT_RECEIVED", title: "Payment in", invoiceId: inv.id, createdAt: at(600) } });
+    await testDb.notification.create({ data: { userId: admin.id, kind: "LEAVE_APPROVED", title: "leave ok", createdAt: at(700) } });
+
+    const titles = async (scope: { team: string | null; client: string | null }, filter: "ALL" | "MONEY" = "ALL") =>
+      (await loadFeed(admin, filter, TZ, now, scope)).groups.flatMap((g) => g.rows.map((r) => r.phrase ?? r.headline));
+    expect((await loadFeed(admin, "ALL", TZ, now)).total).toBe(FEED_LIMIT); // All: capped
+    expect(await titles({ team: team.id, client: null })).toEqual(["joint", "old start"]);
+    expect(await titles({ team: null, client: client.id })).toEqual(["joint", "Payment in", "old start"]);
+    expect(await titles({ team: video.id, client: client.id })).toEqual(["joint"]);
+    expect(await titles({ team: team.id, client: zen.id })).toEqual([]);
+    expect(await titles({ team: null, client: client.id }, "MONEY")).toEqual(["Payment in"]);
+    expect((await titles({ team: video.id, client: null })).length).toBe(FEED_LIMIT);
+
+    const opts = await loadScopeOptions(admin.id);
+    expect(opts.teams.map((t) => t.label)).toEqual(["Graphic · 1", `Video · ${FEED_LIMIT + 6}`]);
+    expect(opts.clients.map((c) => c.label)).toEqual(["Repo · 2", `Zen · ${FEED_LIMIT + 5}`]);
+  });
 });

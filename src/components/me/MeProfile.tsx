@@ -1,10 +1,10 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
 import { BarChip, BottomZone } from "@/components/ui/BottomZone";
 import { Screen, Toggle, WEEKDAYS, minutesToHours, useAdminAction } from "@/components/admin/AdminUi";
 import { setNotifyByEmail } from "@/server/admin/me-actions";
+import { SignOutSheet } from "@/components/shell/SignOutSheet";
 import type { MyProfile } from "@/server/admin/queries";
 
 declare global {
@@ -22,11 +22,12 @@ const ROLE_LABEL: Record<MyProfile["role"], string> = {
   CA: "CA (read-only finance)",
 };
 
-/** /me — own profile and notification preferences; "Enable push" and "Sign out" sit in the bottom bar. */
+/** /me — own profile and notification preferences; "Enable push" and "Sign out" sit in the bottom bar (Sign out asks first, the same sheet as the top bar's). */
 export function MeProfile({ me, defaultCapacityMinutes }: { me: MyProfile; defaultCapacityMinutes: number }) {
   const { busy, run } = useAdminAction();
   const [notify, setNotify] = useState(me.notifyByEmail);
   const [pushState, setPushState] = useState<"idle" | "busy" | "done" | "unavailable">("idle");
+  const [signingOut, setSigningOut] = useState(false);
 
   const toggleEmail = async (value: boolean) => {
     setNotify(value);
@@ -50,15 +51,19 @@ export function MeProfile({ me, defaultCapacityMinutes }: { me: MyProfile; defau
   const pushLabel = pushState === "busy" ? "Enabling…" : pushState === "done" ? "Push on" : "Enable push";
   const zone = (
     <BottomZone
-      menu={me.role === "ADMIN"}
       right={
         <>
           <BarChip label="Enable push notifications" active={pushState === "done"} onClick={busy || pushState === "busy" || pushState === "done" ? undefined : () => void enablePush()}>
             {pushLabel}
           </BarChip>
-          <Link href="/api/auth/signout" className="no-select glass-chip flex h-[22px] items-center whitespace-nowrap rounded-full px-3 text-[11px] font-medium leading-none text-red-600">
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            onClick={() => setSigningOut(true)}
+            className="no-select glass-chip flex h-[30px] items-center whitespace-nowrap rounded-full px-3.5 text-xs font-semibold leading-none text-red-600 outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:text-red-400"
+          >
             Sign out
-          </Link>
+          </button>
         </>
       }
     />
@@ -94,6 +99,7 @@ export function MeProfile({ me, defaultCapacityMinutes }: { me: MyProfile; defau
           </span>
         </div>
       </section>
+      <SignOutSheet open={signingOut} onClose={() => setSigningOut(false)} />
     </Screen>
   );
 }

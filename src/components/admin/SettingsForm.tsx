@@ -53,7 +53,6 @@ export function SettingsForm({ settings, google }: { settings: SettingsDto; goog
 
   const zone = (
     <BottomZone
-      menu
       rows={
         <ZoneRow label="Jump to section">
           {SETTINGS_SECTIONS.map((s) => (

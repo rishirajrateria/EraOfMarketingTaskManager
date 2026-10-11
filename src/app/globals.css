@@ -3,7 +3,7 @@
 /* Glass refresh (ADR 0010): refined palette from docs/prototype/eom-tasks.html ("Glass refresh: refined palette"),
    light + dark. Raw tokens live on :root; Tailwind colours below point at them so `text-ink`, `bg-primary`,
    `bg-glass`, `border-hair`… follow the theme. Never put backdrop-filter on an ancestor of a position:fixed
-   overlay — MenuTray and Sheet are portalled to <body>. */
+   overlay — Sheet and the popovers are portalled to <body>. */
 
 @theme {
   --color-brand-blue: #1e63d6;

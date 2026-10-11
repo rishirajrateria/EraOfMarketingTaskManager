@@ -11,7 +11,7 @@ const NOT_PER_CLIENT = "not per client";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const dayLabel = (key: string) => `${Number(key.slice(8, 10))} ${MONTHS[Number(key.slice(5, 7)) - 1]}`;
 
-/** Lists behind the numbers (prototype `.dblinks`): the menu no longer has these rows (ADR 0016). */
+/** Lists behind the numbers (prototype `.dblinks`), one tap away (ADR 0016). */
 const LINKS = {
   inv: ["Invoices", "/admin/invoices"],
   pay: ["Payments", "/admin/payments"],

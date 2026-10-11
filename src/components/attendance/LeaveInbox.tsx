@@ -52,7 +52,6 @@ export function LeaveInbox({ inbox, isAdmin, highlightLeaveId }: { inbox: Inbox;
   const counts: Record<SectionId, number> = { pending: inbox.pending.length, shift: inbox.needsShift.length, changes: inbox.changeRequests.length, recent: inbox.recent.length };
   const zone = (
     <BottomZone
-      menu={isAdmin}
       rows={
         <ZoneRow label="Section">
           <ZonePill active={section === null} onClick={() => setSection(null)}>

@@ -5,7 +5,7 @@ import { dateKey, zonedStartOfDay } from "@/lib/time";
 
 /**
  * "Needs you" on the Payments & finance hub (ADR 0013): vendor bills that are overdue or due within 7 days (the same
- * window as the menu's "due this week"). Client invoices overdue and approvals come from the payments dashboard.
+ * window as the old menu tray's "due this week"). Client invoices overdue and approvals come from the payments dashboard.
  */
 export type BillDueRow = { occId: string; billId: string; payee: string; label: string | null; category: string; amount: number; dueKey: string; overdue: boolean };
 

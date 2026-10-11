@@ -60,7 +60,6 @@ export function WorkTypesManager({ workTypes, teams, openAdd = false }: { workTy
     <PeekZone label={LIST_FLOWS.WORK_TYPE.peek} onExpand={add.show} />
   ) : (
     <BottomZone
-      menu
       right={
         <BarChip label="Add work type" onClick={add.show}>
           + Add work
