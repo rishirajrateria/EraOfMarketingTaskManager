@@ -63,7 +63,9 @@ export function AddTaskGreenRows({ form, patch, data }: Props) {
   const role = data.role;
   const meeting = form.type === "MEETING";
   const workId = form.tagIds[0] ?? "";
-  const teamPicked = role !== "ADMIN" || form.teamIds.length > 0;
+  // A client task (needed FROM the client) has no team, work type or preference: the CLIENT row only.
+  const client = !meeting && !!form.forClient;
+  const teamPicked = !client && (role !== "ADMIN" || form.teamIds.length > 0);
   const works = workTypesFor(data.workTypes, workTeamIds(form, data));
 
   const preferRow =
@@ -100,7 +102,9 @@ export function AddTaskGreenRows({ form, patch, data }: Props) {
     ) : null;
 
   let teamRow: React.ReactNode = null;
-  if (meeting) {
+  if (client) {
+    teamRow = null;
+  } else if (meeting) {
     // Meetings (ADR 0012): TEAM = "invite these teams" (Team Leader + executives), multi-select, every role.
     teamRow = (
       <Row label="Team">

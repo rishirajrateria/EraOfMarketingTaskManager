@@ -103,7 +103,7 @@ export function TaskDetailSheet({
         <div className={clsx("rounded-xl px-3 py-2", `row-${t.colour}`)}>
           <p className={clsx("text-base font-bold", t.colour === "grey" && "line-through")}>{t.title}</p>
           <p className="text-xs text-gray-600">
-            {statusLabel(t)} · {t.client.name} · {t.type === "MEETING" ? "Meeting" : fmtMinutes(t.allocatedMinutes)} · {datePill(start, tz)}
+            {statusLabel(t)} · {t.client.name} · {t.type === "MEETING" ? "Meeting" : t.forClient ? "For client" : t.deadlineOnly ? "Deadline" : fmtMinutes(t.allocatedMinutes)} · {t.deadlineOnly ? `${t.forClient ? "Needed by" : "Due"} ${datePill(start, tz)}` : datePill(start, tz)}
             {t.recurring ? ` · ↻ ${t.repeatText ?? "recurring"}` : ""}
           </p>
         </div>
@@ -126,7 +126,8 @@ export function TaskDetailSheet({
           </a>
         ) : null}
 
-        <div className="grid grid-cols-4 gap-2">
+        {/* Client tasks have no Drive folder, Meet link, Chat space or Calendar event. */}
+        <div className={t.forClient ? "hidden" : "grid grid-cols-4 gap-2"}>
           <LinkBtn href={t.driveFolderUrl} label="Drive" icon={<FolderOpen size={18} />} />
           <LinkBtn href={t.meetLink} label="Meet" icon={<Video size={18} />} disabled={!t.meetActive} />
           <LinkBtn href={t.chatSpaceUrl} label="Chat" icon={<MessageSquare size={18} />} />
@@ -136,7 +137,7 @@ export function TaskDetailSheet({
         <TaskPeopleCard t={t} data={data} />
 
         <section>
-          <Row k="Scheduled" v={start ? `${fmtDateTime(start, tz)} – ${fmtTime(end, tz)}` : "Unscheduled"} />
+          <Row k={t.deadlineOnly ? (t.forClient ? "Needed by" : "Deadline") : "Scheduled"} v={t.deadlineOnly ? `${fmtDate(start, tz, "EEE d MMM")} · by end of day` : start ? `${fmtDateTime(start, tz)} – ${fmtTime(end, tz)}` : "Unscheduled"} />
           <Row k="Actual" v={t.actualStart ? `${fmtDateTime(new Date(t.actualStart), tz)} – ${t.actualEnd ? fmtTime(new Date(t.actualEnd), tz) : "running"}` : "Not started"} />
           {t.finishRequestedAt ? <Row k="Finish requested" v={fmtDateTime(new Date(t.finishRequestedAt), tz)} /> : null}
           <Row k="Priority" v={t.priority.toLowerCase()} />

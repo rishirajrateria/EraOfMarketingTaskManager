@@ -35,6 +35,10 @@ export type TaskRow = {
   /** The task's work type (first tag), drives the "✓ specialist" marks. */
   workTypeId: string | null;
   allocatedMinutes: number;
+  /** Deadline only: a "done by" day (scheduledStart = scheduledEnd = its working-day end), no hours, no time blocked. */
+  deadlineOnly?: boolean;
+  /** "For client" (Admin only): something needed from the client — no team, no Drive / Meet / Chat. */
+  forClient?: boolean;
   scheduledStart: string | null;
   scheduledEnd: string | null;
   actualStart: string | null;

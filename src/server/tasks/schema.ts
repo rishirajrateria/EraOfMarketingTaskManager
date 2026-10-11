@@ -142,6 +142,16 @@ export const taskInputSchema = z.object({
    * them (ADR 0017 privacy), so their form sends this instead of the emails.
    */
   inviteClient: z.boolean().default(false),
+  /**
+   * Deadline only (work tasks): `scheduledStart` is the "done by" day — no hours, no time blocked; the server stores the
+   * day's working-day end and 0 minutes and ignores `allocatedMinutes`.
+   */
+  deadlineOnly: z.boolean().default(false),
+  /**
+   * "For client" (Admin only): something needed FROM the client. Always deadline only (`scheduledStart` = "Needed by"
+   * day); no team, work type or hours; assigned to the creating Admin; no Drive / Meet / Chat.
+   */
+  forClient: z.boolean().default(false),
   /** when the creator accepted the proposed slot, the client passes it back; otherwise server recomputes */
   acceptProposedSlot: z.boolean().default(true),
 });

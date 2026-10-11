@@ -70,6 +70,47 @@ export function ScheduleSheet({ open, onClose, value, tz, onSet, onError }: { op
   );
 }
 
+/**
+ * Deadline only (prototype `deadlineSheet`): just the "Done by" date — no hours, start or end time, nothing blocked in
+ * the day. Client tasks ask "Needed by". A day before today is refused here, as the server refuses it on Save.
+ */
+export function DeadlineSheet({ open, onClose, value, tz, forClient, onSet, onError }: { open: boolean; onClose: () => void; value: string; tz: string; forClient?: boolean; onSet: (day: string) => void; onError: (m: string) => void }) {
+  const [date, setDate] = useState("");
+  const [today, setToday] = useState("");
+  useEffect(() => {
+    if (!open) return;
+    setToday(dateKey(new Date(), tz));
+    setDate(/^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : dateKey(addDays(new Date(), 1), tz));
+  }, [open, value, tz]);
+  const label = forClient ? "Needed by" : "Done by";
+  return (
+    <Sheet open={open} onClose={onClose} title={forClient ? "Needed by" : "Deadline"}>
+      <div className="px-4 pb-5 pt-1">
+        <Field label={label}>
+          <input type="date" className={inputCls} value={date} min={today || undefined} aria-describedby="deadline-hint" onChange={(e) => setDate(e.target.value)} />
+        </Field>
+        <p id="deadline-hint" className="mt-1.5 text-[11.5px] leading-snug text-muted">
+          {forClient
+            ? "The day you need it from the client. It shows on their tracking link — no hours, nothing blocked in anyone's day."
+            : "No hours, start or end time — just the date it must be finished by. It blocks no time in the day."}
+        </p>
+        <button
+          type="button"
+          className={clsx(btnPrimary, "mt-4 w-full")}
+          onClick={() => {
+            if (!date) return onError(forClient ? "Pick the date it is needed by" : "Pick the due date");
+            if (date < dateKey(new Date(), tz)) return onError(PAST_DAY_MESSAGE);
+            onSet(date);
+            onClose();
+          }}
+        >
+          {forClient ? "Set date" : "Set deadline"}
+        </button>
+      </div>
+    </Sheet>
+  );
+}
+
 /** Meeting attendees, opened from the people glyph next to Save. */
 export function AssigneeSheet({ open, onClose, form, patch, data, assignees }: { open: boolean; onClose: () => void; form: AddTaskForm; patch: (p: Partial<AddTaskForm>) => void; data: DashboardData; assignees: Person[] }) {
   return (

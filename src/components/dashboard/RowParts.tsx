@@ -137,13 +137,24 @@ export function ReviewPill({ t, field, text, className, onMenu, onTap, popup, do
   );
 }
 
-/** Date pill ("08 Oct") + hours pill ("4hrs"; meetings "🎥 30m"), both reviewable. */
+/**
+ * Date pill ("08 Oct") + hours pill ("4hrs"; meetings "🎥 30m"), both reviewable. A deadline-only task: "Due 08 Oct"
+ * (red once the day has passed unstarted) + "Deadline" (prototype `.pill.dl`).
+ */
 export function DateHoursPills({ t, tz, onPillMenu, onTap }: { t: Row; tz: string; onPillMenu: (field: ReviewField) => void; onTap: () => void }) {
   const start = t.scheduledStart ? new Date(t.scheduledStart) : null;
+  const dl = !!t.deadlineOnly;
   return (
     <div className="flex shrink-0 items-center gap-1">
-      <ReviewPill t={t} field="date" text={datePill(start, tz)} className="font-medium text-ink" onMenu={() => onPillMenu("date")} onTap={onTap} />
-      <ReviewPill t={t} field="mins" text={t.type === "MEETING" ? `🎥 ${fmtMinutes(t.allocatedMinutes)}` : fmtMinutes(t.allocatedMinutes)} className="font-bold text-ink" onMenu={() => onPillMenu("mins")} onTap={onTap} />
+      <ReviewPill t={t} field="date" text={dl ? `Due ${datePill(start, tz)}` : datePill(start, tz)} className={dl && t.colour === "red" ? "font-semibold text-late" : "font-medium text-ink"} onMenu={() => onPillMenu("date")} onTap={onTap} />
+      <ReviewPill
+        t={t}
+        field="mins"
+        text={dl ? "Deadline" : t.type === "MEETING" ? `🎥 ${fmtMinutes(t.allocatedMinutes)}` : fmtMinutes(t.allocatedMinutes)}
+        className={dl ? "font-semibold text-ink opacity-85" : "font-bold text-ink"}
+        onMenu={() => onPillMenu("mins")}
+        onTap={onTap}
+      />
     </div>
   );
 }
@@ -170,7 +181,7 @@ export function TimePill({ t, tz, onPillMenu }: { t: Row; tz: string; onPillMenu
       <ReviewPill
         t={t}
         field="time"
-        text={`${fmtTime(start, tz)} – ${fmtTime(end, tz)}`}
+        text={t.deadlineOnly ? "by end of day" : `${fmtTime(start, tz)} – ${fmtTime(end, tz)}`}
         className={clsx("shrink-0", colour)}
         dot={!!tone}
         popup={{ ref, expanded: open, controls: popId, hint }}

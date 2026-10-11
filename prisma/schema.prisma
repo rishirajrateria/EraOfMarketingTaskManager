@@ -407,6 +407,8 @@ model Client {
   kitSharedWith    String? // client email given Editor access
   kitSentAt        DateTime?
   kitSentVia       String? // EMAIL | WHATSAPP (last send)
+  /// Client tracking link `/c/<token>` (no login): 128-bit random hex, made on first use, regenerable by Admin.
+  portalToken      String?           @unique
   visibleInFilters Boolean           @default(false)
   active           Boolean           @default(true)
   tasks            Task[]
@@ -449,6 +451,12 @@ model Task {
   assignedById         String?
   assignedBy           User?             @relation("TaskAssignedBy", fields: [assignedById], references: [id])
   allocatedMinutes     Int               @default(60)
+  /// Deadline only: a "done by" day, no hours and no time blocked. scheduledStart = scheduledEnd = that day's
+  /// working-day end (company tz), allocatedMinutes = 0; never placed by / busy for the slot finder, never booked.
+  deadlineOnly         Boolean           @default(false)
+  /// "For client" (Admin only): something needed FROM the client — always deadline only, no team / work type, assigned
+  /// to the creating Admin, no Google Drive / Meet / Chat; shown on the client's tracking link.
+  forClient            Boolean           @default(false)
   scheduledStart       DateTime?
   scheduledEnd         DateTime?
   actualStart          DateTime?

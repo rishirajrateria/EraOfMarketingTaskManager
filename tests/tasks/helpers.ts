@@ -15,6 +15,8 @@ export type TaskInputOverrides = Partial<{
   teamIds: string[];
   tagIds: string[];
   preferredAssigneeIds: string[];
+  deadlineOnly: boolean;
+  forClient: boolean;
 }>;
 
 /** A no-team ("legacy") work type: available to every team (ADR 0008), so fixtures can always pick it. */

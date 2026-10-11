@@ -11,8 +11,8 @@ import * as Cal from "@/google/calendar";
 import * as Chat from "@/google/chat";
 import * as Meet from "@/google/meet";
 import { ensureTaskFolder } from "@/google/task-folder";
-import { fmtDateTime } from "@/lib/time";
-import { meetingAttendees, readMeetingOptions } from "@/server/tasks/meeting";
+import { fmtDate, fmtDateTime } from "@/lib/time";
+import { defaultMeetingOptions, meetingAttendees, readMeetingOptions, type MeetingOptions } from "@/server/tasks/meeting";
 import { workTaskPeople } from "@/server/tasks/task-people";
 
 let registered = false;
@@ -50,7 +50,18 @@ async function queueMeetConfig(taskId: string, meetLink: string | null) {
   if (code) await enqueue("MEET_CONFIG", `meetcfg:${taskId}:${code}`, {}, { taskId });
 }
 
-const eventSummary = (task: { type: string; title: string }) => `${task.type === "MEETING" ? "Meeting" : "Task"}: ${task.title}`;
+/**
+ * Calendar options of a task's event: a meeting's own; a deadline-only task (no time blocked) is an all-day, "free"
+ * event on its due day — it shows the deadline in everyone's calendar without making anyone busy; other work: none.
+ */
+function eventOptions(task: { type: string; deadlineOnly: boolean; meetingOptions: unknown }, tz: string): MeetingOptions | null {
+  if (task.type === "MEETING") return readMeetingOptions(task.meetingOptions);
+  if (task.deadlineOnly) return { ...defaultMeetingOptions(tz), allDay: true, transparency: "transparent", reminders: [] };
+  return null;
+}
+
+const eventSummary = (task: { type: string; title: string; deadlineOnly?: boolean }) =>
+  task.deadlineOnly ? `Due: ${task.title}` : `${task.type === "MEETING" ? "Meeting" : "Task"}: ${task.title}`;
 /** Client name + the description as plain text (the agenda for meetings). */
 const eventDescription = (task: { client: { name: string }; description: string }) => `${task.client.name}\n${task.description.replace(/<[^>]+>/g, "")}`.trim();
 
@@ -70,7 +81,8 @@ export function registerTaskIntegrationHandlers() {
     if (task.calendarEventId) return { id: task.calendarEventId };
     const start = task.scheduledStart ?? new Date();
     const end = task.scheduledEnd ?? new Date(start.getTime() + task.allocatedMinutes * 60000);
-    const options = task.type === "MEETING" ? readMeetingOptions(task.meetingOptions) : null;
+    const tz = (await getSettings()).timezone;
+    const options = eventOptions(task, tz);
     const ev = await Cal.createEvent({
       summary: eventSummary(task),
       description: eventDescription(task),
@@ -80,7 +92,7 @@ export function registerTaskIntegrationHandlers() {
       withMeet: true,
       requestId: `task-${task.id}`,
       options,
-      timeZone: (await getSettings()).timezone,
+      timeZone: tz,
     });
     await prisma.task.update({
       where: { id: task.id },
@@ -112,7 +124,9 @@ export function registerTaskIntegrationHandlers() {
       space.name,
       [
         `📋 *${task.title}* — ${task.client.name}`,
-        `Allocated: ${Math.round(task.allocatedMinutes / 60 * 10) / 10}h · ${fmtDateTime(task.scheduledStart, settings.timezone)} → ${fmtDateTime(task.scheduledEnd, settings.timezone)}`,
+        task.deadlineOnly
+          ? `Deadline: ${fmtDate(task.scheduledStart, settings.timezone, "EEE d MMM")} · by end of day`
+          : `Allocated: ${Math.round(task.allocatedMinutes / 60 * 10) / 10}h · ${fmtDateTime(task.scheduledStart, settings.timezone)} → ${fmtDateTime(task.scheduledEnd, settings.timezone)}`,
         fresh?.driveFolderUrl ? `📁 Drive: ${fresh.driveFolderUrl}` : "",
         fresh?.meetLink ? `🎥 Meet: ${fresh.meetLink}` : "",
       ]
@@ -125,9 +139,10 @@ export function registerTaskIntegrationHandlers() {
   registerHandler("CALENDAR_UPDATE", async (_p, job) => {
     const { task, emails } = await taskContext(job.taskId!);
     if (!task.calendarEventId) return null;
-    const options = task.type === "MEETING" ? readMeetingOptions(task.meetingOptions) : null;
+    const tz = (await getSettings()).timezone;
+    const options = eventOptions(task, tz);
     // Meet toggled in the meeting options: add a conference when there is none, remove it when switched off.
-    const meet = options ? (options.withMeet && !task.meetLink ? "add" : !options.withMeet && task.meetLink ? "remove" : undefined) : undefined;
+    const meet = options && task.type === "MEETING" ? (options.withMeet && !task.meetLink ? "add" : !options.withMeet && task.meetLink ? "remove" : undefined) : undefined;
     const res = await Cal.updateEvent(task.calendarEventId, {
       summary: eventSummary(task),
       ...(task.type === "MEETING" ? { description: eventDescription(task) } : {}),
@@ -135,7 +150,7 @@ export function registerTaskIntegrationHandlers() {
       end: task.scheduledEnd ?? undefined,
       attendees: emails,
       options,
-      timeZone: (await getSettings()).timezone,
+      timeZone: tz,
       meet,
       requestId: `task-${task.id}-meet-${Date.now()}`,
     });
@@ -161,11 +176,18 @@ export function registerTaskIntegrationHandlers() {
   });
 }
 
+/** "For client" tasks (something needed from the client) skip every Google integration. */
+async function isForClient(taskId: string, tx?: Parameters<typeof enqueue>[4]): Promise<boolean> {
+  const t = await (tx ?? prisma).task.findUnique({ where: { id: taskId }, select: { forClient: true } });
+  return !!t?.forClient;
+}
+
 /**
  * Queue the Google set (ADR 0015): every task gets a Drive folder (+ "Meeting notes") and a Calendar event with Meet
  * (then MEET_CONFIG); work tasks also get a Chat space.
  */
 export async function queueTaskCreation(taskId: string, type: "WORK" | "MEETING", tx?: Parameters<typeof enqueue>[4]) {
+  if (await isForClient(taskId, tx)) return; // for-client tasks: no Drive folder, Meet link or Chat space
   await enqueue("DRIVE_FOLDER", `drive:${taskId}`, {}, { taskId }, tx);
   await enqueue("CALENDAR_EVENT", `cal:${taskId}`, {}, { taskId }, tx);
   if (type === "WORK") await enqueue("CHAT_SPACE", `chat:${taskId}`, {}, { taskId }, tx);
@@ -173,6 +195,7 @@ export async function queueTaskCreation(taskId: string, type: "WORK" | "MEETING"
 
 /** Task edits propagate to Calendar, Chat membership and Drive sharing (SPEC §8). */
 export async function queueTaskPropagation(taskId: string, tx?: Parameters<typeof enqueue>[4]) {
+  if (await isForClient(taskId, tx)) return;
   const stamp = Date.now();
   await enqueue("CALENDAR_UPDATE", `calupd:${taskId}:${stamp}`, {}, { taskId }, tx);
   await enqueue("DRIVE_SHARE", `drvshare:${taskId}:${stamp}`, {}, { taskId }, tx);

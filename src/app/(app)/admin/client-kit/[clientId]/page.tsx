@@ -9,6 +9,9 @@ import { Screen, ScreenHeader } from "@/components/admin/AdminUi";
 import { BarIcon, BottomZone } from "@/components/ui/BottomZone";
 import { CreateKitButton, SendKitButtons, kitBtn } from "@/components/clients/KitActions";
 import { KitShareButton } from "@/components/clients/KitShareSheet";
+import { TrackingLinkButton } from "@/components/clients/TrackingLinkSheet";
+import { ensurePortalToken } from "@/server/portal/portal";
+import { portalBaseUrl } from "@/server/portal/base-url";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +36,7 @@ export default async function ClientKitDetailPage({ params }: { params: Promise<
   const { clientId } = await params;
   const [d, settings] = await Promise.all([getKitDetail(clientId), getSettings()]);
   if (!d) notFound();
+  const portalUrl = `${await portalBaseUrl()}/c/${await ensurePortalToken(clientId)}`;
   const { row: r, folders } = d;
   const tz = settings.timezone;
   const assets = d.vaultItems.filter((i) => i.kind === "ASSET_DRIVE_LINK");
@@ -58,6 +62,15 @@ export default async function ClientKitDetailPage({ params }: { params: Promise<
           <CreateKitButton clientId={r.clientId} repair={r.partial} />
         )}
       </div>
+
+      <section className="mx-4 mt-3 rounded-[18px] border border-hair bg-glass px-3 py-2.5 shadow-[var(--shadow)]" aria-label="Client tracking link">
+        <h2 className="text-[11px] font-bold uppercase tracking-[.08em] text-muted">Client tracking link</h2>
+        <div className="mt-1.5 flex items-center gap-2">
+          <span className="min-w-0 flex-1 font-mono text-[12px] leading-snug text-ink [overflow-wrap:anywhere]">{portalUrl}</span>
+          <TrackingLinkButton clientId={r.clientId} label="Share link" className={kitBtn} />
+        </div>
+        <p className="mt-1 text-[11.5px] leading-snug text-muted">Their tasks, dates and status · this Drive folder · payments and invoices. No hours are shown.</p>
+      </section>
 
       {r.urls ? (
         <section className="mx-4 mt-3">

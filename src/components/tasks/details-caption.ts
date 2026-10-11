@@ -3,7 +3,7 @@ import { toZonedTime } from "date-fns-tz";
 import { DEFAULT_TZ, dateKey } from "@/lib/time";
 import type { DashboardData } from "@/server/tasks/types";
 import type { DayPlacement } from "@/server/scheduling/day-slot";
-import { isDateOnly, type AddTaskForm } from "@/components/tasks/add-task-helpers";
+import { isDateOnly, isDeadline, type AddTaskForm } from "@/components/tasks/add-task-helpers";
 import { fmtDuration, fmtStartPill, startMinutes } from "@/components/tasks/meeting-helpers";
 
 /**
@@ -18,6 +18,21 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 export function fmtDayKey(key: string): string {
   const [y, m, d] = key.split("-").map(Number);
   return `${WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]} ${d} ${MONTHS[m - 1]}`;
+}
+
+/** "2026-10-13" → "13 Oct" (the deadline pill). */
+export function fmtShortDayKey(key: string): string {
+  const [, m, d] = key.split("-").map(Number);
+  return `${d} ${MONTHS[m - 1]}`;
+}
+
+type DeadlineForm = Pick<AddTaskForm, "type" | "scheduledStart" | "deadline" | "forClient">;
+
+/** The time row's Deadline pill: "Due 13 Oct" / "Needed by 13 Oct" once a day is set, else "Deadline" / "Needed by…". */
+export function deadlinePill(form: DeadlineForm): string {
+  const day = isDeadline(form) && isDateOnly(form.scheduledStart) ? fmtShortDayKey(form.scheduledStart) : null;
+  if (form.forClient) return day ? `Needed by ${day}` : "Needed by…";
+  return day ? `Due ${day}` : "Deadline";
 }
 
 /** A slot as the server returns it (Dates) or as it arrives in the browser (JSON strings). */
@@ -64,8 +79,14 @@ function missedPhrase(day: Pick<DayPlacement, "missed" | "freeMinutes">, past: b
  * free" until then); when that day had no room: "Fri 23 Oct full - next free Sat 24 Oct 10 am" ("is a day off", "is
  * over", "has only 1h free"); when the server refused it: "Fri 9 Oct - That day has passed — pick today or later".
  */
-export function whenCaption(form: Pick<AddTaskForm, "type" | "scheduledStart" | "meeting">, now = new Date(), tz = DEFAULT_TZ, preview?: SlotPreview | null): string {
+export function whenCaption(form: Pick<AddTaskForm, "type" | "scheduledStart" | "meeting" | "deadline" | "forClient">, now = new Date(), tz = DEFAULT_TZ, preview?: SlotPreview | null): string {
   const value = form.scheduledStart;
+  // Deadline only: "Due 13 Oct · no time blocked"; a client task: "Needed by 13 Oct".
+  if (isDeadline(form)) {
+    const day = isDateOnly(value) ? fmtShortDayKey(value) : null;
+    if (form.forClient) return day ? `Needed by ${day}` : "Needed by — pick a date";
+    return day ? `Due ${day} · no time blocked` : "Due — pick a date";
+  }
   if (!/^\d{4}-\d{2}-\d{2}/.test(value)) return "Up next";
   const day = value.slice(0, 10);
   const dayLabel = dayLabelOf(day, now, tz);
@@ -85,13 +106,13 @@ export function whenCaption(form: Pick<AddTaskForm, "type" | "scheduledStart" | 
 
 /** "Details · Social + Video · Acme · Today 11 am": the picked teams (task team / invited teams), the client, the start. */
 export function detailsCaption(
-  form: Pick<AddTaskForm, "type" | "teamIds" | "clientId" | "scheduledStart" | "meeting">,
+  form: Pick<AddTaskForm, "type" | "teamIds" | "clientId" | "scheduledStart" | "meeting" | "deadline" | "forClient">,
   data: Pick<DashboardData, "teams" | "clients">,
   now = new Date(),
   tz = DEFAULT_TZ,
   preview?: SlotPreview | null,
 ): string {
-  const teams = form.teamIds.map((id) => data.teams.find((t) => t.id === id)?.name).filter(Boolean).join(" + ");
+  const teams = form.forClient ? "For client" : form.teamIds.map((id) => data.teams.find((t) => t.id === id)?.name).filter(Boolean).join(" + ");
   const client = form.clientId ? data.clients.find((c) => c.id === form.clientId)?.name : undefined;
   return ["Details", teams, client, whenCaption(form, now, tz, preview)].filter(Boolean).join(" · ");
 }

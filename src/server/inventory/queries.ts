@@ -41,7 +41,8 @@ export type InventoryResult = {
 const TASK_ROLES = ["ADMIN", "TEAM_LEADER", "EXECUTIVE"] as const;
 
 /** Open WORK tasks count against the day they are scheduled to start; unscheduled ones count on today. */
-const OPEN_TASK_WHERE = { deletedAt: null, type: "WORK" as const, status: { not: "COMPLETED" as const } };
+/** Booked work: open work tasks with time (a deadline-only task books no hours). */
+const OPEN_TASK_WHERE = { deletedAt: null, type: "WORK" as const, deadlineOnly: false, status: { not: "COMPLETED" as const } };
 
 export async function inventoryFor(range: InventoryRange, opts: InventoryOptions = {}): Promise<InventoryResult> {
   const settings = await getSettings();
@@ -194,6 +195,7 @@ export async function hourlyBreakdown(date: Date, opts: InventoryOptions = {}): 
     prisma.task.findMany({
       where: {
         deletedAt: null,
+        deadlineOnly: false,
         status: { in: ACTIVE_STATUSES },
         assignees: { some: { userId: { in: userIds } } },
         scheduledStart: { lt: dayEnd },
