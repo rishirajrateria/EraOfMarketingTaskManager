@@ -3,7 +3,7 @@
  * task really started and finished. Unit-tested in tests/ui/actual-time.test.ts.
  */
 import type { TaskStatus } from "@prisma/client";
-import { fmtTime } from "@/lib/time";
+import { fmtDate, fmtTime } from "@/lib/time";
 
 export type ActualTimeInput = {
   status: TaskStatus;
@@ -14,6 +14,8 @@ export type ActualTimeInput = {
   actualEnd: string | Date | null;
   /** When the assignee marked it done from their side — the finish time while it waits for approval. */
   finishRequestedAt?: string | Date | null;
+  /** Deadline only: "Deadline 13 Oct · by end of day" instead of a scheduled window. */
+  deadlineOnly?: boolean;
 };
 
 /** One popover row: "Started · 11:20am · 20 min late" (`tone` colours the note: late → red, ok → green). */
@@ -64,20 +66,24 @@ export function actualTimeLines(t: ActualTimeInput, tz: string, now: Date = new 
   const end = toDate(t.scheduledEnd);
   const actualStart = toDate(t.actualStart);
   const done = finishedAt(t);
-  const lines: ActualTimeLine[] = [{ label: "Scheduled", value: `${fmtTime(start, tz)} – ${fmtTime(end, tz)}`, note: null, tone: null }];
+  const dl = !!t.deadlineOnly;
+  const lines: ActualTimeLine[] = [
+    dl ? { label: "Deadline", value: `${fmtDate(start, tz, "d MMM")} · by end of day`, note: null, tone: null } : { label: "Scheduled", value: `${fmtTime(start, tz)} – ${fmtTime(end, tz)}`, note: null, tone: null },
+  ];
 
-  if (actualStart) lines.push({ label: "Started", value: fmtTime(actualStart, tz), ...compare(actualStart, start) });
+  // A deadline has no start time to be late for: just when it was started.
+  if (actualStart) lines.push({ label: "Started", value: fmtTime(actualStart, tz), ...(dl ? { note: null, tone: null } : compare(actualStart, start)) });
   else if (done) lines.push({ label: "Started", value: "not recorded", note: null, tone: null });
   else {
     const missed = t.type !== "MEETING" && !!start && start.getTime() < now.getTime();
-    lines.push({ label: "Started", value: "not yet", note: missed ? "start time passed" : null, tone: missed ? "late" : null });
+    lines.push({ label: "Started", value: "not yet", note: missed ? (dl ? "deadline passed" : "start time passed") : null, tone: missed ? "late" : null });
   }
 
   const label = t.status === "FINISH_REQUESTED" ? "Done (their side)" : "Finished";
   if (done) lines.push({ label, value: fmtTime(done, tz), ...compare(done, end) });
   else if (actualStart) {
     const over = !!end && minutesBetween(now, end) > 0;
-    lines.push({ label, value: t.status === "PAUSED" ? "paused" : "still running", note: over ? "past end time" : null, tone: over ? "late" : null });
+    lines.push({ label, value: t.status === "PAUSED" ? "paused" : "still running", note: over ? (dl ? "past the deadline" : "past end time") : null, tone: over ? "late" : null });
   }
   return lines;
 }

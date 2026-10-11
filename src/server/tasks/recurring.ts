@@ -8,6 +8,8 @@ import { queueTaskCreation } from "@/google/task-integrations";
 import { nextRunAt } from "@/server/tasks/recurrence";
 import { findSlot } from "@/lib/working-time";
 import { workingConfig } from "@/server/scheduling/slot";
+import { deadlineInstant } from "@/server/tasks/deadline";
+import { dateKey } from "@/lib/time";
 
 export async function spawnNextOccurrence(taskId: string, actorId: string | null): Promise<string | null> {
   const t = await prisma.task.findUnique({ where: { id: taskId }, include: { assignees: true, teams: true, tags: true, recurrenceRule: true } });
@@ -25,9 +27,11 @@ export async function spawnNextOccurrence(taskId: string, actorId: string | null
   }
   // Occurrences land exactly at the due time when it falls in working hours; otherwise the next working slot.
   const cfg = await workingConfig();
-  const slot = findSlot(next, t.allocatedMinutes, cfg, []);
-  const start = slot?.start ?? next;
-  const end = slot?.end ?? new Date(start.getTime() + t.allocatedMinutes * 60000);
+  // Deadline-only repeats: due by the end of the occurrence's day (no slot, no hours).
+  const due = t.deadlineOnly ? deadlineInstant(dateKey(next, settings.timezone), settings.timezone, settings.workEndMinutes) : null;
+  const slot = due ? null : findSlot(next, t.allocatedMinutes, cfg, []);
+  const start = due ?? slot?.start ?? next;
+  const end = due ?? slot?.end ?? new Date(start.getTime() + t.allocatedMinutes * 60000);
   // Idempotency: one occurrence per (rule, due time) — never re-create one that already exists.
   const existing = await prisma.task.findFirst({
     where: { recurrenceRuleId: rule.id, deletedAt: null, id: { not: t.id }, scheduledStart: { in: [next, start] } },
@@ -45,6 +49,8 @@ export async function spawnNextOccurrence(taskId: string, actorId: string | null
       createdById: t.createdById,
       assignedById: t.assignedById,
       allocatedMinutes: t.allocatedMinutes,
+      deadlineOnly: t.deadlineOnly,
+      forClient: t.forClient,
       scheduledStart: start,
       scheduledEnd: end,
       important: t.important,

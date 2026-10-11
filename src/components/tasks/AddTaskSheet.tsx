@@ -12,7 +12,7 @@ import { uploadAttachment } from "@/server/tasks/manage";
 import { AddTaskHeader } from "@/components/tasks/AddTaskHeader";
 import { AddTaskBody } from "@/components/tasks/AddTaskBody";
 import { AddTaskTray, TypeSwitch, type Shortcut } from "@/components/tasks/AddTaskTray";
-import { AssigneeSheet, ScheduleSheet } from "@/components/tasks/AddTaskDetails";
+import { AssigneeSheet, DeadlineSheet, ScheduleSheet } from "@/components/tasks/AddTaskDetails";
 import { dayFallbackToast, type SlotPreview } from "@/components/tasks/details-caption";
 import { RepeatSheet } from "@/components/tasks/RecurrencePicker";
 import { MeetingGuestsSheet } from "@/components/tasks/MeetingGuestsSheet";
@@ -28,6 +28,8 @@ import {
   hoursToMinutes,
   headerTeamIds,
   isDateOnly,
+  isDeadline,
+  kindOf,
   parseAddParam,
   repeatBaseDay,
   shortcutStart,
@@ -37,6 +39,7 @@ import {
   type AddTaskErrors,
   type AddTaskForm,
   type PeriodLoads,
+  type TaskKind,
   type TaskMode,
 } from "@/components/tasks/add-task-helpers";
 
@@ -84,6 +87,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
   const [errors, setErrors] = useState<AddTaskErrors>({});
   const [busy, setBusy] = useState<false | "saving" | "uploading">(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [deadlineOpen, setDeadlineOpen] = useState(false);
   const [assigneesOpen, setAssigneesOpen] = useState(false);
   const [repeatOpen, setRepeatOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
@@ -103,6 +107,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
     setErrors({});
     setBusy(false);
     setScheduleOpen(false);
+    setDeadlineOpen(false);
     setAssigneesOpen(false);
     setRepeatOpen(false);
     setOptionsOpen(false);
@@ -148,7 +153,9 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
   // on that day for the people the task lands on (debounced 300ms) so the tray can show "Fri 23 Oct - next free 11:30 am".
   // The day is read in `zone` (meetings: their own), like the server does on Save; a refusal shows in place of the time.
   const [preview, setPreview] = useState<SlotPreview | null>(null);
-  const previewDay = isDateOnly(form.scheduledStart) && !(meeting && form.meeting?.allDay) ? form.scheduledStart : "";
+  const kind: TaskKind = kindOf({ type: chosen ?? "WORK", forClient: form.forClient });
+  // A deadline blocks no time: nothing to preview.
+  const previewDay = isDateOnly(form.scheduledStart) && !isDeadline({ ...form, type: chosen ?? "WORK" }) && !(meeting && form.meeting?.allDay) ? form.scheduledStart : "";
   const previewIds = effectiveAssignees({ ...form, type: chosen ?? "WORK" }, data).join(",");
   const previewMinutes = hoursToMinutes(form.hours);
   useEffect(() => {
@@ -169,25 +176,30 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
       clearTimeout(t);
     };
   }, [open, previewDay, previewIds, previewMinutes, chosen, meeting, zone]);
-  const subSheetOpen = scheduleOpen || assigneesOpen || repeatOpen || optionsOpen || findOpen;
+  const subSheetOpen = scheduleOpen || deadlineOpen || assigneesOpen || repeatOpen || optionsOpen || findOpen;
 
-  const choose = (type: TaskMode) => {
-    if (type === chosen) return;
+  // Task | For client | Meeting. A client task drops the team / work type and is always a deadline ("Needed by"),
+  // keeping a day already picked; leaving it starts over at Up next (prototype `tWorkBtn` / `tClientBtn`).
+  const choose = (next: TaskKind) => {
+    if (next === kind) return;
+    const type: TaskMode = next === "MEETING" ? "MEETING" : "WORK";
     setChosen(type);
     setForm((f) => ({
       ...emptyForm(type, data.me.id, data.role),
       title: f.title,
       description: f.description,
       clientId: f.clientId,
-      teamIds: f.teamIds,
-      tagIds: f.tagIds,
+      teamIds: next === "CLIENT" || f.forClient ? [] : f.teamIds,
+      tagIds: next === "CLIENT" ? [] : f.tagIds,
       ...clientGuestFields(type, data, f.clientId),
+      ...(next === "CLIENT" ? { forClient: true, deadline: true, scheduledStart: isDateOnly(f.scheduledStart) ? f.scheduledStart : "" } : {}),
     }));
   };
 
   // Meetings: once a START time is picked, Tom / today only change the day.
-  const setShortcut = (kind: Shortcut) =>
-    patch({ scheduledStart: kind === "upnext" ? "" : meeting ? meetingShortcut(kind, form.scheduledStart, new Date(), zone) : shortcutStart(kind, new Date(), data.tz) });
+  // Up next / Today / Tomorrow leave deadline mode (prototype `leaveDeadline`).
+  const setShortcut = (sc: Shortcut) =>
+    patch({ deadline: false, scheduledStart: sc === "upnext" ? "" : meeting ? meetingShortcut(sc, isDeadline(form) ? "" : form.scheduledStart, new Date(), zone) : shortcutStart(sc, new Date(), data.tz) });
 
   const uploadAll = async (taskId: string) => {
     const jobs: { file: File; kind: "FILE" | "VOICE_NOTE" | "IMAGE"; durationSec?: number }[] = [
@@ -232,7 +244,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
       // A date-only start that did not fit on that day: say where it went instead of a plain "Task created".
       const fallback = dayFallbackToast(res.data, zone);
       if (fallback) toast(fallback, "ok", { ms: 6000 });
-      else toast(meeting ? "Meeting scheduled" : "Task created");
+      else toast(meeting ? "Meeting scheduled" : live.forClient ? "Client task added · shows on their tracking link" : isDeadline(live) ? "Task created · no time blocked" : "Task created");
       await uploadAll(res.data.taskId);
       voiceNotes.forEach((n) => URL.revokeObjectURL(n.url));
       close();
@@ -252,7 +264,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
   // Missing team / work / client / invitees: shown in one line next to Save (the summary card is gone, ADR 0015).
   // Re-checked live so the line disappears as soon as the missing pick is made.
   const liveErrors = Object.keys(errors).length ? validateForm(liveForm, data) : {};
-  const formError = liveErrors.teamIds ?? liveErrors.tagIds ?? liveErrors.clientId ?? liveErrors.assigneeIds;
+  const formError = liveErrors.teamIds ?? liveErrors.tagIds ?? liveErrors.clientId ?? liveErrors.assigneeIds ?? liveErrors.when;
   const guests = meeting ? guestCount(liveForm, data) : 0;
   const openFindTime = () => {
     setAssigneesOpen(false);
@@ -269,7 +281,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
         <div className="flex h-full min-h-full flex-col" style={{ background: "var(--aurora), var(--bg)" }}>
           <AddTaskHeader loads={loads} teamName={headerName} />
           <AddTaskBody
-            header={<TypeSwitch type={chosen} onType={choose} disabled={!!busy} />}
+            header={<TypeSwitch type={chosen ? kind : null} onType={choose} disabled={!!busy} clientTasks={data.role === "ADMIN"} />}
             form={liveForm}
             patch={patch}
             titleError={errors.title}
@@ -289,10 +301,29 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
             onToast={(m) => toast(m)}
             formError={formError}
           />
-          <AddTaskTray form={liveForm} patch={patch} data={data} type={chosen} tz={zone} preview={preview} onShortcut={setShortcut} onOpenSchedule={() => setScheduleOpen(true)} />
+          <AddTaskTray
+            form={liveForm}
+            patch={patch}
+            data={data}
+            type={chosen ? kind : null}
+            tz={zone}
+            preview={preview}
+            onShortcut={setShortcut}
+            onOpenSchedule={() => setScheduleOpen(true)}
+            onOpenDeadline={() => setDeadlineOpen(true)}
+          />
         </div>
       </Sheet>
-      <ScheduleSheet open={scheduleOpen} onClose={() => setScheduleOpen(false)} value={form.scheduledStart} tz={zone} onSet={(scheduledStart) => patch({ scheduledStart })} onError={(m) => toast(m, "err")} />
+      <ScheduleSheet open={scheduleOpen} onClose={() => setScheduleOpen(false)} value={isDeadline(liveForm) ? "" : form.scheduledStart} tz={zone} onSet={(scheduledStart) => patch({ scheduledStart, deadline: false })} onError={(m) => toast(m, "err")} />
+      <DeadlineSheet
+        open={deadlineOpen}
+        onClose={() => setDeadlineOpen(false)}
+        value={form.scheduledStart}
+        tz={data.tz}
+        forClient={!!form.forClient}
+        onSet={(day) => patch({ scheduledStart: day, deadline: true })}
+        onError={(m) => toast(m, "err")}
+      />
       {meeting ? (
         <>
           <MeetingGuestsSheet open={assigneesOpen} onClose={() => setAssigneesOpen(false)} form={liveForm} patch={patch} data={data} people={assignees} onFindTime={openFindTime} onError={(m) => toast(m, "err")} />
@@ -338,5 +369,6 @@ function errorsFromMessage(message: string): AddTaskErrors {
   if (m.includes("client")) return { clientId: message };
   if (m.includes("assign") || m.includes("invite")) return { assigneeIds: message };
   if (m.includes("allocated")) return { hours: message };
+  if (m.includes("due date") || m.includes("needed by") || m.includes("day has passed")) return { when: message };
   return {};
 }

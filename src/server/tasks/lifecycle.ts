@@ -16,9 +16,12 @@ import { pauseOps, resumeOps } from "@/server/tasks/pause-core";
 import { fieldForKind, reviewFieldsOf, withField } from "@/server/tasks/review-fields";
 import { proposeSlot } from "@/server/scheduling/slot";
 import { getSettings } from "@/lib/settings";
+import { dateKey } from "@/lib/time";
+import { deadlineInstant } from "@/server/tasks/deadline";
 import { z } from "zod";
 
 const noteSchema = z.string().max(2000);
+const maxDay = (a: string, b: string) => (a > b ? a : b);
 const reviewKindSchema = z.enum(["REVIEW", "TIME_CHANGE"]);
 
 async function loadTask(user: SessionUser, taskId: string) {
@@ -264,7 +267,9 @@ export async function restartTask(taskId: string): Promise<ActionResult<{ taskId
     nextStatus(t.status, "RESTART");
     const settings = await getSettings();
     const ids = t.assignees.map((a) => a.userId);
-    const slot = await proposeSlot(ids, t.allocatedMinutes, { requesterRole: user.role, requesterId: user.id });
+    // A deadline-only copy keeps its day (today's end when that day has passed); timed work gets the next slot.
+    const due = t.deadlineOnly ? deadlineInstant(maxDay(dateKey(t.scheduledStart ?? new Date(), settings.timezone), dateKey(new Date(), settings.timezone)), settings.timezone, settings.workEndMinutes) : null;
+    const slot = due ? { start: due, end: due } : await proposeSlot(ids, t.allocatedMinutes, { requesterRole: user.role, requesterId: user.id });
     const reuse = !settings.restartCreatesNewWorkspace;
     const dup = await prisma.task.create({
       data: {
@@ -275,6 +280,8 @@ export async function restartTask(taskId: string): Promise<ActionResult<{ taskId
         createdById: user.id,
         assignedById: user.id,
         allocatedMinutes: t.allocatedMinutes,
+        deadlineOnly: t.deadlineOnly,
+        forClient: t.forClient,
         scheduledStart: slot?.start ?? null,
         scheduledEnd: slot?.end ?? null,
         important: t.important,

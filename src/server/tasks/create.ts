@@ -12,6 +12,7 @@ import { proposeSlotOnDay, type DayPlacement } from "@/server/scheduling/day-slo
 import { queueTaskCreation } from "@/google/task-integrations";
 import { isDateOnly, taskInputSchema, timeZoneInput, type TaskInput } from "@/server/tasks/schema";
 import { firstName, planAssignment, type AssignmentPlan } from "@/server/tasks/assignment";
+import { deadlineDay, deadlineFields } from "@/server/tasks/deadline";
 import { nextRunAt, repeatRuleData } from "@/server/tasks/recurrence";
 import { completeRule } from "@/server/tasks/repeat-rule";
 import { ACTIVE_STATUSES } from "@/server/tasks/state";
@@ -103,10 +104,22 @@ export async function createTask(raw: unknown): Promise<ActionResult<CreateResul
     if (user.role === "HR" || user.role === "CA") throw new ForbiddenError();
     const input = taskInputSchema.parse(raw);
     if (input.type === "MEETING" && input.inviteClient) input.guestEmails = await withClientGuests(input.clientId, input.guestEmails);
-    const plan = await planAssignment(user, input, (ids, type) => validateAssignees(user, ids, type));
+    const forClient = input.forClient;
+    if (forClient && user.role !== "ADMIN") throw new ForbiddenError("Only Admin adds client tasks");
+    if (forClient && input.type !== "WORK") throw new Error("A client task cannot be a meeting");
+    if (input.deadlineOnly && input.type === "MEETING") throw new Error("A meeting has a time — it cannot be deadline only");
+    // "For client": no team, work type or hours — assigned to the creating Admin, always deadline only.
+    const plan: AssignmentPlan = forClient
+      ? { assigneeIds: [user.id], teamIds: [], tagIds: [], preferredAssigneeIds: [] }
+      : await planAssignment(user, input, (ids, type) => validateAssignees(user, ids, type));
+    if (forClient && !(await prisma.client.count({ where: { id: input.clientId, active: true } }))) throw new Error("Pick a client");
     const assignees = await prisma.user.findMany({ where: { id: { in: plan.assigneeIds } }, select: { id: true, teamLeaderId: true } });
     const settings = await getSettings();
-    const selfAssigned = plan.assigneeIds.length === 1 && plan.assigneeIds[0] === user.id;
+    const selfAssigned = !forClient && plan.assigneeIds.length === 1 && plan.assigneeIds[0] === user.id;
+    // Deadline only: the "done by" day's working-day end, 0 minutes; never placed by the slot finder.
+    const deadline = forClient || input.deadlineOnly
+      ? deadlineFields(deadlineDay(input.scheduledStart, settings.timezone, new Date(), forClient ? "date it is needed by" : "due date"), settings.timezone, settings.workEndMinutes)
+      : null;
 
     const meeting = input.type === "MEETING";
     // Meetings (ADR 0012): options default to the company time zone; all-day meetings cover whole days in that zone.
@@ -122,8 +135,13 @@ export async function createTask(raw: unknown): Promise<ActionResult<CreateResul
     }
     let slot: SlotProposal | null = null;
     let day: DayPlacement | undefined;
-    if (start && !end) end = new Date(start.getTime() + input.allocatedMinutes * 60000);
-    if (!start && dayOnly) {
+    if (deadline) {
+      start = deadline.scheduledStart;
+      end = deadline.scheduledEnd;
+    } else if (start && !end) end = new Date(start.getTime() + input.allocatedMinutes * 60000);
+    if (deadline) {
+      // placed already: a deadline blocks no time
+    } else if (!start && dayOnly) {
       // Meetings read the day in their own zone (the form picked it there); the working hours stay the company's.
       const r = await proposeSlotOnDay(plan.assigneeIds, input.allocatedMinutes, dayOnly, { requesterRole: user.role, requesterId: user.id, dayZone: meetingOptions?.timeZone });
       if (!r) throw new Error(NO_SLOT_MESSAGE);
@@ -148,7 +166,9 @@ export async function createTask(raw: unknown): Promise<ActionResult<CreateResul
         clientId: input.clientId,
         createdById: user.id,
         assignedById: user.id,
-        allocatedMinutes: input.allocatedMinutes,
+        allocatedMinutes: deadline ? 0 : input.allocatedMinutes,
+        deadlineOnly: !!deadline,
+        forClient,
         scheduledStart: start,
         scheduledEnd: end,
         important: input.important,
@@ -167,10 +187,11 @@ export async function createTask(raw: unknown): Promise<ActionResult<CreateResul
     });
     await prisma.client.update({ where: { id: input.clientId }, data: { visibleInFilters: true } });
     await audit(user.id, "task.create", "Task", task.id, null, task);
-    await queueTaskCreation(task.id, input.type);
+    // For-client tasks get no Drive folder, Meet link or Chat space (the client sees them on their tracking link).
+    if (!forClient) await queueTaskCreation(task.id, input.type);
     if (slot?.displaced.length) await shiftDisplacedTasks(slot.displaced, user.id);
 
-    await notifyNewTask(user, task.id, input.title, input.type, plan, assignees);
+    if (!forClient) await notifyNewTask(user, task.id, input.title, input.type, plan, assignees);
     void publishTaskChanged(task.id);
     safeRevalidate("/dashboard");
     // Process the integration queue promptly (best-effort; the job runner also drains it).
@@ -273,7 +294,7 @@ export async function addTaskInventory(teamIds: string[]): Promise<ActionResult<
     const rows = inv.rows.filter((r) => scope.has(r.userId));
     const tasks = scope.size
       ? await prisma.task.findMany({
-          where: { deletedAt: null, status: { in: ACTIVE_STATUSES }, assignees: { some: { userId: { in: [...scope] } } }, scheduledStart: { gte: today, lt: addDays(monthEnd, 1) } },
+          where: { deletedAt: null, deadlineOnly: false, status: { in: ACTIVE_STATUSES }, assignees: { some: { userId: { in: [...scope] } } }, scheduledStart: { gte: today, lt: addDays(monthEnd, 1) } },
           select: { scheduledStart: true },
         })
       : [];

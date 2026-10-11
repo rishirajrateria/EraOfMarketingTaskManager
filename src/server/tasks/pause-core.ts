@@ -7,7 +7,7 @@ import { prisma } from "@/lib/db";
 import { nextStatus } from "@/server/tasks/state";
 
 type PauseTask = { id: string; status: TaskStatus };
-type ResumeTask = { id: string; status: TaskStatus; statusBeforePause: TaskStatus | null; pausedAt: Date | null; scheduledEnd: Date | null };
+type ResumeTask = { id: string; status: TaskStatus; statusBeforePause: TaskStatus | null; pausedAt: Date | null; scheduledEnd: Date | null; deadlineOnly?: boolean };
 
 /** Closes the open session and freezes the task (PAUSED, remembering the status it had). */
 export function pauseOps(t: PauseTask, now: Date): { status: TaskStatus; ops: Prisma.PrismaPromise<unknown>[] } {
@@ -37,7 +37,8 @@ export function resumeOps(t: ResumeTask, now: Date): { status: TaskStatus; pause
           statusBeforePause: null,
           pausedAt: null,
           pausedTotalMinutes: { increment: pausedMin },
-          scheduledEnd: t.scheduledEnd ? new Date(t.scheduledEnd.getTime() + pausedMin * 60000) : null,
+          // A deadline stays on its day: only timed work moves its end by the paused minutes.
+          scheduledEnd: t.scheduledEnd && !t.deadlineOnly ? new Date(t.scheduledEnd.getTime() + pausedMin * 60000) : t.scheduledEnd,
         },
       }),
       ...(wasRunning ? [prisma.taskSession.create({ data: { taskId: t.id, startedAt: now } })] : []),

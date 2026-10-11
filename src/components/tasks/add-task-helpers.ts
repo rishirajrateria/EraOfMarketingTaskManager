@@ -48,7 +48,21 @@ export type AddTaskForm = {
   guestEmails: string[];
   /** Meetings: Google Calendar options (Options sheet). `timeZone: ""` = the company time zone. */
   meeting: MeetingOptions;
+  /**
+   * Deadline only (the time row's "Deadline" pill, prototype `AF.deadline`): `scheduledStart` is the "done by" day
+   * ("yyyy-MM-dd", "" until picked) — no hours, no start or end time, nothing blocked. Up next / Today / Tomorrow and
+   * the schedule sheet's Set leave this mode.
+   */
+  deadline?: boolean;
+  /** "For client" (Admin, prototype `AF.type === "CLIENT"`): needed FROM the client — always a deadline ("Needed by"). */
+  forClient?: boolean;
 };
+
+/** The Task | For client | Meeting switch. */
+export type TaskKind = TaskMode | "CLIENT";
+export const kindOf = (form: Pick<AddTaskForm, "type" | "forClient">): TaskKind => (form.type === "MEETING" ? "MEETING" : form.forClient ? "CLIENT" : "WORK");
+/** Deadline mode: set by the Deadline pill, always on for a client task (never for a meeting). */
+export const isDeadline = (form: Pick<AddTaskForm, "type" | "deadline" | "forClient">) => form.type !== "MEETING" && (!!form.forClient || !!form.deadline);
 
 /** Header capacity of the selected team(s) for one period: hours left (inventory), hours booked, tasks booked. */
 export type PeriodLoad = { leftMinutes: number; bookedMinutes: number; count: number };
@@ -189,22 +203,26 @@ export function formatSlot(slot: { start: Date | string; end: Date | string }, t
 /** Form state → payload for `createTask` (matches `taskInputSchema`). */
 export function toTaskInput(form: AddTaskForm, tz = DEFAULT_TZ) {
   const meeting = form.type === "MEETING";
+  const forClient = !meeting && !!form.forClient;
+  const deadline = isDeadline(form);
   // Meetings: the start is interpreted in the meeting's time zone; all-day meetings start at that day's midnight.
   const zone = meeting ? form.meeting?.timeZone || tz : tz;
   const allDay = meeting && !!form.meeting?.allDay;
   const allDayKey = /^\d{4}-\d{2}-\d{2}/.test(form.scheduledStart) ? form.scheduledStart.slice(0, 10) : dateKey(new Date(), zone);
   // A date only goes through as is: the server resolves it to the next free time on that day (ADR 0010 addendum).
-  const scheduledStart = allDay ? fromDatetimeLocal(`${allDayKey}T00:00`, zone) : isDateOnly(form.scheduledStart) ? form.scheduledStart : fromDatetimeLocal(form.scheduledStart, zone);
+  const scheduledStart = deadline ? form.scheduledStart.slice(0, 10) || null : allDay ? fromDatetimeLocal(`${allDayKey}T00:00`, zone) : isDateOnly(form.scheduledStart) ? form.scheduledStart : fromDatetimeLocal(form.scheduledStart, zone);
   return {
     type: form.type,
     title: form.title.trim(),
     description: form.description,
     clientId: form.clientId,
-    assigneeIds: form.assigneeIds,
-    teamIds: form.teamIds,
-    tagIds: meeting ? [] : form.tagIds,
-    preferredAssigneeIds: form.preferredAssigneeIds ?? [],
-    allocatedMinutes: hoursToMinutes(form.hours),
+    assigneeIds: forClient ? [] : form.assigneeIds,
+    teamIds: forClient ? [] : form.teamIds,
+    tagIds: meeting || forClient ? [] : form.tagIds,
+    preferredAssigneeIds: forClient ? [] : (form.preferredAssigneeIds ?? []),
+    allocatedMinutes: hoursToMinutes(form.hours), // ignored for a deadline (the server stores 0)
+    deadlineOnly: deadline,
+    forClient,
     scheduledStart,
     scheduledEnd: null, // the server ends it after the allocated time
     important: false, // the ★ Important chip is gone (ADR 0015); the column stays
@@ -216,7 +234,7 @@ export function toTaskInput(form: AddTaskForm, tz = DEFAULT_TZ) {
   };
 }
 
-export type AddTaskErrorKey = "title" | "teamIds" | "tagIds" | "clientId" | "assigneeIds" | "hours";
+export type AddTaskErrorKey = "title" | "teamIds" | "tagIds" | "clientId" | "assigneeIds" | "hours" | "when";
 export type AddTaskErrors = Partial<Record<AddTaskErrorKey, string>>;
 
 /**
@@ -227,6 +245,12 @@ export function validateForm(form: AddTaskForm, data?: AddTaskData): AddTaskErro
   const errors: AddTaskErrors = {};
   if (!form.title.trim()) errors.title = "Title is required";
   if (form.type === "MEETING") return validateMeeting(form, errors, data);
+  if (form.forClient) {
+    // Needed from the client: a client and the day it is needed by — no team, work type or hours.
+    if (!form.clientId) errors.clientId = data ? "Pick a client in the rows below" : "Client is required";
+    if (!isDateOnly(form.scheduledStart)) errors.when = "Pick the date it is needed by";
+    return errors;
+  }
   if (data?.me.role === "ADMIN" && !form.teamIds.length) errors.teamIds = "Pick a team in the rows below";
   if (data && form.type === "WORK" && !errors.teamIds && !workTypesFor(data.workTypes, workTeamIds(form, data)).some((w) => w.id === form.tagIds[0])) {
     errors.tagIds = "Pick a work type in the rows below";
@@ -236,7 +260,9 @@ export function validateForm(form: AddTaskForm, data?: AddTaskData): AddTaskErro
   if (!assignees.length && !errors.teamIds) {
     errors.assigneeIds = data?.me.role === "ADMIN" ? "That team has no Team Leader yet (Menu → Add teamleader)" : "At least one assignee is required";
   }
-  if (!Number.isFinite(form.hours) || form.hours < 0.25) errors.hours = "Pick how long it takes (at least 15 minutes)";
+  if (form.deadline) {
+    if (!isDateOnly(form.scheduledStart)) errors.when = "Pick the due date";
+  } else if (!Number.isFinite(form.hours) || form.hours < 0.25) errors.hours = "Pick how long it takes (at least 15 minutes)";
   return errors;
 }
 

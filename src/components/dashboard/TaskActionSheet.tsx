@@ -71,7 +71,7 @@ export function TaskActionSheet({
     onClick: act("assign"),
     hint: t.preferredAssigneeIds.length ? `Admin prefers ${t.preferredAssigneeIds.map(first).join(", ")} · you decide` : "Pick who does this task",
   };
-  const canAssign = s !== "COMPLETED" && (role === "ADMIN" || (role === "TEAM_LEADER" && !!data.me.teamId && t.teams.some((x) => x.id === data.me.teamId)));
+  const canAssign = s !== "COMPLETED" && !t.forClient && (role === "ADMIN" || (role === "TEAM_LEADER" && !!data.me.teamId && t.teams.some((x) => x.id === data.me.teamId)));
 
   if (role === "ADMIN") {
     if (canTransition(s, "START")) items.push({ label: "Start", onClick: act("start") });

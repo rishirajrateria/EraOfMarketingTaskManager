@@ -32,7 +32,7 @@ export async function pauseResumeMany(raw: { taskIds: string[]; action: "PAUSE" 
     const ids = Array.from(new Set(taskIds));
     const tasks = await prisma.task.findMany({
       where: { id: { in: ids }, deletedAt: null, ...scopeWhere(user) },
-      select: { id: true, title: true, status: true, statusBeforePause: true, pausedAt: true, scheduledEnd: true },
+      select: { id: true, title: true, status: true, statusBeforePause: true, pausedAt: true, scheduledEnd: true, deadlineOnly: true },
     });
     if (tasks.length !== ids.length) throw new Error("Some of these tasks no longer exist or aren't visible — refresh and try again");
     const transition = action === "PAUSE" ? "PAUSE" : "RESUME";

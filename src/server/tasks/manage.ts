@@ -22,6 +22,7 @@ import { z } from "zod";
 import { sanitizeDescription } from "@/lib/sanitize";
 import { getSettings } from "@/lib/settings";
 import { parseDateKey, zonedEndOfDay, zonedStartOfDay } from "@/lib/time";
+import { deadlineDay, deadlineFields } from "@/server/tasks/deadline";
 
 const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 const attachmentSchema = z.object({
@@ -52,13 +53,21 @@ export async function updateTask(raw: unknown): Promise<ActionResult<undefined>>
     const t = await prisma.task.findUnique({ where: { id: input.id }, include: { assignees: true, teams: true, tags: true } });
     if (!t || t.deletedAt) throw new Error("Task not found");
     if (t.protected && t.createdById !== user.id) throw new ForbiddenError("This task is fixed by its owner");
+    // A for-client task stays Admin's own: no team, work type or other assignee.
+    if (t.forClient) {
+      input.assigneeIds = undefined;
+      input.teamIds = undefined;
+      input.tagIds = undefined;
+      input.type = undefined;
+    }
     if (input.assigneeIds) await validateAssignees(user, input.assigneeIds, input.type ?? t.type);
     const meeting = (input.type ?? t.type) === "MEETING";
-    const tz = (await getSettings()).timezone;
+    const settings = await getSettings();
+    const tz = settings.timezone;
     const meetingOptions = meeting && input.meetingOptions ? { ...input.meetingOptions, timeZone: input.meetingOptions.timeZone || tz } : undefined;
     // A date only ("2026-10-23") = the next free time on that day for the task's people (ADR 0010 addendum); it is
     // resolved here so the DB never holds a date-only value. All-day meetings: that day's midnight in the meeting zone.
-    const dayOnly = isDateOnly(input.scheduledStart) ? input.scheduledStart : null;
+    const dayOnly = isDateOnly(input.scheduledStart) && !t.deadlineOnly ? input.scheduledStart : null;
     let start = input.scheduledStart === undefined ? undefined : input.scheduledStart && !dayOnly ? new Date(input.scheduledStart) : null;
     let end = input.scheduledEnd === undefined ? undefined : input.scheduledEnd ? new Date(input.scheduledEnd) : null;
     if (dayOnly) {
@@ -77,7 +86,14 @@ export async function updateTask(raw: unknown): Promise<ActionResult<undefined>>
         end = r.slot.end;
       }
     }
-    if (start && end === undefined) end = new Date(start.getTime() + (input.allocatedMinutes ?? t.allocatedMinutes) * 60000);
+    if (t.deadlineOnly) {
+      // Deadline only: the new "done by" day (its working-day end); never a slot, never any hours.
+      if (input.scheduledStart) start = end = deadlineFields(deadlineDay(input.scheduledStart, tz), tz, settings.workEndMinutes).scheduledStart;
+      else if (input.scheduledStart === null) throw new Error("Pick the due date");
+      else end = undefined;
+      input.allocatedMinutes = undefined;
+    }
+    if (start && end === undefined && !t.deadlineOnly) end = new Date(start.getTime() + (input.allocatedMinutes ?? t.allocatedMinutes) * 60000);
     if (meetingOptions?.allDay) {
       // All-day meetings cover whole days in the meeting's zone (ADR 0012).
       const from = start ?? t.scheduledStart ?? new Date();
@@ -141,6 +157,7 @@ export async function assignExecutives(taskId: string, userIds: string[]): Promi
     const t = await prisma.task.findUnique({ where: { id: input.taskId }, include: { assignees: true, teams: true } });
     if (!t || t.deletedAt) throw new Error("Task not found");
     if (t.status === "COMPLETED") throw new Error("This task is already completed");
+    if (t.forClient) throw new Error("A client task stays with Admin — it has no team to assign");
     const taskTeams = t.teams.map((x) => x.teamId);
     let teamIds = taskTeams;
     if (user.role === "TEAM_LEADER") {
@@ -273,7 +290,8 @@ export async function ensureTaskDriveFolder(taskId: string): Promise<ActionResul
   return wrap(async () => {
     const user = await requireUser();
     if (!(await canView(user, taskId))) throw new ForbiddenError();
-    const t = await prisma.task.findUniqueOrThrow({ where: { id: taskId }, select: { driveFolderUrl: true } });
+    const t = await prisma.task.findUniqueOrThrow({ where: { id: taskId }, select: { driveFolderUrl: true, forClient: true } });
+    if (t.forClient) throw new Error("Client tasks have no Drive folder");
     if (t.driveFolderUrl) return { url: t.driveFolderUrl };
     const folder = await ensureTaskFolder(taskId);
     if (folder.created) await queueTaskPropagation(taskId); // shares it with the task's people
@@ -296,8 +314,9 @@ export async function uploadAttachment(form: FormData): Promise<ActionResult<{ i
     if (!(await canView(user, taskId))) throw new ForbiddenError();
     const t = await prisma.task.findUniqueOrThrow({ where: { id: taskId }, include: { client: true } });
     if (kind === "VOICE_NOTE" && t.type === "MEETING") throw new Error("Meetings don't take voice notes — put the agenda in the description");
+    // For-client tasks have no Drive folder: their files stay in the app.
     let folderId = t.driveFolderId;
-    if (!folderId) {
+    if (!folderId && !t.forClient) {
       const folder = await ensureTaskFolder(t.id);
       folderId = folder.id;
       if (folder.created) await queueTaskPropagation(t.id);
@@ -306,6 +325,7 @@ export async function uploadAttachment(form: FormData): Promise<ActionResult<{ i
     let driveFileId: string | null = null;
     let url: string | null = null;
     try {
+      if (!folderId) throw new Error("no Drive folder");
       const up = await Drive.uploadFile({ name: file.name, mimeType: file.type || "application/octet-stream", data, parentId: folderId });
       driveFileId = up.id;
       url = up.url;

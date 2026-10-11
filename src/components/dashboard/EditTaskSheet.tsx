@@ -32,6 +32,8 @@ type Draft = {
   allocatedMinutes: number;
   scheduledStart: string; // datetime-local in company tz
   scheduledEnd: string;
+  /** Deadline-only tasks: the "done by" day (yyyy-MM-dd, company tz). */
+  dueDay: string;
   priority: TaskRow["priority"];
   /** Meetings (ADR 0012): outside guests and the Google Calendar options. */
   guestEmails: string[];
@@ -59,6 +61,7 @@ function draftOf(t: TaskRow, companyTz: string): Draft {
     allocatedMinutes: t.allocatedMinutes,
     scheduledStart: toLocal(t.scheduledStart, tz),
     scheduledEnd: toLocal(t.scheduledEnd, tz),
+    dueDay: toLocal(t.scheduledStart, tz).slice(0, 10),
     priority: t.priority,
     guestEmails: t.guestEmails ?? [],
     meetingOptions: t.meetingOptions ?? defaultMeetingOptions(tz),
@@ -109,9 +112,20 @@ export function EditTaskSheet({
         (p) => p.role === "TEAM_LEADER" || p.id === data.me.id,
       );
 
+  const dl = !!t.deadlineOnly;
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const original = draftOf(t, data.tz);
+    // Deadline only: just the "done by" day, sent when it changed (no hours, start or end time).
+    const timing = dl
+      ? d.dueDay !== original.dueDay
+        ? { scheduledStart: d.dueDay || null }
+        : {}
+      : {
+          allocatedMinutes: d.allocatedMinutes,
+          scheduledStart: toIso(d.scheduledStart, zone),
+          scheduledEnd: toIso(d.scheduledEnd, zone),
+        };
     const optionsChanged =
       JSON.stringify(d.meetingOptions) !==
       JSON.stringify(original.meetingOptions);
@@ -121,9 +135,7 @@ export function EditTaskSheet({
         title: d.title,
         description: d.description,
         clientId: d.clientId,
-        allocatedMinutes: d.allocatedMinutes,
-        scheduledStart: toIso(d.scheduledStart, zone),
-        scheduledEnd: toIso(d.scheduledEnd, zone),
+        ...timing,
         priority: d.priority,
         ...(sameSet(d.assigneeIds, original.assigneeIds)
           ? {}
@@ -190,35 +202,37 @@ export function EditTaskSheet({
               ))}
             </select>
           </Field>
-          <Field
-            label="Assignees"
-            hint={
-              hasExecutive
-                ? "Executives are assigned via their Team Leader — reassign from the Team Leader's dashboard."
-                : undefined
-            }
-          >
-            <div className="flex flex-wrap gap-1.5">
-              {hasExecutive
-                ? t.assignees.map((a) => (
-                    <Pill key={a.id} tone="outline" active>
-                      {a.name}
-                    </Pill>
-                  ))
-                : assignable.map((p) => (
-                    <Pill
-                      key={p.id}
-                      tone="outline"
-                      active={d.assigneeIds.includes(p.id)}
-                      onClick={() =>
-                        set("assigneeIds", toggle(d.assigneeIds, p.id))
-                      }
-                    >
-                      {p.name}
-                    </Pill>
-                  ))}
-            </div>
-          </Field>
+          {t.forClient ? null : (
+            <Field
+              label="Assignees"
+              hint={
+                hasExecutive
+                  ? "Executives are assigned via their Team Leader — reassign from the Team Leader's dashboard."
+                  : undefined
+              }
+            >
+              <div className="flex flex-wrap gap-1.5">
+                {hasExecutive
+                  ? t.assignees.map((a) => (
+                      <Pill key={a.id} tone="outline" active>
+                        {a.name}
+                      </Pill>
+                    ))
+                  : assignable.map((p) => (
+                      <Pill
+                        key={p.id}
+                        tone="outline"
+                        active={d.assigneeIds.includes(p.id)}
+                        onClick={() =>
+                          set("assigneeIds", toggle(d.assigneeIds, p.id))
+                        }
+                      >
+                        {p.name}
+                      </Pill>
+                    ))}
+              </div>
+            </Field>
+          )}
           {meeting ? (
             <>
               <Field
@@ -255,21 +269,23 @@ export function EditTaskSheet({
               </Field>
             </>
           ) : null}
-          <Field label="Teams">
-            <div className="flex flex-wrap gap-1.5">
-              {data.teams.map((x) => (
-                <Pill
-                  key={x.id}
-                  tone="outline"
-                  active={d.teamIds.includes(x.id)}
-                  onClick={() => set("teamIds", toggle(d.teamIds, x.id))}
-                >
-                  {x.name}
-                </Pill>
-              ))}
-            </div>
-          </Field>
-          {meeting ? null : (
+          {t.forClient ? null : (
+            <Field label="Teams">
+              <div className="flex flex-wrap gap-1.5">
+                {data.teams.map((x) => (
+                  <Pill
+                    key={x.id}
+                    tone="outline"
+                    active={d.teamIds.includes(x.id)}
+                    onClick={() => set("teamIds", toggle(d.teamIds, x.id))}
+                  >
+                    {x.name}
+                  </Pill>
+                ))}
+              </div>
+            </Field>
+          )}
+          {meeting || t.forClient ? null : (
             <Field label="Tags">
               <div className="flex flex-wrap gap-1.5">
                 {data.workTypes.map((x) => (
@@ -285,22 +301,38 @@ export function EditTaskSheet({
               </div>
             </Field>
           )}
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Allocated (minutes)">
+          {dl ? (
+            <Field
+              label={t.forClient ? "Needed by" : "Done by"}
+              hint="No hours, start or end time — nothing is blocked in the day."
+            >
               <input
-                type="number"
-                min={5}
-                step={5}
-                value={d.allocatedMinutes}
-                onChange={(e) =>
-                  set(
-                    "allocatedMinutes",
-                    Math.max(5, Number(e.target.value) || 0),
-                  )
-                }
+                type="date"
+                value={d.dueDay}
+                onChange={(e) => set("dueDay", e.target.value)}
                 className={inputCls}
+                required
               />
             </Field>
+          ) : null}
+          <div className="grid grid-cols-2 gap-3">
+            {dl ? null : (
+              <Field label="Allocated (minutes)">
+                <input
+                  type="number"
+                  min={5}
+                  step={5}
+                  value={d.allocatedMinutes}
+                  onChange={(e) =>
+                    set(
+                      "allocatedMinutes",
+                      Math.max(5, Number(e.target.value) || 0),
+                    )
+                  }
+                  className={inputCls}
+                />
+              </Field>
+            )}
             <Field label="Priority">
               <select
                 value={d.priority}
@@ -316,22 +348,26 @@ export function EditTaskSheet({
                 ))}
               </select>
             </Field>
-            <Field label="Scheduled start">
-              <input
-                type="datetime-local"
-                value={d.scheduledStart}
-                onChange={(e) => set("scheduledStart", e.target.value)}
-                className={inputCls}
-              />
-            </Field>
-            <Field label="Scheduled end">
-              <input
-                type="datetime-local"
-                value={d.scheduledEnd}
-                onChange={(e) => set("scheduledEnd", e.target.value)}
-                className={inputCls}
-              />
-            </Field>
+            {dl ? null : (
+              <>
+                <Field label="Scheduled start">
+                  <input
+                    type="datetime-local"
+                    value={d.scheduledStart}
+                    onChange={(e) => set("scheduledStart", e.target.value)}
+                    className={inputCls}
+                  />
+                </Field>
+                <Field label="Scheduled end">
+                  <input
+                    type="datetime-local"
+                    value={d.scheduledEnd}
+                    onChange={(e) => set("scheduledEnd", e.target.value)}
+                    className={inputCls}
+                  />
+                </Field>
+              </>
+            )}
           </div>
           <SheetButtons className="pt-2">
             <button

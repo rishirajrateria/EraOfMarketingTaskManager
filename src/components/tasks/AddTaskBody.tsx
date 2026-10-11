@@ -6,7 +6,7 @@ import { ChipButton, Stepper } from "@/components/ui/Controls";
 import { RichTextEditor, type RichTextEditorHandle } from "@/components/tasks/RichTextEditor";
 import { DictationButton } from "@/components/tasks/DictationButton";
 import { VoiceNoteRecorder, type VoiceNote } from "@/components/tasks/VoiceRecorder";
-import { HOUR_PRESETS, fmtHours, stepHours, type AddTaskForm } from "@/components/tasks/add-task-helpers";
+import { HOUR_PRESETS, fmtHours, isDeadline, stepHours, type AddTaskForm } from "@/components/tasks/add-task-helpers";
 import { describeRule } from "@/server/tasks/repeat-rule";
 import { DURATION_PRESETS, fmtDuration } from "@/components/tasks/meeting-helpers";
 
@@ -57,7 +57,7 @@ export function AddTaskBody(p: Props) {
         value={form.title}
         onChange={(e) => patch({ title: e.target.value })}
         onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), onSubmit())}
-        placeholder={meeting ? "Meeting title" : "Task title"}
+        placeholder={meeting ? "Meeting title" : form.forClient ? "What do you need from the client?" : "Task title"}
         aria-label="Title"
         aria-invalid={!!titleError}
         autoFocus
@@ -98,7 +98,8 @@ export function AddTaskBody(p: Props) {
         <input ref={fileInput} type="file" multiple hidden onChange={(e) => setFiles([...files, ...Array.from(e.target.files ?? [])])} />
       </div>
 
-      {meeting && form.meeting?.allDay ? null : (
+      {/* A deadline (and a client task) has no hours: "How long" hides (prototype `#tHrs`). */}
+      {(meeting && form.meeting?.allDay) || isDeadline(form) ? null : (
         <div className="mt-4 flex flex-wrap items-center gap-2" role="group" aria-label={meeting ? "Duration" : "How long"}>
           <span className="mr-0.5 text-xs text-muted">{meeting ? "Duration" : "How long"}</span>
           {(meeting ? DURATION_PRESETS : HOUR_PRESETS).map((h) => (

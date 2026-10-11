@@ -59,6 +59,7 @@ export async function busyFor(userId: string, from: Date, to: Date, opts: BusyOp
   const tasks = await prisma.task.findMany({
     where: {
       deletedAt: null,
+      deadlineOnly: false, // a deadline blocks no time in anyone's day
       status: { in: ACTIVE_STATUSES },
       assignees: { some: { userId } },
       scheduledStart: { lt: to },
@@ -144,6 +145,7 @@ export async function shiftTaskToNextSlot(taskId: string, actorId: string, reaso
   });
   if (!task || task.deletedAt || task.status === "COMPLETED") return null;
   if (task.protected) return null; // fixed tasks (Admin's own, or protected on request) are never moved (SPEC §2)
+  if (task.deadlineOnly) return null; // a deadline has no slot to move
   const slot = await proposeSlot(
     task.assignees.map((a) => a.userId),
     task.allocatedMinutes,
@@ -179,6 +181,7 @@ export async function tasksAffectedByLeave(leaveId: string): Promise<{ id: strin
   return prisma.task.findMany({
     where: {
       deletedAt: null,
+      deadlineOnly: false,
       status: { in: ACTIVE_STATUSES },
       assignees: { some: { userId: leave.userId } },
       scheduledStart: { lt: to },

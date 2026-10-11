@@ -178,6 +178,10 @@ async function main() {
     late?: number;
     /** Pills under review (ADR 0015): one REVIEW request per field. */
     reviewFields?: ("date" | "time" | "mins")[];
+    /** Deadline only: due by the end of `start`'s day (start = end = 19:00 IST), no hours. */
+    deadline?: boolean;
+    /** For client (Admin): needed from the client — no team, no Drive / Meet / Chat; shows on the tracking link. */
+    forClient?: boolean;
   };
   const specs: Spec[] = [
     { title: "[demo] Repo Instagram carousel", client: 0, assignees: [rishi.id], teams: [teams[0]!.id], minutes: 240, start: at(10), end: at(14), tags: [wt("Graphic design")] },
@@ -194,6 +198,12 @@ async function main() {
     { title: "[demo] Pharma bag social calendar", client: 2, assignees: [rishi.id], teams: [teams[0]!.id], minutes: 240, start: at(10, 2), end: at(14, 2), status: "FINISH_REQUESTED", tags: [wt("Reporting")] },
     // Admin → Graphic team: waits for Rishi (TL, the demo Team Leader) to assign; Admin prefers Arush (ADR 0008).
     { title: "[demo] Festive logo refresh — Robam", client: 1, assignees: [rishi.id], teams: [graphic.id], minutes: 120, start: at(14, 1), end: at(16, 1), tags: [wt("Logo")], prefs: [arush.id] },
+    // Deadline only: a "done by" day, no hours, nothing blocked (the second one's day has passed → red).
+    { title: "[demo] Repo brand guidelines PDF", client: 0, assignees: [rishi.id], teams: [graphic.id], minutes: 0, start: at(19, 3), end: at(19, 3), tags: [wt("Graphic design")], deadline: true },
+    { title: "[demo] Sunrise copy deck", client: 3, assignees: [neha.id], teams: [social.id], minutes: 0, start: at(19, -1), end: at(19, -1), tags: [wt("Content")], deadline: true },
+    // For client: things needed FROM the client (Admin's own), shown on the client's tracking link.
+    { title: "[demo] Product photos for the carousel", client: 0, assignees: [admin.id], teams: [], minutes: 0, start: at(19, 2), end: at(19, 2), deadline: true, forClient: true },
+    { title: "[demo] Approve the October content calendar", client: 0, assignees: [admin.id], teams: [], minutes: 0, start: at(19, -2), end: at(19, -2), deadline: true, forClient: true },
   ];
 
   for (const s of specs) {
@@ -208,6 +218,8 @@ async function main() {
         createdById: s.createdBy ?? admin.id,
         assignedById: s.createdBy ?? admin.id,
         allocatedMinutes: s.minutes,
+        deadlineOnly: !!s.deadline,
+        forClient: !!s.forClient,
         scheduledStart: s.start,
         scheduledEnd: s.end,
         status,
@@ -229,13 +241,18 @@ async function main() {
         finishRequestedAt: status === "FINISH_REQUESTED" ? subHours(now, 2) : null,
         finishRequestedById: status === "FINISH_REQUESTED" ? rishi.id : null,
         // Every task has a Drive folder (+ "Meeting notes") and a Meet link until it is deleted (ADR 0015).
-        driveFolderId: `folder_demo_${s.title.length}`,
-        driveFolderUrl: "https://drive.google.com/drive/folders/demo",
-        meetNotesFolderId: `folder_demo_notes_${s.title.length}`,
-        meetLink: "https://meet.google.com/abc-defg-hij",
-        meetSpaceName: "spaces/demo",
-        meetActive: true,
-        chatSpaceUrl: s.type === "MEETING" ? null : "https://chat.google.com/room/demo",
+        // Client tasks get none of them.
+        ...(s.forClient
+          ? {}
+          : {
+              driveFolderId: `folder_demo_${s.title.length}`,
+              driveFolderUrl: "https://drive.google.com/drive/folders/demo",
+              meetNotesFolderId: `folder_demo_notes_${s.title.length}`,
+              meetLink: "https://meet.google.com/abc-defg-hij",
+              meetSpaceName: "spaces/demo",
+              meetActive: true,
+              chatSpaceUrl: s.type === "MEETING" ? null : "https://chat.google.com/room/demo",
+            }),
         preferredAssigneeIds: s.prefs ?? [],
         assignees: { create: s.assignees.map((userId) => ({ userId })) },
         teams: { create: s.teams.map((teamId) => ({ teamId })) },

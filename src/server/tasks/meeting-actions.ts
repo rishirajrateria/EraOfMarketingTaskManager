@@ -45,6 +45,7 @@ export async function meetingBusy(raw: unknown): Promise<ActionResult<MeetingBus
       ? await prisma.task.findMany({
           where: {
             deletedAt: null,
+            deadlineOnly: false,
             status: { in: ACTIVE_STATUSES },
             assignees: { some: { userId: { in: fallback } } },
             scheduledStart: { lt: to },

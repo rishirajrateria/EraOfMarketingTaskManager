@@ -36,6 +36,8 @@ const CHIP_SHAPE = "inline-block h-[22px] min-w-0 max-w-[150px] shrink truncate 
 const CHIP = `glass-chip ${CHIP_SHAPE} text-ink`;
 /** The task's team (ADR 0015): a subtle teal chip next to the client, readable in light and dark. */
 const TEAM_CHIP = `${CHIP_SHAPE} border border-hair bg-team-bg text-team`;
+/** "For client" (prototype `.chip.forclient`): blue, in place of the team chip. */
+const CLIENT_TASK_CHIP = `${CHIP_SHAPE} border border-transparent bg-[linear-gradient(150deg,#60a5fa,#2563eb)] font-semibold text-white`;
 
 /**
  * A compact task card (prototype `taskRow`, ADR 0015): title (2 lines) + badges · circle / client + team chips · date
@@ -132,7 +134,11 @@ export function TaskRow({ t, data, h, pendingDone }: { t: Row; data: DashboardDa
       <div className="mt-1.5 flex min-w-0 items-center justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
           <span className={CHIP}>{t.client.name}</span>
-          {team ? (
+          {t.forClient ? (
+            <span className={CLIENT_TASK_CHIP} title="Needed from the client · shows on their tracking link">
+              For client
+            </span>
+          ) : team ? (
             <span className={TEAM_CHIP} title={t.teams.map((x) => x.name).join(", ")}>
               {team}
             </span>
@@ -147,15 +153,20 @@ export function TaskRow({ t, data, h, pendingDone }: { t: Row; data: DashboardDa
           <IconBtn label="Task details" onClick={open}>
             <Info size={19} strokeWidth={1.75} />
           </IconBtn>
-          <IconBtn label="Drive folder" onClick={openDrive} disabled={driveBusy}>
-            <FolderOpen size={19} strokeWidth={1.75} />
-          </IconBtn>
-          <IconBtn label="Google Meet" onClick={() => t.meetLink && openExternal(t.meetLink)} disabled={meetDisabled}>
-            <Video size={19} strokeWidth={1.75} />
-          </IconBtn>
-          <IconBtn label="Chat space" onClick={() => t.chatSpaceUrl && openExternal(t.chatSpaceUrl)} disabled={!t.chatSpaceUrl}>
-            <MessageSquare size={19} strokeWidth={1.75} />
-          </IconBtn>
+          {/* Client tasks have no Drive folder, Meet link or Chat space (the client sees them on their tracking link). */}
+          {t.forClient ? null : (
+            <>
+              <IconBtn label="Drive folder" onClick={openDrive} disabled={driveBusy}>
+                <FolderOpen size={19} strokeWidth={1.75} />
+              </IconBtn>
+              <IconBtn label="Google Meet" onClick={() => t.meetLink && openExternal(t.meetLink)} disabled={meetDisabled}>
+                <Video size={19} strokeWidth={1.75} />
+              </IconBtn>
+              <IconBtn label="Chat space" onClick={() => t.chatSpaceUrl && openExternal(t.chatSpaceUrl)} disabled={!t.chatSpaceUrl}>
+                <MessageSquare size={19} strokeWidth={1.75} />
+              </IconBtn>
+            </>
+          )}
           <IconBtn label="Call" onClick={() => h.onContact(t, "call")}>
             <Phone size={18} strokeWidth={1.75} />
           </IconBtn>

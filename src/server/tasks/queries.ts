@@ -56,6 +56,8 @@ export function toRow(t: TaskWithRelations, opts: { hideClientContact?: boolean 
     tags: t.tags.map((x) => x.workType),
     workTypeId: t.tags[0]?.workType.id ?? null,
     allocatedMinutes: t.allocatedMinutes,
+    deadlineOnly: t.deadlineOnly,
+    forClient: t.forClient,
     scheduledStart: t.scheduledStart?.toISOString() ?? null,
     scheduledEnd: t.scheduledEnd?.toISOString() ?? null,
     actualStart: t.actualStart?.toISOString() ?? null,
@@ -89,8 +91,10 @@ export function toRow(t: TaskWithRelations, opts: { hideClientContact?: boolean 
 /** Visibility scope per role (SPEC §2 "Dashboard"). */
 export function scopeWhere(user: SessionUser): Prisma.TaskWhereInput {
   if (user.role === "ADMIN") return {};
+  // "For client" tasks are Admin's own (things needed from the client): Team Leaders and Executives never see them.
   if (user.role === "TEAM_LEADER") {
     return {
+      forClient: false,
       OR: [
         { assignees: { some: { userId: user.id } } },
         { assignees: { some: { user: { teamLeaderId: user.id } } } },
@@ -99,7 +103,7 @@ export function scopeWhere(user: SessionUser): Prisma.TaskWhereInput {
       ],
     };
   }
-  if (user.role === "EXECUTIVE") return { assignees: { some: { userId: user.id } } };
+  if (user.role === "EXECUTIVE") return { forClient: false, assignees: { some: { userId: user.id } } };
   return { id: "__none__" };
 }
 
@@ -191,6 +195,7 @@ export async function periodLoad(assigneeIds: string[], from: Date, to: Date) {
     where: {
       deletedAt: null,
       type: "WORK",
+      deadlineOnly: false, // a deadline books no hours
       status: { in: ACTIVE_STATUSES },
       assignees: { some: { userId: { in: assigneeIds } } },
       scheduledStart: { gte: from, lt: to },

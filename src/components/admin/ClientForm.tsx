@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Field, inputCls, btnSecondary } from "@/components/ui/Field";
 import { FormFooter } from "@/components/admin/AdminUi";
 import { TaxBadge } from "@/components/finance/TaxBadge";
+import { TrackingLinkButton } from "@/components/clients/TrackingLinkSheet";
 import { CURRENCIES } from "@/components/finance/finance-ui";
 import { GST_STATE_CODES, resolveTax, stateByCode, stateFromGstin } from "@/server/finance/tax";
 import type { ClientRow } from "@/server/admin/queries";
@@ -159,6 +160,11 @@ export function ClientForm({ client, busy, companyStateCode, onSubmit, onToggle 
           {client.workOnHold ? <div className="font-medium text-red-700">Work on hold since {client.holdSince?.slice(0, 10)}</div> : null}
           <div>
             Vault items: {client._count.vaultItems} · <Link className="text-brand-blue underline" href={`/admin/vault?clientId=${client.id}`}>manage vault</Link>
+          </div>
+          {/* The client's public tracking link (prototype `trackerSheet`): copy, send or preview it. */}
+          <div className="mt-1.5 flex items-center justify-between gap-2 border-t border-line pt-1.5">
+            <span className="min-w-0">Their work, files and payments on one page — no login</span>
+            <TrackingLinkButton clientId={client.id} className="inline-flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-hair bg-chip px-2.5 text-[12px] font-semibold text-ink active:opacity-70" />
           </div>
         </div>
       ) : null}
