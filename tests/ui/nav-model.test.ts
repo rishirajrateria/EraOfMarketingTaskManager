@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import type { Role } from "@prisma/client";
-import { activeNavKey, addTaskHref, allNavItems, canAdd, FOLDER_LINKS, NAV_HYPH, navHome, navItems, navLabel, navTarget, profileOpen, profileTarget, shownNavKey } from "@/components/shell/nav-model";
-import { SOFT_HYPHEN } from "@/components/shell/menu-model";
+import {
+  activeNavKey, addTaskHref, allNavItems, canAdd, FOLDER_LINKS, NAV_HYPH, navHome, navItems, navLabel, navTarget, profileOpen, profileTarget, settingsOpen, showsSettings, shownNavKey, SOFT_HYPHEN,
+} from "@/components/shell/nav-model";
 import { addTaskStore } from "@/components/shell/add-task-store";
 
 /** Bottom nav row of every signed-in screen (ADR 0016 addendum nav v4, prototype `#gNav` / `navActive` / `renderDashNav` / `foldersBtn`). */
@@ -197,5 +198,20 @@ describe("the add-task screen over the nav (ADR 0016 addendum: the nav stays bel
     addTaskStore.setShown(true);
     addTaskStore.setShown(false);
     expect(flips).toEqual([true, false]);
+  });
+});
+
+describe("top bar left pair (prototype settingsBtn / signoutBtn, where the ☰ was)", () => {
+  it("Settings is Admin only; Sign out has no role check", () => {
+    expect(showsSettings("ADMIN")).toBe(true);
+    for (const r of ["TEAM_LEADER", "EXECUTIVE", "HR", "CA"] as Role[]) expect(showsSettings(r)).toBe(false);
+  });
+
+  it("Settings is current on the settings page only", () => {
+    expect(settingsOpen("/admin/settings")).toBe(true);
+    expect(settingsOpen("/admin/settings/")).toBe(true);
+    expect(settingsOpen("/admin/settingsx")).toBe(false);
+    expect(settingsOpen("/admin/dashboards")).toBe(false);
+    expect(settingsOpen("/me")).toBe(false);
   });
 });

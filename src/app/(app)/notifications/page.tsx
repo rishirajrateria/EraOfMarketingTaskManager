@@ -1,23 +1,24 @@
 import { requireUser } from "@/lib/rbac";
 import { getSettings } from "@/lib/settings";
 import { parseFeedFilter } from "@/lib/notification-kinds";
-import { loadFeed } from "@/server/notification-feed";
-import { NotificationFeed, type FeedLinks } from "@/components/notifications/NotificationFeed";
+import { parseFeedScope, showsFeedScope } from "@/lib/notification-scope";
+import { loadFeed, loadScopeOptions, type ScopeOptions } from "@/server/notification-feed";
+import { NotificationFeed } from "@/components/notifications/NotificationFeed";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Notifications (every role, ADR 0017): a feed of what happened — nothing to decide. Decisions are in Requests
- * (Admin `/admin/requests`, HR the leave inbox). `?show=UNREAD|TASKS|PEOPLE|MONEY` filters.
+ * (Admin `/admin/requests`, HR the leave inbox). `?show=UNREAD|TASKS|PEOPLE|MONEY` filters; Admin / TL / Executive
+ * also get TEAMS and CLIENTS rows (`?team=&client=`, prototype `notifTeam` / `notifClient`).
  */
-export default async function NotificationsPage({ searchParams }: { searchParams: Promise<{ show?: string }> }) {
+export default async function NotificationsPage({ searchParams }: { searchParams: Promise<{ show?: string; team?: string; client?: string }> }) {
   const user = await requireUser();
-  const filter = parseFeedFilter((await searchParams).show);
-  const settings = await getSettings();
-  const feed = await loadFeed(user, filter, settings.timezone);
-  const links: FeedLinks = {
-    requests: user.role === "ADMIN" ? "/admin/requests" : user.role === "HR" ? "/requests/leave" : null,
-    home: user.role === "HR" ? { href: "/requests/leave", label: "Leave inbox" } : user.role === "CA" ? { href: "/me", label: "Profile" } : { href: "/dashboard", label: "Task list" },
-  };
-  return <NotificationFeed groups={feed.groups} unread={feed.unread} filter={filter} links={links} />;
+  const sp = await searchParams;
+  const filter = parseFeedFilter(sp.show);
+  const [settings, options] = await Promise.all([getSettings(), showsFeedScope(user.role) ? loadScopeOptions(user.id) : Promise.resolve<ScopeOptions | null>(null)]);
+  const scope = parseFeedScope(sp, user.role, options ?? undefined);
+  const feed = await loadFeed(user, filter, settings.timezone, new Date(), scope);
+  const requests = user.role === "ADMIN" ? "/admin/requests" : user.role === "HR" ? "/requests/leave" : null;
+  return <NotificationFeed groups={feed.groups} unread={feed.unread} filter={filter} scope={scope} options={options} requests={requests} />;
 }

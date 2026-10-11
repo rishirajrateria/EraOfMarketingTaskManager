@@ -1,11 +1,15 @@
 "use client";
 import Link from "next/link";
+import { ChevronRight, Clock } from "lucide-react";
 import { clsx } from "@/lib/clsx";
 import type { HrDash, TodayStatus } from "@/server/dashboards/hr";
 import { Card, Empty, Tile, Tiles } from "@/components/dashboards/charts";
 import { hrs, loadTone } from "@/components/dashboards/format";
 
-/** HR view (prototype `hrBody`): today's attendance, free hours, and each person's booked share of capacity. */
+/**
+ * HR view (prototype `hrBody`): today's attendance, free hours, a link card to Inventory (its only door since the menu
+ * tray went) and each person's booked share of capacity.
+ */
 const STATUS: Record<TodayStatus, { label: string; cls: string }> = {
   PRESENT: { label: "Present", cls: "text-emerald-700 dark:text-emerald-300" },
   HALF_DAY: { label: "Half day", cls: "text-amber-700 dark:text-amber-300" },
@@ -25,6 +29,7 @@ export function HrBody({ data: d }: { data: HrDash }) {
         <Tile label="On leave" value={String(d.onLeaveToday)} sub="today" />
         <Tile label="Free to assign" value={h0(d.freeMin)} sub={`${h0(d.bookedMin)} of ${h0(d.capacityMin)} booked`} />
       </Tiles>
+      <InventoryLink />
       <Card title="Team inventory · booked of capacity">
         {d.people.length === 0 ? <Empty>No team leaders or executives in this team</Empty> : null}
         <ul className="mt-1">
@@ -55,5 +60,26 @@ export function HrBody({ data: d }: { data: HrDash }) {
         </ul>
       </Card>
     </>
+  );
+}
+
+/** "Inventory · Hours available vs assigned" — the link card the menu tray's Inventory tile became. */
+export function InventoryLink() {
+  return (
+    <Link
+      href="/admin/inventory"
+      data-inventory-link
+      aria-label="Inventory · Hours available vs assigned"
+      className="flex min-h-[56px] items-center gap-3 rounded-[18px] border border-hair bg-glass px-3.5 py-2.5 text-ink shadow-[var(--shadow)] outline-none transition-transform active:scale-[.99] focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+    >
+      <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-[linear-gradient(150deg,#fcd34d,#f59e0b)] text-[#3b2a00]">
+        <Clock size={18} strokeWidth={2.2} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <b className="block truncate text-[14px] font-bold tracking-[-.01em]">Inventory</b>
+        <small className="block truncate text-[12px] text-muted">Hours available vs assigned</small>
+      </span>
+      <ChevronRight aria-hidden size={18} className="shrink-0 text-muted" />
+    </Link>
   );
 }

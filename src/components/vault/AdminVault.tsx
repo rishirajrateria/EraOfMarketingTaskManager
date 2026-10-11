@@ -71,7 +71,6 @@ export function AdminVault({
 
   const zone = (
     <BottomZone
-      menu
       rows={
         <>
           <ZoneRow label="Clients">

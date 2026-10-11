@@ -18,7 +18,7 @@ const TABS: { kind: VaultItemKind; label: string }[] = [
  * /vault — items the signed-in user currently has an active grant for, grouped by client and kind.
  * Client pills and section pills in the bottom zone narrow the list (default: everything).
  */
-export function GrantedVault({ groups, isAdmin = false }: { groups: GrantedGroup[]; isAdmin?: boolean }) {
+export function GrantedVault({ groups }: { groups: GrantedGroup[] }) {
   const [clientId, setClientId] = useState<string | null>(null);
   const [kind, setKind] = useState<VaultItemKind | null>(null);
 
@@ -34,7 +34,6 @@ export function GrantedVault({ groups, isAdmin = false }: { groups: GrantedGroup
 
   const zone = (
     <BottomZone
-      menu={isAdmin}
       rows={
         <>
           <ZoneRow label="Clients">

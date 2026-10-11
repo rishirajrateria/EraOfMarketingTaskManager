@@ -1,7 +1,5 @@
 "use client";
-import { Menu } from "lucide-react";
 import { clsx } from "@/lib/clsx";
-import { menuStore } from "@/components/shell/menu-store";
 
 /**
  * Thumb-reach zone shared by every screen (same geometry as the dashboard, SPEC §5.4):
@@ -74,7 +72,6 @@ export function BottomZone({
   rows,
   left,
   right,
-  menu = true,
   actions,
   className,
 }: {
@@ -84,12 +81,10 @@ export function BottomZone({
   strip?: React.ReactNode;
   /** green pill rows (each should be a <ZoneRow>) */
   rows?: React.ReactNode;
-  /** contents of the green 62% part of the bar (after the ☰) */
+  /** contents of the green 62% part of the bar */
   left?: React.ReactNode;
   /** contents of the white 38% part of the bar (primary actions) */
   right?: React.ReactNode;
-  /** show the ☰ menu button (Admin screens) */
-  menu?: boolean;
   className?: string;
 }) {
   return (
@@ -101,13 +96,7 @@ export function BottomZone({
       ) : (
         <div className="flex h-14 items-stretch">
           <div className="scrollbar-none flex min-w-0 flex-[62] items-center gap-2 overflow-x-auto bg-green-bar pr-2">
-            {menu ? (
-              <BarIcon label="Menu" onClick={() => menuStore.open()}>
-                <Menu size={22} />
-              </BarIcon>
-            ) : (
-              <span className="w-2.5" />
-            )}
+            <span className="w-2.5 shrink-0" />
             {left}
           </div>
           <div className="bar-glass flex flex-[38] items-center justify-evenly gap-1 px-1">{right}</div>

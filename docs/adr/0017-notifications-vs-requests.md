@@ -135,3 +135,16 @@ whose times already passed are stamped so the live job doesn't repeat them; orph
 - Colleagues' numbers / emails reach only the people who may contact them; client contact details reach Admins only.
 - A Team Leader / Executive cannot see which client addresses a meeting invites (only "<Client> (client)").
 - Open: rescheduling a task does not re-arm "Not started" / "Still not finished".
+
+## Addendum (2026-10-11) — TEAMS / CLIENTS rows
+Prototype `notifTeam` / `notifClient` / `PAGES.notifications`.
+- Two pill rows above the SHOW tabs (the tabs stay lowest): **TEAMS** and **CLIENTS**, active ones by name, each
+  "Name · N" with the user's unread feed rows about it (count only when > 0). Admin, Team Leader and Executive only;
+  HR and CA get neither.
+- A notification's team / client = its task's (a task in two teams is under both); a task-less money row's client =
+  its invoice's; anything else shows only while both rows are on All. The rows combine (team AND client); tapping the
+  picked pill again returns to All. Selection in the URL (`?team=&client=` next to `?show=`); unknown ids are dropped.
+- The filter runs in the database before the 150-row limit: `scopeMatches` resolves the user's own referenced task /
+  invoice ids that match, `scopeWhere` turns them into the `where`. Pure helpers in `src/lib/notification-scope.ts`
+  (unit-tested). The "Task list" button is gone; **Mark all read** is a text link in the hint on top, shown only while
+  something is unread.

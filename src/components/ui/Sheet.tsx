@@ -8,7 +8,7 @@ import { useCornerClose } from "@/components/shell/corner-store";
  * Bottom sheet / full-height sheet used for action menus and forms (glass refresh: 26px top radius, grab handle,
  * 18px title, 20px side padding = 4px here + the children's own 16px).
  * Portalled to <body>: `.phone-frame` and the glass cards use backdrop-filter, which would otherwise make the
- * fixed overlay size itself to that ancestor instead of the viewport (same reason as MenuTray).
+ * fixed overlay size itself to that ancestor instead of the viewport (same reason as every fixed overlay).
  *
  * One close control (ADR 0016 addendum, prototype `.hasnav .dim` / `cornerMode`): the sheet and its dim stop above
  * the 64px bottom row (+ safe area) so the row's corner button stays visible — it turns into × while the sheet is open
@@ -57,6 +57,7 @@ export function Sheet({
       onClick={onClose}
       role="dialog"
       aria-modal
+      aria-label={title}
     >
       <div
         onClick={(e) => e.stopPropagation()}

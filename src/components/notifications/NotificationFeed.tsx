@@ -3,9 +3,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useOptimistic, useState, useTransition } from "react";
 import { Bell, CalendarDays, Check, ChevronRight, CircleHelp, Clock, IndianRupee, Pause, Play, Plus, type LucideIcon } from "lucide-react";
-import type { FeedRow } from "@/server/notification-feed";
+import type { FeedRow, ScopeOptions } from "@/server/notification-feed";
 import { markAllRead, markRead } from "@/server/notifications";
-import { feedHref, type FeedFilter, type NotifIcon } from "@/lib/notification-kinds";
+import type { FeedFilter, NotifIcon } from "@/lib/notification-kinds";
+import { feedScopeHref, hasScope, toggleScopeId, type FeedScope } from "@/lib/notification-scope";
 import { FilterRow } from "@/components/ui/FilterRow";
 import { Screen } from "@/components/admin/AdminUi";
 import { useToast } from "@/components/ui/Toast";
@@ -14,9 +15,14 @@ import { clsx } from "@/lib/clsx";
 /**
  * Notifications = a feed of what happened, nothing to decide (ADR 0017, prototype `PAGES.notifications`). Rows wear the
  * colour of the task card they are about; tapping one marks it read and opens the task (or invoice / leave). Bottom
- * zone: SHOW All · Unread n · Tasks · People · Money (?show=) and Mark all read · Task list.
+ * zone, top → bottom: TEAMS and CLIENTS ("Name · N" unread; Admin / TL / Executive only, prototype `notifTeam` /
+ * `notifClient`), then SHOW All · Unread n · Tasks · People · Money lowest, nearest the thumb. Everything is in the URL
+ * (?show=&team=&client=). "Mark all read" is a text link in the hint on top, only while something is unread.
  */
 const ICONS: Record<NotifIcon, LucideIcon> = { play: Play, clock: Clock, check: Check, pause: Pause, help: CircleHelp, plus: Plus, calendar: CalendarDays, rupee: IndianRupee, bell: Bell };
+
+/** The hint's text links (prototype `.linkish`): bold, underlined, with a focus ring. */
+const LINKISH = "rounded-[4px] font-bold text-ink underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]";
 
 const EMPTY: Record<FeedFilter, string> = {
   ALL: "No updates yet.",
@@ -26,24 +32,54 @@ const EMPTY: Record<FeedFilter, string> = {
   MONEY: "No money updates.",
 };
 
-export type FeedLinks = { requests: string | null; home: { href: string; label: string } };
+type View = { filter: FeedFilter; scope: FeedScope };
 
-export function NotificationFeed({ groups, unread, filter, links }: { groups: { label: string; rows: FeedRow[] }[]; unread: number; filter: FeedFilter; links: FeedLinks }) {
+export function NotificationFeed({
+  groups,
+  unread,
+  filter,
+  scope,
+  options,
+  requests,
+}: {
+  groups: { label: string; rows: FeedRow[] }[];
+  unread: number;
+  filter: FeedFilter;
+  scope: FeedScope;
+  /** TEAMS / CLIENTS pills (null for HR / CA: no rows). */
+  options: ScopeOptions | null;
+  /** Where decisions live (Admin's Requests, HR's leave inbox), or null. */
+  requests: string | null;
+}) {
   const router = useRouter();
   const toast = useToast();
   const [navPending, startNav] = useTransition();
   const [, startAction] = useTransition();
-  const [shown, setShown] = useOptimistic(filter);
+  const [view, setView] = useOptimistic<View>({ filter, scope });
+  const shown = view.filter;
   const [readNow, setReadNow] = useState<ReadonlySet<string>>(() => new Set());
   const [allRead, setAllRead] = useState(false);
+  // fresh rows from the server carry their own read state: drop the optimistic marks (a later update starts unread)
+  const [seenGroups, setSeenGroups] = useState(groups);
+  if (seenGroups !== groups) {
+    setSeenGroups(groups);
+    setAllRead(false);
+    setReadNow(new Set());
+  }
   const isRead = (r: FeedRow) => r.read || allRead || readNow.has(r.id);
-  const unreadLeft = allRead ? 0 : Math.max(0, unread - readNow.size);
+  const rows = groups.flatMap((g) => g.rows);
+  // only rows the server still sends as unread are subtracted, so a refresh never counts a read twice
+  const unreadLeft = allRead ? 0 : Math.max(0, unread - rows.filter((r) => !r.read && readNow.has(r.id)).length);
 
-  const pick = (f: FeedFilter) =>
+  const go = (patch: Partial<View>) =>
     startNav(() => {
-      setShown(f);
-      router.replace(feedHref(f), { scroll: false });
+      const next = { ...view, ...patch };
+      setView(next);
+      router.replace(feedScopeHref(next.filter, next.scope), { scroll: false });
     });
+  const pick = (f: FeedFilter) => go({ filter: f });
+  const pickTeam = (id: string | null) => go({ scope: { ...view.scope, team: toggleScopeId(view.scope.team, id) } });
+  const pickClient = (id: string | null) => go({ scope: { ...view.scope, client: toggleScopeId(view.scope.client, id) } });
 
   const open = (r: FeedRow) => {
     const wasRead = isRead(r);
@@ -67,7 +103,14 @@ export function NotificationFeed({ groups, unread, filter, links }: { groups: { 
     });
 
   const zone = (
-    <section className="zone-top bar-glass zone-sticky z-20 shrink-0 border-t border-hair pt-1" aria-label="Notifications">
+    <section className="zone-top bar-glass zone-sticky z-20 shrink-0 border-t border-hair pb-1.5 pt-1" aria-label="Notifications">
+      {options && options.teams.length ? (
+        <FilterRow dense label="Teams" value={view.scope.team} onChange={pickTeam} items={options.teams.map((t) => ({ id: t.id, label: t.label, aria: t.unread ? `${t.name}, ${t.unread} unread` : t.name }))} />
+      ) : null}
+      {options && options.clients.length ? (
+        <FilterRow dense label="Clients" value={view.scope.client} onChange={pickClient} items={options.clients.map((c) => ({ id: c.id, label: c.label, aria: c.unread ? `${c.name}, ${c.unread} unread` : c.name }))} />
+      ) : null}
+      {/* the main tabs stay lowest, nearest the thumb */}
       <FilterRow
         dense
         all={false}
@@ -82,42 +125,33 @@ export function NotificationFeed({ groups, unread, filter, links }: { groups: { 
           { id: "MONEY", label: "Money" },
         ]}
       />
-      <div className="grid h-[60px] grid-cols-2 items-center gap-2 px-3">
-        <button
-          type="button"
-          onClick={readAll}
-          disabled={unreadLeft === 0}
-          className="glass-chip flex h-11 items-center justify-center rounded-[14px] border border-hair text-[14px] font-semibold text-ink disabled:opacity-50"
-        >
-          Mark all read
-        </button>
-        <Link
-          href={links.home.href}
-          className="flex h-11 items-center justify-center rounded-[14px] bg-gradient-to-br from-[#3b82f6] to-[#1d4ed8] text-[14px] font-semibold text-white shadow-[0_6px_16px_-6px_rgba(37,99,235,.7)]"
-        >
-          {links.home.label}
-        </Link>
-      </div>
     </section>
   );
 
-  const rows = groups.flatMap((g) => g.rows);
   return (
     <Screen zone={zone}>
       <div aria-busy={navPending} className={clsx("pb-4 transition-opacity", navPending && "opacity-55")}>
         <p className="px-4 pb-1 pt-3 text-[12.5px] leading-[1.45] text-muted">
           Updates on tasks, people and money.
-          {links.requests ? (
+          {requests ? (
             <>
               {" "}Things that need your decision are in{" "}
-              <Link href={links.requests} className="font-bold text-ink underline underline-offset-2">
+              <Link href={requests} className={LINKISH}>
                 Requests
               </Link>
               .
             </>
           ) : null}
+          {unreadLeft > 0 ? (
+            <>
+              {" · "}
+              <button type="button" onClick={readAll} data-mark-all className={LINKISH}>
+                Mark all read
+              </button>
+            </>
+          ) : null}
         </p>
-        {rows.length === 0 ? <p className="px-6 py-10 text-center text-[13px] text-muted">{EMPTY[shown]}</p> : null}
+        {rows.length === 0 ? <p className="px-6 py-10 text-center text-[13px] text-muted">{hasScope(view.scope) ? "No updates for this team or client." : EMPTY[shown]}</p> : null}
         {groups.map((g) => (
           <section key={g.label} aria-label={g.label}>
             <h2 className="px-4 pb-1 pt-3 text-[11px] font-bold uppercase tracking-[.08em] text-muted">{g.label}</h2>

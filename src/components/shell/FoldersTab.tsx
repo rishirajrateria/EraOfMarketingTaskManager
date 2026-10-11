@@ -13,7 +13,7 @@ const MENU_ID = "folders-menu";
 const EDGE = 8;
 /** The popover's bottom sits 2px above the nav's top edge (prototype `.navpop{bottom:62px}` on the 56px tab). */
 const LIFT = 2;
-/** Tones = the menu's Money green and Clients blue (`MenuTray` TONE). */
+/** Tones = Money green and Clients blue (the colours the old menu tray's tiles wore). */
 const TONE: Record<FolderLink["key"], string> = {
   DRIVE: "bg-[linear-gradient(150deg,#34d399,#059669)]",
   SHARED: "bg-[linear-gradient(150deg,#60a5fa,#2563eb)]",

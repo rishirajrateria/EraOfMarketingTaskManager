@@ -137,7 +137,6 @@ export function InvoiceWizard({ clients, companyStateCode, defaults, onClose, ed
         {step === 4 ? <StepReview {...stepProps} /> : null}
       </div>
       <BottomZone
-        menu={false}
         strip={
           step === 1 ? (
             <label className="flex flex-1 items-center gap-2 rounded-full bg-white/70 px-3 py-1 text-sm">

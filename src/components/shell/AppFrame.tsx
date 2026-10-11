@@ -2,8 +2,6 @@
 import { usePathname, useRouter } from "next/navigation";
 import type { Role } from "@prisma/client";
 import { ChevronLeft } from "lucide-react";
-import { MenuTray } from "@/components/shell/MenuTray";
-import { menuStore, useMenuOpen } from "@/components/shell/menu-store";
 import { TopBar } from "@/components/shell/TopBar";
 import { GlobalNav } from "@/components/shell/GlobalNav";
 
@@ -23,7 +21,7 @@ const TITLES: Record<string, string> = { payments: "Payments & finance", dashboa
 /**
  * App shell. Every page except the task dashboard (which draws the bar inside its cyan summary) gets, at the very top,
  * the shared top bar in a cyan band with rounded bottom corners, and right under it the page's own row: back arrow +
- * title (ADR 0016, prototype `pageTop` / `.pgtop`). The ☰ lives in the top bar only. Every page, the task dashboard
+ * title (ADR 0016, prototype `pageTop` / `.pgtop`). There is no menu: Settings and Sign out sit in the top bar. Every page, the task dashboard
  * included, ends with the fixed bottom nav row (GlobalNav, ADR 0016 addendum); `.has-gnav` reserves its height so
  * nothing scrolls under it and the pages' sticky bottom zones sit on top of it.
  */
@@ -38,7 +36,6 @@ export function AppFrame({
   openRequests: number;
   children: React.ReactNode;
 }) {
-  const menuOpen = useMenuOpen();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -66,7 +63,6 @@ export function AppFrame({
       ) : null}
       <div className="flex flex-1 flex-col">{children}</div>
       <GlobalNav user={user} unread={unread} openRequests={openRequests} />
-      {user.role === "ADMIN" ? <MenuTray open={menuOpen} onClose={() => menuStore.close()} user={{ name: user.name }} /> : null}
     </div>
   );
 }

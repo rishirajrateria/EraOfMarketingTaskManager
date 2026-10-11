@@ -62,7 +62,6 @@ export function InventoryPanel({
 
   const zone = (
     <BottomZone
-      menu
       rows={
         <>
           <ZoneRow label="View">

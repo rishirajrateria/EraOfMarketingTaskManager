@@ -11,5 +11,5 @@ export default async function VaultPage() {
   if (!user) redirect("/login");
   if (user.role === "ADMIN") redirect("/admin/vault");
   const groups = await listGrantedItems(user.id);
-  return <GrantedVault groups={groups} isAdmin={false} />;
+  return <GrantedVault groups={groups} />;
 }

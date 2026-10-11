@@ -312,3 +312,19 @@ the tab order of "Nav v3" above and the menu list of the previous section.
 - **Menu**: the Attendance, Drive folders and Shared links tiles leave (they are in the nav now); `menuSections`
   drops empty groups, so Money and Clients disappear with their last tile. Left: **Team · HR, Tasks, Inventory;
   Other · Settings, Sign out**. The Money / Clients tones stay in `MenuTray` for tiles that may return.
+
+### No menu: Settings and Sign out in the top bar (2026-10-11)
+Prototype `settingsBtn` / `signoutBtn` / `signOutSheet`.
+- The ☰ and the menu tray are gone everywhere: `MenuTray`, `menu-model`, `menu-store`, the admin-only
+  `menuCounts()` server action (`src/server/shell/menu.ts`) and their tests are deleted, and `BottomZone` lost its
+  `menu` prop (the bar's ☰). `SOFT_HYPHEN` moved to `nav-model`.
+- Top bar, left, where the ☰ was: **Settings** (gear, Admin only, `aria-current="page"` and a lighter chip on
+  `/admin/settings`; `showsSettings` / `settingsOpen` in `nav-model`) and **Sign out** (logout icon, every role).
+  The right side (Gmail · Drive · WhatsApp | Profile) is unchanged. Both are 34px with the top bar's white focus ring.
+- Sign out opens the **"Sign out?"** sheet (`SignOutSheet`): "You can sign back in with Google any time.", then
+  **Keep me signed in** (focused on open) and a red **Sign out** that submits the `signOutNow` server action
+  (NextAuth `signOut({ redirectTo: "/login" })`: the session row is deleted and the cookie cleared). The profile
+  page's Sign out opens the same sheet (it used to link to `/api/auth/signout`).
+- Where the menu's pages went: HR and Tasks dashboards → Dashboard tab › VIEW row (HR / Tasks); Inventory → the HR
+  view's **"Inventory · Hours available vs assigned"** link card (and each person's row); Settings and Sign out → the
+  top bar. Everything else already had a door (bottom nav, + speed dial and its eyes, Finance links).

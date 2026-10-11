@@ -15,7 +15,7 @@ import {
  * · VIEW (lowest, nearest the thumb, just above the bottom nav), in a tray that minimises with the task dashboard's tab
  * (MinimisableTray: a 40px bar "⌃ Filters · Finance · Overview · This month", remembered per user). The old bar of three
  * actions is gone (ADR 0016 addendum): the bottom nav and its + speed dial cover Requests / + Invoice / + Expense /
- * + Task, and the menu's Team group has Attendance and Inventory. Every filter lives in the URL, so links and Back
+ * + Task; Attendance is a bottom nav tab and the HR view links Inventory (the menu tray is gone). Every filter lives in the URL, so links and Back
  * work; while the next view loads the old one stays, dimmed.
  */
 type Nav = { params: DashParams; go: (patch: Partial<DashParams>) => void; pending: boolean };

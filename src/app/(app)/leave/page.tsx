@@ -8,5 +8,5 @@ import { LeaveScreen } from "@/components/attendance/LeaveScreen";
 export default async function LeavePage() {
   const user = await requireUser();
   const [settings, leaves] = await Promise.all([getSettings(), myLeaves(user.id)]);
-  return <LeaveScreen leaves={leaves} defaultDate={dateKey(new Date(), settings.timezone)} isAdmin={user.role === "ADMIN"} />;
+  return <LeaveScreen leaves={leaves} defaultDate={dateKey(new Date(), settings.timezone)} />;
 }

@@ -25,7 +25,6 @@ export default async function AttendancePage({ searchParams }: { searchParams: S
       filterUsers={filterUsers}
       selectedUserId={all ? sp.userId : undefined}
       hint={all ? "Tap a cell to mark or correct a day." : "Your attendance is marked by HR."}
-      isAdmin={user.role === "ADMIN"}
     />
   );
 }

@@ -1,5 +1,7 @@
 import type { Role } from "@prisma/client";
-import { SOFT_HYPHEN } from "@/components/shell/menu-model";
+
+/** U+00AD: a hyphen the browser shows only where it breaks a word. */
+export const SOFT_HYPHEN = "\u00ad";
 
 /**
  * Bottom nav row of every signed-in screen (ADR 0016 addendum "nav v4", prototype `#gNav` / `renderDashNav` /
@@ -104,3 +106,11 @@ export const navLabel = (label: string): string =>
 /** The top bar's avatar: Profile is open on /me; tapping it again goes home. */
 export const profileOpen = (pathname: string) => under(pathname, PROFILE_HREF);
 export const profileTarget = (pathname: string, role: Role) => (profileOpen(pathname) ? navHome(role) : PROFILE_HREF);
+
+/**
+ * The top bar's left pair (prototype `settingsBtn` / `signoutBtn`, where the ☰ was): Settings (Admin only, marked
+ * `aria-current` on the settings page) and Sign out (everyone, opens the "Sign out?" sheet).
+ */
+export const SETTINGS_HREF = "/admin/settings";
+export const showsSettings = (role: Role) => role === "ADMIN";
+export const settingsOpen = (pathname: string) => under(pathname, SETTINGS_HREF);
