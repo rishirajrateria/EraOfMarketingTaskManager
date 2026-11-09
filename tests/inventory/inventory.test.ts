@@ -31,7 +31,7 @@ describe("inventoryFor", () => {
     expect(byDay["2026-09-13"].capacityMinutes).toBe(0); // Sunday
     expect(byDay["2026-09-14"]).toMatchObject({ capacityMinutes: 480, assignedMinutes: 0, sellableMinutes: 480 });
     expect(byDay["2026-09-15"].capacityMinutes).toBe(0); // holiday
-    expect(inv.total).toEqual({ capacityMinutes: 480, assignedMinutes: 0, sellableMinutes: 480 });
+    expect(inv.total).toEqual({ capacityMinutes: 480, assignedMinutes: 0, sellableMinutes: 480, overbookedMinutes: 0 });
     expect(inv.users).toHaveLength(1);
     expect(inv.teams[0]).toMatchObject({ teamId: seed.team.id, teamName: "Graphic", capacityMinutes: 480 });
     expect(inv.dayTotals.map((d) => d.capacityMinutes)).toEqual([0, 480, 0]);

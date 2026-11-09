@@ -188,19 +188,3 @@ export async function dashboardData(user: SessionUser): Promise<DashboardData> {
     nextLeaveKey,
   };
 }
-
-/** Allocated hours in a period for an assignee (Add-task blue area, SPEC §6). */
-export async function periodLoad(assigneeIds: string[], from: Date, to: Date) {
-  const rows = await prisma.task.findMany({
-    where: {
-      deletedAt: null,
-      type: "WORK",
-      deadlineOnly: false, // a deadline books no hours
-      status: { in: ACTIVE_STATUSES },
-      assignees: { some: { userId: { in: assigneeIds } } },
-      scheduledStart: { gte: from, lt: to },
-    },
-    select: { allocatedMinutes: true },
-  });
-  return { minutes: rows.reduce((s, r) => s + r.allocatedMinutes, 0), count: rows.length };
-}

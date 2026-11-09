@@ -5,6 +5,7 @@ import { resetDb, seedBasics, testDb } from "../helpers/db";
 import { mockSession } from "../helpers/mock-session";
 import { anyTeamWorkType, createTaskAs, loadTask, settle } from "./helpers";
 import { dateKey, parseDateKey, zonedDayAt } from "@/lib/time";
+import { DEFAULT_WORKING, clipMinutes, workingIntervalsForDay } from "@/lib/working-time";
 
 /**
  * Date-only starts (ADR 0010 addendum): "2026-10-23" = the next free time on that day for the people the task lands
@@ -22,6 +23,12 @@ function nextKey(weekday: number, after = new Date()): string {
 const at = (key: string, hhmm: string) => zonedDayAt(parseDateKey(key, TZ), Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5)), TZ);
 const hhmm = (d: Date) => `${String(toZonedTime(d, TZ).getHours()).padStart(2, "0")}:${String(toZonedTime(d, TZ).getMinutes()).padStart(2, "0")}`;
 
+/** Booked minutes of a fixture block: the working time it covers (lunch excluded), as the slot finder would book it (ADR 0019). */
+function workMinutes(start: Date, end: Date): number {
+  const span = Math.round((end.getTime() - start.getTime()) / 60000);
+  return clipMinutes(workingIntervalsForDay(start, { ...DEFAULT_WORKING, workingDays: [0, 1, 2, 3, 4, 5, 6] }), start, end) || span;
+}
+
 async function busyBlock(o: { clientId: string; createdById: string; assigneeIds: string[]; start: Date; end: Date; selfAssigned?: boolean }) {
   return testDb.task.create({
     data: {
@@ -29,7 +36,7 @@ async function busyBlock(o: { clientId: string; createdById: string; assigneeIds
       clientId: o.clientId,
       createdById: o.createdById,
       assignedById: o.createdById,
-      allocatedMinutes: Math.round((o.end.getTime() - o.start.getTime()) / 60000),
+      allocatedMinutes: workMinutes(o.start, o.end),
       scheduledStart: o.start,
       scheduledEnd: o.end,
       selfAssigned: o.selfAssigned ?? false,

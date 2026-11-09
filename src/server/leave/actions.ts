@@ -158,21 +158,24 @@ export async function hrReject(leaveId: string, note = ""): Promise<ActionResult
 }
 
 /** One-tap "Shift all affected tasks to next available slot" (SPEC §9.3). Admin only. */
-export async function shiftLeaveTasks(leaveId: string): Promise<ActionResult<{ shifted: number }>> {
+export async function shiftLeaveTasks(leaveId: string): Promise<ActionResult<{ shifted: number; remaining: number }>> {
   return wrap(async () => {
     const actor = await requireRole("ADMIN");
     const leave = await leaveOr404(leaveId);
     if (!APPROVED_LEAVE.includes(leave.status)) throw new Error("Leave is not approved");
     const result = await shiftTasksForLeave(leaveId, actor.id);
-    const after = await prisma.leave.update({ where: { id: leaveId }, data: { tasksShiftedAt: new Date() } });
-    await audit(actor.id, "leave.shiftTasks", "Leave", leaveId, leave, { ...after, shifted: result.shifted });
+    // Done only when nothing is left in the leave: started tasks, meetings and protected ones are moved by hand, and
+    // until they are the leave keeps showing "needs shift" with the remaining count (ADR 0019).
+    const after = result.remaining ? leave : await prisma.leave.update({ where: { id: leaveId }, data: { tasksShiftedAt: new Date() } });
+    await audit(actor.id, "leave.shiftTasks", "Leave", leaveId, leave, { ...after, shifted: result.shifted, remaining: result.remaining });
     if (result.shifted) {
       const days = leaveDays(fromDbDate(leave.from), fromDbDate(leave.to));
-      await notify({ userIds: (await hrIds()).filter((id) => id !== actor.id), kind: "LEAVE_APPROVED", title: `${first(leave.user.name)}'s leave on ${days} · ${plural(result.shifted, "task")} moved`, href: `/requests/leave?leaveId=${leaveId}` });
+      const left = result.remaining ? ` · ${plural(result.remaining, "task")} to move by hand` : "";
+      await notify({ userIds: (await hrIds()).filter((id) => id !== actor.id), kind: "LEAVE_APPROVED", title: `${first(leave.user.name)}'s leave on ${days} · ${plural(result.shifted, "task")} moved${left}`, href: `/requests/leave?leaveId=${leaveId}` });
     }
     bus.publish({ type: "requests.changed" });
     safeRevalidate(...LEAVE_PATHS);
-    return result;
+    return { shifted: result.shifted, remaining: result.remaining };
   });
 }
 

@@ -20,6 +20,7 @@ import { MeetingOptionsSheet } from "@/components/tasks/MeetingOptionsSheet";
 import { FindTimeSheet } from "@/components/tasks/FindTimeSheet";
 import { clientGuestFields, findTimeDay, guestCount, meetingShortcut, meetingTz, voiceNotesFor } from "@/components/tasks/meeting-helpers";
 import type { VoiceNote } from "@/components/tasks/VoiceRecorder";
+import { OffDayWarning, useOffDayWarnings } from "@/components/tasks/OffDayWarning";
 import {
   EMPTY_LOADS,
   allowedAssignees,
@@ -176,6 +177,9 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
       clearTimeout(t);
     };
   }, [open, previewDay, previewIds, previewMinutes, chosen, meeting, zone]);
+  // A manually picked start time on a day someone is off: warn, never block (ADR 0019).
+  const manualStart = form.scheduledStart && !isDateOnly(form.scheduledStart) && !isDeadline({ ...form, type: chosen ?? "WORK" }) ? form.scheduledStart : null;
+  const offDay = useOffDayWarnings(previewIds ? previewIds.split(",") : [], manualStart, open);
   const subSheetOpen = scheduleOpen || deadlineOpen || assigneesOpen || repeatOpen || optionsOpen || findOpen;
 
   // Task | For client | Meeting. A client task drops the team / work type and is always a deadline ("Needed by"),
@@ -301,6 +305,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
             onToast={(m) => toast(m)}
             formError={formError}
           />
+          <OffDayWarning messages={offDay} className="mx-3 mb-1" />
           <AddTaskTray
             form={liveForm}
             patch={patch}

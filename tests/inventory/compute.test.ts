@@ -79,10 +79,11 @@ describe("totals", () => {
     expect(sellable(480, 120)).toBe(360);
   });
   it("sums rows", () => {
-    expect(sumTotals([{ capacityMinutes: 480, assignedMinutes: 60, sellableMinutes: 420 }, { capacityMinutes: 240, assignedMinutes: 0, sellableMinutes: 240 }])).toEqual({
-      capacityMinutes: 720,
-      assignedMinutes: 60,
-      sellableMinutes: 660,
-    });
+    expect(
+      sumTotals([
+        { capacityMinutes: 480, assignedMinutes: 60, sellableMinutes: 420, overbookedMinutes: 0 },
+        { capacityMinutes: 240, assignedMinutes: 300, sellableMinutes: 0, overbookedMinutes: 60 },
+      ]),
+    ).toEqual({ capacityMinutes: 720, assignedMinutes: 360, sellableMinutes: 420, overbookedMinutes: 60 });
   });
 });

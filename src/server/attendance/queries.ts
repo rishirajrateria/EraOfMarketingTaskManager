@@ -7,10 +7,23 @@ import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { dateKey, fmtTime, parseDateKey } from "@/lib/time";
 import { fromDbDate, toDbDate, toWorkingConfig } from "@/server/inventory/compute";
+import { loadAvailability, loadPeople } from "@/server/availability/load";
+import type { DayKind, PersonDay } from "@/server/availability/day-status";
 import type { SessionUser } from "@/lib/rbac";
 
 export type GridDay = { key: string; day: number; weekday: number; working: boolean; holiday: boolean };
-export type GridCell = { status: AttendanceStatus; checkIn: string | null; checkOut: string | null; note: string | null; explicit: boolean };
+export type GridCell = {
+  /** What the day counts as (ADR 0019 precedence): a leave / holiday wins over the row. */
+  status: AttendanceStatus;
+  /** The attendance row's own status, if one exists (the marking sheet edits this). */
+  marked: AttendanceStatus | null;
+  checkIn: string | null;
+  checkOut: string | null;
+  note: string | null;
+  explicit: boolean;
+  /** "Marked present on a leave day" etc.: a PRESENT / HALF_DAY row on a day off. */
+  warning: string | null;
+};
 export type GridUser = { id: string; name: string; teamName: string | null };
 export type MonthGrid = {
   month: string; // yyyy-MM
@@ -44,7 +57,8 @@ export const canMarkAttendance = canSeeAllAttendance;
 
 /**
  * Monthly grid. Admin/HR see everyone (optionally filtered to one user); others only themselves.
- * Cell precedence: explicit attendance row → approved leave → holiday → (blank).
+ * Cell precedence is `personDayStatus` (ADR 0019): approved leave > company holiday > weekly off > attendance row.
+ * A PRESENT row on a leave / holiday / weekly-off day is kept but flagged with a warning.
  */
 export async function attendanceMonth(viewer: SessionUser, input: { month?: string; userId?: string }): Promise<MonthGrid> {
   const s = await getSettings();
@@ -63,12 +77,9 @@ export async function attendanceMonth(viewer: SessionUser, input: { month?: stri
   });
   const userIds = users.map((u) => u.id);
 
-  const [rows, leaves] = await Promise.all([
+  const [rows, availability] = await Promise.all([
     prisma.attendance.findMany({ where: { userId: { in: userIds }, date: { gte: first, lte: last } } }),
-    prisma.leave.findMany({
-      where: { userId: { in: userIds }, status: { in: ["HR_APPROVED", "ADMIN_APPROVED"] }, from: { lte: last }, to: { gte: first } },
-      select: { userId: true, from: true, to: true },
-    }),
+    loadPeople(userIds).then((people) => loadAvailability(people, keys[0], keys[keys.length - 1], cfg)),
   ]);
 
   const holidays = new Set(cfg.holidays);
@@ -79,25 +90,15 @@ export async function attendanceMonth(viewer: SessionUser, input: { month?: stri
     return { key, day: d.getUTCDate(), weekday, working: cfg.workingDays.includes(weekday) && !holiday, holiday };
   });
 
+  const rowOf = new Map(rows.map((r) => [`${r.userId}|${fromDbDate(r.date)}`, r]));
   const cells: Record<string, Record<string, GridCell>> = {};
-  for (const id of userIds) cells[id] = {};
-  for (const l of leaves) {
-    for (let d = toDbDate(fromDbDate(l.from)); d <= toDbDate(fromDbDate(l.to)); d = addDays(d, 1)) {
-      const k = fromDbDate(d);
-      if (k >= keys[0] && k <= keys[keys.length - 1]) cells[l.userId][k] = { status: "LEAVE", checkIn: null, checkOut: null, note: null, explicit: false };
-    }
-  }
   for (const id of userIds) {
-    for (const key of keys) if (holidays.has(key) && !cells[id][key]) cells[id][key] = { status: "HOLIDAY", checkIn: null, checkOut: null, note: null, explicit: false };
-  }
-  for (const r of rows) {
-    cells[r.userId][fromDbDate(r.date)] = {
-      status: r.status,
-      checkIn: r.checkIn ? fmtTime(r.checkIn, tz) : null,
-      checkOut: r.checkOut ? fmtTime(r.checkOut, tz) : null,
-      note: r.note,
-      explicit: true,
-    };
+    cells[id] = {};
+    for (const key of keys) {
+      const r = rowOf.get(`${id}|${key}`);
+      const cell = gridCell(availability.day(id, key), r ? { ...r, checkIn: r.checkIn ? fmtTime(r.checkIn, tz) : null, checkOut: r.checkOut ? fmtTime(r.checkOut, tz) : null } : null);
+      if (cell) cells[id][key] = cell;
+    }
   }
 
   const monthDate = new Date(`${month}-01T00:00:00Z`);
@@ -111,6 +112,24 @@ export async function attendanceMonth(viewer: SessionUser, input: { month?: stri
     cells,
     timezone: tz,
   };
+}
+
+const OFF_WARNING: Partial<Record<DayKind, string>> = {
+  LEAVE: "Marked present on an approved leave day",
+  HOLIDAY: "Marked present on a company holiday",
+  OFF_WEEKLY: "Marked present on a weekly off",
+};
+
+type RowView = { status: AttendanceStatus; checkIn: string | null; checkOut: string | null; note: string | null };
+
+/** One grid cell from the person's day and the row (if any); null = blank. */
+export function gridCell(day: PersonDay, row: RowView | null): GridCell | null {
+  const warning = day.presentOnOffDay ? (OFF_WARNING[day.kind] ?? null) : null;
+  const base = { marked: row?.status ?? null, checkIn: row?.checkIn ?? null, checkOut: row?.checkOut ?? null, note: row?.note ?? null, explicit: !!row, warning };
+  if (day.kind === "LEAVE" || day.kind === "HOLIDAY") return { status: day.kind, ...base };
+  if (day.kind === "ABSENT") return { status: "ABSENT", ...base };
+  if (day.kind === "HALF") return { status: "HALF_DAY", ...base };
+  return row ? { status: row.status, ...base } : null; // WORKING / weekly off: the row as marked, else blank
 }
 
 /** CSV rows: one line per user per day with a status. */

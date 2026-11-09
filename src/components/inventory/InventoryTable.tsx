@@ -7,6 +7,19 @@ import { clsx } from "@/lib/clsx";
 export const hrs = (min: number) => (Math.round((min / 60) * 10) / 10).toString();
 
 /**
+ * Sellable hours, plus a red "over by Xh" when work is booked beyond capacity (sellable clamps at 0, ADR 0019).
+ * Over a range it is the sum of each day's overbooking, so a free day does not hide an overbooked one.
+ */
+export function SellCell({ t, className }: { t: { capacityMinutes: number; sellableMinutes: number; overbookedMinutes: number }; className?: string }) {
+  return (
+    <td className={clsx("text-right", className, t.sellableMinutes === 0 && t.capacityMinutes > 0 && "text-red-600")}>
+      {hrs(t.sellableMinutes)}
+      {t.overbookedMinutes > 0 ? <span className="ml-1 whitespace-nowrap text-[10px] font-semibold text-red-600">over by {hrs(t.overbookedMinutes)}h</span> : null}
+    </td>
+  );
+}
+
+/**
  * "Remaining after current assignments" strip: one bar per day, or per week / month for long ranges
  * (Quarter, Year) so it stays readable.
  */
@@ -22,15 +35,16 @@ export function RemainingStrip({ dayTotals, by }: { dayTotals: DayTotals[]; by: 
         {buckets.map((b) => {
           const pct = b.capacityMinutes ? Math.min(100, Math.round((b.assignedMinutes / b.capacityMinutes) * 100)) : 0;
           const span = b.from === b.to ? b.from : `${b.from} → ${b.to}`;
+          const over = b.overbookedMinutes > 0 ? ` · over by ${hrs(b.overbookedMinutes)}h` : "";
           return (
-            <div key={b.key} className="flex w-11 shrink-0 flex-col items-center" title={`${span}: ${hrs(b.sellableMinutes)}h sellable of ${hrs(b.capacityMinutes)}h`}>
+            <div key={b.key} className="flex w-11 shrink-0 flex-col items-center" title={`${span}: ${hrs(b.sellableMinutes)}h sellable of ${hrs(b.capacityMinutes)}h${over}`}>
               <div className="flex h-14 w-6 items-end rounded bg-white/60">
                 <div
                   className={clsx("w-full rounded", b.capacityMinutes === 0 ? "bg-gray-300" : pct >= 100 ? "bg-red-400" : "bg-brand-green")}
                   style={{ height: `${b.capacityMinutes ? 100 - pct : 100}%` }}
                 />
               </div>
-              <div className="mt-1 text-[10px] font-semibold">{hrs(b.sellableMinutes)}</div>
+              <div className={clsx("mt-1 text-[10px] font-semibold", b.overbookedMinutes > 0 && "text-red-600")}>{b.overbookedMinutes > 0 ? `+${hrs(b.overbookedMinutes)}` : hrs(b.sellableMinutes)}</div>
               <div className="whitespace-nowrap text-[9px] text-gray-400">{b.label}</div>
             </div>
           );
@@ -70,7 +84,7 @@ export function InventoryTable({ inv }: { inv: InventoryResult }) {
             <td className="py-1.5">Total</td>
             <td className="py-1.5 text-right">{hrs(inv.total.capacityMinutes)}</td>
             <td className="py-1.5 text-right">{hrs(inv.total.assignedMinutes)}</td>
-            <td className="py-1.5 text-right">{hrs(inv.total.sellableMinutes)}</td>
+            <SellCell t={inv.total} className="py-1.5" />
           </tr>
         </tfoot>
       </table>
@@ -85,14 +99,14 @@ function TeamRows({ team, users }: { team: InventoryResult["teams"][number]; use
         <td className="py-1">{team.teamName}</td>
         <td className="py-1 text-right">{hrs(team.capacityMinutes)}</td>
         <td className="py-1 text-right">{hrs(team.assignedMinutes)}</td>
-        <td className="py-1 text-right">{hrs(team.sellableMinutes)}</td>
+        <SellCell t={team} className="py-1" />
       </tr>
       {users.map((u) => (
         <tr key={u.userId} className="border-t border-white/60">
           <td className="py-1 pl-3">{u.name}</td>
           <td className="py-1 text-right">{hrs(u.capacityMinutes)}</td>
           <td className="py-1 text-right">{hrs(u.assignedMinutes)}</td>
-          <td className={clsx("py-1 text-right", u.sellableMinutes === 0 && u.capacityMinutes > 0 && "text-red-600")}>{hrs(u.sellableMinutes)}</td>
+          <SellCell t={u} className="py-1" />
         </tr>
       ))}
     </>

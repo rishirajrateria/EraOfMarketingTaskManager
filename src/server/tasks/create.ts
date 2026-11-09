@@ -232,29 +232,6 @@ export async function previewSlot(
   });
 }
 
-/** Live "Today / Tom / Week / Month – X Hours – N" figures for the add-task header (SPEC §6). */
-export async function periodLoads(assigneeIds: string[]): Promise<ActionResult<Record<string, { minutes: number; count: number }>>> {
-  return wrap(async () => {
-    const user = await requireUser();
-    if (user.role === "HR" || user.role === "CA") throw new ForbiddenError();
-    const requested = idsSchema.parse(assigneeIds);
-    if (requested.length) await validateAssignees(user, requested, "WORK");
-    const { periodLoad } = await import("@/server/tasks/queries");
-    const { zonedStartOfDay } = await import("@/lib/time");
-    const { addDays, addMonths } = await import("date-fns");
-    const tz = (await getSettings()).timezone;
-    const ids = requested.length ? requested : [user.id];
-    const today = zonedStartOfDay(new Date(), tz);
-    const [t, tom, week, month] = await Promise.all([
-      periodLoad(ids, today, addDays(today, 1)),
-      periodLoad(ids, addDays(today, 1), addDays(today, 2)),
-      periodLoad(ids, today, addDays(today, 7)),
-      periodLoad(ids, today, addMonths(today, 1)),
-    ]);
-    return { today: t, tomorrow: tom, week, month };
-  });
-}
-
 const teamIdsSchema = z.array(z.string().min(1).max(64)).min(1, "Pick a team").max(20);
 
 export type TeamPeriodLoad = { leftMinutes: number; bookedMinutes: number; count: number };
@@ -262,7 +239,8 @@ export type TeamPeriodLoad = { leftMinutes: number; bookedMinutes: number; count
 /**
  * Add-task header (owner's revision): capacity of the selected team(s) — all active members (Team Leader +
  * executives) — for Today / Tom / Week / Month: minutes BOOKED (scheduled minutes of open tasks, per person, as in
- * the inventory screen), minutes LEFT (inventory: capacity − booked) and the number of tasks booked. Admin may look
+ * the inventory screen), minutes LEFT (inventory: capacity − booked) and the number of tasks booked. Booked / left come
+ * from `inventoryFor` rows, so they follow `personDayStatus` (ADR 0019) exactly like the Inventory page. Admin may look
  * at any active team; Team Leaders and Executives only at their own team.
  */
 export async function addTaskInventory(teamIds: string[]): Promise<ActionResult<Record<"today" | "tomorrow" | "week" | "month", TeamPeriodLoad>>> {

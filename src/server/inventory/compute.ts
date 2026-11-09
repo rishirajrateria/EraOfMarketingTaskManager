@@ -3,8 +3,9 @@
  */
 import { addDays } from "date-fns";
 import type { AttendanceStatus, CompanySettings } from "@prisma/client";
-import { dateKey, parseDateKey, zonedWeekday } from "@/lib/time";
-import { productiveMinutesPerDay, type WorkingConfig } from "@/lib/working-time";
+import { dateKey, parseDateKey } from "@/lib/time";
+import type { WorkingConfig } from "@/lib/working-time";
+import { DEFAULT_HALF_DAY_MINUTES, personDayStatus, type DayKind } from "@/server/availability/day-status";
 
 /** Date-only columns (`@db.Date`) are stored as UTC midnight of the local calendar date. */
 export function toDbDate(key: string): Date {
@@ -16,8 +17,7 @@ export function fromDbDate(d: Date): string {
   return dateKey(d, "UTC");
 }
 
-/** Schema default for `CompanySettings.halfDayMinutes`; used when a caller passes a plain WorkingConfig. */
-export const DEFAULT_HALF_DAY_MINUTES = 240;
+export { DEFAULT_HALF_DAY_MINUTES };
 
 /** Working-time config plus the capacity a HALF_DAY counts for (Settings → half-day hours). */
 export type CapacityConfig = WorkingConfig & { halfDayMinutes: number };
@@ -52,7 +52,7 @@ export function dayKeysBetween(from: Date, to: Date, tz: string): string[] {
 export type CapacityInput = {
   /** Any instant on the day in question (interpreted in `settings.timezone`). */
   date: Date;
-  /** `dailyCapacityMinutes` overrides the full-day capacity only; half days always use the company setting. */
+  /** `dailyCapacityMinutes` overrides the full-day capacity; a half day is capped at it. */
   user: { dailyCapacityMinutes: number | null; workingDays: number[] };
   settings: WorkingConfig & { halfDayMinutes?: number };
   /** Explicit attendance row for the day, if any. */
@@ -64,29 +64,14 @@ export type CapacityInput = {
 };
 
 /**
- * Capacity (productive minutes) of one person on one day.
- * - default = productive minutes/day from working hours minus lunch, or the user's override
- * - HALF_DAY → `settings.halfDayMinutes` (Settings → half-day hours), capped at the full day
- * - ABSENT / LEAVE / HOLIDAY, approved leave, holiday or non-working day → 0
- * - future days with no attendance row assume the person is present
+ * Capacity (productive minutes) of one person on one day — a thin wrapper over `personDayStatus` (ADR 0019), so the
+ * precedence (leave > holiday > weekly off > attendance row > working) is the same as everywhere else.
  */
 export function computeCapacityMinutes(input: CapacityInput): number {
   const { date, user, settings, attendanceStatus, onLeave, isHoliday } = input;
-  if (isHoliday || onLeave) return 0;
-  const weekday = zonedWeekday(date, settings.timezone);
-  const userDays = user.workingDays.length ? user.workingDays : settings.workingDays;
-  if (!settings.workingDays.includes(weekday) || !userDays.includes(weekday)) return 0;
-  const full = user.dailyCapacityMinutes ?? productiveMinutesPerDay(settings);
-  switch (attendanceStatus) {
-    case "ABSENT":
-    case "LEAVE":
-    case "HOLIDAY":
-      return 0;
-    case "HALF_DAY":
-      return Math.min(full, settings.halfDayMinutes ?? DEFAULT_HALF_DAY_MINUTES);
-    default:
-      return full;
-  }
+  const dayKey = dateKey(date, settings.timezone);
+  const cfg = isHoliday && !settings.holidays.includes(dayKey) ? { ...settings, holidays: [...settings.holidays, dayKey] } : settings;
+  return personDayStatus({ user, dayKey, cfg, onLeave, attendance: attendanceStatus ? { status: attendanceStatus } : null }).capacityMinutes;
 }
 
 export type InventoryRow = {
@@ -94,23 +79,37 @@ export type InventoryRow = {
   name: string;
   teamId: string | null;
   date: string; // yyyy-MM-dd
+  /** The person's day per `personDayStatus` (WORKING / HALF / OFF_WEEKLY / HOLIDAY / LEAVE / ABSENT). */
+  kind: DayKind;
   capacityMinutes: number;
   assignedMinutes: number;
   sellableMinutes: number;
+  /** Booked beyond capacity that day (sellable clamps at 0; this shows by how much) — "over by 2h". */
+  overbookedMinutes: number;
 };
 
-export type InventoryTotals = { capacityMinutes: number; assignedMinutes: number; sellableMinutes: number };
+export type InventoryTotals = { capacityMinutes: number; assignedMinutes: number; sellableMinutes: number; overbookedMinutes: number };
 
 export function sellable(capacityMinutes: number, assignedMinutes: number): number {
   return Math.max(0, capacityMinutes - assignedMinutes);
 }
 
-export function sumTotals(rows: Pick<InventoryRow, "capacityMinutes" | "assignedMinutes" | "sellableMinutes">[]): InventoryTotals {
-  const t: InventoryTotals = { capacityMinutes: 0, assignedMinutes: 0, sellableMinutes: 0 };
+/** Minutes booked beyond capacity (0 when within). */
+export function overbooked(capacityMinutes: number, assignedMinutes: number): number {
+  return Math.max(0, assignedMinutes - capacityMinutes);
+}
+
+/**
+ * Sums per-day rows. `overbookedMinutes` is the sum of each day's overbooking (a free Tuesday does not cancel an
+ * overbooked Monday), so a total can show both sellable time and "over by".
+ */
+export function sumTotals(rows: Pick<InventoryRow, "capacityMinutes" | "assignedMinutes" | "sellableMinutes" | "overbookedMinutes">[]): InventoryTotals {
+  const t: InventoryTotals = { capacityMinutes: 0, assignedMinutes: 0, sellableMinutes: 0, overbookedMinutes: 0 };
   for (const r of rows) {
     t.capacityMinutes += r.capacityMinutes;
     t.assignedMinutes += r.assignedMinutes;
     t.sellableMinutes += r.sellableMinutes;
+    t.overbookedMinutes += r.overbookedMinutes ?? 0;
   }
   return t;
 }
