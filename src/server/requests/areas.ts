@@ -33,6 +33,11 @@ export function inboxCounts(i: { finance: { kind: "APPROVE" | "OVERDUE" | "BILL"
   return { FIN: i.finance.length, WORK: i.work.filter((r) => r.status === "OPEN").length, HR: i.hr.filter((r) => r.status === "OPEN").length, APPR: fin("APPR"), PAY: fin("PAY"), EXP: fin("EXP") };
 }
 
+/** The one number Admin's header badge and the inbox tabs agree on: Finance + Work + HR (leave) items waiting. */
+export function inboxTotal(c: { FIN: number; WORK: number; HR: number }): number {
+  return c.FIN + c.WORK + c.HR;
+}
+
 /**
  * The Work tab's Teams / Clients rows (ADR 0016 addendum, prototype `reqTeam` / `reqClient` / `wOk`): `null` = All.
  * Both combine.

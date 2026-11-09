@@ -118,7 +118,7 @@ describe("invoicing v2", () => {
     expect(sentWhatsappLog[0].to).toBe("+919876543210");
     expect(sentWhatsappLog[0].body).toContain(`invoice ${INV(1)} for INR 23,600.00 is due on 25 Sep 2026`);
     expect(sentWhatsappLog[0].mediaUrl).toBe(`${process.env.PUBLIC_BASE_URL || process.env.AUTH_URL || ""}/api/public/invoice/${inv.publicToken}`);
-    expect((await testDb.notification.findMany({ where: { kind: "INVOICE_SENT" } })).map((n) => n.userId)).toEqual([seed.admin.id]);
+    expect((await testDb.notification.findMany({ where: { kind: "INVOICE_SENT" } })).map((n) => n.userId)).toEqual([]); // the sender is the only admin: never told about their own action
     expect(await testDb.auditLog.count({ where: { action: { in: ["invoice.approve", "invoice.send"] }, entityId: inv.id } })).toBe(2);
 
     // the public route serves the stored PDF for the token, 404 otherwise
@@ -279,7 +279,7 @@ describe("invoicing v2", () => {
     const created = await createInvoice({ ...baseInput(seed.client.id), remindAt: remindAt.toISOString() });
     if (!created.ok) throw new Error(created.error);
     expect((await testDb.invoice.findUniqueOrThrow({ where: { id: created.data.id } })).remindAt).toEqual(remindAt);
-    const part = await createInvoice({ ...baseInput(seed.client.id), plan: "PART", parts: [{ kind: "PERCENT", value: 50, dueDate: "2026-10-09" }, { kind: "PERCENT", value: 50, dueDate: "2026-11-09" }], remindAt: remindAt.toISOString() });
+    const part = await createInvoice({ ...baseInput(seed.client.id), plan: "PART", parts: [{ kind: "PERCENT", value: 50, dueDate: "2026-10-09" }, { kind: "PERCENT", value: 50, dueDate: "2099-11-09" }], remindAt: remindAt.toISOString() });
     if (!part.ok) throw new Error(part.error);
     expect((await testDb.invoice.findUniqueOrThrow({ where: { id: part.data.id } })).remindAt).toEqual(remindAt);
     expect((await run()).reminded).toBe(0);

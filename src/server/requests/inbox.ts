@@ -4,7 +4,8 @@ import { awaitingApproval, paymentsDashboard } from "@/server/finance/queries";
 import { billsNeedingPayment } from "@/server/finance/hub-queries";
 import { DOC_LABEL, docNumber } from "@/components/finance/finance-ui";
 import { listInboxRequests, type RequestItem } from "@/server/requests/queries";
-import { groupByArea } from "@/server/requests/areas";
+import { groupByArea, inboxCounts, inboxTotal } from "@/server/requests/areas";
+import { prisma } from "@/lib/db";
 
 /**
  * Finance items that need the owner (ADR 0016), from the same queries as the hub's "Needs you" (ADR 0013): invoices
@@ -61,4 +62,14 @@ export async function requestInbox(opts: { includeResolved?: boolean } = {}, now
   const [finance, rows] = await Promise.all([financeNeeds(now), listInboxRequests(opts)]);
   const g = groupByArea(rows);
   return { finance, work: g.WORK, hr: g.HR };
+}
+
+/**
+ * The Requests badge in the header. Admin: exactly what the inbox tabs add up to (Finance + Work + HR, via the same
+ * `requestInbox` + `inboxCounts`). HR: open requests addressed to HR (HR's own leave goes to Admin, so never counted).
+ */
+export async function requestBadgeCount(role: string): Promise<number> {
+  if (role === "ADMIN") return inboxTotal(inboxCounts(await requestInbox()));
+  if (role === "HR") return prisma.request.count({ where: { status: "OPEN", targetRole: "HR" } });
+  return 0;
 }

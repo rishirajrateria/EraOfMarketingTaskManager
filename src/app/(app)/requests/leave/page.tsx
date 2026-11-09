@@ -9,6 +9,6 @@ type Search = Promise<{ leaveId?: string }>;
 export default async function LeaveRequestsPage({ searchParams }: { searchParams: Search }) {
   const user = await requireUser();
   if (!can.approveLeave(user)) redirect("/");
-  const [inbox, sp] = await Promise.all([leaveInbox(), searchParams]);
-  return <LeaveInbox inbox={inbox} isAdmin={user.role === "ADMIN"} highlightLeaveId={sp.leaveId} />;
+  const [inbox, sp] = await Promise.all([leaveInbox(user), searchParams]);
+  return <LeaveInbox inbox={inbox} isAdmin={user.role === "ADMIN"} viewerId={user.id} highlightLeaveId={sp.leaveId} />;
 }

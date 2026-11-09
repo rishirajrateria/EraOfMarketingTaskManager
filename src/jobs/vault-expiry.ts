@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/db";
 import { notify } from "@/lib/notify";
 import { audit } from "@/lib/audit";
+import { getSettings } from "@/lib/settings";
+import { whenTodayPhrase } from "@/lib/notification-text";
 import { grantExpiresAt, grantIsActive } from "@/server/vault/access";
 
 const WARN_WINDOW_MS = 30 * 60_000;
@@ -16,6 +18,7 @@ export async function run(now = new Date()): Promise<{ notified: number; expired
     where: { revoked: false, OR: [{ expiresAt: { not: null } }, { expiresAfterFirstOpenMinutes: { not: null }, firstOpenedAt: { not: null } }] },
     include: { vaultItem: { select: { label: true, client: { select: { name: true } } } } },
   });
+  const tz = grants.length ? (await getSettings()).timezone : "UTC";
   let notified = 0;
   let expired = 0;
   for (const g of grants) {
@@ -32,7 +35,7 @@ export async function run(now = new Date()): Promise<{ notified: number; expired
       userIds: [g.userId],
       kind: "VAULT_ACCESS_EXPIRING",
       title: "Vault access expiring soon",
-      body: `${g.vaultItem.label} (${g.vaultItem.client.name}) expires at ${exp.toISOString()}`,
+      body: `${g.vaultItem.label} (${g.vaultItem.client.name}) expires at ${whenTodayPhrase(exp, now, tz)}`,
       href: "/vault",
     });
     await prisma.vaultAccessGrant.update({ where: { id: g.id }, data: { expiringNotifiedAt: now } });

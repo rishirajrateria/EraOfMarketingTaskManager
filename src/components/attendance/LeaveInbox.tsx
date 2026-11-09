@@ -32,7 +32,7 @@ function Section({ title, children, empty }: { title: string; children: React.Re
   );
 }
 
-export function LeaveInbox({ inbox, isAdmin, highlightLeaveId }: { inbox: Inbox; isAdmin: boolean; highlightLeaveId?: string }) {
+export function LeaveInbox({ inbox, isAdmin, viewerId, highlightLeaveId }: { inbox: Inbox; isAdmin: boolean; viewerId: string; highlightLeaveId?: string }) {
   const router = useRouter();
   const toast = useToast();
   const [pending, start] = useTransition();
@@ -83,6 +83,9 @@ export function LeaveInbox({ inbox, isAdmin, highlightLeaveId }: { inbox: Inbox;
               {l.userName} · {fmtLeaveRange(l)}
             </div>
             {l.reason ? <div className="text-xs text-gray-500">{l.reason}</div> : null}
+            {l.userId === viewerId ? (
+              <div className="mt-2 text-xs text-gray-500">Waiting for someone else to approve your leave.</div>
+            ) : (
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <input
                 className={clsx(inputCls, "flex-1")}
@@ -97,6 +100,7 @@ export function LeaveInbox({ inbox, isAdmin, highlightLeaveId }: { inbox: Inbox;
                 Approve
               </button>
             </div>
+            )}
           </div>
         ))}
         </Section>
@@ -141,7 +145,9 @@ export function LeaveInbox({ inbox, isAdmin, highlightLeaveId }: { inbox: Inbox;
               <span className="text-gray-400"> · raised by {c.raisedBy}</span>
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
-              {isAdmin ? (
+              {isAdmin && c.userId === viewerId ? (
+                <span className="text-xs text-gray-500">Someone else must approve your leave.</span>
+              ) : isAdmin ? (
                 <>
                   <button className={btnSecondary} disabled={pending} onClick={() => run(() => resolveLeaveChange(c.requestId, false), "Change declined")}>
                     Decline
@@ -169,7 +175,7 @@ export function LeaveInbox({ inbox, isAdmin, highlightLeaveId }: { inbox: Inbox;
               </div>
               {l.tasksShiftedAt ? <div className="text-[10px] text-gray-400">tasks shifted</div> : null}
             </div>
-            <LeaveStatusPill status={l.status} />
+            <LeaveStatusPill status={l.status} cancelled={l.cancelled} />
           </div>
         ))}
         </Section>
