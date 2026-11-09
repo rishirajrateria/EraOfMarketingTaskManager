@@ -22,6 +22,8 @@ export type LeaveSummary = {
   status: LeaveStatus;
   tasksShiftedAt: string | null;
   createdAt: string;
+  /** REJECTED because Admin approved its cancellation (no migration: derived from the resolved change request). */
+  cancelled: boolean;
   pendingChange: { requestId: string; payload: LeaveChangePayload; status: RequestStatus } | null;
 };
 
@@ -34,7 +36,7 @@ type LeaveRow = {
   status: LeaveStatus;
   tasksShiftedAt: Date | null;
   createdAt: Date;
-  user: { name: string };
+  user: { name: string; role?: string };
   requests: { id: string; type: string; status: RequestStatus; payload: unknown }[];
 };
 
@@ -50,11 +52,12 @@ function summarize(l: LeaveRow): LeaveSummary {
     status: l.status,
     tasksShiftedAt: l.tasksShiftedAt?.toISOString() ?? null,
     createdAt: l.createdAt.toISOString(),
+    cancelled: l.status === "REJECTED" && l.requests.some((r) => r.type === "APPROVED_CHANGE" && r.status === "APPROVED" && !!r.payload && (r.payload as { cancel?: boolean }).cancel === true),
     pendingChange: change ? { requestId: change.id, payload: change.payload as LeaveChangePayload, status: change.status } : null,
   };
 }
 
-const leaveInclude = { user: { select: { name: true } }, requests: { select: { id: true, type: true, status: true, payload: true } } } as const;
+const leaveInclude = { user: { select: { name: true, role: true } }, requests: { select: { id: true, type: true, status: true, payload: true } } } as const;
 
 export async function myLeaves(userId: string): Promise<LeaveSummary[]> {
   const rows = await prisma.leave.findMany({ where: { userId }, include: leaveInclude, orderBy: { from: "desc" }, take: 50 });
@@ -69,7 +72,8 @@ export type LeaveInbox = {
   recent: LeaveSummary[];
 };
 
-export async function leaveInbox(): Promise<LeaveInbox> {
+/** `viewer`: HR never sees HR's own (or another HR person's) pending leave — that is Admin's call alone. */
+export async function leaveInbox(viewer?: { id: string; role: string }): Promise<LeaveInbox> {
   const s = await getSettings();
   const today = toDbDate(dateKey(new Date(), s.timezone));
   const [pending, approved, changes, recent] = await Promise.all([
@@ -88,7 +92,7 @@ export async function leaveInbox(): Promise<LeaveInbox> {
     if (affected.length) needsShift.push({ ...summarize(l), affected });
   }
   return {
-    pending: pending.map(summarize),
+    pending: pending.filter((l) => viewer?.role !== "HR" || l.user.role !== "HR").map(summarize),
     needsShift,
     changeRequests: changes
       .filter((r) => r.leave)

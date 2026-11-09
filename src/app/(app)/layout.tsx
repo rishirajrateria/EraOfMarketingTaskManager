@@ -2,19 +2,15 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/rbac";
 import { AppFrame } from "@/components/shell/AppFrame";
 import { ToastProvider } from "@/components/ui/Toast";
-import { prisma } from "@/lib/db";
 import { unreadNotificationCount } from "@/server/notification-feed";
+import { requestBadgeCount } from "@/server/requests/inbox";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await currentUser();
   if (!user) redirect("/login");
   const [unread, openRequests] = await Promise.all([
     unreadNotificationCount(user.id),
-    user.role === "ADMIN"
-      ? prisma.request.count({ where: { status: "OPEN", targetRole: "ADMIN" } })
-      : user.role === "HR"
-        ? prisma.request.count({ where: { status: "OPEN", targetRole: "HR" } })
-        : Promise.resolve(0),
+    requestBadgeCount(user.role),
   ]);
   const demo = process.env.DEMO_LOGIN === "true";
   return (

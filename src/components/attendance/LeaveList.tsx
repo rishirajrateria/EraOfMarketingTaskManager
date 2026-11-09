@@ -11,7 +11,7 @@ export const LEAVE_STATUS_STYLE: Record<LeaveSummary["status"], { label: string;
   REQUESTED: { label: "Pending HR", cls: "border border-white/60 bg-amber-100/70 text-amber-800 backdrop-blur-sm" },
   HR_APPROVED: { label: "Approved (HR)", cls: "border border-white/60 bg-green-100/70 text-green-800 backdrop-blur-sm" },
   ADMIN_APPROVED: { label: "Approved (Admin)", cls: "border border-white/60 bg-green-100/70 text-green-800 backdrop-blur-sm" },
-  REJECTED: { label: "Rejected / cancelled", cls: "border border-white/60 bg-red-100/70 text-red-800 backdrop-blur-sm" },
+  REJECTED: { label: "Rejected", cls: "border border-white/60 bg-red-100/70 text-red-800 backdrop-blur-sm" },
 };
 
 export const isApprovedLeave = (s: LeaveSummary["status"]) => s === "HR_APPROVED" || s === "ADMIN_APPROVED";
@@ -20,8 +20,8 @@ export function fmtLeaveRange(l: { from: string; to: string }) {
   return l.from === l.to ? l.from : `${l.from} → ${l.to}`;
 }
 
-export function LeaveStatusPill({ status }: { status: LeaveSummary["status"] }) {
-  const s = LEAVE_STATUS_STYLE[status];
+export function LeaveStatusPill({ status, cancelled }: { status: LeaveSummary["status"]; cancelled?: boolean }) {
+  const s = cancelled ? { ...LEAVE_STATUS_STYLE.REJECTED, label: "Cancelled" } : LEAVE_STATUS_STYLE[status];
   return <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${s.cls}`}>{s.label}</span>;
 }
 
@@ -84,7 +84,7 @@ export function LeaveList({ leaves }: { leaves: LeaveSummary[] }) {
             <div className="text-sm font-medium">{fmtLeaveRange(l)}</div>
             {l.reason ? <div className="truncate text-xs text-gray-500">{l.reason}</div> : null}
             <div className="mt-1 flex flex-wrap items-center gap-1">
-              <LeaveStatusPill status={l.status} />
+              <LeaveStatusPill status={l.status} cancelled={l.cancelled} />
               {l.pendingChange ? (
                 <span className="rounded border border-white/60 bg-purple-100/70 px-1.5 py-0.5 text-[10px] font-semibold text-purple-800 backdrop-blur-sm">
                   {"cancel" in l.pendingChange.payload ? "Cancellation" : "Change"} pending Admin

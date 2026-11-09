@@ -14,7 +14,12 @@ export type NotifyInput = {
   invoiceId?: string;
   /** post to the task's Google Chat space too (default: CompanySettings.notifyChatDefault, off unless enabled) */
   chat?: boolean;
+  /** The person who did it: never told about their own action. Applied here, once, for every caller. */
+  exceptUserId?: string;
 };
+
+const recipients = (input: Pick<NotifyInput, "userIds" | "exceptUserId">) =>
+  Array.from(new Set(input.userIds.filter((id) => !!id && id !== input.exceptUserId)));
 
 /** Reminders sent without a feed row (bills due, invoices to approve — decisions live in Requests). Tests read it. */
 export const reminderLog: { userIds: string[]; kind: NotificationKind; title: string; body: string; href: string | null }[] = [];
@@ -22,49 +27,57 @@ export const reminderLog: { userIds: string[]; kind: NotificationKind; title: st
 /** Push + email (+ Chat) for a notification; best-effort, never throws. A task's title heads the push. */
 function sideChannels(input: NotifyInput, ids: string[]) {
   void (async () => {
-    let title = input.title;
-    let body = input.body ?? "";
-    if (input.taskId) {
-      try {
-        const t = await prisma.task.findUnique({ where: { id: input.taskId }, select: { title: true } });
-        if (t) {
-          title = t.title;
-          body = body ? `${input.title} · ${body}` : input.title;
-        }
-      } catch {
-        /* keep the phrase */
-      }
-    }
     try {
-      const { sendPushToUsers } = await import("@/lib/push");
-      await sendPushToUsers(ids, { title, body, url: input.href ?? "/" });
-    } catch {
-      /* push optional */
-    }
-    let chatWanted = input.chat === true;
-    if (input.chat === undefined && input.taskId) {
-      try {
-        const { getSettings } = await import("@/lib/settings");
-        chatWanted = (await getSettings()).notifyChatDefault;
-      } catch {
-        chatWanted = false;
-      }
-    }
-    if (input.taskId && chatWanted) {
-      try {
-        const { postTaskChatMessage } = await import("@/google/chat");
-        await postTaskChatMessage(input.taskId, `${input.title}${input.body ? " — " + input.body : ""}`);
-      } catch {
-        /* chat optional */
-      }
-    }
-    try {
-      const { sendNotificationEmails } = await import("@/lib/email");
-      await sendNotificationEmails(ids, title, body);
-    } catch {
-      /* email optional */
+      await sideChannelsInner(input, ids);
+    } catch (e) {
+      console.error("[notify] side channel failed", e); // fire-and-forget on a long-lived host: log, never unhandled
     }
   })();
+}
+
+async function sideChannelsInner(input: NotifyInput, ids: string[]) {
+  let title = input.title;
+  let body = input.body ?? "";
+  if (input.taskId) {
+    try {
+      const t = await prisma.task.findUnique({ where: { id: input.taskId }, select: { title: true } });
+      if (t) {
+        title = t.title;
+        body = body ? `${input.title} · ${body}` : input.title;
+      }
+    } catch {
+      /* keep the phrase */
+    }
+  }
+  try {
+    const { sendPushToUsers } = await import("@/lib/push");
+    await sendPushToUsers(ids, { title, body, url: input.href ?? "/" });
+  } catch {
+    /* push optional */
+  }
+  let chatWanted = input.chat === true;
+  if (input.chat === undefined && input.taskId) {
+    try {
+      const { getSettings } = await import("@/lib/settings");
+      chatWanted = (await getSettings()).notifyChatDefault;
+    } catch {
+      chatWanted = false;
+    }
+  }
+  if (input.taskId && chatWanted) {
+    try {
+      const { postTaskChatMessage } = await import("@/google/chat");
+      await postTaskChatMessage(input.taskId, `${input.title}${input.body ? " — " + input.body : ""}`);
+    } catch {
+      /* chat optional */
+    }
+  }
+  try {
+    const { sendNotificationEmails } = await import("@/lib/email");
+    await sendNotificationEmails(ids, title, body);
+  } catch {
+    /* email optional */
+  }
 }
 
 /**
@@ -72,7 +85,7 @@ function sideChannels(input: NotifyInput, ids: string[]) {
  * Kinds that are decisions (PAYMENT_DUE, INVOICE_APPROVAL_DUE) never get a feed row — they go through `remind`.
  */
 export async function notify(input: NotifyInput, tx: Prisma.TransactionClient | typeof prisma = prisma) {
-  const ids = Array.from(new Set(input.userIds.filter(Boolean)));
+  const ids = recipients(input);
   if (ids.length === 0) return [];
   if (!isFeedKind(input.kind)) {
     await remind(input);
@@ -92,7 +105,7 @@ export async function notify(input: NotifyInput, tx: Prisma.TransactionClient | 
 
 /** A reminder about something waiting in Requests: push + email only, no feed row and no bell count (ADR 0017). */
 export async function remind(input: NotifyInput) {
-  const ids = Array.from(new Set(input.userIds.filter(Boolean)));
+  const ids = recipients(input);
   if (ids.length === 0) return;
   reminderLog.push({ userIds: ids, kind: input.kind, title: input.title, body: input.body ?? "", href: input.href ?? null });
   if (reminderLog.length > 200) reminderLog.splice(0, reminderLog.length - 200);
@@ -100,7 +113,7 @@ export async function remind(input: NotifyInput) {
 }
 
 /** Everyone who should hear about a task: assignees + their team leaders + all admins. */
-export async function taskStakeholderIds(taskId: string, opts: { includeAdmins?: boolean } = {}) {
+export async function taskStakeholderIds(taskId: string, opts: { includeAdmins?: boolean; exceptUserId?: string } = {}) {
   const task = await prisma.task.findUnique({
     where: { id: taskId },
     select: { assignees: { select: { user: { select: { id: true, teamLeaderId: true } } } }, createdById: true },
@@ -116,6 +129,7 @@ export async function taskStakeholderIds(taskId: string, opts: { includeAdmins?:
     const admins = await prisma.user.findMany({ where: { role: "ADMIN", active: true }, select: { id: true } });
     admins.forEach((a) => ids.add(a.id));
   }
+  if (opts.exceptUserId) ids.delete(opts.exceptUserId);
   return Array.from(ids);
 }
 

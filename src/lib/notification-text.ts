@@ -32,6 +32,11 @@ export function whenPhrase(d: Date, now: Date, tz: string): string {
   return dateKey(d, tz) === dateKey(now, tz) ? fmtTime(d, tz) : `${formatInTimeZone(d, tz, "d MMM")}, ${fmtTime(d, tz)}`;
 }
 
+/** "3:15pm today", else "9 Oct, 3:15pm" — for "expires at …". */
+export function whenTodayPhrase(d: Date, now: Date, tz: string): string {
+  return dateKey(d, tz) === dateKey(now, tz) ? `${fmtTime(d, tz)} today` : whenPhrase(d, now, tz);
+}
+
 export const notStartedPhrase = (scheduledStart: Date, now: Date, tz: string) => `Not started · was due at ${whenPhrase(scheduledStart, now, tz)}`;
 export const pastEndPhrase = (scheduledEnd: Date, now: Date, tz: string) => `Still not finished · was due to end at ${whenPhrase(scheduledEnd, now, tz)}`;
 

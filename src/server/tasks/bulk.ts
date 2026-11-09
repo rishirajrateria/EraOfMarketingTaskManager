@@ -48,6 +48,7 @@ export async function pauseResumeMany(raw: { taskIds: string[]; action: "PAUSE" 
       if (action === "RESUME") await queueTaskPropagation(t.id); // the scheduled end moved
       await notify({
         userIds: await taskStakeholderIds(t.id, { includeAdmins: false }),
+        exceptUserId: user.id,
         kind: action === "PAUSE" ? "TASK_PAUSED" : "TASK_RESUMED",
         // ADR 0017: "Paused by Admin · client call" — the reason is part of the phrase.
         title: `${action === "PAUSE" ? "Paused" : "Resumed"} by ${first(user.name)}${reason ? ` · ${reason}` : ""}`,

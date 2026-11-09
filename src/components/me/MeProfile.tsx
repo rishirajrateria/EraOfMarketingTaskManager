@@ -6,13 +6,8 @@ import { Screen, Toggle, WEEKDAYS, minutesToHours, useAdminAction } from "@/comp
 import { setNotifyByEmail } from "@/server/admin/me-actions";
 import { SignOutSheet } from "@/components/shell/SignOutSheet";
 import type { MyProfile } from "@/server/admin/queries";
-
-declare global {
-  interface Window {
-    /** Registered by the PWA push module; enables web-push for the current user. */
-    __eomEnablePush?: () => Promise<void> | void;
-  }
-}
+import { usePush } from "@/components/pwa/usePush";
+import { PUSH_COPY } from "@/components/pwa/push-state";
 
 const ROLE_LABEL: Record<MyProfile["role"], string> = {
   ADMIN: "Admin",
@@ -23,10 +18,10 @@ const ROLE_LABEL: Record<MyProfile["role"], string> = {
 };
 
 /** /me — own profile and notification preferences; "Enable push" and "Sign out" sit in the bottom bar (Sign out asks first, the same sheet as the top bar's). */
-export function MeProfile({ me, defaultCapacityMinutes }: { me: MyProfile; defaultCapacityMinutes: number }) {
+export function MeProfile({ me, defaultCapacityMinutes, vapidKey }: { me: MyProfile; defaultCapacityMinutes: number; vapidKey: string }) {
   const { busy, run } = useAdminAction();
   const [notify, setNotify] = useState(me.notifyByEmail);
-  const [pushState, setPushState] = useState<"idle" | "busy" | "done" | "unavailable">("idle");
+  const push = usePush(vapidKey);
   const [signingOut, setSigningOut] = useState(false);
 
   const toggleEmail = async (value: boolean) => {
@@ -34,26 +29,13 @@ export function MeProfile({ me, defaultCapacityMinutes }: { me: MyProfile; defau
     const res = await run(setNotifyByEmail(value), value ? "Email notifications on" : "Email notifications off");
     if (!res) setNotify(!value);
   };
-  const enablePush = async () => {
-    if (typeof window.__eomEnablePush !== "function") {
-      setPushState("unavailable");
-      return;
-    }
-    setPushState("busy");
-    try {
-      await window.__eomEnablePush();
-      setPushState("done");
-    } catch {
-      setPushState("idle");
-    }
-  };
-
-  const pushLabel = pushState === "busy" ? "Enabling…" : pushState === "done" ? "Push on" : "Enable push";
+  const pushLabel = push.busy ? "Enabling…" : PUSH_COPY[push.state].label;
+  const pushClickable = push.state === "off" && !push.busy && !busy;
   const zone = (
     <BottomZone
       right={
         <>
-          <BarChip label="Enable push notifications" active={pushState === "done"} onClick={busy || pushState === "busy" || pushState === "done" ? undefined : () => void enablePush()}>
+          <BarChip label="Enable notifications" active={push.state === "on"} onClick={pushClickable ? () => void push.enable() : undefined}>
             {pushLabel}
           </BarChip>
           <button
@@ -95,7 +77,7 @@ export function MeProfile({ me, defaultCapacityMinutes }: { me: MyProfile; defau
         <div className="py-2">
           <span className="block text-sm text-gray-900">Push notifications</span>
           <span className="block text-[11px] text-gray-400">
-            {pushState === "done" ? "Enabled on this device" : pushState === "unavailable" ? "Not available in this browser yet" : "Tap “Enable push” below to get alerts even when the app is closed"}
+            {push.error ?? PUSH_COPY[push.state].hint}
           </span>
         </div>
       </section>

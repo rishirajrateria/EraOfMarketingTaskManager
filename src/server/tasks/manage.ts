@@ -23,6 +23,7 @@ import { sanitizeDescription } from "@/lib/sanitize";
 import { getSettings } from "@/lib/settings";
 import { parseDateKey, zonedEndOfDay, zonedStartOfDay } from "@/lib/time";
 import { deadlineDay, deadlineFields } from "@/server/tasks/deadline";
+import { openEditableRequests, tellEditHandled, tellTimeShifted, timesMoved } from "@/server/tasks/manage-notify";
 
 const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 const attachmentSchema = z.object({
@@ -102,6 +103,7 @@ export async function updateTask(raw: unknown): Promise<ActionResult<undefined>>
       end = zonedEndOfDay(to > from ? new Date(to.getTime() - 1) : from, meetingOptions.timeZone);
     }
     const now = new Date();
+    const handled = await openEditableRequests(t.id);
     await prisma.$transaction(async (tx) => {
       await tx.task.update({
         where: { id: t.id },
@@ -135,7 +137,10 @@ export async function updateTask(raw: unknown): Promise<ActionResult<undefined>>
     await audit(user.id, "task.update", "Task", t.id, t, input);
     await queueTaskPropagation(t.id);
     const added = (input.assigneeIds ?? []).filter((id) => !t.assignees.some((a) => a.userId === id));
-    if (added.length) await notify({ userIds: added, kind: "TASK_ASSIGNED", title: `Assigned to you by ${firstName(user.name)}`, href: taskDeepLink(t.id), taskId: t.id, chat: false });
+    if (added.length) await notify({ userIds: added, exceptUserId: user.id, kind: "TASK_ASSIGNED", title: `Assigned to you by ${firstName(user.name)}`, href: taskDeepLink(t.id), taskId: t.id, chat: false });
+    await tellEditHandled(t.id, handled, user.id);
+    const newStart = start ?? t.scheduledStart;
+    if (newStart && timesMoved(t, { start, end })) await tellTimeShifted(t.id, input.assigneeIds ?? t.assignees.map((a) => a.userId), user.id, newStart, tz, added);
     void import("@/google/queue").then((q) => q.processPending()).catch(() => undefined);
     void publishTaskChanged(t.id);
     bus.publish({ type: "requests.changed" });
@@ -193,9 +198,19 @@ export async function setTaskProtected(taskId: string, value: boolean): Promise<
   return wrap(async () => {
     const user = await requireUser();
     if (!can.editTask(user)) throw new ForbiddenError();
+    const asked = await prisma.request.findMany({ where: { taskId, type: "FIX_SELF_TASK", status: "OPEN" }, select: { raisedById: true } });
     await prisma.task.update({ where: { id: taskId }, data: { protected: value } });
     await prisma.request.updateMany({ where: { taskId, type: "FIX_SELF_TASK", status: "OPEN" }, data: { status: value ? "APPROVED" : "REJECTED", resolvedById: user.id, resolvedAt: new Date() } });
     await audit(user.id, "task.protect", "Task", taskId, null, { protected: value });
+    await notify({
+      userIds: asked.map((r) => r.raisedById),
+      exceptUserId: user.id,
+      kind: "GENERIC",
+      title: value ? "Your request was approved · task is fixed" : "Your request was declined",
+      href: taskDeepLink(taskId),
+      taskId,
+      chat: false,
+    });
     void publishTaskChanged(taskId);
     bus.publish({ type: "requests.changed" });
     safeRevalidate("/dashboard", "/admin/requests");
@@ -372,7 +387,7 @@ export async function notifyTaskStakeholders(taskId: string, message: string): P
     const user = await requireUser();
     if (!can.editTask(user)) throw new ForbiddenError();
     const text = noteSchema.min(1).parse(message);
-    await notify({ userIds: await taskStakeholderIds(taskId, { includeAdmins: false }), kind: "GENERIC", title: `${firstName(user.name)}: ${text}`, taskId, href: taskDeepLink(taskId) });
+    await notify({ userIds: await taskStakeholderIds(taskId, { includeAdmins: false }), exceptUserId: user.id, kind: "GENERIC", title: `${firstName(user.name)}: ${text}`, taskId, href: taskDeepLink(taskId) });
     return undefined;
   });
 }

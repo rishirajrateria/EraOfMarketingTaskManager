@@ -66,7 +66,7 @@ export async function pauseTask(taskId: string): Promise<ActionResult<undefined>
     const { status, ops } = pauseOps(t, new Date());
     await prisma.$transaction(ops);
     await audit(user.id, "task.pause", "Task", t.id, { status: t.status }, { status });
-    await notify({ userIds: (await taskStakeholderIds(t.id, { includeAdmins: false })), kind: "TASK_PAUSED", title: `Paused by ${first(user.name)}`, href: taskDeepLink(t.id), taskId: t.id });
+    await notify({ userIds: await taskStakeholderIds(t.id, { includeAdmins: false }), exceptUserId: user.id, kind: "TASK_PAUSED", title: `Paused by ${first(user.name)}`, href: taskDeepLink(t.id), taskId: t.id });
     done(t.id);
     return undefined;
   });
@@ -81,7 +81,7 @@ export async function resumeTask(taskId: string): Promise<ActionResult<undefined
     await prisma.$transaction(ops);
     await audit(user.id, "task.resume", "Task", t.id, { status: t.status }, { status, pausedMin });
     await queueTaskPropagation(t.id);
-    await notify({ userIds: (await taskStakeholderIds(t.id, { includeAdmins: false })), kind: "TASK_RESUMED", title: `Resumed by ${first(user.name)}`, href: taskDeepLink(t.id), taskId: t.id });
+    await notify({ userIds: await taskStakeholderIds(t.id, { includeAdmins: false }), exceptUserId: user.id, kind: "TASK_RESUMED", title: `Resumed by ${first(user.name)}`, href: taskDeepLink(t.id), taskId: t.id });
     done(t.id);
     return undefined;
   });
@@ -171,7 +171,7 @@ export async function rejectFinish(taskId: string, rawNote: string): Promise<Act
       prisma.request.updateMany({ where: { taskId: t.id, type: "FINISH", status: "OPEN" }, data: { status: "REJECTED", resolvedById: user.id, resolvedAt: now, resolutionNote: note } }),
     ]);
     await audit(user.id, "task.reject_finish", "Task", t.id, { status: t.status }, { status, note });
-    await notify({ userIds: (await taskStakeholderIds(t.id, { includeAdmins: false })), kind: "FINISH_REJECTED", title: `${first(user.name)} sent it back · not finished yet`, body: note, href: taskDeepLink(t.id), taskId: t.id });
+    await notify({ userIds: await taskStakeholderIds(t.id, { includeAdmins: false }), exceptUserId: user.id, kind: "FINISH_REJECTED", title: `${first(user.name)} sent it back · not finished yet`, body: note, href: taskDeepLink(t.id), taskId: t.id });
     bus.publish({ type: "requests.changed" });
     done(t.id);
     return undefined;
@@ -185,12 +185,14 @@ export async function raiseDoubt(taskId: string, rawNote: string): Promise<Actio
     const user = await requireUser();
     if (!can.raiseDoubt(user)) throw new ForbiddenError();
     const t = await loadTask(user, taskId);
+    const open = await prisma.request.findFirst({ where: { taskId: t.id, type: "DOUBT", status: "OPEN" }, select: { id: true } });
+    if (open) throw new Error("A doubt is already open on this task — Admin hasn't answered it yet");
     await prisma.$transaction([
       prisma.task.update({ where: { id: t.id }, data: { doubtRaised: true, doubtNote: note } }),
       prisma.request.create({ data: { type: "DOUBT", taskId: t.id, raisedById: user.id, targetRole: "ADMIN", note } }),
     ]);
     await audit(user.id, "task.raise_doubt", "Task", t.id, null, { note });
-    await notify({ userIds: await adminIds(), kind: "DOUBT_RAISED", title: `${first(user.name)} raised a doubt`, body: note, href: taskDeepLink(t.id), taskId: t.id });
+    await notify({ userIds: await adminIds(), exceptUserId: user.id, kind: "DOUBT_RAISED", title: `${first(user.name)} raised a doubt`, body: note, href: taskDeepLink(t.id), taskId: t.id });
     bus.publish({ type: "requests.changed" });
     done(t.id);
     return undefined;
@@ -210,7 +212,7 @@ export async function resolveDoubt(taskId: string, rawNote = ""): Promise<Action
       prisma.request.updateMany({ where: { taskId: t.id, type: "DOUBT", status: "OPEN" }, data: { status: "RESOLVED", resolvedById: user.id, resolvedAt: now, resolutionNote: note } }),
     ]);
     await audit(user.id, "task.resolve_doubt", "Task", t.id, { doubtNote: t.doubtNote }, { note });
-    await notify({ userIds: (await taskStakeholderIds(t.id, { includeAdmins: false })), kind: "DOUBT_RESOLVED", title: `Doubt cleared by ${first(user.name)}`, body: note, href: taskDeepLink(t.id), taskId: t.id });
+    await notify({ userIds: await taskStakeholderIds(t.id, { includeAdmins: false }), exceptUserId: user.id, kind: "DOUBT_RESOLVED", title: `Doubt cleared by ${first(user.name)}`, body: note, href: taskDeepLink(t.id), taskId: t.id });
     bus.publish({ type: "requests.changed" });
     done(t.id);
     return undefined;
