@@ -663,6 +663,7 @@ select.in{padding-right:10px}
 /* add-task rows + bar in the same neutral glass feel as the dashboard dock */
 #s-add .greenarea{background:var(--glass)!important;backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:none!important;border-top:1px solid var(--hair);padding:4px 0 2px!important}
 #s-add .wrow{height:42px;padding:0 12px;gap:6px}
+.wrow[hidden]{display:none!important}
 #s-add .wrow .lbl{position:sticky;left:0;z-index:1;width:52px;min-width:52px;font-size:10.5px;font-weight:800;letter-spacing:.07em;color:var(--muted);background:transparent}
 #s-add .gpk{height:32px;padding:0 11px;border-radius:12px;border:1px solid var(--hair);background:var(--chip);color:var(--ink);font-size:12.5px;font-weight:600;box-shadow:none}
 #s-add .gpk.on{background:var(--ink);color:var(--bg);border-color:transparent}
@@ -3084,7 +3085,7 @@ function earlySheet(u,after){
   rs.replaceChildren(...["Sick","Personal","Other"].map(x=>el("button",{class:reason===x?"on":"","aria-pressed":String(reason===x),onclick:()=>{reason=x;draw();}},x)));
   opts.replaceChildren(
    el("button",{class:"ocard"+(mode==="UNTIL"?" on":""),"aria-pressed":String(mode==="UNTIL"),onclick:()=>{mode="UNTIL";draw();}},el("b",{},"Away until…"),el("small",{},"Covers the rest of today and every day through the last day you pick")),
-   mode==="UNTIL"?field("Last day away",dIn):null,
+   ...(mode==="UNTIL"?[field("Last day away",dIn)]:[]),
    el("button",{class:"ocard"+(mode==="ASK"?" on":""),"aria-pressed":String(mode==="ASK"),onclick:()=>{mode="ASK";draw();}},el("b",{},"Ask tomorrow"),el("small",{},"Covers the rest of today only. Tomorrow morning HR and Admin are asked: Back or Still off")));
   upd();};
  tIn.oninput=upd;dIn.oninput=upd;draw();
