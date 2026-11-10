@@ -5,6 +5,7 @@ import { clsx } from "@/lib/clsx";
 import type { HrDash, TodayStatus } from "@/server/dashboards/hr";
 import { Card, Empty, Tile, Tiles } from "@/components/dashboards/charts";
 import { hrs, loadTone } from "@/components/dashboards/format";
+import { EarlyLeaveButton } from "@/components/early-leave/EarlyLeaveButton";
 
 /**
  * HR view (prototype `hrBody`): today's attendance, free hours, a link card to Inventory (its only door since the menu
@@ -17,6 +18,7 @@ const STATUS: Record<TodayStatus, { label: string; cls: string }> = {
   ABSENT: { label: "Absent", cls: "text-red-700 dark:text-red-300" },
   HOLIDAY: { label: "Holiday", cls: "text-muted" },
   OFF: { label: "Off", cls: "text-muted" },
+  AWAY: { label: "Away", cls: "text-[#c2410c] dark:text-[#fdba74]" },
   NONE: { label: "Not marked", cls: "text-muted" },
 };
 const BAR = { red: "bg-[#dc2626]", amber: "bg-[#f59e0b]", ok: "bg-s-inc" } as const;
@@ -35,7 +37,7 @@ export function HrBody({ data: d }: { data: HrDash }) {
         {d.people.length === 0 ? <Empty>No team leaders or executives in this team</Empty> : null}
         <ul className="mt-1">
           {d.people.map((p) => {
-            const st = STATUS[p.today];
+            const st = p.early ? { label: p.early.label, cls: STATUS.AWAY.cls } : STATUS[p.today];
             const tone = loadTone(p.pct);
             return (
               <li key={p.userId} className="border-b border-line last:border-b-0">
@@ -46,7 +48,7 @@ export function HrBody({ data: d }: { data: HrDash }) {
                 >
                   <span className="flex items-center justify-between gap-2 text-[13px]">
                     <b className="min-w-0 truncate font-semibold">{p.name}</b>
-                    <span className={clsx("inline-flex h-[22px] shrink-0 items-center rounded-full border border-hair bg-chip px-2 text-[11px] font-semibold", st.cls)} title={p.todayWarning ? "Marked present on a day off" : undefined}>
+                    <span className={clsx("inline-flex h-[22px] min-w-0 shrink truncate items-center rounded-full border border-hair bg-chip px-2 text-[11px] font-semibold", st.cls)} title={p.todayWarning ? "Marked present on a day off" : undefined}>
                       {st.label}
                       {p.todayWarning ? <span className="ml-1 text-[#dc2626]">!</span> : null}
                     </span>
@@ -58,6 +60,10 @@ export function HrBody({ data: d }: { data: HrDash }) {
                     {[p.teamName, `${hrs(p.bookedMin)} of ${h0(p.capacityMin)} booked`, `${h0(p.freeMin)} free`, p.overMin ? `over by ${hrs(p.overMin)}` : null, p.daysOff ? `${p.daysOff} day${p.daysOff === 1 ? "" : "s"} off` : null].filter(Boolean).join(" · ")}
                   </small>
                 </Link>
+                {/* Going home early (ADR 0022): Admin marks it from the person's row too (HR from Attendance). */}
+                <div className="-mt-1 flex justify-end pb-2.5">
+                  <EarlyLeaveButton person={{ id: p.userId, name: p.name }} earlyId={p.early?.id ?? null} tz={d.tz} />
+                </div>
               </li>
             );
           })}

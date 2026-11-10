@@ -173,9 +173,12 @@ export async function dashboardData(user: SessionUser): Promise<DashboardData> {
     // Executives see only their own team's work types (plus legacy ones with no team).
     row2 = workTypes.filter((w) => !w.teamIds.length || (!!user.teamId && w.teamIds.includes(user.teamId))).map((w) => ({ id: w.id, label: w.name }));
   }
+  // Going home early (ADR 0022): Admin sees the banner and the "Needs shifting" flags.
+  const early = user.role === "ADMIN" ? await (await import("@/server/early-leave/queries")).earlyBanners() : undefined;
   return {
     role: user.role,
     tasks,
+    early,
     row1,
     row2,
     workTypes,

@@ -6,6 +6,8 @@ import { REQUEST_TABS, type RequestTab } from "@/server/dashboards/params";
 import { parseFinanceGroup, parseWorkFilter } from "@/server/requests/areas";
 import { workFilterOptions } from "@/server/requests/queries";
 import { RequestsInbox } from "@/components/requests/RequestsInbox";
+import { backQuestions } from "@/server/early-leave/queries";
+import { BackQuestionCards } from "@/components/early-leave/EarlyBanners";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +23,7 @@ export default async function AdminRequestsPage({ searchParams }: { searchParams
   const sp = await searchParams;
   const tab: RequestTab = REQUEST_TABS.includes(sp.tab as RequestTab) ? (sp.tab as RequestTab) : "ALL";
   const showAll = sp.all === "1";
-  const [inbox, settings, names] = await Promise.all([requestInbox({ includeResolved: showAll }), getSettings(), workFilterOptions()]);
+  const [inbox, settings, names, questions] = await Promise.all([requestInbox({ includeResolved: showAll }), getSettings(), workFilterOptions(), backQuestions()]);
   return (
     <RequestsInbox
       inbox={inbox}
@@ -31,6 +33,7 @@ export default async function AdminRequestsPage({ searchParams }: { searchParams
       names={names}
       showAll={showAll}
       tz={settings.timezone}
+      top={<BackQuestionCards key="questions" questions={questions} />}
     />
   );
 }

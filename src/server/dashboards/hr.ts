@@ -7,13 +7,14 @@ import { addKeyDays, type PersonDay } from "@/server/availability/day-status";
 import { loadAvailability, loadPeople } from "@/server/availability/load";
 import { dashRange, type DashRange } from "@/server/dashboards/period";
 import type { DashParams } from "@/server/dashboards/params";
+import { earlyToday } from "@/server/early-leave/queries";
 
 /**
  * HR dashboard (ADR 0016): today's attendance and the team inventory (booked of capacity over the WHEN period) for
  * Team Leaders and Executives. Capacity and booked hours come from `inventoryFor` — the same numbers as the Inventory
  * page — and today's status from `personDayStatus` (ADR 0019), the same precedence as the grid and the slot finder.
  */
-export type TodayStatus = "PRESENT" | "HALF_DAY" | "LEAVE" | "ABSENT" | "HOLIDAY" | "OFF" | "NONE";
+export type TodayStatus = "PRESENT" | "HALF_DAY" | "LEAVE" | "ABSENT" | "HOLIDAY" | "OFF" | "AWAY" | "NONE";
 export type HrPerson = {
   userId: string;
   name: string;
@@ -22,6 +23,8 @@ export type HrPerson = {
   today: TodayStatus;
   /** Marked present on a leave / holiday / weekly-off day: shown with a warning. */
   todayWarning: boolean;
+  /** Going home early today (ADR 0022): "Left early 2:15pm · Sick" / "Away · Sick", and the record to cancel. */
+  early: { id: string; label: string } | null;
   capacityMin: number;
   bookedMin: number;
   freeMin: number;
@@ -30,7 +33,7 @@ export type HrPerson = {
   pct: number;
   daysOff: number;
 };
-export type HrDash = { range: DashRange; staff: number; presentToday: number; onLeaveToday: number; capacityMin: number; bookedMin: number; freeMin: number; people: HrPerson[] };
+export type HrDash = { range: DashRange; tz: string; staff: number; presentToday: number; onLeaveToday: number; capacityMin: number; bookedMin: number; freeMin: number; people: HrPerson[] };
 
 /** Today's tile label from the person's day (leave > holiday > weekly off > attendance row > working). */
 export function todayStatus(day: Pick<PersonDay, "kind" | "marked">): TodayStatus {
@@ -38,6 +41,7 @@ export function todayStatus(day: Pick<PersonDay, "kind" | "marked">): TodayStatu
     case "LEAVE":
     case "HOLIDAY":
     case "ABSENT":
+    case "AWAY":
       return day.kind;
     case "OFF_WEEKLY":
       return "OFF";
@@ -67,9 +71,10 @@ export async function hrDashboard(p: Pick<DashParams, "team" | "period">, now = 
   });
   const lo = todayKey < range.fromKey ? todayKey : range.fromKey;
   const hi = todayKey > range.toKey ? todayKey : range.toKey;
-  const [inv, availability] = await Promise.all([
+  const [inv, availability, early] = await Promise.all([
     inventoryFor({ from: parseDateKey(range.fromKey, tz), to: parseDateKey(range.toKey, tz) }, { teamId: p.team ?? undefined }),
     loadPeople(staff.map((u) => u.id)).then((people) => loadAvailability(people, lo, hi, cfg)),
+    earlyToday(staff.map((u) => u.id), now),
   ]);
 
   const people: HrPerson[] = staff.map((u) => {
@@ -80,7 +85,7 @@ export async function hrDashboard(p: Pick<DashParams, "team" | "period">, now = 
     let daysOff = 0;
     for (let k = range.fromKey, i = 0; k <= range.toKey && i < 400; k = addKeyDays(k, 1), i++) {
       const kind = availability.day(u.id, k).kind;
-      if (kind === "LEAVE" || kind === "ABSENT") daysOff++;
+      if (kind === "LEAVE" || kind === "ABSENT" || kind === "AWAY") daysOff++;
     }
     const today = availability.day(u.id, todayKey);
     return {
@@ -90,6 +95,7 @@ export async function hrDashboard(p: Pick<DashParams, "team" | "period">, now = 
       teamName: u.team?.name ?? null,
       today: todayStatus(today),
       todayWarning: today.presentOnOffDay,
+      early: early[u.id] ? { id: early[u.id].id, label: early[u.id].label } : null,
       capacityMin,
       bookedMin,
       freeMin: Math.max(0, capacityMin - bookedMin),
@@ -102,6 +108,7 @@ export async function hrDashboard(p: Pick<DashParams, "team" | "period">, now = 
   const bookedMin = people.reduce((s, x) => s + x.bookedMin, 0);
   return {
     range,
+    tz,
     staff: people.length,
     presentToday: people.filter((x) => x.today === "PRESENT" || x.today === "HALF_DAY").length,
     onLeaveToday: people.filter((x) => x.today === "LEAVE").length,

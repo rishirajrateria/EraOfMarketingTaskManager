@@ -30,6 +30,7 @@ import { FLASH_MS, OPEN_AFTER_MS, planDeepLink, strippedDashboardUrl } from "@/c
 import { pauseResumeMany } from "@/server/tasks/bulk";
 import { requestPillReview, resolvePillReview, withdrawPillReview } from "@/server/tasks/review";
 import { REVIEW_FIELD_NAME, type ReviewField } from "@/server/tasks/review-fields";
+import { EarlyBanners } from "@/components/early-leave/EarlyBanners";
 
 const SAVE_DEBOUNCE_MS = 800;
 /**
@@ -40,12 +41,15 @@ export function Dashboard({
   data,
   filters: initialFilters,
   initialTaskId,
+  initialShiftId = null,
   showCompleted,
   user,
 }: {
   data: DashboardData;
   filters: DashboardFilters;
   initialTaskId: string | null;
+  /** `?shift=<early leave id>`: open "Shift manually" for it (ADR 0022). */
+  initialShiftId?: string | null;
   showCompleted: boolean;
   user: TopBarUser;
 }) {
@@ -69,7 +73,17 @@ export function Dashboard({
   const [contact, setContact] = useState<{ taskId: string; mode: ContactMode } | null>(null);
 
   const byId = useMemo(() => new Map(data.tasks.map((t) => [t.id, t])), [data.tasks]);
-  const tasks = useMemo(() => applyFilters(data.tasks, filters, { role: data.role, meId: data.me.id, tz: data.tz, nextLeaveKey: data.nextLeaveKey }), [data, filters]);
+  // Going home early (ADR 0022): flagged rows wear the "Needs shifting" ribbon; "Shift manually" lists only them, and
+  // a tap opens the edit sheet (new time and/or person). Once a task is moved out of the period the flag is gone.
+  const shiftIds = useMemo(() => new Set((data.early ?? []).flatMap((b) => b.taskIds)), [data.early]);
+  const [shiftOnly, setShiftOnly] = useState<string | null>(initialShiftId);
+  const manual = shiftOnly ? (data.early ?? []).find((b) => b.id === shiftOnly && b.taskIds.length) ?? null : null;
+  const filtered = useMemo(() => applyFilters(data.tasks, filters, { role: data.role, meId: data.me.id, tz: data.tz, nextLeaveKey: data.nextLeaveKey }), [data, filters]);
+  const tasks = useMemo(() => (manual ? data.tasks.filter((t) => manual.taskIds.includes(t.id)) : filtered), [manual, data.tasks, filtered]);
+  useEffect(() => {
+    if (!initialShiftId) return;
+    window.history.replaceState(window.history.state, "", window.location.pathname);
+  }, [initialShiftId]);
 
   // Persist filters per user (debounced; skip the initial render).
   const mounted = useRef(false);
@@ -277,14 +291,16 @@ export function Dashboard({
   return (
     <div className="flex h-[calc(100dvh-var(--gnav-h,0px))] flex-col">
       <TimeStatus data={data} filters={filters} onChange={setFilters} topBar={<DashboardTopBar user={user} />} />
+      {data.role === "ADMIN" ? <EarlyBanners banners={data.early ?? []} canShift tz={data.tz} manualId={manual?.id ?? null} onManual={setShiftOnly} /> : null}
       <TaskList
         tasks={tasks}
+        shiftIds={shiftIds}
         data={data}
         refreshing={busy}
         onRefresh={refresh}
         pendingDone={pendingDone}
         handlers={{
-          onOpen: (t) => setDetailId(t.id),
+          onOpen: (t) => (manual && shiftIds.has(t.id) ? setEditId(t.id) : setDetailId(t.id)),
           onOpenAttachments: (t) => {
             setDetailId(t.id);
             setScrollToAttachments(true);

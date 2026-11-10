@@ -11,6 +11,7 @@ import { BottomZone, ZonePill, ZoneRow } from "@/components/ui/BottomZone";
 import { Screen, ScreenHeader } from "@/components/admin/AdminUi";
 import { LeaveStatusPill, fmtLeaveRange } from "@/components/attendance/LeaveList";
 import { RequestsCaption } from "@/components/requests/RequestsInbox";
+import { UNMOVABLE_LABEL } from "@/server/scheduling/unmovable";
 
 type Result = { ok: true; data: unknown } | { ok: false; error: string };
 
@@ -118,7 +119,7 @@ export function LeaveInbox({ inbox, isAdmin, viewerId, highlightLeaveId }: { inb
             </div>
             {l.affected.some((t) => !t.movable) ? (
               <div className="text-xs text-amber-700">
-                Move yourself: {l.affected.filter((t) => !t.movable).map((t) => `${t.title} (${t.why === "meeting" ? "meeting" : t.why === "started" ? "started" : "fixed"})`).join(", ")}
+                Move yourself: {l.affected.filter((t) => !t.movable).map((t) => `${t.title} (${t.why ? UNMOVABLE_LABEL[t.why] : "no free slot"})`).join(", ")}
               </div>
             ) : null}
             <div className="mt-2 flex flex-wrap items-center gap-2">

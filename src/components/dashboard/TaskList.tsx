@@ -13,8 +13,11 @@ export function TaskList({
   onRefresh,
   refreshing,
   pendingDone,
+  shiftIds,
 }: {
   tasks: Row[];
+  /** Tasks flagged "Needs shifting" (ADR 0022). */
+  shiftIds?: ReadonlySet<string>;
   data: DashboardData;
   handlers: RowHandlers;
   onRefresh: () => void;
@@ -52,7 +55,7 @@ export function TaskList({
       ) : (
         <ul className="pb-3 pt-2.5">
           {tasks.map((t) => (
-            <TaskRow key={t.id} t={t} data={data} h={handlers} pendingDone={pendingDone?.has(t.id)} />
+            <TaskRow key={t.id} t={t} data={data} h={handlers} pendingDone={pendingDone?.has(t.id)} needsShift={shiftIds?.has(t.id)} />
           ))}
         </ul>
       )}

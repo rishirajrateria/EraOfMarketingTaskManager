@@ -8,6 +8,7 @@ export const JOBS = {
   payables: () => import("@/jobs/payables"),
   "month-folders": () => import("@/jobs/month-folders"),
   "meeting-notes": () => import("@/jobs/meeting-notes"),
+  "back-question": () => import("@/jobs/back-question"),
 } as const;
 
 export type JobName = keyof typeof JOBS;

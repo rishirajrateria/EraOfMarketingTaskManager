@@ -10,6 +10,7 @@ import { fromDbDate, toDbDate, toWorkingConfig } from "@/server/inventory/comput
 import { loadAvailability, loadPeople } from "@/server/availability/load";
 import type { DayKind, PersonDay } from "@/server/availability/day-status";
 import type { SessionUser } from "@/lib/rbac";
+import { dayAwayLabel } from "@/server/early-leave/core";
 
 export type GridDay = { key: string; day: number; weekday: number; working: boolean; holiday: boolean };
 export type GridCell = {
@@ -23,6 +24,8 @@ export type GridCell = {
   explicit: boolean;
   /** "Marked present on a leave day" etc.: a PRESENT / HALF_DAY row on a day off. */
   warning: string | null;
+  /** Going home early (ADR 0022): "Left early 2:15pm · Sick" on the day, "Away · Sick" on later covered days. */
+  away: string | null;
 };
 export type GridUser = { id: string; name: string; teamName: string | null };
 export type MonthGrid = {
@@ -96,7 +99,9 @@ export async function attendanceMonth(viewer: SessionUser, input: { month?: stri
     cells[id] = {};
     for (const key of keys) {
       const r = rowOf.get(`${id}|${key}`);
-      const cell = gridCell(availability.day(id, key), r ? { ...r, checkIn: r.checkIn ? fmtTime(r.checkIn, tz) : null, checkOut: r.checkOut ? fmtTime(r.checkOut, tz) : null } : null);
+      const day = availability.day(id, key);
+      const row = r ? { ...r, checkIn: r.checkIn ? fmtTime(r.checkIn, tz) : null, checkOut: r.checkOut ? fmtTime(r.checkOut, tz) : null } : null;
+      const cell = gridCell(day, row, day.away ? dayAwayLabel(day.away, tz) : null);
       if (cell) cells[id][key] = cell;
     }
   }
@@ -123,9 +128,12 @@ const OFF_WARNING: Partial<Record<DayKind, string>> = {
 type RowView = { status: AttendanceStatus; checkIn: string | null; checkOut: string | null; note: string | null };
 
 /** One grid cell from the person's day and the row (if any); null = blank. */
-export function gridCell(day: PersonDay, row: RowView | null): GridCell | null {
+export function gridCell(day: PersonDay, row: RowView | null, away: string | null = null): GridCell | null {
   const warning = day.presentOnOffDay ? (OFF_WARNING[day.kind] ?? null) : null;
-  const base = { marked: row?.status ?? null, checkIn: row?.checkIn ?? null, checkOut: row?.checkOut ?? null, note: row?.note ?? null, explicit: !!row, warning };
+  const base = { marked: row?.status ?? null, checkIn: row?.checkIn ?? null, checkOut: row?.checkOut ?? null, note: row?.note ?? null, explicit: !!row, warning, away };
+  // Going home early (ADR 0022): later covered days count as absent; the leaving day as the row says (else present).
+  if (day.kind === "AWAY") return { status: "ABSENT", ...base };
+  if (away && day.kind === "WORKING") return { status: row?.status ?? "PRESENT", ...base };
   if (day.kind === "LEAVE" || day.kind === "HOLIDAY") return { status: day.kind, ...base };
   if (day.kind === "ABSENT") return { status: "ABSENT", ...base };
   if (day.kind === "HALF") return { status: "HALF_DAY", ...base };
@@ -140,7 +148,8 @@ export function gridToCsv(grid: MonthGrid): string {
     for (const d of grid.days) {
       const c = grid.cells[u.id]?.[d.key];
       if (!c) continue;
-      lines.push([esc(u.name), esc(u.teamName), d.key, c.status, esc(c.checkIn), esc(c.checkOut), esc(c.note)].join(","));
+      const note = [c.away, c.note].filter(Boolean).join(" · ") || null;
+      lines.push([esc(u.name), esc(u.teamName), d.key, c.status, esc(c.checkIn), esc(c.checkOut), esc(note)].join(","));
     }
   }
   return lines.join("\n") + "\n";

@@ -4,6 +4,8 @@
  * client; anything else (leave, vault, TDS…) shows only while both rows are on All. The two rows combine (team AND
  * client), tapping the picked pill again returns to All, and the selection rides in the URL (?team=&client=) next to
  * ?show=. The filter runs in the database, before the row limit (`scopeWhere`). HR and CA get no rows.
+ * People rows (leave, going home early / "back today?" — ADR 0022) have no task or invoice: they show under the People
+ * filter and while both rows are on All (`isUnscopedPeopleKind`).
  */
 import type { Prisma, Role } from "@prisma/client";
 import type { FeedFilter } from "@/lib/notification-kinds";
@@ -15,6 +17,10 @@ export const NO_SCOPE: FeedScope = { team: null, client: null };
 export const showsFeedScope = (role: Role) => role === "ADMIN" || role === "TEAM_LEADER" || role === "EXECUTIVE";
 
 export const hasScope = (s: FeedScope) => !!(s.team || s.client);
+
+/** People kinds about a person, not a task or invoice: never narrowed by TEAMS / CLIENTS (ADR 0017, ADR 0022). */
+export const UNSCOPED_PEOPLE_KINDS = ["LEAVE_REQUESTED", "LEAVE_APPROVED", "LEAVE_REJECTED", "EARLY_LEAVE", "BACK_QUESTION"] as const;
+export const isUnscopedPeopleKind = (k: string) => (UNSCOPED_PEOPLE_KINDS as readonly string[]).includes(k);
 
 const one = (v: string | string[] | undefined | null): string | null => {
   const s = (Array.isArray(v) ? v[0] : v)?.trim();

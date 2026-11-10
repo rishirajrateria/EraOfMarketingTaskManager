@@ -10,7 +10,7 @@ export type HourTask = { id: string; title: string; type: "WORK" | "MEETING" };
 export type HourCell = { start: number; kind: HourCellKind; tasks: HourTask[] };
 /** Minutes-of-day (company timezone) a task occupies on the day, clipped to [0, 1440]. */
 export type BusyBlock = { start: number; end: number; task: HourTask };
-export type HourlyStatus = "PRESENT" | "HALF_DAY" | "ABSENT" | "LEAVE" | "HOLIDAY" | "OFF";
+export type HourlyStatus = "PRESENT" | "HALF_DAY" | "ABSENT" | "LEAVE" | "HOLIDAY" | "OFF" | "AWAY";
 
 export const HOUR = 60;
 export const DAY_MINUTES = 24 * HOUR;
@@ -53,7 +53,7 @@ export function hourlyStatus(day: Pick<PersonDay, "kind">): HourlyStatus {
     case "WORKING":
       return "PRESENT";
     default:
-      return day.kind; // HOLIDAY / LEAVE / ABSENT
+      return day.kind; // HOLIDAY / LEAVE / ABSENT / AWAY (ADR 0022)
   }
 }
 
@@ -67,7 +67,7 @@ export function buildHourCells(
   busy: BusyBlock[],
   opts: { status: HourlyStatus; presentFrom?: number | null; presentTo?: number | null },
 ): HourCell[] {
-  const dayOff = opts.status === "ABSENT" || opts.status === "LEAVE" || opts.status === "HOLIDAY" || opts.status === "OFF";
+  const dayOff = opts.status === "ABSENT" || opts.status === "LEAVE" || opts.status === "HOLIDAY" || opts.status === "OFF" || opts.status === "AWAY";
   const from = opts.presentFrom ?? 0;
   const to = opts.presentTo ?? DAY_MINUTES;
   return hours.map((start) => {

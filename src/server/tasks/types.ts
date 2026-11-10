@@ -2,6 +2,7 @@ import type { Priority, TaskStatus, TaskType } from "@prisma/client";
 import type { RowColour } from "@/server/tasks/state";
 import type { MeetingOptions } from "@/server/tasks/schema";
 import type { ReviewField } from "@/server/tasks/review-fields";
+import type { EarlyBanner } from "@/server/early-leave/queries";
 
 /** Serialisable task row for the dashboard (SPEC §5.2). */
 export type TaskRow = {
@@ -94,6 +95,8 @@ export type DashboardData = {
   tz: string;
   /** yyyy-MM-dd of the user's next approved leave (drives the B4Leave pill filter). */
   nextLeaveKey: string | null;
+  /** Admin: people who went home early and their tasks flagged "Needs shifting" (ADR 0022). */
+  early?: EarlyBanner[];
 };
 
 /** Dashboard filter state persisted per user (SPEC §5.4). */

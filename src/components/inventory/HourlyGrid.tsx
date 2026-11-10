@@ -8,7 +8,7 @@ const KIND_STYLE: Record<HourCellKind, { cls: string; label: string }> = {
   free: { cls: "border border-white/60 bg-green-100/70 backdrop-blur-sm", label: "Free" },
   assigned: { cls: "border border-white/60 bg-blue-200/70 backdrop-blur-sm", label: "Assigned" },
   lunch: { cls: "border border-white/60 bg-gray-200/70 backdrop-blur-sm", label: "Lunch" },
-  off: { cls: "border border-white/60 bg-gray-300/70 backdrop-blur-sm", label: "Leave / holiday / absent" },
+  off: { cls: "border border-white/60 bg-gray-300/70 backdrop-blur-sm", label: "Leave / holiday / absent / away" },
 };
 
 const STATUS_LABEL: Record<HourlyRow["status"], string> = {
@@ -18,6 +18,7 @@ const STATUS_LABEL: Record<HourlyRow["status"], string> = {
   LEAVE: "Leave",
   HOLIDAY: "Holiday",
   OFF: "Non-working day",
+  AWAY: "Away",
 };
 
 function cellTitle(cell: HourCell, lunch: { start: number; end: number }): string {

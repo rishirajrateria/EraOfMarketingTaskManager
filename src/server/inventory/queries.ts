@@ -157,12 +157,13 @@ export async function hourlyBreakdown(date: Date, opts: InventoryOptions = {}): 
   const rows: HourlyRow[] = inv.users.map((u) => {
     const day = availability.day(u.userId, key);
     const status = hourlyStatus(day);
-    // Half days only occupy the hours inside the person's window (check-in/out, else the first half of the day).
-    const w = day.kind === "HALF" ? day.window : [];
+    // Half days and the day someone left early (ADR 0022) only occupy the hours inside the person's window.
+    const cut = day.kind === "HALF" || !!day.away;
+    const w = cut ? day.window : [];
     const cells = buildHourCells(hours, cfg, busyByUser.get(u.userId) ?? [], {
       status,
-      presentFrom: w.length ? minutesOfDay(w[0].start) : null,
-      presentTo: w.length ? minutesOfDay(w[w.length - 1].end) : null,
+      presentFrom: cut ? (w.length ? minutesOfDay(w[0].start) : 0) : null,
+      presentTo: cut ? (w.length ? minutesOfDay(w[w.length - 1].end) : 0) : null,
     });
     return { ...u, status, cells };
   });

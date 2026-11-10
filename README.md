@@ -208,7 +208,8 @@ seed and a non-32-byte vault key. It never excuses missing or default secrets. D
 
 Every job is also an HTTP endpoint (`/api/jobs/<name>` with `Authorization: Bearer $CRON_SECRET`) for hosts without a
 long-running process: `overdue`, `recurrence`, `invoices`, `vault-expiry`, `inventory`, `leave-sync`, `payables`,
-`month-folders`, `meeting-notes`. `vercel.json` lists all nine, but Vercel is not a supported target: live updates need
+`month-folders`, `meeting-notes`, `back-question` (ADR 0022: the morning "Is <Name> back today?" for people who went home
+early). `vercel.json` lists all ten, but Vercel is not a supported target: live updates need
 the in-process SSE server.
 
 ## Operations notes
