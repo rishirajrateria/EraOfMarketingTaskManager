@@ -65,7 +65,7 @@ describe("client kit", () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.data).toMatchObject({ repaired: false, sharedWith: "asha@repo.test", warnings: [] });
-    expect(r.data.created).toEqual(["Repo Media LLP", "Brand kit", "Credentials", "Work", "Reports", "Repo Media LLP — Credentials"]);
+    expect(r.data.created).toEqual(["Repo Media LLP", "Brand kit", "Credentials", "Work", "Reports", "Final work", "Repo Media LLP — Credentials"]);
 
     const settings = await testDb.companySettings.findUniqueOrThrow({ where: { id: "default" } });
     expect(settings.clientKitRootId).toBe(mockId("folder", "root/Client Kit"));
@@ -74,6 +74,7 @@ describe("client kit", () => {
     expect(c.kitBrandId).toBe(mockId("folder", `${c.kitFolderId}/Brand kit`));
     expect(c.kitWorkId).toBe(mockId("folder", `${c.kitFolderId}/Work`));
     expect(c.kitReportsId).toBe(mockId("folder", `${c.kitFolderId}/Reports`));
+    expect(c.kitFinalId).toBe(mockId("folder", `${c.kitFolderId}/Final work`));
     expect(clientWorkFolderId(c)).toBe(c.kitWorkId);
     const { mockSheetLog } = await import("@/google/kit-sheet");
     expect(mockSheetLog).toHaveLength(1);
@@ -81,7 +82,10 @@ describe("client kit", () => {
     expect(c.kitCreatedAt).not.toBeNull();
 
     const { listPermissions, mockShareNotifications } = await import("@/google/drive-share");
-    expect((await listPermissions(c.kitFolderId!)).map((p) => [p.emailAddress, p.role])).toEqual([["admin@test.local", "owner"], ["asha@repo.test", "writer"]]);
+    // the kit root and Work are NOT shared with the client (ADR 0020); only the four client-facing items are
+    expect((await listPermissions(c.kitFolderId!)).map((p) => [p.emailAddress, p.role])).toEqual([["admin@test.local", "owner"]]);
+    expect((await listPermissions(c.kitWorkId!)).some((p) => p.emailAddress === "asha@repo.test")).toBe(false);
+    expect((await listPermissions(c.kitFinalId!)).map((p) => [p.emailAddress, p.role])).toEqual([["admin@test.local", "owner"], ["asha@repo.test", "reader"]]);
     expect(mockShareNotifications).toEqual([]); // we send our own message
 
     // again: nothing new, same ids, one sheet, no duplicate share
@@ -89,8 +93,9 @@ describe("client kit", () => {
     expect(again.ok && again.data).toMatchObject({ repaired: true, created: [] });
     const c2 = await testDb.client.findUniqueOrThrow({ where: { id: seed.client.id } });
     expect([c2.kitFolderId, c2.kitBrandId, c2.kitCredentialsId, c2.kitWorkId, c2.kitReportsId, c2.kitSheetId]).toEqual([c.kitFolderId, c.kitBrandId, c.kitCredentialsId, c.kitWorkId, c.kitReportsId, c.kitSheetId]);
+    expect(c2.kitFinalId).toBe(c.kitFinalId);
     expect(mockSheetLog).toHaveLength(1);
-    expect((await listPermissions(c.kitFolderId!)).length).toBe(2);
+    expect((await listPermissions(c.kitFinalId!)).length).toBe(2);
 
     // repair: a lost subfolder + sheet are recreated, the rest kept
     await testDb.client.update({ where: { id: seed.client.id }, data: { kitReportsId: null, kitSheetId: null } });
@@ -113,7 +118,7 @@ describe("client kit", () => {
     (await import("@/lib/settings")).invalidateSettingsCache();
     const { createClientKit } = await import("@/server/clients/kit");
     const r = await createClientKit(seed.client.id);
-    expect(r.ok && r.data.created).toEqual(["Repo Media LLP", "Logos", "Logins", "Deliverables", "Monthly reports", "Repo Media LLP — Credentials"]);
+    expect(r.ok && r.data.created).toEqual(["Repo Media LLP", "Logos", "Logins", "Deliverables", "Monthly reports", "Final work", "Repo Media LLP — Credentials"]);
     expect(r.ok && r.data.sharedWith).toBeNull();
     expect(r.ok && r.data.warnings[0]).toMatch(/No client email/);
   });
@@ -126,8 +131,13 @@ describe("client kit", () => {
     expect(mail.ok && mail.data).toMatchObject({ channel: "EMAIL", to: "Asha@Repo.test" });
     const sent = (await import("@/google/gmail")).sentMailDetails.at(-1)!;
     expect(sent.subject).toBe("Your Era Of Marketing client kit");
-    expect(sent.text).toContain(`https://drive.google.com/drive/folders/${c.kitFolderId}`);
-    expect(sent.text).toMatch(/Hi Asha,[\s\S]*Brand kit[\s\S]*"Repo Media LLP — Credentials" sheet[\s\S]*How to fill[\s\S]*Work[\s\S]*Reports/);
+    expect(sent.text).toContain(`https://drive.google.com/drive/folders/${c.kitFinalId}`);
+    expect(sent.text).toContain(`https://drive.google.com/drive/folders/${c.kitBrandId}`);
+    expect(sent.text).toContain(`https://docs.google.com/spreadsheets/d/${c.kitSheetId}/edit`);
+    // the client cannot open the kit root or Work, so those links are never sent
+    expect(sent.text).not.toContain(c.kitFolderId!);
+    expect(sent.text).not.toContain(c.kitWorkId!);
+    expect(sent.text).toMatch(/Hi Asha,[\s\S]*Brand kit[\s\S]*"Repo Media LLP — Credentials" sheet[\s\S]*How to fill[\s\S]*Final work[\s\S]*Reports/);
 
     const wa = await sendClientKit(seed.client.id, { channel: "WHATSAPP", text: "Hi Asha, your kit: link" });
     expect(wa.ok && wa.data.to).toBe("+919876543210");
@@ -154,7 +164,7 @@ describe("client kit", () => {
     list = await listKitRows();
     expect(list.owner).toBe("admin@test.local");
     expect(list.rows[0]).toMatchObject({ ready: true, displayName: "Repo Media LLP", whatsapp: "+919876543210" });
-    expect(list.rows[0].messages?.whatsapp).toContain(list.rows[0].urls!.folder);
+    expect(list.rows[0].messages?.whatsapp).toContain(list.rows[0].urls!.final);
     const d = await getKitDetail(seed.client.id);
     expect(d?.vaultItems.map((i) => [i.kind, i.label, i.hasPassword])).toEqual([["ASSET_DRIVE_LINK", "Logos", false], ["CREDENTIAL", "Instagram", true]]);
     expect(JSON.stringify(d)).not.toContain("passwordEnc");

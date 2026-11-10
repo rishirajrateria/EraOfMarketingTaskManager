@@ -5,6 +5,7 @@ import { publishTaskChanged } from "@/lib/notify";
  */
 import type { IntegrationKind, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { notifyJobFailed } from "@/google/job-failure";
 
 const MAX_ATTEMPTS = 5;
 
@@ -17,7 +18,7 @@ export async function enqueue(
 ) {
   return tx.integrationJob.upsert({
     where: { idempotencyKey },
-    update: { status: "PENDING", nextAttemptAt: new Date(), lastError: null, attempts: 0, payload: payload as Prisma.InputJsonValue },
+    update: { status: "PENDING", nextAttemptAt: new Date(), lastError: null, attempts: 0, failureNotifiedAt: null, dismissedAt: null, payload: payload as Prisma.InputJsonValue },
     create: {
       kind,
       idempotencyKey,
@@ -77,6 +78,7 @@ async function processBatch(limit: number): Promise<number> {
       const attempts = job.attempts + 1;
       const msg = e instanceof Error ? e.message : String(e);
       const failed = attempts >= MAX_ATTEMPTS;
+      console.error(`[google-queue] ${job.kind} job ${job.id} attempt ${attempts}/${MAX_ATTEMPTS} failed${failed ? " (giving up)" : ""}:`, msg);
       await prisma.integrationJob.update({
         where: { id: job.id },
         data: {
@@ -86,9 +88,12 @@ async function processBatch(limit: number): Promise<number> {
           nextAttemptAt: new Date(Date.now() + Math.min(60 * 60_000, 30_000 * 2 ** attempts)),
         },
       });
-      if (failed && job.taskId) {
-        await prisma.task.update({ where: { id: job.taskId }, data: { integrationError: `${job.kind}: ${msg.slice(0, 200)}` } }).catch(() => undefined);
-        void publishTaskChanged(job.taskId);
+      if (failed) {
+        if (job.taskId) {
+          await prisma.task.update({ where: { id: job.taskId }, data: { integrationError: `${job.kind}: ${msg.slice(0, 200)}` } }).catch(() => undefined);
+          void publishTaskChanged(job.taskId);
+        }
+        await notifyJobFailed(job.id); // Admins hear once, with the task title and the failed step (ADR 0020)
       }
     }
   }
@@ -99,7 +104,26 @@ async function processBatch(limit: number): Promise<number> {
 export async function retryFailedForTask(taskId: string) {
   await prisma.integrationJob.updateMany({
     where: { taskId, status: "FAILED" },
-    data: { status: "PENDING", attempts: 0, nextAttemptAt: new Date(), lastError: null },
+    data: { status: "PENDING", attempts: 0, nextAttemptAt: new Date(), lastError: null, failureNotifiedAt: null, dismissedAt: null },
   });
   await prisma.task.update({ where: { id: taskId }, data: { integrationError: null } });
+}
+
+/** Admin "Retry" from the failed-jobs list: a task's jobs retry together (the existing action); a task-less job on its own. */
+export async function retryFailedJob(jobId: string): Promise<void> {
+  const job = await prisma.integrationJob.findUnique({ where: { id: jobId }, select: { id: true, taskId: true, status: true } });
+  if (!job || job.status !== "FAILED") throw new Error("That job is no longer failed");
+  if (job.taskId) return retryFailedForTask(job.taskId);
+  await prisma.integrationJob.update({ where: { id: jobId }, data: { status: "PENDING", attempts: 0, nextAttemptAt: new Date(), lastError: null, failureNotifiedAt: null, dismissedAt: null } });
+}
+
+/** Admin "Dismiss": hide a failed job from the list; clears the task's error badge when nothing else is failing there. */
+export async function dismissFailedJob(jobId: string): Promise<void> {
+  const job = await prisma.integrationJob.findUnique({ where: { id: jobId }, select: { id: true, taskId: true, status: true } });
+  if (!job || job.status !== "FAILED") throw new Error("That job is no longer failed");
+  await prisma.integrationJob.update({ where: { id: jobId }, data: { dismissedAt: new Date() } });
+  if (job.taskId && (await prisma.integrationJob.count({ where: { taskId: job.taskId, status: "FAILED", dismissedAt: null } })) === 0) {
+    await prisma.task.update({ where: { id: job.taskId }, data: { integrationError: null } }).catch(() => undefined);
+    void publishTaskChanged(job.taskId);
+  }
 }

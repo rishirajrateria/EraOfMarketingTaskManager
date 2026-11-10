@@ -72,7 +72,7 @@ export default async function ClientKitPage() {
       className="pb-4"
     >
       <p className="px-4 pt-2 text-[11.5px] leading-snug text-muted">
-        One Drive folder per client with {folders.slice(0, -1).join(", ")} and {folders.at(-1)}, plus a ready-made Credentials sheet. The client gets Editor access to upload assets and fill the sheet; send them the link by email or WhatsApp.
+        One Drive folder per client with {folders.slice(0, -1).join(", ")} and {folders.at(-1)}, plus a ready-made Credentials sheet. The client can open only Brand kit (upload), the Credentials sheet (fill), Reports and Final work (view); send them the link by email or WhatsApp.
       </p>
       {rows.length === 0 ? <EmptyState>No active clients yet.</EmptyState> : null}
       {rows.map((r) => (

@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Briefcase, ChartNoAxesColumn, ChevronRight, ExternalLink, FileSpreadsheet, KeyRound, Link2, Palette, type LucideIcon } from "lucide-react";
+import { Briefcase, ChartNoAxesColumn, ChevronRight, ExternalLink, FileSpreadsheet, KeyRound, Link2, PackageCheck, Palette, type LucideIcon } from "lucide-react";
 import { requireAdminPage } from "@/server/admin/guard";
 import { getKitDetail } from "@/server/clients/kit-queries";
 import { getSettings } from "@/lib/settings";
+import { kitFinalName } from "@/server/clients/kit-paths";
 import { fmtDate } from "@/lib/time";
 import { Screen, ScreenHeader } from "@/components/admin/AdminUi";
 import { BarIcon, BottomZone } from "@/components/ui/BottomZone";
-import { CreateKitButton, SendKitButtons, kitBtn } from "@/components/clients/KitActions";
+import { CreateKitButton, FixSharingButton, SendKitButtons, kitBtn } from "@/components/clients/KitActions";
 import { KitShareButton } from "@/components/clients/KitShareSheet";
 import { TrackingLinkButton } from "@/components/clients/TrackingLinkSheet";
 import { ensurePortalToken } from "@/server/portal/portal";
@@ -38,12 +39,13 @@ export default async function ClientKitDetailPage({ params }: { params: Promise<
   if (!d) notFound();
   const portalUrl = `${await portalBaseUrl()}/c/${await ensurePortalToken(clientId)}`;
   const { row: r, folders } = d;
+  const finalName = kitFinalName(settings.clientKitFolders);
   const tz = settings.timezone;
   const assets = d.vaultItems.filter((i) => i.kind === "ASSET_DRIVE_LINK");
   const creds = d.vaultItems.filter((i) => i.kind === "CREDENTIAL");
   const subtitle = r.ready
-    ? `Created ${fmtDate(new Date(r.createdAt!), tz, "d MMM yyyy")}${r.sharedWith ? ` · ${r.sharedWith} can edit` : " · not shared with the client"}${r.sentAt ? ` · sent ${fmtDate(new Date(r.sentAt), tz, "d MMM")}` : ""}`
-    : r.partial ? "Kit incomplete — Repair adds what is missing" : "No kit yet";
+    ? `Created ${fmtDate(new Date(r.createdAt!), tz, "d MMM yyyy")}${r.sharedWith ? ` · ${r.sharedWith} has client access` : " · not shared with the client"}${r.sentAt ? ` · sent ${fmtDate(new Date(r.sentAt), tz, "d MMM")}` : ""}`
+    : r.partial ? "Kit incomplete — Repair adds what is missing and fixes sharing" : "No kit yet";
   return (
     <Screen
       header={<ScreenHeader title={`${r.displayName} · Client kit`} subtitle={subtitle} />}
@@ -57,6 +59,7 @@ export default async function ClientKitDetailPage({ params }: { params: Promise<
             <a href={r.urls.folder} target="_blank" rel="noreferrer" className={kitBtn}><ExternalLink size={13} /> Open</a>
             <SendKitButtons contact={{ clientId: r.clientId, name: r.displayName, email: r.email, whatsapp: r.whatsapp, messages: r.messages }} />
             <CreateKitButton clientId={r.clientId} repair />
+            <FixSharingButton clientId={r.clientId} />
           </>
         ) : (
           <CreateKitButton clientId={r.clientId} repair={r.partial} />
@@ -76,16 +79,17 @@ export default async function ClientKitDetailPage({ params }: { params: Promise<
         <section className="mx-4 mt-3">
           <h2 className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-[.08em] text-muted">In Google Drive</h2>
           <div className="overflow-hidden rounded-[18px] border border-hair bg-glass shadow-[var(--shadow)]">
-            <FolderRow icon={Palette} name={folders[0]} hint="The client uploads logos, fonts and brand assets" href={r.urls.brand} tone="bg-[linear-gradient(150deg,#f472b6,#db2777)]" />
-            <FolderRow icon={KeyRound} name={folders[1]} hint="Holds the credentials sheet" href={r.urls.credentials} tone="bg-[linear-gradient(150deg,#fbbf24,#d97706)]" />
-            <FolderRow icon={FileSpreadsheet} name={`${r.displayName} — Credentials`} hint="Sheet · Way dropdown · How to fill tab" href={r.urls.sheet} tone="bg-[linear-gradient(150deg,#34d399,#059669)]" />
-            <FolderRow icon={Briefcase} name={folders[2]} hint="We upload the work we create for them" href={r.urls.work} tone="bg-[linear-gradient(150deg,#38bdf8,#0284c7)]" />
-            <FolderRow icon={ChartNoAxesColumn} name={folders[3]} hint="Reports for the client" href={r.urls.reports} tone="bg-[linear-gradient(150deg,#a78bfa,#7c3aed)]" />
+            <FolderRow icon={Palette} name={folders[0]} hint="Client-facing · the client uploads logos, fonts and brand assets" href={r.urls.brand} tone="bg-[linear-gradient(150deg,#f472b6,#db2777)]" />
+            <FolderRow icon={KeyRound} name={folders[1]} hint="Internal · holds the credentials sheet (not shared with the client)" href={r.urls.credentials} tone="bg-[linear-gradient(150deg,#fbbf24,#d97706)]" />
+            <FolderRow icon={FileSpreadsheet} name={`${r.displayName} — Credentials`} hint="Client-facing · sheet with Way dropdown and How to fill tab" href={r.urls.sheet} tone="bg-[linear-gradient(150deg,#34d399,#059669)]" />
+            <FolderRow icon={Briefcase} name={folders[2]} hint="Internal only · task folders and meeting notes (never shared with the client)" href={r.urls.work} tone="bg-[linear-gradient(150deg,#38bdf8,#0284c7)]" />
+            <FolderRow icon={ChartNoAxesColumn} name={folders[3]} hint="Client-facing · reports (view only)" href={r.urls.reports} tone="bg-[linear-gradient(150deg,#a78bfa,#7c3aed)]" />
+            <FolderRow icon={PackageCheck} name={finalName} hint="Client-facing · put approved deliverables here (view only)" href={r.urls.final} tone="bg-[linear-gradient(150deg,#4ade80,#16a34a)]" />
           </div>
         </section>
       ) : (
         <p className="mx-4 mt-3 rounded-2xl border border-dashed border-hair bg-glass px-4 py-5 text-center text-[13px] text-muted">
-          Create kit makes Client Kit › {r.displayName} in Google Drive with {folders.join(", ")} and a Credentials sheet, shared with {r.email ?? "the client's email"} as Editor.
+          Create kit makes Client Kit › {r.displayName} in Google Drive with {folders.join(", ")} and a Credentials sheet. Only Brand kit, the Credentials sheet, Reports and {finalName} are shared with {r.email ?? "the client's email"}.
         </p>
       )}
 

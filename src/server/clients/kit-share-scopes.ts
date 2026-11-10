@@ -6,7 +6,7 @@ import type { KitIds } from "@/server/clients/kit-paths";
  * a sub-folder's access splits into "set here" and "via the whole kit", and the one-tap team suggestions. No I/O, so
  * they run on the server and in the browser.
  */
-export const KIT_SCOPE_KEYS = ["kit", "brand", "sheet", "work", "reports"] as const;
+export const KIT_SCOPE_KEYS = ["kit", "brand", "sheet", "work", "reports", "final"] as const;
 export type KitScopeKey = (typeof KIT_SCOPE_KEYS)[number];
 
 /** One "What to share" pill: the whole kit, a sub-folder, or the credentials Google Sheet. */
@@ -15,10 +15,10 @@ export type KitScope = { key: KitScopeKey; name: string; label: string; fileId: 
 export type KitScopeOption = Pick<KitScope, "key" | "name" | "label">;
 
 /**
- * The parts of this client's kit that exist, in pill order: Whole kit, then the four parts named from Settings. The
+ * The parts of this client's kit that exist, in pill order: Whole kit, then the parts named from Settings (the client-facing ones are Brand kit, the Credentials sheet, Reports and Final work). The
  * Credentials pill shares the credentials sheet (that is what the client opens), not its folder.
  */
-export function kitShareScopes(ids: KitIds, folders: readonly [string, string, string, string], displayName: string): KitScope[] {
+export function kitShareScopes(ids: KitIds, folders: readonly [string, string, string, string], displayName: string, finalName = "Final work"): KitScope[] {
   if (!ids.kitFolderId) return [];
   const [brand, creds, work, reports] = folders;
   const parts: [KitScopeKey, string | null | undefined, string, KitScope["kind"]][] = [
@@ -26,6 +26,7 @@ export function kitShareScopes(ids: KitIds, folders: readonly [string, string, s
     ["sheet", ids.kitSheetId, `${creds} sheet`, "sheet"],
     ["work", ids.kitWorkId, work, "folder"],
     ["reports", ids.kitReportsId, reports, "folder"],
+    ["final", ids.kitFinalId, finalName, "folder"],
   ];
   return [
     { key: "kit", name: "Whole kit", label: `Client kit › ${displayName}`, fileId: ids.kitFolderId, kind: "folder" },

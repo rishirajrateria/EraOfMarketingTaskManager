@@ -4,6 +4,7 @@ import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/rbac";
 import { wrap, type ActionResult } from "@/lib/action-result";
 import { safeRevalidate } from "@/lib/revalidate";
+import { syncKitSharingCore } from "@/server/clients/kit-core";
 import {
   parse,
   userInputSchema,
@@ -207,6 +208,8 @@ export async function updateClient(raw: unknown): Promise<ActionResult<{ id: str
     if (!before) throw new Error("Client not found");
     const after = await withUnique(() => prisma.client.update({ where: { id }, data: input }), "A client with this name already exists");
     await audit(actor.id, "client.update", "Client", id, before, after);
+    // A changed email loses the old address's Drive access and shares the new one (ADR 0020).
+    if (before.kitFolderId && (before.email ?? "").trim().toLowerCase() !== (after.email ?? "").trim().toLowerCase()) await syncKitSharingCore(id, actor.id).catch((e) => console.error("[client-kit] sync after email change failed", id, e));
     safeRevalidate(CLIENTS, "/admin/vault");
     return { id };
   });
@@ -219,6 +222,8 @@ export async function setClientActive(id: string, active: boolean): Promise<Acti
     if (!before) throw new Error("Client not found");
     const after = await prisma.client.update({ where: { id }, data: { active } });
     await audit(actor.id, active ? "client.activate" : "client.deactivate", "Client", id, before, after);
+    // Deactivating revokes every client access in Drive; reactivating re-shares the client-facing folders (ADR 0020).
+    if (before.kitFolderId && before.active !== active) await syncKitSharingCore(id, actor.id).catch((e) => console.error("[client-kit] sync after active change failed", id, e));
     safeRevalidate(CLIENTS, "/admin/vault");
     return { id };
   });

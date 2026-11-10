@@ -6,7 +6,7 @@ import { addPeople, listPermissions, removePermission, setLinkSharing, updateRol
 import { clientDisplayName } from "@/server/finance/file-names";
 import { financeDriveOwner } from "@/server/finance/month-folders";
 import { toPerson, type SharePerson } from "@/server/finance/drive-share-core";
-import { kitFolderNames } from "@/server/clients/kit-paths";
+import { kitFinalName, kitFolderNames } from "@/server/clients/kit-paths";
 import { KIT_SCOPE_KEYS, kitShareScopes, scopeOptions, scopeUrl, splitAccess, type KitScope, type KitScopeKey, type KitScopeOption, type TeamMember } from "@/server/clients/kit-share-scopes";
 
 /**
@@ -55,10 +55,11 @@ type Ctx = { clientId: string; scope: KitScope; kit: KitScope; scopes: KitScope[
 export async function resolveKitScope(clientId: string, key: KitScopeKey): Promise<Ctx> {
   const client = await prisma.client.findUnique({
     where: { id: clientId },
-    select: { id: true, name: true, businessName: true, kitFolderId: true, kitBrandId: true, kitCredentialsId: true, kitSheetId: true, kitWorkId: true, kitReportsId: true },
+    select: { id: true, name: true, businessName: true, kitFolderId: true, kitBrandId: true, kitCredentialsId: true, kitSheetId: true, kitWorkId: true, kitReportsId: true, kitFinalId: true },
   });
   if (!client) throw new Error("Client not found");
-  const scopes = kitShareScopes(client, kitFolderNames((await getSettings()).clientKitFolders), clientDisplayName(client));
+  const saved = (await getSettings()).clientKitFolders;
+  const scopes = kitShareScopes(client, kitFolderNames(saved), clientDisplayName(client), kitFinalName(saved));
   if (!scopes.length) throw new Error("Create the client kit first");
   const scope = scopes.find((s) => s.key === key);
   if (!scope) throw new Error("That part of the kit doesn't exist yet — tap Repair");

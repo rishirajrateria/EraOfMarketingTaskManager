@@ -31,3 +31,14 @@ export async function sendClientKit(clientId: unknown, raw: unknown): Promise<Ac
     return res;
   });
 }
+
+/** "Fix sharing" for an existing kit: removes the client from the kit root and Work, adds them to the client-facing folders (creating Final work if missing). */
+export async function fixClientKitSharing(clientId: unknown): Promise<ActionResult<KitResult>> {
+  return wrap(async () => {
+    const actor = await requireRole("ADMIN");
+    const id = parseInput(clientIdSchema, clientId);
+    const res = await createKitCore(id, actor.id);
+    done(id);
+    return res;
+  });
+}

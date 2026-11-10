@@ -26,7 +26,7 @@ function toValues(s: SettingsDto): SettingsValues {
 }
 
 /** /admin/settings — every CompanySettings field (SPEC §11.9). */
-export function SettingsForm({ settings, google }: { settings: SettingsDto; google: GoogleStatus }) {
+export function SettingsForm({ settings, google, extra }: { settings: SettingsDto; google: GoogleStatus; extra?: React.ReactNode }) {
   const { busy, run } = useAdminAction();
   const [v, setV] = useState<SettingsValues>(() => toValues(settings));
   const [dirty, setDirty] = useState(false);
@@ -93,6 +93,7 @@ export function SettingsForm({ settings, google }: { settings: SettingsDto; goog
         <ClientKitSection v={v} patch={patch} />
         <NotificationsSection v={v} patch={patch} />
         <GoogleStatusSection status={google} />
+        {extra}
       </Screen>
     </form>
   );

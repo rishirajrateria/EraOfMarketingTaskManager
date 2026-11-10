@@ -10,6 +10,7 @@ import { wrap, type ActionResult } from "@/lib/action-result";
 import { safeRevalidate } from "@/lib/revalidate";
 import { grantExpiresAt, grantIsActive } from "@/server/vault/access";
 import { findActiveGrant } from "@/server/vault/queries";
+import { isHttpUrl } from "@/server/vault/url";
 
 const ADMIN_PATH = "/admin/vault";
 const VAULT_PATH = "/vault";
@@ -34,7 +35,7 @@ const itemSchema = z.object({
   clientId: z.string().min(1),
   kind: z.enum(["ASSET_DRIVE_LINK", "CREDENTIAL", "SHARED_DRIVE_LINK"]),
   label: z.string().trim().min(1, "Label is required").max(200),
-  url: optionalText,
+  url: optionalText.refine((v) => v === null || isHttpUrl(v), "Link must start with http:// or https://"),
   username: optionalText,
   /** Plain-text password; encrypted before it touches the DB. `undefined` on update = keep existing. */
   password: z.string().max(4000).optional().nullable(),

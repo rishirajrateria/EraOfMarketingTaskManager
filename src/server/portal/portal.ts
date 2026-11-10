@@ -60,7 +60,10 @@ export type PortalData = {
   asks: PortalTask[];
   work: PortalTask[];
   finished: PortalTask[];
+  /** "Final work" folder (the only delivery folder the client can open, ADR 0020). */
   driveUrl: string | null;
+  brandUrl: string | null;
+  reportsUrl: string | null;
   upcoming: PortalMoney[];
   paid: PortalMoney[];
   company: { name: string; email: string; phone: string };
@@ -137,7 +140,9 @@ export async function portalData(token: string, now = new Date()): Promise<Porta
     asks: asks.map(shape).sort(byDue),
     work: work.filter((t) => t.status !== "COMPLETED").map(shape).sort(byDue),
     finished: done.map(shape).sort((a, b) => byDue(b, a)).slice(0, MAX_DONE),
-    driveUrl: hasKit(client) ? (kitUrls(client)?.folder ?? null) : null,
+    driveUrl: hasKit(client) ? (kitUrls(client)?.final ?? null) : null,
+    brandUrl: hasKit(client) ? (kitUrls(client)?.brand ?? null) : null,
+    reportsUrl: hasKit(client) ? (kitUrls(client)?.reports ?? null) : null,
     upcoming,
     paid,
     company: { name: s.companyName, email: s.email, phone: s.phone },

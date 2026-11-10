@@ -22,7 +22,7 @@ describe("kitPickerClients", () => {
 
   it("returns active clients by name with ready / partial kit flags", async () => {
     const { kitPickerClients } = await import("@/server/shell/kit-picker");
-    const ids = { kitFolderId: "f", kitBrandId: "b", kitCredentialsId: "c", kitSheetId: "s", kitWorkId: "w", kitReportsId: "r" };
+    const ids = { kitFolderId: "f", kitBrandId: "b", kitCredentialsId: "c", kitSheetId: "s", kitWorkId: "w", kitReportsId: "r", kitFinalId: "fw" };
     await testDb.client.create({ data: { name: "Acme", businessName: "Acme Pvt Ltd", ...ids } });
     await testDb.client.create({ data: { name: "Bolt", kitFolderId: "f2" } });
     await testDb.client.create({ data: { name: "Gone", active: false } });

@@ -13,7 +13,7 @@ export async function kitPickerClients(): Promise<ActionResult<KitPickerClient[]
     const rows = await prisma.client.findMany({
       where: { active: true },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, businessName: true, kitFolderId: true, kitBrandId: true, kitCredentialsId: true, kitSheetId: true, kitWorkId: true, kitReportsId: true },
+      select: { id: true, name: true, businessName: true, kitFolderId: true, kitBrandId: true, kitCredentialsId: true, kitSheetId: true, kitWorkId: true, kitReportsId: true, kitFinalId: true },
     });
     return rows.map((c) => {
       const ready = hasKit(c);

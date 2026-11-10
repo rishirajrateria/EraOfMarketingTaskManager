@@ -24,14 +24,19 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/taskmanager?schema=public
       JOBS_INLINE: "true"
-      # Local try-out defaults (override in .env for a real deployment):
+      # Secrets are REQUIRED (no public defaults). Put them in .env next to this file:
+      #   AUTH_SECRET=$(openssl rand -base64 32)  VAULT_ENCRYPTION_KEY=$(openssl rand -base64 32)  CRON_SECRET=$(openssl rand -hex 24)
       AUTH_URL: ${AUTH_URL:-http://localhost:3000}
-      AUTH_SECRET: ${AUTH_SECRET:-local-dev-secret-change-me-0123456789abcdef}
-      VAULT_ENCRYPTION_KEY: ${VAULT_ENCRYPTION_KEY:-bG9jYWwtZGV2LXZhdWx0LWtleS1jaGFuZ2UtbWUtMDEyMzQ1Njc4OQ==}
-      CRON_SECRET: ${CRON_SECRET:-local-dev-cron}
-      GOOGLE_MOCK: ${GOOGLE_MOCK:-true}
-      DEMO_LOGIN: ${DEMO_LOGIN:-true}
-      SEED_DEMO: ${SEED_DEMO:-true}
+      AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-true}
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET (openssl rand -base64 32)}
+      VAULT_ENCRYPTION_KEY: ${VAULT_ENCRYPTION_KEY:?set VAULT_ENCRYPTION_KEY (openssl rand -base64 32)}
+      CRON_SECRET: ${CRON_SECRET:?set CRON_SECRET (openssl rand -hex 24)}
+      # Demo / mock behaviour is OFF by default. For a local try-out set GOOGLE_MOCK=true DEMO_LOGIN=true SEED_DEMO=true
+      # ALLOW_DEMO_IN_PRODUCTION=true in .env (the container runs NODE_ENV=production, so the escape hatch is needed; UNSAFE).
+      GOOGLE_MOCK: ${GOOGLE_MOCK:-false}
+      DEMO_LOGIN: ${DEMO_LOGIN:-false}
+      SEED_DEMO: ${SEED_DEMO:-false}
+      ALLOW_DEMO_IN_PRODUCTION: ${ALLOW_DEMO_IN_PRODUCTION:-false}
     ports:
       - "3000:3000"
 volumes:

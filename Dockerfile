@@ -17,7 +17,8 @@ RUN npx prisma generate && npx next build
 FROM node:22-alpine AS runner
 WORKDIR /app
 RUN apk add --no-cache libc6-compat openssl
-ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 JOBS_INLINE=true
+# Safe by default (ADR 0020): no demo sign-in, no demo seed, real Google. Override only on a staging / demo deployment.
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 JOBS_INLINE=true DEMO_LOGIN=false SEED_DEMO=false GOOGLE_MOCK=false
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/.next ./.next
@@ -27,5 +28,5 @@ COPY --from=build /app/next.config.ts ./next.config.ts
 # PDF fonts (DejaVu Sans for the ₹ glyph) are read from src/ at runtime — see src/server/finance/pdf-base.ts
 COPY --from=build /app/src/server/finance/fonts ./src/server/finance/fonts
 EXPOSE 3000
-# Apply migrations on boot (and seed demo data when SEED_DEMO=true), then start Next (jobs start from instrumentation.ts)
-CMD ["sh", "-c", "npx prisma migrate deploy && if [ \"$SEED_DEMO\" = \"true\" ]; then npx tsx prisma/seed.ts; fi && npx next start -p ${PORT}"]
+# Apply migrations on boot (and seed demo data only when SEED_DEMO=true — the seed itself refuses to run in production without ALLOW_DEMO_IN_PRODUCTION=true), then start Next (jobs start from instrumentation.ts)
+CMD ["sh", "-c", "npx prisma migrate deploy && if [ \"${SEED_DEMO:-false}\" = \"true\" ]; then npx tsx prisma/seed.ts; fi && npx next start -p ${PORT}"]

@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { clientDisplayName } from "@/server/finance/file-names";
 import { financeDriveOwner } from "@/server/finance/month-folders";
-import { hasKit, kitFolderNames, kitMessage, kitUrls } from "@/server/clients/kit-paths";
+import { clientLinks, hasKit, kitFinalName, kitFolderNames, kitMessage, kitUrls } from "@/server/clients/kit-paths";
 import { kitShareScopes, scopeOptions, type KitScopeOption } from "@/server/clients/kit-share-scopes";
 
 /** Read models for the Client kit screens (ADR 0014). Plain values only. */
@@ -29,18 +29,18 @@ export type KitRow = {
 
 const KIT_SELECT = {
   id: true, name: true, businessName: true, contact: true, email: true, whatsapp: true, phone: true,
-  kitFolderId: true, kitBrandId: true, kitCredentialsId: true, kitSheetId: true, kitWorkId: true, kitReportsId: true,
+  kitFolderId: true, kitBrandId: true, kitCredentialsId: true, kitSheetId: true, kitWorkId: true, kitReportsId: true, kitFinalId: true,
   kitCreatedAt: true, kitSentAt: true, kitSentVia: true, kitSharedWith: true,
 } as const;
 
-type Sel = { id: string; name: string; businessName: string | null; contact: string | null; email: string | null; whatsapp: string | null; phone: string | null; kitFolderId: string | null; kitBrandId: string | null; kitCredentialsId: string | null; kitSheetId: string | null; kitWorkId: string | null; kitReportsId: string | null; kitCreatedAt: Date | null; kitSentAt: Date | null; kitSentVia: string | null; kitSharedWith: string | null };
+type Sel = { id: string; name: string; businessName: string | null; contact: string | null; email: string | null; whatsapp: string | null; phone: string | null; kitFolderId: string | null; kitBrandId: string | null; kitCredentialsId: string | null; kitSheetId: string | null; kitWorkId: string | null; kitReportsId: string | null; kitFinalId: string | null; kitCreatedAt: Date | null; kitSentAt: Date | null; kitSentVia: string | null; kitSharedWith: string | null };
 
-type Ctx = { company: string; folders: [string, string, string, string] };
+type Ctx = { company: string; folders: [string, string, string, string]; finalName: string };
 
 function toRow(c: Sel, vault: Map<string, { assets: number; credentials: number }>, ctx: Ctx): KitRow {
   const ready = hasKit(c);
   const urls = kitUrls(c);
-  const base = urls ? { greetName: c.contact?.trim() || clientDisplayName(c), clientName: clientDisplayName(c), company: ctx.company, url: urls.folder, folders: ctx.folders } : null;
+  const base = urls ? { greetName: c.contact?.trim() || clientDisplayName(c), clientName: clientDisplayName(c), company: ctx.company, links: clientLinks(urls), folders: ctx.folders, finalName: ctx.finalName } : null;
   return {
     clientId: c.id,
     name: c.name,
@@ -56,7 +56,7 @@ function toRow(c: Sel, vault: Map<string, { assets: number; credentials: number 
     sentVia: c.kitSentVia,
     sharedWith: c.kitSharedWith,
     vault: vault.get(c.id) ?? { assets: 0, credentials: 0 },
-    shareScopes: scopeOptions(kitShareScopes(c, ctx.folders, clientDisplayName(c))),
+    shareScopes: scopeOptions(kitShareScopes(c, ctx.folders, clientDisplayName(c), ctx.finalName)),
     messages: base ? { email: kitMessage({ ...base, channel: "EMAIL" }), whatsapp: kitMessage({ ...base, channel: "WHATSAPP" }) } : null,
   };
 }
@@ -81,7 +81,8 @@ export async function listKitRows(): Promise<{ rows: KitRow[]; owner: string | n
     getSettings(),
   ]);
   const folders = kitFolderNames(s.clientKitFolders);
-  return { rows: clients.map((c) => toRow(c, vault, { company: s.companyName, folders })), owner, folders };
+  const finalName = kitFinalName(s.clientKitFolders);
+  return { rows: clients.map((c) => toRow(c, vault, { company: s.companyName, folders, finalName })), owner, folders };
 }
 
 export type KitDetail = {
@@ -100,7 +101,7 @@ export async function getKitDetail(clientId: string): Promise<KitDetail | null> 
   ]);
   const folders = kitFolderNames(s.clientKitFolders);
   return {
-    row: toRow(client, vault, { company: s.companyName, folders }),
+    row: toRow(client, vault, { company: s.companyName, folders, finalName: kitFinalName(s.clientKitFolders) }),
     folders,
     vaultItems: items.map((i) => ({ id: i.id, kind: i.kind as "ASSET_DRIVE_LINK" | "CREDENTIAL", label: i.label, url: i.url, username: i.username, hasPassword: Boolean(i.passwordEnc) })),
   };

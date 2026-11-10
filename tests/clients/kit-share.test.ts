@@ -14,13 +14,14 @@ const FOLDERS = ["Brand kit", "Credentials", "Work", "Reports"] as const;
 describe("client kit sharing — pure helpers", () => {
   it("lists the whole kit and the parts that exist; Credentials shares the sheet", () => {
     expect(kitShareScopes({ kitFolderId: null }, FOLDERS, "Repo")).toEqual([]);
-    const all = kitShareScopes({ kitFolderId: "k", kitBrandId: "b", kitCredentialsId: "c", kitSheetId: "s", kitWorkId: "w", kitReportsId: "r" }, FOLDERS, "Repo");
+    const all = kitShareScopes({ kitFolderId: "k", kitBrandId: "b", kitCredentialsId: "c", kitSheetId: "s", kitWorkId: "w", kitReportsId: "r", kitFinalId: "f" }, FOLDERS, "Repo");
     expect(all.map((s) => [s.key, s.name, s.label, s.fileId])).toEqual([
       ["kit", "Whole kit", "Client kit › Repo", "k"],
       ["brand", "Brand kit", "Repo › Brand kit", "b"],
       ["sheet", "Credentials sheet", "Repo › Credentials sheet", "s"],
       ["work", "Work", "Repo › Work", "w"],
       ["reports", "Reports", "Repo › Reports", "r"],
+      ["final", "Final work", "Repo › Final work", "f"],
     ]);
     expect(scopeUrl(all[2])).toBe("https://docs.google.com/spreadsheets/d/s/edit");
     expect(scopeUrl(all[3])).toBe("https://drive.google.com/drive/folders/w");
@@ -119,7 +120,7 @@ describe("client kit sharing — actions", () => {
     const before = await getKitSharing(seed.client.id, { scope: "kit" });
     if (!before.ok) throw new Error(before.error);
     expect(before.data).toMatchObject({ title: "Client kit › Repo Media LLP", url: `https://drive.google.com/drive/folders/${c.kitFolderId}`, owner: "admin@test.local" });
-    expect(before.data.scopes.map((s) => s.name)).toEqual(["Whole kit", "Brand kit", "Credentials sheet", "Work", "Reports"]);
+    expect(before.data.scopes.map((s) => s.name)).toEqual(["Whole kit", "Brand kit", "Credentials sheet", "Work", "Reports", "Final work"]);
     expect(teamSuggestions(before.data.team, before.data.people.map((p) => p.email)).map((u) => u.email)).toEqual(["tl@test.local", "exec@test.local"]);
 
     const r = await shareKit(seed.client.id, {
@@ -132,7 +133,6 @@ describe("client kit sharing — actions", () => {
     expect(r.data.added).toEqual([{ email: "tl@test.local", role: "writer" }, { email: "exec@test.local", role: "reader" }, { email: "owner@client.com", role: "commenter" }]);
     expect(r.data.sharing.people.map((p) => [p.email, p.role, p.inherited])).toEqual([
       ["admin@test.local", "owner", false],
-      ["asha@repo.test", "writer", false],
       ["exec@test.local", "reader", false],
       ["owner@client.com", "commenter", false],
       ["tl@test.local", "writer", false],
@@ -165,7 +165,6 @@ describe("client kit sharing — actions", () => {
     expect(s.people.map((p) => [p.email, p.role, p.inherited])).toEqual([
       ["admin@test.local", "owner", false],
       ["exec2@test.local", "writer", false],
-      ["asha@repo.test", "writer", true],
       ["exec@test.local", "reader", true],
       ["tl@test.local", "writer", true],
     ]);
@@ -220,7 +219,7 @@ describe("client kit sharing — actions", () => {
     await kit();
     const { listKitRows } = await import("@/server/clients/kit-queries");
     const row = (await listKitRows()).rows[0];
-    expect(row.shareScopes.map((s) => s.key)).toEqual(["kit", "brand", "sheet", "work", "reports"]);
+    expect(row.shareScopes.map((s) => s.key)).toEqual(["kit", "brand", "sheet", "work", "reports", "final"]);
     expect(JSON.stringify(row.shareScopes)).not.toContain("fileId");
   });
 });

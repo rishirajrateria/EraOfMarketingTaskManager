@@ -4,13 +4,15 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { demoLoginAllowed } from "@/lib/prod-guards";
 
 /**
- * Demo sign-in (no Google needed) for trying the three dashboards. Enabled ONLY when DEMO_LOGIN=true.
+ * Demo sign-in (no Google needed) for trying the three dashboards. Enabled ONLY when DEMO_LOGIN=true, and never in
+ * production unless the unsafe ALLOW_DEMO_IN_PRODUCTION=true escape hatch is set (ADR 0020).
  * Creates a database session for the first active user of the chosen role and sets the NextAuth cookie.
  */
 export async function demoLoginEnabled(): Promise<boolean> {
-  return process.env.DEMO_LOGIN === "true";
+  return demoLoginAllowed(process.env);
 }
 
 const DEMO_ROLES: Role[] = ["ADMIN", "TEAM_LEADER", "EXECUTIVE", "HR"];
