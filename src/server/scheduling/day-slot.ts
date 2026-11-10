@@ -5,9 +5,11 @@
  * it — and says why, so the UI can tell the user instead of dropping the request.
  */
 import { addDays } from "date-fns";
-import { dateKey, parseDateKey, zonedStartOfDay } from "@/lib/time";
-import { clipMinutes, findSlot, subtractIntervals, workingIntervalsForDay, type Interval, type WorkingConfig } from "@/lib/working-time";
+import { dateKey, parseDateKey } from "@/lib/time";
+import { minutesBetween, type Interval } from "@/lib/working-time";
+import { addKeyDays } from "@/server/availability/day-status";
 import { PAST_DAY_MESSAGE } from "@/server/tasks/schema";
+import { freeMinutesOn, freeOn, findAvailableSlot, slotDays, type SlotDays } from "@/server/scheduling/finder";
 import { ceilToMinute, collectBusy, proposeSlot, workingConfig, type BusyOptions, type SlotProposal } from "@/server/scheduling/slot";
 
 export { PAST_DAY_MESSAGE };
@@ -39,23 +41,26 @@ type DaySlotOptions = BusyOptions & {
 };
 
 /** "2026-10-31" + 1 → "2026-11-01": calendar arithmetic on the key itself (no zone, no DST). */
-export function shiftDayKey(key: string, days: number): string {
-  const [y, m, d] = key.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
-}
+export const shiftDayKey = addKeyDays;
 
-/** Working minutes in [from, to) not covered by `busy`, over the company days the window touches. */
-function workingMinutesBetween(from: Date, to: Date, cfg: WorkingConfig, busy: Interval[], off: Set<string>): number {
+/**
+ * Minutes in [from, to) the assignees can work, over the company days the window touches: with `busy` (and capped by
+ * the capacity left per day) it is the free time; with no busy blocks and `capped` false it is the raw working window.
+ */
+function minutesBetweenIn(from: Date, to: Date, tz: string, days: SlotDays, busy: Interval[], capped: boolean): number {
   let total = 0;
-  for (let day = zonedStartOfDay(from, cfg.timezone); day < to; day = addDays(day, 1)) {
-    total += clipMinutes(subtractIntervals(workingIntervalsForDay(day, cfg, off), busy), from, to);
+  const last = dateKey(new Date(to.getTime() - 1), tz);
+  for (let key = dateKey(from, tz), i = 0; key <= last && i < 400; key = addKeyDays(key, 1), i++) {
+    total += capped
+      ? freeMinutesOn(days, key, busy, from, to)
+      : freeOn(days, key, busy, from, to).reduce((s, iv) => s + minutesBetween(iv.start, iv.end), 0);
   }
   return total;
 }
 
 /**
- * Next free slot on `day` (yyyy-MM-dd) for all `assigneeIds`: within the company working hours (lunch, holidays and
- * approved leave excluded), after their existing active tasks and calendar busy blocks, never in the past when the day
+ * Next free slot on `day` (yyyy-MM-dd) for all `assigneeIds`: within everyone's availability (`personDayStatus`: lunch,
+ * holidays, approved leave, weekly offs, absent / half days and per-person capacity honoured), after their existing active tasks and calendar busy blocks, never in the past when the day
  * is today. The day is read in `opts.dayZone` (meetings: the meeting's zone; a day there may straddle two company
  * days), the working hours stay the company's. Like the prototype's `dayFreeSlot`, the first gap where the WHOLE
  * duration fits wins; only when no single gap is long enough (a task longer than a lunch-bounded block) may it be
@@ -73,13 +78,15 @@ export async function proposeSlotOnDay(assigneeIds: string[], minutes: number, d
   const dayStart = parseDateKey(day, zone);
   const dayEnd = parseDateKey(shiftDayKey(day, 1), zone);
   const from = ceilToMinute(dayStart > now ? dayStart : now);
-  const { hard, soft, off } = await collectBusy(assigneeIds, from, addDays(from, HORIZON_DAYS + 1), opts, cfg.timezone);
+  const { hard, soft, world } = await collectBusy(assigneeIds, from, addDays(from, HORIZON_DAYS + 1), opts, cfg);
   const busy = [...hard, ...soft]; // strict: soft blocks are honoured
+  const days = slotDays(world, assigneeIds);
+  const tz = cfg.timezone;
 
   // Why the day may not do: nothing to work in at all / nothing left of today / every minute taken / too little.
-  const freeMinutes = workingMinutesBetween(from, dayEnd, cfg, busy, off);
+  const freeMinutes = minutesBetweenIn(from, dayEnd, tz, days, busy, true);
   const missed: DayMissed =
-    workingMinutesBetween(dayStart, dayEnd, cfg, [], off) === 0 ? "day-off" : workingMinutesBetween(from, dayEnd, cfg, [], off) === 0 ? "over" : freeMinutes === 0 ? "full" : "no-room";
+    minutesBetweenIn(dayStart, dayEnd, tz, days, [], false) === 0 ? "day-off" : minutesBetweenIn(from, dayEnd, tz, days, [], false) === 0 ? "over" : freeMinutes === 0 ? "full" : "no-room";
   const placement = (hit: boolean): DayPlacement => ({ requestedDay: day, onRequestedDay: hit, missed: hit ? null : missed, freeMinutes });
 
   // One calendar day in `zone`: a whole contiguous gap first, else split across that day's free time.
@@ -87,8 +94,8 @@ export async function proposeSlotOnDay(assigneeIds: string[], minutes: number, d
     const start = parseDateKey(key, zone);
     const end = parseDateKey(shiftDayKey(key, 1), zone);
     const f = start > from ? start : from;
-    const o = { extraOff: off, maxDays: 3, until: end }; // a zone day touches at most two (DST: three) company days
-    return findSlot(f, minutes, cfg, busy, { ...o, allowSplit: false }) ?? findSlot(f, minutes, cfg, busy, { ...o, allowSplit: true });
+    const o = { maxDays: 3, until: end }; // a zone day touches at most two (DST: three) company days
+    return findAvailableSlot(f, minutes, cfg, busy, days, { ...o, allowSplit: false }) ?? findAvailableSlot(f, minutes, cfg, busy, days, { ...o, allowSplit: true });
   };
   for (let i = 0; i < HORIZON_DAYS; i++) {
     const found = onDay(shiftDayKey(day, i));

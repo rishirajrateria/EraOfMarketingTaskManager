@@ -2,16 +2,16 @@
  * Inventory (sellable hours) queries — SPEC §9.3 / §11.6.
  * capacity − assigned = sellable, per person, per team, per day.
  */
-import { addDays } from "date-fns";
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
-import { dateKey, zonedEndOfDay, zonedStartOfDay, zonedWeekday } from "@/lib/time";
+import { dateKey, zonedEndOfDay, zonedStartOfDay } from "@/lib/time";
 import { ACTIVE_STATUSES } from "@/server/tasks/state";
+import { BOOKED_TASK_WHERE, loadWorld } from "@/server/availability/booked";
+import { loadAvailability, loadPeople } from "@/server/availability/load";
 import { buildHourCells, hourStarts, hourlyStatus, toBusyBlock, type BusyBlock, type HourCell, type HourlyStatus } from "@/server/inventory/hourly";
 import {
-  computeCapacityMinutes,
   dayKeysBetween,
-  fromDbDate,
+  overbooked,
   sellable,
   sumTotals,
   toDbDate,
@@ -40,18 +40,14 @@ export type InventoryResult = {
 /** Roles that carry tasks and therefore have sellable capacity. */
 const TASK_ROLES = ["ADMIN", "TEAM_LEADER", "EXECUTIVE"] as const;
 
-/** Open WORK tasks count against the day they are scheduled to start; unscheduled ones count on today. */
-/** Booked work: open work tasks with time (a deadline-only task books no hours). */
-const OPEN_TASK_WHERE = { deletedAt: null, type: "WORK" as const, deadlineOnly: false, status: { not: "COMPLETED" as const } };
+/** Booked work (ADR 0019): open work tasks with time, spread over the days they occupy (`availability/booked.ts`). */
+const OPEN_TASK_WHERE = BOOKED_TASK_WHERE;
 
 export async function inventoryFor(range: InventoryRange, opts: InventoryOptions = {}): Promise<InventoryResult> {
   const settings = await getSettings();
   const cfg = toWorkingConfig(settings);
   const tz = cfg.timezone;
   const days = dayKeysBetween(range.from, range.to, tz);
-  const rangeStart = zonedStartOfDay(range.from, tz);
-  const rangeEnd = zonedEndOfDay(range.to, tz);
-  const todayKey = dateKey(new Date(), tz);
 
   const users = await prisma.user.findMany({
     where: {
@@ -60,81 +56,29 @@ export async function inventoryFor(range: InventoryRange, opts: InventoryOptions
       ...(opts.teamId ? { teamId: opts.teamId } : {}),
       ...(opts.userId ? { id: opts.userId } : {}),
     },
-    select: { id: true, name: true, teamId: true, dailyCapacityMinutes: true, workingDays: true, team: { select: { name: true } } },
+    select: { id: true, name: true, teamId: true, team: { select: { name: true } } },
     orderBy: [{ teamId: "asc" }, { name: "asc" }],
   });
-  const userIds = users.map((u) => u.id);
-  const first = toDbDate(days[0]);
-  const last = toDbDate(days[days.length - 1]);
-
-  const [attendance, leaves, tasks] = await Promise.all([
-    prisma.attendance.findMany({
-      where: { userId: { in: userIds }, date: { gte: first, lte: last } },
-      select: { userId: true, date: true, status: true },
-    }),
-    prisma.leave.findMany({
-      where: { userId: { in: userIds }, status: { in: ["HR_APPROVED", "ADMIN_APPROVED"] }, from: { lte: last }, to: { gte: first } },
-      select: { userId: true, from: true, to: true },
-    }),
-    prisma.task.findMany({
-      where: {
-        ...OPEN_TASK_WHERE,
-        assignees: { some: { userId: { in: userIds } } },
-        OR: [
-          { scheduledStart: { gte: rangeStart, lt: rangeEnd } },
-          ...(days.includes(todayKey) ? [{ scheduledStart: null }] : []),
-        ],
-      },
-      select: { allocatedMinutes: true, scheduledStart: true, assignees: { select: { userId: true } } },
-    }),
-  ]);
-
-  const attendanceMap = new Map<string, (typeof attendance)[number]["status"]>();
-  for (const a of attendance) attendanceMap.set(`${a.userId}|${fromDbDate(a.date)}`, a.status);
-
-  const leaveDays = new Set<string>();
-  for (const l of leaves) {
-    let d = toDbDate(fromDbDate(l.from));
-    const end = toDbDate(fromDbDate(l.to));
-    while (d <= end) {
-      leaveDays.add(`${l.userId}|${fromDbDate(d)}`);
-      d = addDays(d, 1);
-    }
-  }
-
+  const world = await loadWorld(users.map((u) => u.id), days[0], days[days.length - 1], cfg);
   const assigned = new Map<string, number>();
-  const userSet = new Set(userIds);
-  for (const t of tasks) {
-    const day = t.scheduledStart ? dateKey(t.scheduledStart, tz) : todayKey;
-    for (const a of t.assignees) {
-      if (!userSet.has(a.userId)) continue;
-      const k = `${a.userId}|${day}`;
-      assigned.set(k, (assigned.get(k) ?? 0) + t.allocatedMinutes);
-    }
-  }
+  for (const b of world.booked) assigned.set(`${b.userId}|${b.day}`, (assigned.get(`${b.userId}|${b.day}`) ?? 0) + b.minutes);
 
-  const holidays = new Set(cfg.holidays);
   const rows: InventoryRow[] = [];
   for (const u of users) {
     for (const day of days) {
-      const k = `${u.id}|${day}`;
-      const capacityMinutes = computeCapacityMinutes({
-        date: toDbDate(day),
-        user: u,
-        settings: cfg,
-        attendanceStatus: attendanceMap.get(k) ?? null,
-        onLeave: leaveDays.has(k),
-        isHoliday: holidays.has(day),
-      });
-      const assignedMinutes = assigned.get(k) ?? 0;
+      const status = world.availability.day(u.id, day);
+      const capacityMinutes = status.capacityMinutes;
+      const assignedMinutes = assigned.get(`${u.id}|${day}`) ?? 0;
       rows.push({
         userId: u.id,
         name: u.name,
         teamId: u.teamId,
         date: day,
+        kind: status.kind,
         capacityMinutes,
         assignedMinutes,
         sellableMinutes: sellable(capacityMinutes, assignedMinutes),
+        overbookedMinutes: overbooked(capacityMinutes, assignedMinutes),
       });
     }
   }
@@ -181,17 +125,12 @@ export async function hourlyBreakdown(date: Date, opts: InventoryOptions = {}): 
   const key = dateKey(date, tz);
   const dayStart = zonedStartOfDay(date, tz);
   const dayEnd = zonedEndOfDay(date, tz);
-  const dbDate = toDbDate(key);
   const minutesOfDay = (d: Date) => Math.round((d.getTime() - dayStart.getTime()) / 60_000);
 
   const inv = await inventoryFor({ from: date, to: date }, opts);
   const userIds = inv.users.map((u) => u.userId);
-  const [attendance, leaves, tasks] = await Promise.all([
-    prisma.attendance.findMany({ where: { userId: { in: userIds }, date: dbDate }, select: { userId: true, status: true, checkIn: true, checkOut: true } }),
-    prisma.leave.findMany({
-      where: { userId: { in: userIds }, status: { in: ["HR_APPROVED", "ADMIN_APPROVED"] }, from: { lte: dbDate }, to: { gte: dbDate } },
-      select: { userId: true },
-    }),
+  const [availability, tasks] = await Promise.all([
+    loadPeople(userIds).then((people) => loadAvailability(people, key, key, cfg)),
     prisma.task.findMany({
       where: {
         deletedAt: null,
@@ -206,27 +145,24 @@ export async function hourlyBreakdown(date: Date, opts: InventoryOptions = {}): 
     }),
   ]);
 
+  // Meetings are busy time here (an "assigned" hour) though they book no hours in the inventory (ADR 0015/0016).
   const busyByUser = new Map<string, BusyBlock[]>();
   for (const t of tasks) {
     const block = toBusyBlock(t, dayStart);
     if (!block) continue;
     for (const a of t.assignees) busyByUser.set(a.userId, [...(busyByUser.get(a.userId) ?? []), block]);
   }
-  const attendanceByUser = new Map(attendance.map((a) => [a.userId, a]));
-  const onLeave = new Set(leaves.map((l) => l.userId));
-  const isHoliday = cfg.holidays.includes(key);
-  const weekday = zonedWeekday(dayStart, tz);
   const hours = hourStarts(cfg);
 
   const rows: HourlyRow[] = inv.users.map((u) => {
-    const a = attendanceByUser.get(u.userId);
-    const status = hourlyStatus({ attendanceStatus: a?.status ?? null, onLeave: onLeave.has(u.userId), isHoliday, workingDay: cfg.workingDays.includes(weekday) });
-    // Half days with recorded times only occupy the hours between check-in and check-out.
-    const timed = status === "HALF_DAY";
+    const day = availability.day(u.userId, key);
+    const status = hourlyStatus(day);
+    // Half days only occupy the hours inside the person's window (check-in/out, else the first half of the day).
+    const w = day.kind === "HALF" ? day.window : [];
     const cells = buildHourCells(hours, cfg, busyByUser.get(u.userId) ?? [], {
       status,
-      presentFrom: timed && a?.checkIn ? minutesOfDay(a.checkIn) : null,
-      presentTo: timed && a?.checkOut ? minutesOfDay(a.checkOut) : null,
+      presentFrom: w.length ? minutesOfDay(w[0].start) : null,
+      presentTo: w.length ? minutesOfDay(w[w.length - 1].end) : null,
     });
     return { ...u, status, cells };
   });

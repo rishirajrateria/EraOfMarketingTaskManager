@@ -2,7 +2,7 @@
 import type { HourlyBreakdown, HourlyRow } from "@/server/inventory/queries";
 import { minutesLabel, type HourCell, type HourCellKind } from "@/server/inventory/hourly";
 import { clsx } from "@/lib/clsx";
-import { hrs } from "@/components/inventory/InventoryTable";
+import { SellCell, hrs } from "@/components/inventory/InventoryTable";
 
 const KIND_STYLE: Record<HourCellKind, { cls: string; label: string }> = {
   free: { cls: "border border-white/60 bg-green-100/70 backdrop-blur-sm", label: "Free" },
@@ -67,7 +67,7 @@ export function HourlyGrid({ hourly }: { hourly: HourlyBreakdown }) {
                 ))}
                 <td className="pl-2 text-right text-xs">{hrs(r.capacityMinutes)}</td>
                 <td className="text-right text-xs">{hrs(r.assignedMinutes)}</td>
-                <td className={clsx("text-right text-xs font-semibold", r.sellableMinutes === 0 && r.capacityMinutes > 0 && "text-red-600")}>{hrs(r.sellableMinutes)}</td>
+                <SellCell t={r} className="text-xs font-semibold" />
               </tr>
             ))}
             {hourly.rows.length === 0 ? (

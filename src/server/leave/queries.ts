@@ -7,6 +7,7 @@ import { getSettings } from "@/lib/settings";
 import { dateKey } from "@/lib/time";
 import { fromDbDate, toDbDate } from "@/server/inventory/compute";
 import { tasksAffectedByLeave } from "@/server/scheduling/shift";
+import type { AffectedTask } from "@/server/scheduling/slot";
 
 export const APPROVED_LEAVE: LeaveStatus[] = ["HR_APPROVED", "ADMIN_APPROVED"];
 
@@ -67,7 +68,7 @@ export async function myLeaves(userId: string): Promise<LeaveSummary[]> {
 export type LeaveInbox = {
   pending: LeaveSummary[];
   /** Approved leaves (not yet past) whose window still contains open tasks. */
-  needsShift: (LeaveSummary & { affected: { id: string; title: string }[] })[];
+  needsShift: (LeaveSummary & { affected: AffectedTask[] })[];
   changeRequests: (LeaveSummary & { requestId: string; payload: LeaveChangePayload; raisedBy: string; note: string })[];
   recent: LeaveSummary[];
 };

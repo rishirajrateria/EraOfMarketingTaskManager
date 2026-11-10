@@ -19,7 +19,7 @@ describe("HR dashboard", () => {
   });
 
   it("today's status, booked of capacity from the inventory, days off, team filter", async () => {
-    const now = new Date();
+    const now = new Date("2026-10-14T06:30:00Z"); // a Wednesday in Asia/Kolkata: weekly offs would read "Off" (ADR 0019)
     const today = toDbDate(dateKey(now, tz));
     const other = await testDb.team.create({ data: { name: "SEO" } });
     const seoExec = await testDb.user.create({ data: { email: "s@t.local", name: "Sana", role: "EXECUTIVE", teamId: other.id } });
@@ -46,7 +46,8 @@ describe("HR dashboard", () => {
     expect(g.people.map((p) => p.name)).toEqual(["Rishi", "Arush"]);
     expect(seoExec.id).toBeTruthy();
     // pure helpers
-    expect([todayStatus("HALF_DAY", true), todayStatus(null, true), todayStatus(undefined, false)]).toEqual(["HALF_DAY", "LEAVE", "NONE"]);
+    // ADR 0019 precedence: leave > holiday > weekly off > row; a working day without a row is "Not marked"
+    expect([todayStatus({ kind: "LEAVE", marked: "HALF_DAY" }), todayStatus({ kind: "WORKING", marked: null }), todayStatus({ kind: "OFF_WEEKLY", marked: "PRESENT" }), todayStatus({ kind: "HOLIDAY", marked: null })]).toEqual(["LEAVE", "NONE", "OFF", "HOLIDAY"]);
     expect([bookedPct(30, 60), bookedPct(90, 60), bookedPct(10, 0), bookedPct(0, 0)]).toEqual([50, 100, 100, 0]);
   });
 });

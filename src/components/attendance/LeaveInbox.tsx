@@ -114,11 +114,16 @@ export function LeaveInbox({ inbox, isAdmin, viewerId, highlightLeaveId }: { inb
               {l.userName} · {fmtLeaveRange(l)}
             </div>
             <div className="text-xs text-gray-500">
-              {l.affected.length} task{l.affected.length === 1 ? "" : "s"} in this window: {l.affected.map((t) => t.title).join(", ")}
+              {l.affected.length} task{l.affected.length === 1 ? "" : "s"} still in this window: {l.affected.map((t) => t.title).join(", ")}
             </div>
+            {l.affected.some((t) => !t.movable) ? (
+              <div className="text-xs text-amber-700">
+                Move yourself: {l.affected.filter((t) => !t.movable).map((t) => `${t.title} (${t.why === "meeting" ? "meeting" : t.why === "started" ? "started" : "fixed"})`).join(", ")}
+              </div>
+            ) : null}
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {isAdmin ? (
-                <button className={btnPrimary} disabled={pending} onClick={() => run(() => shiftLeaveTasks(l.id), "Tasks shifted")}>
+                <button className={btnPrimary} disabled={pending || !l.affected.some((t) => t.movable)} onClick={() => run(() => shiftLeaveTasks(l.id), "Tasks shifted")}>
                   Shift all affected tasks to next available slot
                 </button>
               ) : (

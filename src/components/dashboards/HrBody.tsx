@@ -16,6 +16,7 @@ const STATUS: Record<TodayStatus, { label: string; cls: string }> = {
   LEAVE: { label: "On leave", cls: "text-red-700 dark:text-red-300" },
   ABSENT: { label: "Absent", cls: "text-red-700 dark:text-red-300" },
   HOLIDAY: { label: "Holiday", cls: "text-muted" },
+  OFF: { label: "Off", cls: "text-muted" },
   NONE: { label: "Not marked", cls: "text-muted" },
 };
 const BAR = { red: "bg-[#dc2626]", amber: "bg-[#f59e0b]", ok: "bg-s-inc" } as const;
@@ -45,13 +46,16 @@ export function HrBody({ data: d }: { data: HrDash }) {
                 >
                   <span className="flex items-center justify-between gap-2 text-[13px]">
                     <b className="min-w-0 truncate font-semibold">{p.name}</b>
-                    <span className={clsx("inline-flex h-[22px] shrink-0 items-center rounded-full border border-hair bg-chip px-2 text-[11px] font-semibold", st.cls)}>{st.label}</span>
+                    <span className={clsx("inline-flex h-[22px] shrink-0 items-center rounded-full border border-hair bg-chip px-2 text-[11px] font-semibold", st.cls)} title={p.todayWarning ? "Marked present on a day off" : undefined}>
+                      {st.label}
+                      {p.todayWarning ? <span className="ml-1 text-[#dc2626]">!</span> : null}
+                    </span>
                   </span>
                   <span className="mt-1.5 block h-2 overflow-hidden rounded-full bg-chip">
                     <i className={clsx("block h-full rounded-r-[4px]", BAR[tone])} style={{ width: `${Math.max(2, p.pct)}%` }} />
                   </span>
                   <small className="mt-1 block truncate text-[11px] text-muted">
-                    {[p.teamName, `${hrs(p.bookedMin)} of ${h0(p.capacityMin)} booked`, `${h0(p.freeMin)} free`, p.daysOff ? `${p.daysOff} day${p.daysOff === 1 ? "" : "s"} off` : null].filter(Boolean).join(" · ")}
+                    {[p.teamName, `${hrs(p.bookedMin)} of ${h0(p.capacityMin)} booked`, `${h0(p.freeMin)} free`, p.overMin ? `over by ${hrs(p.overMin)}` : null, p.daysOff ? `${p.daysOff} day${p.daysOff === 1 ? "" : "s"} off` : null].filter(Boolean).join(" · ")}
                   </small>
                 </Link>
               </li>

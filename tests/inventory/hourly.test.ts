@@ -29,14 +29,13 @@ describe("hourly helpers", () => {
     expect(toBusyBlock({ ...task("e", "2026-09-14T04:30:00Z", null), scheduledStart: null }, dayStart)).toBeNull();
   });
 
-  it("derives the day status with holiday > leave > absent > non-working > half day", () => {
-    const base = { attendanceStatus: null, onLeave: false, isHoliday: false, workingDay: true };
-    expect(hourlyStatus(base)).toBe("PRESENT");
-    expect(hourlyStatus({ ...base, attendanceStatus: "HALF_DAY" })).toBe("HALF_DAY");
-    expect(hourlyStatus({ ...base, workingDay: false })).toBe("OFF");
-    expect(hourlyStatus({ ...base, attendanceStatus: "ABSENT" })).toBe("ABSENT");
-    expect(hourlyStatus({ ...base, onLeave: true, attendanceStatus: "PRESENT" })).toBe("LEAVE");
-    expect(hourlyStatus({ ...base, isHoliday: true, onLeave: true })).toBe("HOLIDAY");
+  it("labels the row from personDayStatus (ADR 0019)", () => {
+    expect(hourlyStatus({ kind: "WORKING" })).toBe("PRESENT");
+    expect(hourlyStatus({ kind: "HALF" })).toBe("HALF_DAY");
+    expect(hourlyStatus({ kind: "OFF_WEEKLY" })).toBe("OFF");
+    expect(hourlyStatus({ kind: "ABSENT" })).toBe("ABSENT");
+    expect(hourlyStatus({ kind: "LEAVE" })).toBe("LEAVE");
+    expect(hourlyStatus({ kind: "HOLIDAY" })).toBe("HOLIDAY");
   });
 
   it("marks the right hours busy, greys lunch, and turns the whole day off on leave", () => {

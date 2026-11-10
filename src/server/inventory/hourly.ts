@@ -2,8 +2,8 @@
  * Pure helpers for the Day view's hourly breakdown (SPEC §9.3): one cell per working hour per person,
  * coloured by what is scheduled then. No DB access so it is unit-testable.
  */
-import type { AttendanceStatus } from "@prisma/client";
 import type { WorkingConfig } from "@/lib/working-time";
+import type { PersonDay } from "@/server/availability/day-status";
 
 export type HourCellKind = "free" | "assigned" | "lunch" | "off";
 export type HourTask = { id: string; title: string; type: "WORK" | "MEETING" };
@@ -43,14 +43,18 @@ export function toBusyBlock(
 
 const overlaps = (aStart: number, aEnd: number, bStart: number, bEnd: number) => aStart < bEnd && bStart < aEnd;
 
-/** Status of the person's day, for the row label and the "off" colouring. */
-export function hourlyStatus(input: { attendanceStatus: AttendanceStatus | null; onLeave: boolean; isHoliday: boolean; workingDay: boolean }): HourlyStatus {
-  if (input.isHoliday || input.attendanceStatus === "HOLIDAY") return "HOLIDAY";
-  if (input.onLeave || input.attendanceStatus === "LEAVE") return "LEAVE";
-  if (input.attendanceStatus === "ABSENT") return "ABSENT";
-  if (!input.workingDay) return "OFF";
-  if (input.attendanceStatus === "HALF_DAY") return "HALF_DAY";
-  return "PRESENT";
+/** Status of the person's day, for the row label and the "off" colouring — read from `personDayStatus` (ADR 0019). */
+export function hourlyStatus(day: Pick<PersonDay, "kind">): HourlyStatus {
+  switch (day.kind) {
+    case "HALF":
+      return "HALF_DAY";
+    case "OFF_WEEKLY":
+      return "OFF";
+    case "WORKING":
+      return "PRESENT";
+    default:
+      return day.kind; // HOLIDAY / LEAVE / ABSENT
+  }
 }
 
 /**

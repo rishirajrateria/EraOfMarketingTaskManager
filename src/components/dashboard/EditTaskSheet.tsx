@@ -16,6 +16,7 @@ import { useTaskAction } from "@/components/dashboard/useTaskAction";
 import { useToast } from "@/components/ui/Toast";
 import { GuestEmailInput } from "@/components/tasks/MeetingGuestsSheet";
 import { MeetingOptionsSheet } from "@/components/tasks/MeetingOptionsSheet";
+import { OffDayWarningFor } from "@/components/tasks/OffDayWarning";
 import {
   defaultMeetingOptions,
   describeReminder,
@@ -358,6 +359,7 @@ export function EditTaskSheet({
                     className={inputCls}
                   />
                 </Field>
+                <OffDayWarningFor userIds={d.assigneeIds} start={d.scheduledStart ? toIso(d.scheduledStart, zone) : null} className="sm:col-span-2" />
                 <Field label="Scheduled end">
                   <input
                     type="datetime-local"

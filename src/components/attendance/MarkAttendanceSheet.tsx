@@ -26,7 +26,7 @@ export function MarkAttendanceSheet({ target, onClose }: { target: MarkTarget | 
   const router = useRouter();
   const toast = useToast();
   const [pending, start] = useTransition();
-  const [status, setStatus] = useState<AttendanceStatus>(target?.cell?.status ?? "PRESENT");
+  const [status, setStatus] = useState<AttendanceStatus>(target?.cell?.marked ?? target?.cell?.status ?? "PRESENT");
   const [checkIn, setCheckIn] = useState(toHHMM(target?.cell?.checkIn ?? null));
   const [checkOut, setCheckOut] = useState(toHHMM(target?.cell?.checkOut ?? null));
   const [note, setNote] = useState(target?.cell?.note ?? "");

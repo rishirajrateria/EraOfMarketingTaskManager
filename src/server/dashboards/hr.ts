@@ -1,28 +1,51 @@
-import { addDays } from "date-fns";
-import type { AttendanceStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { dateKey, parseDateKey } from "@/lib/time";
 import { inventoryFor } from "@/server/inventory/queries";
-import { fromDbDate, toDbDate } from "@/server/inventory/compute";
-import { APPROVED_LEAVE } from "@/server/leave/queries";
+import { toWorkingConfig } from "@/server/inventory/compute";
+import { addKeyDays, type PersonDay } from "@/server/availability/day-status";
+import { loadAvailability, loadPeople } from "@/server/availability/load";
 import { dashRange, type DashRange } from "@/server/dashboards/period";
 import type { DashParams } from "@/server/dashboards/params";
 
 /**
  * HR dashboard (ADR 0016): today's attendance and the team inventory (booked of capacity over the WHEN period) for
  * Team Leaders and Executives. Capacity and booked hours come from `inventoryFor` — the same numbers as the Inventory
- * page (capacity from working hours, attendance, approved leave and holidays; booked = open work tasks scheduled in
- * the period).
+ * page — and today's status from `personDayStatus` (ADR 0019), the same precedence as the grid and the slot finder.
  */
-export type TodayStatus = "PRESENT" | "HALF_DAY" | "LEAVE" | "ABSENT" | "HOLIDAY" | "NONE";
-export type HrPerson = { userId: string; name: string; role: string; teamName: string | null; today: TodayStatus; capacityMin: number; bookedMin: number; freeMin: number; pct: number; daysOff: number };
+export type TodayStatus = "PRESENT" | "HALF_DAY" | "LEAVE" | "ABSENT" | "HOLIDAY" | "OFF" | "NONE";
+export type HrPerson = {
+  userId: string;
+  name: string;
+  role: string;
+  teamName: string | null;
+  today: TodayStatus;
+  /** Marked present on a leave / holiday / weekly-off day: shown with a warning. */
+  todayWarning: boolean;
+  capacityMin: number;
+  bookedMin: number;
+  freeMin: number;
+  /** Booked beyond capacity over the period (sum of each day's overbooking). */
+  overMin: number;
+  pct: number;
+  daysOff: number;
+};
 export type HrDash = { range: DashRange; staff: number; presentToday: number; onLeaveToday: number; capacityMin: number; bookedMin: number; freeMin: number; people: HrPerson[] };
 
-/** Attendance row first; an approved leave covering today without a row also counts as on leave. */
-export function todayStatus(att: AttendanceStatus | null | undefined, onApprovedLeave: boolean): TodayStatus {
-  if (att) return att;
-  return onApprovedLeave ? "LEAVE" : "NONE";
+/** Today's tile label from the person's day (leave > holiday > weekly off > attendance row > working). */
+export function todayStatus(day: Pick<PersonDay, "kind" | "marked">): TodayStatus {
+  switch (day.kind) {
+    case "LEAVE":
+    case "HOLIDAY":
+    case "ABSENT":
+      return day.kind;
+    case "OFF_WEEKLY":
+      return "OFF";
+    case "HALF":
+      return "HALF_DAY";
+    default:
+      return day.marked === "PRESENT" ? "PRESENT" : "NONE";
+  }
 }
 
 /** Booked share of capacity, 0–100 (anything booked with no capacity reads as full). */
@@ -32,7 +55,9 @@ export function bookedPct(booked: number, capacity: number): number {
 }
 
 export async function hrDashboard(p: Pick<DashParams, "team" | "period">, now = new Date()): Promise<HrDash> {
-  const tz = (await getSettings()).timezone;
+  const settings = await getSettings();
+  const cfg = toWorkingConfig(settings);
+  const tz = cfg.timezone;
   const range = dashRange(p.period, now, tz);
   const todayKey = dateKey(now, tz);
   const staff = await prisma.user.findMany({
@@ -40,41 +65,37 @@ export async function hrDashboard(p: Pick<DashParams, "team" | "period">, now = 
     select: { id: true, name: true, role: true, team: { select: { name: true } } },
     orderBy: [{ team: { name: "asc" } }, { role: "asc" }, { name: "asc" }],
   });
-  const ids = staff.map((u) => u.id);
-  const first = toDbDate(range.fromKey);
-  const last = toDbDate(range.toKey);
-  const [inv, attendance, leaves] = await Promise.all([
+  const lo = todayKey < range.fromKey ? todayKey : range.fromKey;
+  const hi = todayKey > range.toKey ? todayKey : range.toKey;
+  const [inv, availability] = await Promise.all([
     inventoryFor({ from: parseDateKey(range.fromKey, tz), to: parseDateKey(range.toKey, tz) }, { teamId: p.team ?? undefined }),
-    prisma.attendance.findMany({ where: { userId: { in: ids }, date: { gte: first, lte: last } }, select: { userId: true, date: true, status: true } }),
-    prisma.leave.findMany({ where: { userId: { in: ids }, status: { in: APPROVED_LEAVE }, from: { lte: last }, to: { gte: first } }, select: { userId: true, from: true, to: true } }),
+    loadPeople(staff.map((u) => u.id)).then((people) => loadAvailability(people, lo, hi, cfg)),
   ]);
-
-  // Days off in the period: absent / leave attendance rows plus approved leave days (each day counted once).
-  const off = new Map<string, Set<string>>();
-  const mark = (u: string, k: string) => {
-    if (k < range.fromKey || k > range.toKey) return;
-    off.set(u, (off.get(u) ?? new Set()).add(k));
-  };
-  for (const a of attendance) if (a.status === "ABSENT" || a.status === "LEAVE") mark(a.userId, fromDbDate(a.date));
-  for (const l of leaves) for (let d = l.from; d <= l.to; d = addDays(d, 1)) mark(l.userId, fromDbDate(d));
-  const attToday = new Map(attendance.filter((a) => fromDbDate(a.date) === todayKey).map((a) => [a.userId, a.status]));
-  const leaveToday = new Set(leaves.filter((l) => fromDbDate(l.from) <= todayKey && fromDbDate(l.to) >= todayKey).map((l) => l.userId));
 
   const people: HrPerson[] = staff.map((u) => {
     const t = inv.users.find((x) => x.userId === u.id);
     const capacityMin = t?.capacityMinutes ?? 0;
     const bookedMin = t?.assignedMinutes ?? 0;
+    // Days off in the period: leave and absent days (approved leave or an attendance row), each counted once.
+    let daysOff = 0;
+    for (let k = range.fromKey, i = 0; k <= range.toKey && i < 400; k = addKeyDays(k, 1), i++) {
+      const kind = availability.day(u.id, k).kind;
+      if (kind === "LEAVE" || kind === "ABSENT") daysOff++;
+    }
+    const today = availability.day(u.id, todayKey);
     return {
       userId: u.id,
       name: u.name,
       role: u.role,
       teamName: u.team?.name ?? null,
-      today: todayStatus(attToday.get(u.id), leaveToday.has(u.id)),
+      today: todayStatus(today),
+      todayWarning: today.presentOnOffDay,
       capacityMin,
       bookedMin,
       freeMin: Math.max(0, capacityMin - bookedMin),
+      overMin: t?.overbookedMinutes ?? 0,
       pct: bookedPct(bookedMin, capacityMin),
-      daysOff: off.get(u.id)?.size ?? 0,
+      daysOff,
     };
   });
   const capacityMin = people.reduce((s, x) => s + x.capacityMin, 0);

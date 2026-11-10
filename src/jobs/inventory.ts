@@ -23,7 +23,8 @@ export async function run(): Promise<{ snapshots: number }> {
   for (const teamId of teamIds) {
     for (const day of inv.days) {
       const t = sumTotals(inv.rows.filter((r) => r.teamId === teamId && r.date === day));
-      data.push({ date: toDbDate(day), userId: null, teamId, ...t });
+      const { capacityMinutes, assignedMinutes, sellableMinutes } = t; // overbooking is derived, not snapshotted
+      data.push({ date: toDbDate(day), userId: null, teamId, capacityMinutes, assignedMinutes, sellableMinutes });
     }
   }
 

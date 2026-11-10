@@ -108,9 +108,9 @@ export function AttendanceGrid({
                 {grid.days.map((d) => {
                   const c = grid.cells[u.id]?.[d.key];
                   const style = c ? STATUS_STYLE[c.status] : null;
-                  const title = c ? `${style?.label}${c.checkIn ? ` · in ${c.checkIn}` : ""}${c.checkOut ? ` · out ${c.checkOut}` : ""}${c.note ? ` · ${c.note}` : ""}` : d.key;
+                  const title = c ? `${style?.label}${c.warning ? ` · Warning: ${c.warning}` : ""}${c.checkIn ? ` · in ${c.checkIn}` : ""}${c.checkOut ? ` · out ${c.checkOut}` : ""}${c.note ? ` · ${c.note}` : ""}` : d.key;
                   const cellCls = clsx(
-                    "flex h-6 w-6 items-center justify-center rounded font-bold",
+                    "flex h-6 w-6 items-center justify-center rounded font-bold", c?.warning && "ring-2 ring-red-500",
                     style ? style.cls : d.working ? "bg-white/50 text-gray-400" : "bg-gray-300/50 text-gray-500",
                   );
                   return (

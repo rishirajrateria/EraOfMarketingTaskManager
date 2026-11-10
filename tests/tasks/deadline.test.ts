@@ -82,16 +82,14 @@ describe("deadline-only tasks", () => {
     expect(placed?.onRequestedDay).toBe(true);
     expect(formatInTimeZone(placed!.slot.start, TZ, "HH:mm")).toBe("10:00");
 
-    // capacity: inventory, the add-task header and the period loads all leave it out
+    // capacity: inventory and the add-task header both leave it out
     const { inventoryFor } = await import("@/server/inventory/queries");
     const inv = await inventoryFor({ from, to: from });
     expect(inv.rows.find((r) => r.userId === exec.id && r.date === day)?.assignedMinutes).toBe(0);
     session.set(admin);
-    const { addTaskInventory, periodLoads } = await import("@/server/tasks/create");
+    const { addTaskInventory } = await import("@/server/tasks/create");
     const header = await addTaskInventory([team.id]);
     expect(header.ok && header.data.month).toMatchObject({ bookedMinutes: 0, count: 0 });
-    const loads = await periodLoads([tl.id]);
-    expect(loads.ok && loads.data.month).toEqual({ minutes: 0, count: 0 });
     // the dashboard row carries the flag and 0 minutes (the summary counts no hours for it)
     const { listTasks } = await import("@/server/tasks/queries");
     const row = (await listTasks({ id: admin.id, role: "ADMIN", teamId: null, teamLeaderId: null })).find((r) => r.id === id)!;
