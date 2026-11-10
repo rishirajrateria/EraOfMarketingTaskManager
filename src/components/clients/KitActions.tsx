@@ -1,11 +1,11 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { FolderPlus, Mail, MessageCircle, Wrench } from "lucide-react";
+import { FolderPlus, Mail, MessageCircle, ShieldCheck, Wrench } from "lucide-react";
 import { Sheet } from "@/components/ui/Sheet";
 import { btnPrimary, inputCls } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
-import { createClientKit, sendClientKit } from "@/server/clients/kit";
+import { createClientKit, fixClientKitSharing, sendClientKit } from "@/server/clients/kit";
 
 /** Client kit buttons (ADR 0014): Create / Repair kit and the Email / WhatsApp send sheet. */
 export const kitBtn = "inline-flex h-8 shrink-0 items-center gap-[3px] whitespace-nowrap rounded-full border border-hair bg-chip px-[7px] text-[11px] font-semibold text-ink active:opacity-70 disabled:opacity-45";
@@ -31,6 +31,31 @@ export function CreateKitButton({ clientId, repair = false }: { clientId: string
       }
     >
       {repair ? <Wrench size={14} /> : <FolderPlus size={14} />} {pending ? (repair ? "Checking…" : "Creating…") : repair ? "Repair" : "Create kit"}
+    </button>
+  );
+}
+
+/** Repair path for kits made before ADR 0020: removes the client from the kit root and Work, adds them to the client-facing folders. */
+export function FixSharingButton({ clientId }: { clientId: string }) {
+  const toast = useToast();
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  return (
+    <button
+      type="button"
+      disabled={pending}
+      className={kitBtn}
+      onClick={() =>
+        start(async () => {
+          const r = await fixClientKitSharing(clientId);
+          if (!r.ok) return toast(r.error, "err");
+          const what = `Sharing fixed · ${r.data.revoked} old access removed`;
+          toast(r.data.warnings.length ? `${what} · ${r.data.warnings[0]}` : what);
+          router.refresh();
+        })
+      }
+    >
+      <ShieldCheck size={14} /> {pending ? "Fixing…" : "Fix sharing"}
     </button>
   );
 }

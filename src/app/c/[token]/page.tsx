@@ -129,7 +129,7 @@ export default async function ClientTrackingPage({ params }: { params: Promise<{
           </span>
           <span className="min-w-0 flex-1">
             <b className="block text-[14px] font-semibold">Open your Drive folder</b>
-            <small className="block text-[11.5px] text-muted">Your brand kit, credentials sheet, work and reports</small>
+            <small className="block text-[11.5px] text-muted">Final work: the finished files we share with you</small>
           </span>
           <ExternalLink size={15} className="shrink-0 text-muted" aria-hidden />
         </a>
@@ -144,6 +144,21 @@ export default async function ClientTrackingPage({ params }: { params: Promise<{
           </span>
         </div>
       )}
+
+      {d.brandUrl || d.reportsUrl ? (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {d.brandUrl ? (
+            <a href={d.brandUrl} target="_blank" rel="noreferrer noopener" className="glass-chip inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-[12.5px] font-semibold active:opacity-80">
+              Brand kit <ExternalLink size={13} aria-hidden />
+            </a>
+          ) : null}
+          {d.reportsUrl ? (
+            <a href={d.reportsUrl} target="_blank" rel="noreferrer noopener" className="glass-chip inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-[12.5px] font-semibold active:opacity-80">
+              Reports <ExternalLink size={13} aria-hidden />
+            </a>
+          ) : null}
+        </div>
+      ) : null}
 
       <Heading>Upcoming payments</Heading>
       {d.upcoming.length ? (

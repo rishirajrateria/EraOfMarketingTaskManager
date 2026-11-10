@@ -1,3 +1,4 @@
+import { pushCapped } from "@/lib/capped-log";
 import { drive, isMock, withRetry } from "@/google/client";
 
 /**
@@ -97,7 +98,7 @@ export async function addPeople(fileId: string, emails: string[], role: ShareRol
       }
       if (existing) existing.role = role;
       else list.push({ id: `perm_${++mockSeq}`, type: "user", role, emailAddress: email, displayName: null, domain: null, inherited: false });
-      if (opts.notify) mockShareNotifications.push({ fileId, to: email, role, message: opts.message ?? null });
+      if (opts.notify) pushCapped(mockShareNotifications, { fileId, to: email, role, message: opts.message ?? null });
       result.added.push(email);
       continue;
     }
@@ -139,6 +140,23 @@ export async function removePermission(fileId: string, permissionId: string): Pr
   await withRetry(() => drive().permissions.delete({ fileId, permissionId, supportsAllDrives: true })).catch((e: unknown) => {
     if ((e as { code?: number }).code !== 404) throw e;
   });
+}
+
+/**
+ * Removes `email`'s own (direct) access from the file; access inherited from a parent folder can only be removed
+ * on that parent. Never touches the owner. Returns how many permissions were removed.
+ */
+export async function removePersonAccess(fileId: string, email: string, owner: string | null = null): Promise<number> {
+  const target = email.trim().toLowerCase();
+  if (!target) return 0;
+  const mine = (await listPermissions(fileId, owner)).filter((p) => p.type === "user" && p.emailAddress === target && p.role !== "owner" && p.role !== "organizer" && p.inherited !== true);
+  for (const p of mine) await removePermission(fileId, p.id);
+  return mine.length;
+}
+
+/** Mock mode: every non-owner user permission per file (tests assert which folders are shared with whom). */
+export function mockDriveShares(): { fileId: string; email: string; role: PermissionRole }[] {
+  return Array.from(mockStore.entries()).flatMap(([fileId, list]) => list.filter((p) => p.type === "user" && p.role !== "owner" && p.emailAddress).map((p) => ({ fileId, email: p.emailAddress!, role: p.role })));
 }
 
 /** General access: "restricted" removes the anyone-with-the-link permission; a role creates or updates it. */

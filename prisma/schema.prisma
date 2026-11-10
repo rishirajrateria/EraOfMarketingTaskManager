@@ -403,6 +403,8 @@ model Client {
   kitSheetId       String?
   kitWorkId        String?
   kitReportsId     String?
+  /// ADR 0020: "Final work" — the client-facing delivery folder (Admin puts approved deliverables here)
+  kitFinalId       String?
   kitCreatedAt     DateTime?
   kitSharedWith    String? // client email given Editor access
   kitSentAt        DateTime?
@@ -468,7 +470,7 @@ model Task {
   /// ADR 0017: the one-time "Not started" / "Still not finished" notifications went out
   notStartedNotifiedAt DateTime?
   pastEndNotifiedAt    DateTime?
-  important           Boolean           @default(false)
+  important            Boolean           @default(false)
   tags                 TaskTag[]
   priority             Priority          @default(NORMAL)
   selfAssigned         Boolean           @default(false)
@@ -1084,21 +1086,24 @@ model PushSubscription {
 
 // Queue of idempotent Google side-effects with retry/backoff
 model IntegrationJob {
-  id             String            @id @default(cuid())
-  kind           IntegrationKind
-  taskId         String?
-  task           Task?             @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  entityType     String?
-  entityId       String?
-  idempotencyKey String            @unique
-  payload        Json?
-  status         IntegrationStatus @default(PENDING)
-  attempts       Int               @default(0)
-  nextAttemptAt  DateTime          @default(now())
-  lastError      String?
-  result         Json?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  id                String            @id @default(cuid())
+  kind              IntegrationKind
+  taskId            String?
+  task              Task?             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  entityType        String?
+  entityId          String?
+  idempotencyKey    String            @unique
+  payload           Json?
+  status            IntegrationStatus @default(PENDING)
+  attempts          Int               @default(0)
+  nextAttemptAt     DateTime          @default(now())
+  lastError         String?
+  /// ADR 0020: Admins were told about this FAILED job (once per failure); dismissed = hidden from the failed-jobs list
+  failureNotifiedAt DateTime?
+  dismissedAt       DateTime?
+  result            Json?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
   @@index([status, nextAttemptAt])
 }

@@ -279,7 +279,7 @@ describe("invoicing v2", () => {
     const created = await createInvoice({ ...baseInput(seed.client.id), remindAt: remindAt.toISOString() });
     if (!created.ok) throw new Error(created.error);
     expect((await testDb.invoice.findUniqueOrThrow({ where: { id: created.data.id } })).remindAt).toEqual(remindAt);
-    const part = await createInvoice({ ...baseInput(seed.client.id), plan: "PART", parts: [{ kind: "PERCENT", value: 50, dueDate: "2026-10-09" }, { kind: "PERCENT", value: 50, dueDate: "2026-11-09" }], remindAt: remindAt.toISOString() });
+    const part = await createInvoice({ ...baseInput(seed.client.id), plan: "PART", parts: [{ kind: "PERCENT", value: 50, dueDate: "2026-10-09" }, { kind: "PERCENT", value: 50, dueDate: "2099-11-09" }], remindAt: remindAt.toISOString() });
     if (!part.ok) throw new Error(part.error);
     expect((await testDb.invoice.findUniqueOrThrow({ where: { id: part.data.id } })).remindAt).toEqual(remindAt);
     expect((await run()).reminded).toBe(0);

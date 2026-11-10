@@ -1,3 +1,4 @@
+import { pushCapped } from "@/lib/capped-log";
 import { drive, isMock, mockId, sheets, withRetry } from "@/google/client";
 
 /**
@@ -60,7 +61,7 @@ const rgb = (v: number) => ({ red: v, green: v, blue: v });
 export async function createCredentialsSheet(parentId: string, spec: KitSheetSpec): Promise<string> {
   if (isMock()) {
     const id = mockId("sheet", `${parentId}/${spec.title}`);
-    mockSheetLog.push({ id, parentId, spec });
+    pushCapped(mockSheetLog, { id, parentId, spec });
     return id;
   }
   const file = await withRetry(() =>

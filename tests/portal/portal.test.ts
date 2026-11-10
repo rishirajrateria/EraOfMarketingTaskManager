@@ -121,11 +121,16 @@ describe("client tracking link (/c/<token>)", () => {
     for (const s of ["Arush", "Rishi", "Admin", "INTERNAL NOTE", "OTHER CLIENT SECRET", "Other Co", "Kickoff call", "Deleted one", "DRAFT-1", "AWAIT-1", "EOM/3", "EOM/4", "EOM/9"]) expect(json).not.toContain(s);
   });
 
-  it("links the kit's root Drive folder once the kit exists (no new folder)", async () => {
-    const ids = { kitFolderId: "root1", kitBrandId: "b", kitCredentialsId: "c", kitSheetId: "s", kitWorkId: "w", kitReportsId: "r" };
+  it("links the Final work folder (not the kit root) plus Brand kit and Reports once the kit exists", async () => {
+    const ids = { kitFolderId: "root1", kitBrandId: "b", kitCredentialsId: "c", kitSheetId: "s", kitWorkId: "w", kitReportsId: "r", kitFinalId: "fw" };
     await testDb.client.update({ where: { id: seed.client.id }, data: ids });
     const { ensurePortalToken, portalData } = await import("@/server/portal/portal");
-    expect((await portalData(await ensurePortalToken(seed.client.id)))!.driveUrl).toBe("https://drive.google.com/drive/folders/root1");
+    const d = (await portalData(await ensurePortalToken(seed.client.id)))!;
+    expect(d.driveUrl).toBe("https://drive.google.com/drive/folders/fw");
+    expect(d.brandUrl).toBe("https://drive.google.com/drive/folders/b");
+    expect(d.reportsUrl).toBe("https://drive.google.com/drive/folders/r");
+    expect(JSON.stringify(d)).not.toContain("root1");
+    expect(JSON.stringify(d)).not.toContain("/w\"");
   });
 
   it("the PDF route serves only that client's issued invoices", async () => {

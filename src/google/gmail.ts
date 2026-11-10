@@ -1,5 +1,6 @@
 import { gmailAs, isMock, withRetry } from "@/google/client";
 import { env } from "@/lib/env";
+import { pushCapped } from "@/lib/capped-log";
 
 export type MailAttachment = { filename: string; mimeType: string; data: Buffer };
 
@@ -82,6 +83,8 @@ function encodeMime(opts: { to: string; from: string; replyTo?: string | null; s
 }
 
 /** Mock mode: every mail with the sender kind and the mailbox it went out from (`from`, "" when none is configured). */
+let mockMailSeq = 0;
+/** Mock mode: the most recent MOCK_LOG_LIMIT mails (capped so a long-running mock server cannot grow without bound). */
 export const sentMailLog: { to: string; subject: string; sender: MailSender; from: string; at: Date }[] = [];
 /** Mock mode: body + attachment names/sizes + headers of every mail (tests that need more than to/subject). */
 export const sentMailDetails: {
@@ -101,8 +104,9 @@ export async function sendMail(opts: SendMailOptions) {
   const sender = opts.sender ?? "default";
   const h = await senderHeaders(sender);
   if (isMock()) {
-    sentMailLog.push({ to: opts.to, subject: opts.subject, sender, from: h.mailbox, at: new Date() });
-    sentMailDetails.push({
+    mockMailSeq++;
+    pushCapped(sentMailLog, { to: opts.to, subject: opts.subject, sender, from: h.mailbox, at: new Date() });
+    pushCapped(sentMailDetails, {
       to: opts.to,
       subject: opts.subject,
       text: opts.text,
@@ -112,7 +116,7 @@ export async function sendMail(opts: SendMailOptions) {
       replyTo: h.replyTo,
       attachments: (opts.attachments ?? []).map((a) => ({ filename: a.filename, mimeType: a.mimeType, size: a.data.length })),
     });
-    return { id: `mock_mail_${sentMailLog.length}` };
+    return { id: `mock_mail_${mockMailSeq}` };
   }
   const raw = encodeMime({ ...opts, from: h.from, replyTo: h.replyTo });
   // The finance mailbox is impersonated directly (JWT subject = finance sender, gmail.send only), so the mail sits in

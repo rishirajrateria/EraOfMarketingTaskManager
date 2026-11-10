@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import type { VaultItemKind } from "@prisma/client";
 import { grantExpiresAt, grantIsActive } from "@/server/vault/access";
+import { safeHttpUrl } from "@/server/vault/url";
 
 export const VAULT_KINDS: VaultItemKind[] = ["ASSET_DRIVE_LINK", "CREDENTIAL", "SHARED_DRIVE_LINK"];
 
@@ -34,7 +35,11 @@ export type VaultItemDto = {
   notes: string | null;
   hasPassword: boolean;
   grants: GrantDto[];
+  /** "Viewed by" (Admin only, ADR 0020): who revealed this password, how often, and when last. Newest first. */
+  viewers: ViewerDto[];
 };
+
+export type ViewerDto = { userId: string; userName: string; views: number; lastViewedAt: string };
 
 export type ClientDto = { id: string; name: string; contact: string | null; email: string | null; gstNumber: string | null; address: string | null };
 export type UserOption = { id: string; name: string; role: string };
@@ -57,22 +62,37 @@ export async function listGrantableUsers(): Promise<UserOption[]> {
   });
 }
 
+/** One row per person (their latest view and count), newest first. `views` must be newest first. */
+export function summariseViews(views: { userId: string; viewedAt: Date; user: { name: string } }[]): ViewerDto[] {
+  const by = new Map<string, ViewerDto>();
+  for (const v of views) {
+    const cur = by.get(v.userId);
+    if (cur) cur.views++;
+    else by.set(v.userId, { userId: v.userId, userName: v.user.name, views: 1, lastViewedAt: v.viewedAt.toISOString() });
+  }
+  return Array.from(by.values());
+}
+
 /** Admin list: items of one client + kind with all non-revoked grants (revoked grants are hidden). */
 export async function listVaultItems(clientId: string, kind: VaultItemKind, now = new Date()): Promise<VaultItemDto[]> {
   const items = await prisma.clientVaultItem.findMany({
     where: { clientId, kind },
     orderBy: { label: "asc" },
-    include: { grants: { where: { revoked: false }, include: { user: { select: { name: true } } }, orderBy: { createdAt: "asc" } } },
+    include: {
+      grants: { where: { revoked: false }, include: { user: { select: { name: true } } }, orderBy: { createdAt: "asc" } },
+      views: { include: { user: { select: { name: true } } }, orderBy: { viewedAt: "desc" }, take: 500 },
+    },
   });
   return items.map((it) => ({
     id: it.id,
     clientId: it.clientId,
     kind: it.kind,
     label: it.label,
-    url: it.url,
+    url: safeHttpUrl(it.url),
     username: it.username,
     notes: it.notes,
     hasPassword: !!it.passwordEnc,
+    viewers: summariseViews(it.views),
     grants: it.grants.map((g) => ({
       id: g.id,
       userId: g.userId,
@@ -125,7 +145,7 @@ export async function listGrantedItems(userId: string, now = new Date()): Promis
     kindGroup.items.push({
       id: it.id,
       label: it.label,
-      url: it.url,
+      url: safeHttpUrl(it.url),
       username: it.username,
       notes: it.notes,
       hasPassword: !!it.passwordEnc,

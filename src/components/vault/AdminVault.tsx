@@ -131,6 +131,22 @@ export function AdminVault({
             <div className="mt-2">
               <RevealSecret itemId={it.id} hasPassword={it.hasPassword} />
             </div>
+            {it.hasPassword ? (
+              <div className="mt-2 border-t border-white/60 pt-2 text-xs">
+                <span className="text-[11px] font-medium uppercase text-gray-400">Viewed by</span>
+                {it.viewers.length === 0 ? <div className="text-gray-400">Nobody has revealed this password yet</div> : null}
+                <ul className="mt-1 space-y-0.5">
+                  {it.viewers.map((v) => (
+                    <li key={v.userId} className="flex justify-between gap-2">
+                      <span className="font-medium">{v.userName}</span>
+                      <span className="text-gray-500">
+                        {v.views}× · last {new Date(v.lastViewedAt).toLocaleString()}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             <div className="mt-2 border-t border-white/60 pt-2">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-medium uppercase text-gray-400">Access</span>

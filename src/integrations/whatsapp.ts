@@ -3,9 +3,13 @@
  * Mock mode (no credentials or GOOGLE_MOCK=true) records messages in `sentWhatsappLog` for tests.
  * Never throws: HTTP 4xx/5xx and network errors come back as `{ ok: false, error }`.
  */
+import { pushCapped } from "@/lib/capped-log";
+
 export type WhatsappMessage = { to: string; body: string; mediaUrl?: string | null };
 export type WhatsappResult = { ok: true; sid: string } | { ok: false; error: string };
 
+let mockWaSeq = 0;
+/** Mock mode: the most recent MOCK_LOG_LIMIT messages (capped). */
 export const sentWhatsappLog: { to: string; body: string; mediaUrl: string | null; at: Date }[] = [];
 
 function creds() {
@@ -36,8 +40,9 @@ export async function sendWhatsapp(msg: WhatsappMessage): Promise<WhatsappResult
   const to = normalizeE164(msg.to);
   if (!to) return { ok: false, error: "Invalid WhatsApp number (expected E.164, e.g. +919876543210)" };
   if (isWhatsappMock()) {
-    sentWhatsappLog.push({ to, body: msg.body, mediaUrl: msg.mediaUrl ?? null, at: new Date() });
-    return { ok: true, sid: `mock_wa_${sentWhatsappLog.length}` };
+    mockWaSeq++;
+    pushCapped(sentWhatsappLog, { to, body: msg.body, mediaUrl: msg.mediaUrl ?? null, at: new Date() });
+    return { ok: true, sid: `mock_wa_${mockWaSeq}` };
   }
   const { sid, token, from } = creds();
   if (!from) return { ok: false, error: "TWILIO_WHATSAPP_FROM is not configured" };

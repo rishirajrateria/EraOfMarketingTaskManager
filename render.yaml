@@ -1,13 +1,14 @@
 # Render blueprint — one always-on web service (Docker) + managed Postgres.
 # Real-time updates (SSE) and the inline job scheduler both need a single long-running process, which this gives.
 #
-# TEST DEPLOYMENT (default below): demo sign-in on, Google integrations mocked, sample data seeded.
-# PRODUCTION: set DEMO_LOGIN=false, SEED_DEMO=false, GOOGLE_MOCK=false and fill the Google/Twilio/VAPID vars.
+# SAFE BY DEFAULT (ADR 0020): demo sign-in off, no demo seed, real Google. The server refuses to start in production
+# without GOOGLE_MOCK=false and real secrets. For a throw-away staging / demo deployment ONLY, set DEMO_LOGIN=true,
+# SEED_DEMO=true, GOOGLE_MOCK=true and ALLOW_DEMO_IN_PRODUCTION=true (UNSAFE: never with real client data).
 services:
   - type: web
     name: eom-task-manager
     runtime: docker
-    plan: free # upgrade to "starter" for production (no spin-down, more RAM)
+    plan: starter # paid, always on (no spin-down); the inline job runner and live updates need a running process
     region: singapore
     healthCheckPath: /login
     envVars:
@@ -18,11 +19,13 @@ services:
       - key: JOBS_INLINE
         value: "true"
       - key: DEMO_LOGIN
-        value: "true"
+        value: "false"
       - key: SEED_DEMO
-        value: "true"
+        value: "false"
       - key: GOOGLE_MOCK
-        value: "true"
+        value: "false"
+      - key: ALLOW_DEMO_IN_PRODUCTION
+        value: "false"
       - key: AUTH_SECRET
         generateValue: true
       - key: VAULT_ENCRYPTION_KEY
@@ -31,7 +34,12 @@ services:
         generateValue: true
       - key: AUTH_TRUST_HOST
         value: "true"
-      # Optional for a test deployment; required for real Google sign-in and integrations:
+      # Public URLs: the site's own https address (sign-in redirects, tracking links, WhatsApp PDF links)
+      - key: AUTH_URL
+        sync: false
+      - key: PUBLIC_BASE_URL
+        sync: false
+      # Required for real Google sign-in and integrations:
       - key: AUTH_GOOGLE_ID
         sync: false
       - key: AUTH_GOOGLE_SECRET
@@ -60,5 +68,5 @@ services:
         sync: false
 databases:
   - name: eom-postgres
-    plan: free # free Postgres expires after 30 days; use "basic-256mb" for production
+    plan: basic-256mb # paid managed Postgres: daily backups + point-in-time restore (free Postgres expires after 30 days)
     region: singapore

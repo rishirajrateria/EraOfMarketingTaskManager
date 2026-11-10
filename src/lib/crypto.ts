@@ -1,11 +1,14 @@
 import { createCipheriv, createDecipheriv, randomBytes, createHash } from "crypto";
 import { env } from "@/lib/env";
+import { strictVaultKey } from "@/lib/prod-guards";
 
 /** AES-256-GCM with the application key (SPEC §11.1, §14). Never log plaintext. */
 function key(): Buffer {
   if (!env.vaultKey) throw new Error("VAULT_ENCRYPTION_KEY is not configured");
   const raw = Buffer.from(env.vaultKey, "base64");
   if (raw.length === 32) return raw;
+  // Production never silently hashes a malformed key (it would hide a typo that makes every password unrecoverable).
+  if (strictVaultKey(process.env)) throw new Error("VAULT_ENCRYPTION_KEY must be base64 of exactly 32 bytes");
   return createHash("sha256").update(env.vaultKey).digest();
 }
 
