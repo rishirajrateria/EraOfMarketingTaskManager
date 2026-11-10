@@ -1,0 +1,292 @@
+"use server";
+/**
+ * Leave flow server actions (SPEC §11.5, §9.3, §2).
+ * request → HR/Admin approve or reject → (approved) Admin shifts affected tasks;
+ * changes to an already-approved leave go through an APPROVED_CHANGE request that only Admin resolves.
+ */
+import { addDays } from "date-fns";
+import { z } from "zod";
+import type { Prisma } from "@prisma/client";
+import { prisma } from "@/lib/db";
+import { audit } from "@/lib/audit";
+import { wrap, type ActionResult } from "@/lib/action-result";
+import { bus } from "@/lib/events";
+import { adminIds, hrIds, notify } from "@/lib/notify";
+import { ForbiddenError, requireRole, requireUser } from "@/lib/rbac";
+import { safeRevalidate } from "@/lib/revalidate";
+import { getSettings } from "@/lib/settings";
+import { parseDateKey } from "@/lib/time";
+import { createEvent, deleteEvent, updateEvent } from "@/google/calendar";
+import { fromDbDate, toDbDate } from "@/server/inventory/compute";
+import { shiftTasksForLeave, tasksAffectedByLeave } from "@/server/scheduling/shift";
+import { APPROVED_LEAVE, type LeaveChangePayload } from "@/server/leave/queries";
+import { first, leaveDays, plural } from "@/lib/notification-text";
+
+/**
+ * Leave updates (ADR 0017): the employee hears "Your leave on 17–18 Oct was approved"; Admin / HR (except whoever
+ * decided) hear "Arush's leave on 17–18 Oct was approved · 2 tasks need moving". The leave is re-read here so a change
+ * that was just applied quotes the NEW dates. `alsoTell` = the requester when it isn't the owner (an HR-raised change).
+ */
+async function tellLeaveOutcome(
+  leaveId: string,
+  actorId: string,
+  kind: "LEAVE_APPROVED" | "LEAVE_REJECTED",
+  opts: { what?: string; extra?: string; body?: string; alsoTell?: string; range?: { from: string; to: string } } = {},
+) {
+  const leave = await leaveOr404(leaveId);
+  const days = opts.range ? leaveDays(opts.range.from, opts.range.to) : leaveDays(fromDbDate(leave.from), fromDbDate(leave.to));
+  const verb = kind === "LEAVE_APPROVED" ? "approved" : "declined";
+  const what = opts.what ?? "leave";
+  const common = { kind, body: opts.body, href: "/leave", exceptUserId: actorId } as const;
+  await notify({ ...common, userIds: [leave.userId], title: `Your ${what} on ${days} was ${verb}` });
+  const requester = opts.alsoTell && opts.alsoTell !== leave.userId ? opts.alsoTell : null;
+  if (requester) await notify({ ...common, userIds: [requester], title: `${first(leave.user.name)}'s ${what} on ${days} was ${verb}` });
+  const office = (await hrIds()).filter((id) => id !== leave.userId && id !== requester);
+  await notify({ kind, body: opts.body, userIds: office, exceptUserId: actorId, title: `${first(leave.user.name)}'s ${what} on ${days} was ${verb}${opts.extra ? ` · ${opts.extra}` : ""}`, href: `/requests/leave?leaveId=${leave.id}` });
+}
+
+/** Nobody decides their own leave; an HR person's leave is Admin's call alone. */
+function assertMayDecide(actor: { id: string; role: string }, leave: { userId: string; user: { role: string } }) {
+  if (leave.userId === actor.id) throw new Error("Someone else must approve your leave");
+  if (leave.user.role === "HR" && actor.role !== "ADMIN") throw new Error("Only Admin can decide HR's leave");
+}
+
+const LEAVE_PATHS = ["/leave", "/requests/leave", "/attendance", "/admin/inventory", "/dashboard", "/admin/requests"];
+
+const dateKeySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected yyyy-MM-dd");
+const rangeSchema = z
+  .object({ from: dateKeySchema, to: dateKeySchema, reason: z.string().max(1000).default("") })
+  .refine((r) => r.from <= r.to, { message: "'from' must be on or before 'to'" });
+export type LeaveRangeInput = z.input<typeof rangeSchema>;
+
+const changeSchema = z.union([z.object({ cancel: z.literal(true) }), rangeSchema]);
+export type LeaveChangeInput = z.input<typeof changeSchema>;
+
+function fmtRange(from: string, to: string) {
+  return from === to ? from : `${from} → ${to}`;
+}
+
+async function leaveOr404(leaveId: string) {
+  const leave = await prisma.leave.findUnique({ where: { id: leaveId }, include: { user: { select: { id: true, name: true, email: true, role: true } } } });
+  if (!leave) throw new Error("Leave not found");
+  return leave;
+}
+
+/** Calendar block for an approved leave: all-day span [from, to+1) in the company timezone. */
+async function createLeaveCalendarEvent(leave: { id: string; from: Date; to: Date; user: { name: string; email: string } }) {
+  const s = await getSettings();
+  try {
+    const ev = await createEvent({
+      summary: `Leave: ${leave.user.name}`,
+      start: parseDateKey(fromDbDate(leave.from), s.timezone),
+      end: addDays(parseDateKey(fromDbDate(leave.to), s.timezone), 1),
+      attendees: [leave.user.email],
+      withMeet: false,
+      requestId: `leave-${leave.id}`,
+    });
+    return ev.eventId;
+  } catch {
+    return null; // calendar is best-effort; approval must not fail because of it
+  }
+}
+
+export async function requestLeave(input: LeaveRangeInput): Promise<ActionResult<{ leaveId: string }>> {
+  return wrap(async () => {
+    const u = await requireUser();
+    const data = rangeSchema.parse(input);
+    const me = await prisma.user.findUnique({ where: { id: u.id }, select: { active: true, name: true, role: true, email: true } });
+    if (!me?.active) throw new ForbiddenError("Inactive user");
+    // Nobody is above Admin: Admin's own leave is approved on submit. HR's own leave goes to Admin only.
+    const auto = me.role === "ADMIN";
+    const leave = await prisma.$transaction(async (tx) => {
+      const l = await tx.leave.create({
+        data: { userId: u.id, from: toDbDate(data.from), to: toDbDate(data.to), reason: data.reason, ...(auto ? { status: "ADMIN_APPROVED", adminApprovedById: u.id } : {}) },
+      });
+      await tx.request.create({
+        data: { type: "LEAVE", leaveId: l.id, raisedById: u.id, targetRole: me.role === "HR" ? "ADMIN" : "HR", note: data.reason, ...(auto ? { status: "APPROVED", resolvedById: u.id, resolvedAt: new Date(), resolutionNote: "Auto-approved (Admin's own leave)" } : {}) },
+      });
+      await audit(u.id, auto ? "leave.autoApprove" : "leave.request", "Leave", l.id, null, l, tx);
+      return l;
+    });
+    if (auto) {
+      const calendarEventId = await createLeaveCalendarEvent({ ...leave, user: { name: me.name, email: me.email } });
+      if (calendarEventId) await prisma.leave.update({ where: { id: leave.id }, data: { calendarEventId } });
+      await notify({ userIds: await hrIds(), exceptUserId: u.id, kind: "LEAVE_APPROVED", title: `${first(me.name)} is on leave ${leaveDays(data.from, data.to)} · approved by Admin`, body: data.reason, href: `/requests/leave?leaveId=${leave.id}` });
+    } else {
+      await notify({
+        userIds: me.role === "HR" ? await adminIds() : await hrIds(),
+        exceptUserId: u.id,
+        kind: "LEAVE_REQUESTED",
+        title: `${first(me.name)} asked for leave on ${leaveDays(data.from, data.to)}`,
+        body: data.reason,
+        href: `/requests/leave?leaveId=${leave.id}`,
+      });
+    }
+    bus.publish({ type: "requests.changed" });
+    bus.publish({ type: "leave.changed", userId: u.id });
+    safeRevalidate(...LEAVE_PATHS);
+    return { leaveId: leave.id };
+  });
+}
+
+async function resolveLeaveRequest(tx: Prisma.TransactionClient, leaveId: string, actorId: string, status: "APPROVED" | "REJECTED", note?: string) {
+  await tx.request.updateMany({
+    where: { leaveId, type: "LEAVE", status: "OPEN" },
+    data: { status, resolvedById: actorId, resolvedAt: new Date(), resolutionNote: note },
+  });
+}
+
+export async function hrApprove(leaveId: string): Promise<ActionResult<{ status: string; affectedTasks: number }>> {
+  return wrap(async () => {
+    const actor = await requireRole("HR", "ADMIN");
+    const leave = await leaveOr404(leaveId);
+    if (leave.status !== "REQUESTED") throw new Error(`Leave is already ${leave.status}`);
+    assertMayDecide(actor, leave);
+    const status = actor.role === "ADMIN" ? "ADMIN_APPROVED" : "HR_APPROVED";
+    const calendarEventId = await createLeaveCalendarEvent(leave);
+    const updated = await prisma.$transaction(async (tx) => {
+      const l = await tx.leave.update({
+        where: { id: leaveId },
+        data: { status, calendarEventId, ...(actor.role === "ADMIN" ? { adminApprovedById: actor.id } : { hrApprovedById: actor.id }) },
+      });
+      await resolveLeaveRequest(tx, leaveId, actor.id, "APPROVED");
+      await audit(actor.id, "leave.approve", "Leave", leaveId, leave, l, tx);
+      return l;
+    });
+    const affected = await tasksAffectedByLeave(leaveId);
+    await tellLeaveOutcome(leaveId, actor.id, "LEAVE_APPROVED", { extra: affected.length ? `${plural(affected.length, "task")} to move` : "no tasks affected" });
+    bus.publish({ type: "leave.changed", userId: leave.userId });
+    bus.publish({ type: "requests.changed" });
+    safeRevalidate(...LEAVE_PATHS);
+    return { status: updated.status, affectedTasks: affected.length };
+  });
+}
+
+export async function hrReject(leaveId: string, note = ""): Promise<ActionResult<{ status: string }>> {
+  return wrap(async () => {
+    const actor = await requireRole("HR", "ADMIN");
+    const reason = z.string().max(1000).parse(note ?? "");
+    const leave = await leaveOr404(leaveId);
+    if (leave.status !== "REQUESTED") throw new Error(`Leave is already ${leave.status}`);
+    assertMayDecide(actor, leave);
+    const updated = await prisma.$transaction(async (tx) => {
+      const l = await tx.leave.update({ where: { id: leaveId }, data: { status: "REJECTED", rejectedById: actor.id } });
+      await resolveLeaveRequest(tx, leaveId, actor.id, "REJECTED", reason);
+      await audit(actor.id, "leave.reject", "Leave", leaveId, leave, l, tx);
+      return l;
+    });
+    await tellLeaveOutcome(leaveId, actor.id, "LEAVE_REJECTED", { body: reason });
+    bus.publish({ type: "leave.changed", userId: leave.userId });
+    bus.publish({ type: "requests.changed" });
+    safeRevalidate(...LEAVE_PATHS);
+    return { status: updated.status };
+  });
+}
+
+/** One-tap "Shift all affected tasks to next available slot" (SPEC §9.3). Admin only. */
+export async function shiftLeaveTasks(leaveId: string): Promise<ActionResult<{ shifted: number; remaining: number }>> {
+  return wrap(async () => {
+    const actor = await requireRole("ADMIN");
+    const leave = await leaveOr404(leaveId);
+    if (!APPROVED_LEAVE.includes(leave.status)) throw new Error("Leave is not approved");
+    const result = await shiftTasksForLeave(leaveId, actor.id);
+    // Done only when nothing is left in the leave: started tasks, meetings and protected ones are moved by hand, and
+    // until they are the leave keeps showing "needs shift" with the remaining count (ADR 0019).
+    const after = result.remaining ? leave : await prisma.leave.update({ where: { id: leaveId }, data: { tasksShiftedAt: new Date() } });
+    await audit(actor.id, "leave.shiftTasks", "Leave", leaveId, leave, { ...after, shifted: result.shifted, remaining: result.remaining });
+    if (result.shifted) {
+      const days = leaveDays(fromDbDate(leave.from), fromDbDate(leave.to));
+      const left = result.remaining ? ` · ${plural(result.remaining, "task")} to move by hand` : "";
+      await notify({ userIds: await hrIds(), exceptUserId: actor.id, kind: "LEAVE_APPROVED", title: `${first(leave.user.name)}'s leave on ${days} · ${plural(result.shifted, "task")} moved${left}`, href: `/requests/leave?leaveId=${leaveId}` });
+    }
+    bus.publish({ type: "requests.changed" });
+    safeRevalidate(...LEAVE_PATHS);
+    return { shifted: result.shifted, remaining: result.remaining };
+  });
+}
+
+/** Edit or cancel an already-approved leave → APPROVED_CHANGE request for Admin (SPEC §2). */
+export async function requestLeaveChange(leaveId: string, change: LeaveChangeInput): Promise<ActionResult<{ requestId: string }>> {
+  return wrap(async () => {
+    const u = await requireUser();
+    const payload = changeSchema.parse(change);
+    const leave = await leaveOr404(leaveId);
+    if (leave.userId !== u.id && u.role !== "HR" && u.role !== "ADMIN") throw new ForbiddenError();
+    if (!APPROVED_LEAVE.includes(leave.status)) throw new Error("Only approved leaves need a change request");
+    const open = await prisma.request.findFirst({ where: { leaveId, type: "APPROVED_CHANGE", status: "OPEN" } });
+    if (open) throw new Error("A change request is already pending");
+    const requester = await prisma.user.findUnique({ where: { id: u.id }, select: { name: true } });
+    const note = "cancel" in payload ? "Cancel leave" : `Change to ${fmtRange(payload.from, payload.to)}`;
+    const req = await prisma.request.create({
+      data: { type: "APPROVED_CHANGE", leaveId, raisedById: u.id, targetRole: "ADMIN", note, payload: payload as Prisma.InputJsonValue },
+    });
+    await audit(u.id, "leave.requestChange", "Leave", leaveId, leave, payload);
+    const own = leave.userId === u.id;
+    await notify({
+      userIds: await hrIds(),
+      exceptUserId: u.id,
+      kind: "LEAVE_REQUESTED",
+      title: `${first(requester?.name)} asked to ${"cancel" in payload ? "cancel" : "change"} ${own ? "their" : `${first(leave.user.name)}'s`} leave on ${leaveDays(fromDbDate(leave.from), fromDbDate(leave.to))}`,
+      body: note,
+      href: `/requests/leave?leaveId=${leaveId}`,
+    });
+    bus.publish({ type: "requests.changed" });
+    safeRevalidate(...LEAVE_PATHS);
+    // Nobody is above Admin: an Admin's change to their own leave applies at once.
+    if (own && u.role === "ADMIN") await applyLeaveChange({ id: u.id, role: u.role }, req.id, true);
+    return { requestId: req.id };
+  });
+}
+
+/** Admin applies (or declines) a change to an approved leave. HR cannot (SPEC §2); nobody decides their own. */
+export async function resolveLeaveChange(requestId: string, approve: boolean): Promise<ActionResult<{ status: string }>> {
+  return wrap(async () => {
+    const actor = await requireRole("ADMIN");
+    return applyLeaveChange(actor, requestId, approve, true);
+  });
+}
+
+async function applyLeaveChange(actor: { id: string; role: string }, requestId: string, approve: boolean, checkSelf = false): Promise<{ status: string }> {
+  const req = await prisma.request.findUnique({ where: { id: requestId } });
+  if (!req || req.type !== "APPROVED_CHANGE" || !req.leaveId) throw new Error("Change request not found");
+  if (req.status !== "OPEN") throw new Error("Request already resolved");
+  const leave = await leaveOr404(req.leaveId);
+  if (checkSelf && leave.userId === actor.id) throw new Error("Someone else must approve your leave");
+  const payload = req.payload as LeaveChangePayload;
+  let after = leave;
+  if (approve) {
+    if ("cancel" in payload) {
+      if (leave.calendarEventId) await deleteEvent(leave.calendarEventId).catch(() => undefined);
+      after = { ...leave, ...(await prisma.leave.update({ where: { id: leave.id }, data: { status: "REJECTED", calendarEventId: null, rejectedById: actor.id } })) };
+    } else {
+      const s = await getSettings();
+      if (leave.calendarEventId) {
+        await updateEvent(leave.calendarEventId, {
+          start: parseDateKey(payload.from, s.timezone),
+          end: addDays(parseDateKey(payload.to, s.timezone), 1),
+        }).catch(() => undefined);
+      }
+      after = {
+        ...leave,
+        ...(await prisma.leave.update({
+          where: { id: leave.id },
+          data: { from: toDbDate(payload.from), to: toDbDate(payload.to), reason: payload.reason ?? leave.reason, status: "ADMIN_APPROVED", adminApprovedById: actor.id, tasksShiftedAt: null },
+        })),
+      };
+    }
+  }
+  const status = approve ? "APPROVED" : "REJECTED";
+  await prisma.request.update({ where: { id: requestId }, data: { status, resolvedById: actor.id, resolvedAt: new Date() } });
+  await audit(actor.id, `leave.change.${status.toLowerCase()}`, "Leave", leave.id, leave, after);
+  const cancel = "cancel" in payload;
+  await tellLeaveOutcome(leave.id, actor.id, approve ? "LEAVE_APPROVED" : "LEAVE_REJECTED", {
+    what: cancel ? "leave cancellation" : "leave change",
+    body: req.note,
+    alsoTell: req.raisedById,
+    range: !approve && !cancel ? { from: payload.from, to: payload.to } : undefined, // a declined change quotes what was asked for
+  });
+  bus.publish({ type: "leave.changed", userId: leave.userId });
+  bus.publish({ type: "requests.changed" });
+  safeRevalidate(...LEAVE_PATHS);
+  return { status };
+}

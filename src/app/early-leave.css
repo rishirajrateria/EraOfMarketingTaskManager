@@ -1,0 +1,70 @@
+/* Going home early (ADR 0022, prototype `.row.shift` / `.ribbon` / `.sbanner` / `.card.bq`). Orange is reserved for
+   "Needs shifting": no task-card colour (white / green / yellow / red / purple / grey) uses it. */
+:root {
+  --shift: #f97316;
+  --ban-bg: linear-gradient(160deg, #fff7ed, #ffedd5);
+  --ban-bd: #fdba74;
+  --ban-fg: #7c2d12;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ban-bg: rgba(249, 115, 22, 0.16);
+    --ban-bd: rgba(251, 146, 60, 0.55);
+    --ban-fg: #fed7aa;
+  }
+}
+:root[data-theme="dark"] {
+  --ban-bg: rgba(249, 115, 22, 0.16);
+  --ban-bd: rgba(251, 146, 60, 0.55);
+  --ban-fg: #fed7aa;
+}
+
+/* A flagged card: orange ring + edge and the "Needs shifting" ribbon on its top edge. */
+.task-card.shift {
+  box-shadow: inset 0 0 0 1.5px var(--shift), var(--shadow);
+  padding-top: 20px;
+}
+.task-card.shift::before {
+  background: var(--shift);
+}
+.ribbon {
+  position: absolute;
+  top: 0;
+  left: 16px;
+  height: 16px;
+  line-height: 16px;
+  padding: 0 9px;
+  border-radius: 0 0 8px 8px;
+  background: var(--shift);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+/* The sticky banner: "<Name> left early · N tasks need shifting". */
+.sbanner {
+  border-radius: 16px;
+  padding: 10px 12px;
+  background: var(--ban-bg);
+  border: 1px solid var(--ban-bd);
+  color: var(--ban-fg);
+  box-shadow: var(--shadow);
+}
+.sbanner .sbic {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--shift);
+  color: #fff;
+  display: grid;
+  place-items: center;
+}
+
+/* The morning question card. */
+.card-bq {
+  border-left: 4px solid #f59e0b;
+}
