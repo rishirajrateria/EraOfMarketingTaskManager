@@ -19,6 +19,7 @@ import { ACTIVE_STATUSES } from "@/server/tasks/state";
 import { sanitizeDescription } from "@/lib/sanitize";
 import { clientGuestEmails, normaliseEmails } from "@/server/tasks/meeting";
 import { z } from "zod";
+import { createProposal, MSG_PROPOSAL } from "@/server/tasks/proposal-core";
 
 const idsSchema = z.array(z.string().min(1)).max(50);
 
@@ -49,7 +50,7 @@ async function withClientGuests(clientId: string, typed: string[]): Promise<stri
 }
 
 /** `day` is set when the start was a date only: where it landed (the UI says "<day> was full — scheduled for …"). */
-export type CreateResult = { taskId: string; slot: SlotProposal | null; day?: DayPlacement };
+export type CreateResult = { taskId: string; slot: SlotProposal | null; day?: DayPlacement; /** A Team Leader's work task: sent to Admin (ADR 0021). */ proposal?: boolean };
 
 const NO_SLOT_MESSAGE = "No available slot found in the next 60 days";
 
@@ -108,6 +109,14 @@ export async function createTask(raw: unknown): Promise<ActionResult<CreateResul
     if (forClient && user.role !== "ADMIN") throw new ForbiddenError("Only Admin adds client tasks");
     if (forClient && input.type !== "WORK") throw new Error("A client task cannot be a meeting");
     if (input.deadlineOnly && input.type === "MEETING") throw new Error("A meeting has a time — it cannot be deadline only");
+    // ADR 0021: executives book meetings only; a Team Leader's work task is a proposal until Admin approves it.
+    if (input.type === "WORK" && user.role === "EXECUTIVE") throw new ForbiddenError(MSG_PROPOSAL.execWork);
+    if (input.type === "WORK" && user.role === "TEAM_LEADER") {
+      const taskId = await createProposal(user, input);
+      void publishTaskChanged(taskId);
+      safeRevalidate("/dashboard", "/admin/requests");
+      return { taskId, slot: null, proposal: true };
+    }
     // "For client": no team, work type or hours — assigned to the creating Admin, always deadline only.
     const plan: AssignmentPlan = forClient
       ? { assigneeIds: [user.id], teamIds: [], tagIds: [], preferredAssigneeIds: [] }

@@ -52,14 +52,15 @@ export function Row({ label, children }: { label: string; children: React.ReactN
 
 const Note = ({ children }: { children: React.ReactNode }) => <span className="shrink-0 whitespace-nowrap text-[11px] font-medium text-muted">{children}</span>;
 
-type Props = { form: AddTaskForm; patch: (p: Partial<AddTaskForm>) => void; data: DashboardData };
+/** `proposal`: a Team Leader's work task goes to Admin first — no executive is picked (ADR 0021). */
+type Props = { form: AddTaskForm; patch: (p: Partial<AddTaskForm>) => void; data: DashboardData; proposal?: boolean };
 
 /**
  * TAG ROWS (ADR 0008; neutral glass since ADR 0015), top to bottom: PREFER (Admin) · WORK · TEAM (Admin) / EXEC (Team Leader) · CLIENT.
  * TEAM stays fixed directly above CLIENT; WORK and PREFER appear above it once a team is picked. They sit in the
  * add-task screen's details tray (AddTaskTray), which draws the glass behind them.
  */
-export function AddTaskGreenRows({ form, patch, data }: Props) {
+export function AddTaskGreenRows({ form, patch, data, proposal }: Props) {
   const role = data.role;
   const meeting = form.type === "MEETING";
   const workId = form.tagIds[0] ?? "";
@@ -125,7 +126,7 @@ export function AddTaskGreenRows({ form, patch, data }: Props) {
         ))}
       </Row>
     );
-  } else if (role === "TEAM_LEADER") {
+  } else if (role === "TEAM_LEADER" && !proposal) {
     const execs = specialistsFirst(data.me.teamId ? executivesOf(data, [data.me.teamId]) : [], workId);
     teamRow = (
       <Row label="Exec">

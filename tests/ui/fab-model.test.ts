@@ -12,16 +12,15 @@ describe("fab menu model", () => {
     expect(fabOrder(fabMenu("ADMIN")).map((i) => i.label)).toEqual(["Task", "Meeting", "Invoice", "Expense", "Executive", "Work type", "Team", "Team leader", "Client", "Client kit"]);
   });
 
-  it("gives Team Leaders and Executives Task + Meeting only (no separator group)", () => {
-    for (const role of ["TEAM_LEADER", "EXECUTIVE"] as const) {
-      expect(keys(role)).toEqual(["TASK", "MEETING"]);
-      expect(fabMenu(role).more).toEqual([]);
-    }
+  it("gives Team Leaders Task + Meeting and Executives Meeting only (ADR 0021; no separator group)", () => {
+    expect(keys("TEAM_LEADER")).toEqual(["TASK", "MEETING"]);
+    expect(keys("EXECUTIVE")).toEqual(["MEETING"]);
+    for (const role of ["TEAM_LEADER", "EXECUTIVE"] as const) expect(fabMenu(role).more).toEqual([]);
     expect(fabMenu("ADMIN").main.map((i) => i.key)).toEqual(["TASK", "MEETING"]);
   });
 
   it("Task / Meeting open the add-task sheet in the right mode and are the big items", () => {
-    const [task, meeting] = fabMenu("EXECUTIVE").main;
+    const [task, meeting] = fabMenu("TEAM_LEADER").main;
     expect(task.action).toEqual({ kind: "add", mode: "WORK" });
     expect(meeting.action).toEqual({ kind: "add", mode: "MEETING" });
     expect(task.main && meeting.main).toBe(true);

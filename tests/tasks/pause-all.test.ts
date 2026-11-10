@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { resetDb, seedBasics, testDb } from "../helpers/db";
 import { mockSession } from "../helpers/mock-session";
-import { createTaskAs, loadTask, settle } from "./helpers";
+import { createTaskAs, loadTask, legacyWorkAs, settle } from "./helpers";
 import { pauseAllSplit } from "@/components/dashboard/PauseAllSheet";
 
 const session = mockSession();
@@ -30,7 +30,7 @@ describe("Admin Pause all / Resume all (ADR 0015)", () => {
     session.set(admin);
     const a = await createTaskAs(client.id, [tl.id], { title: "A" });
     session.set(tl);
-    const b = await createTaskAs(client.id, [exec.id], { title: "B" });
+    const b = await legacyWorkAs(tl, client.id, [exec.id], { title: "B" });
     const lc = await import("@/server/tasks/lifecycle");
     await lc.startTask(b);
     const { pauseResumeMany } = await import("@/server/tasks/bulk");

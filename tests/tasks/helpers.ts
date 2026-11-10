@@ -47,6 +47,66 @@ export async function loadTask(id: string) {
   return testDb.task.findUniqueOrThrow({ where: { id }, include: { assignees: true, sessions: true, requests: true, recurrenceRule: true } });
 }
 
+type LegacyUser = { id: string; role: "ADMIN" | "TEAM_LEADER" | "EXECUTIVE" | "HR" | "CA"; teamId?: string | null };
+
+/**
+ * A live WORK task created by a Team Leader or Executive the way it was before ADR 0021 (a Team Leader's work task is
+ * now a proposal, and Executives create meetings only). Such rows still exist ("existing exec self-assigned tasks stay
+ * as they are"), so tests about the lifecycle, the slot finder and inventory seed them directly — placed by the real
+ * slot finder exactly as createTask placed them (Up next, a day, an explicit start, or a deadline day).
+ */
+export async function legacyWorkAs(by: LegacyUser, clientId: string, assigneeIds: string[], overrides: TaskInputOverrides = {}) {
+  const { proposeSlot } = await import("@/server/scheduling/slot");
+  const { proposeSlotOnDay } = await import("@/server/scheduling/day-slot");
+  const { getSettings } = await import("@/lib/settings");
+  const { deadlineFields } = await import("@/server/tasks/deadline");
+  const settings = await getSettings();
+  const tz = settings.timezone;
+  const minutes = overrides.allocatedMinutes ?? 60;
+  const opts = { requesterRole: by.role, requesterId: by.id };
+  let start: Date;
+  let end: Date;
+  const s = overrides.scheduledStart ?? null;
+  if (overrides.deadlineOnly) {
+    const f = deadlineFields(s!.slice(0, 10), tz, settings.workEndMinutes);
+    start = f.scheduledStart;
+    end = f.scheduledEnd;
+  } else if (s && /^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const r = await proposeSlotOnDay(assigneeIds, minutes, s, opts);
+    start = r!.slot.start;
+    end = r!.slot.end;
+  } else if (s) {
+    start = new Date(s);
+    end = overrides.scheduledEnd ? new Date(overrides.scheduledEnd) : new Date(start.getTime() + minutes * 60000);
+  } else {
+    const slot = await proposeSlot(assigneeIds, minutes, opts);
+    start = slot!.start;
+    end = slot!.end;
+  }
+  const users = await testDb.user.findMany({ where: { id: { in: assigneeIds } }, select: { teamId: true } });
+  const teamIds = overrides.teamIds ?? [...new Set(users.map((u) => u.teamId).filter((x): x is string => !!x))];
+  const tagIds = overrides.tagIds ?? [(await anyTeamWorkType()).id];
+  const selfAssigned = assigneeIds.length === 1 && assigneeIds[0] === by.id;
+  const t = await testDb.task.create({
+    data: {
+      title: overrides.title ?? "Test task",
+      clientId,
+      createdById: by.id,
+      assignedById: by.id,
+      allocatedMinutes: overrides.deadlineOnly ? 0 : minutes,
+      deadlineOnly: !!overrides.deadlineOnly,
+      scheduledStart: start,
+      scheduledEnd: end,
+      selfAssigned,
+      status: "ASSIGNED",
+      assignees: { create: assigneeIds.map((userId) => ({ userId })) },
+      teams: { create: teamIds.map((teamId) => ({ teamId })) },
+      tags: { create: tagIds.map((workTypeId) => ({ workTypeId })) },
+    },
+  });
+  return t.id;
+}
+
 /** Wait for any fire-and-forget queue processing kicked off by an action to settle. */
 export async function settle(ms = 50) {
   await new Promise((r) => setTimeout(r, ms));

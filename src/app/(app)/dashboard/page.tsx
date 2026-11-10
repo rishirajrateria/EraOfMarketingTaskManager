@@ -5,7 +5,7 @@ import { dashboardData } from "@/server/tasks/queries";
 import { Dashboard } from "@/components/dashboard/Dashboard";
 import { normaliseFilters } from "@/components/dashboard/filters";
 
-type Search = { task?: string; completed?: string; shift?: string };
+type Search = { task?: string; completed?: string; shift?: string; approve?: string };
 
 /**
  * Task dashboard (SPEC §5) for Admin / Team Leader / Executive. HR and CA have no task dashboard. The bottom nav row
@@ -22,6 +22,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       filters={normaliseFilters(prefs?.filterPrefs)}
       initialTaskId={sp.task ?? null}
       initialShiftId={sp.shift ?? null}
+      initialApproveId={user.role === "ADMIN" ? (sp.approve ?? null) : null}
       showCompleted={sp.completed === "1" || sp.completed === "true"}
       user={{ id: user.id, name: user.name ?? "", image: user.image ?? null, email: user.email ?? null, role: data.role }}
     />

@@ -100,10 +100,10 @@ describe("Admin add-task: team first, the Team Leader decides (ADR 0008)", () =>
     const legacy = await anyTeamWorkType();
     session.set(s.admin);
     expect((await create({ clientId: s.client.id, teamIds: [s.other.id], tagIds: [legacy.id] })).ok).toBe(true);
-    session.set(s.tl);
-    expect((await create({ clientId: s.client.id, assigneeIds: [s.exec.id], tagIds: [legacy.id] })).ok).toBe(true);
+    session.set(s.tl); // a Team Leader's work task is a proposal (ADR 0021): no executive picked
+    expect((await create({ clientId: s.client.id, tagIds: [legacy.id] })).ok).toBe(true);
     // …while a TL cannot use another team's work type
-    expect((await create({ clientId: s.client.id, assigneeIds: [s.exec.id], tagIds: [s.otherWork.id] })).ok).toBe(false);
+    expect((await create({ clientId: s.client.id, tagIds: [s.otherWork.id] })).ok).toBe(false);
   });
 
   it("dashboard rows carry preferredAssigneeIds and the work type id; people carry specialities", async () => {

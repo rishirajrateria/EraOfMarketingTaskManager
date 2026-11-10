@@ -16,6 +16,7 @@ export async function resolveRequest(id: string, status: "RESOLVED" | "APPROVED"
     if (r.targetRole !== user.role && user.role !== "ADMIN") throw new Error("Not your inbox");
     if (r.status !== "OPEN") throw new Error("Request is already resolved");
     // Types with dedicated actions must go through them so the domain change is actually applied.
+    if (r.type === "TASK_PROPOSAL") throw new Error("Use Approve, Edit & approve or Reject on the proposal");
     if (r.type === "FINISH" || r.type === "LEAVE" || r.type === "APPROVED_CHANGE") throw new Error(`Use the ${r.type.toLowerCase()} action for this request`);
     if (r.type === "FIX_SELF_TASK" && status !== "REJECTED") throw new Error("Approve fix requests by protecting the task");
     if (status === "APPROVED" && r.type !== "DOUBT") throw new Error("Only resolve/reject is available here");

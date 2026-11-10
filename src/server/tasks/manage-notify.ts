@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { notify } from "@/lib/notify";
 import { taskDeepLink } from "@/lib/notification-kinds";
-import { whenPhrase } from "@/lib/notification-text";
+import { first, movedToPhrase, movedToYouPhrase, whenPhrase } from "@/lib/notification-text";
 
 /** Open review / time-change requests on a task, read before an Admin edit resolves them. */
 export async function openEditableRequests(taskId: string) {
@@ -34,4 +34,23 @@ export async function tellTimeShifted(taskId: string, assigneeIds: string[], edi
   const leaders = await prisma.user.findMany({ where: { id: { in: assigneeIds } }, select: { teamLeaderId: true } });
   const ids = [...assigneeIds, ...leaders.map((l) => l.teamLeaderId).filter((x): x is string => !!x)].filter((id) => !skip.includes(id));
   await notify({ userIds: ids, exceptUserId: editorId, kind: "TASK_SHIFTED", title: `Moved to ${whenPhrase(when, new Date(), tz)}`, href: taskDeepLink(taskId), taskId });
+}
+
+/**
+ * Assign / Change person (ADR 0021): when someone else lost the task it is a move — the old person hears "Task moved
+ * to <name>" and the new one "Task moved to you · by <actor>" (TASK_REASSIGNED); a first hand-off from the Team Leader
+ * stays "Assigned to you by <actor>" (TASK_ASSIGNED). The actor never hears about their own change.
+ */
+export async function tellReassigned(taskId: string, change: { added: string[]; removed: string[]; actor: { id: string; name: string | null } }) {
+  const { added, removed, actor } = change;
+  const href = taskDeepLink(taskId);
+  const moved = removed.some((id) => id !== actor.id);
+  if (!moved) {
+    if (added.length) await notify({ userIds: added, exceptUserId: actor.id, kind: "TASK_ASSIGNED", title: `Assigned to you by ${first(actor.name)}`, href, taskId, chat: false });
+    return;
+  }
+  const people = await prisma.user.findMany({ where: { id: { in: added } }, select: { id: true, name: true } });
+  const names = added.map((id) => first(people.find((p) => p.id === id)?.name)).join(", ");
+  if (names) await notify({ userIds: removed, exceptUserId: actor.id, kind: "TASK_REASSIGNED", title: movedToPhrase(names), href, taskId, chat: false });
+  if (added.length) await notify({ userIds: added, exceptUserId: actor.id, kind: "TASK_REASSIGNED", title: movedToYouPhrase(actor.name), href, taskId, chat: false });
 }

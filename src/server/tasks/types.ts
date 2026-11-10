@@ -66,6 +66,11 @@ export type TaskRow = {
   attachments: { id: string; name: string; kind: string; url: string; durationSec: number | null }[];
   createdById: string;
   createdAt: string;
+  /**
+   * A Team Leader's proposal (ADR 0021, status PENDING_APPROVAL): who sent it and their preferred slot — a day
+   * (yyyy-MM-dd; a deadline's due day) and an optional HH:mm start. Nothing is scheduled while it waits.
+   */
+  proposal?: { byId: string; requestedDate: string | null; requestedTime: string | null } | null;
 };
 
 export type PillGroup = { key: string; label: string; items: { id: string; label: string; minutes: number; count?: number }[] };
@@ -104,6 +109,8 @@ export type DashboardFilters = {
   colours: RowColour[];
   icons: ("paused" | "doubt" | "review" | "important" | "recurring" | "restarted")[];
   row1: string | null; // team / executive / client id
+  /** Admin's PEOPLE row (ADR 0021): one assignee (a proposal: its Team Leader). */
+  row3?: string | null;
   row2: string | null; // client / work type id
   pill: string | null; // "team:<id>" | "person:<id>" | "client:<id>" | "date:today|tomorrow|b4leave|all"
   date: string | null; // yyyy-MM-dd
@@ -118,6 +125,7 @@ export const DEFAULT_FILTERS: DashboardFilters = {
   icons: [],
   row1: null,
   row2: null,
+  row3: null,
   pill: null,
   date: null,
   quick: null,

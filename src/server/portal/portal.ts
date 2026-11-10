@@ -94,7 +94,7 @@ export async function portalData(token: string, now = new Date()): Promise<Porta
   const tz = s.timezone;
   const [tasks, invoices] = await Promise.all([
     prisma.task.findMany({
-      where: { clientId: client.id, deletedAt: null, type: "WORK" },
+      where: { clientId: client.id, deletedAt: null, type: "WORK", status: { not: "PENDING_APPROVAL" } }, // proposals are internal
       select: { title: true, status: true, doubtRaised: true, type: true, scheduledStart: true, scheduledEnd: true, deadlineOnly: true, forClient: true },
       orderBy: [{ scheduledEnd: "asc" }, { createdAt: "asc" }],
       take: 500,

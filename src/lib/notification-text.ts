@@ -72,3 +72,10 @@ export const stillOffPhrase = (name: string | null | undefined, flagged: number)
 
 /** The morning question (BACK_QUESTION). */
 export const backQuestionPhrase = (name: string | null | undefined) => `Is ${first(name)} back today?`;
+/** ADR 0021 — proposals and reassignment (the feed shows the task title on its own line). */
+export const proposedPhrase = (tl: string | null | undefined) => `New proposal from ${first(tl)}`;
+export const proposalApprovedPhrase = (when: string) => `Approved · ${when} · you can now assign an executive`;
+export const proposalRejectedPhrase = (note: string) => `Rejected: ${note}`;
+export const proposalWithdrawnPhrase = (tl: string | null | undefined) => `${first(tl)} withdrew the proposal`;
+export const movedToPhrase = (names: string) => `Task moved to ${names}`;
+export const movedToYouPhrase = (actor: string | null | undefined) => `Task moved to you · by ${first(actor)}`;

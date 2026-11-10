@@ -118,8 +118,12 @@ describe("Assign executive sheet helpers", () => {
     expect(ids(assignCandidates(row({ teams: [{ id: "graphic", name: "Graphic", colour: "#000" }] }), { ...data("admin"), role: "ADMIN" }))).toEqual(["karan", "sana"]);
   });
 
-  it("pre-selects current executive assignees, else Admin's preferences", () => {
-    expect(initialPick(row({}), { people })).toEqual(["arjun"]);
-    expect(initialPick(row({ assignees: [{ id: "neha", name: "Neha Verma", avatar: null }] }), { people })).toEqual(["neha"]);
+  it("pre-selects ONE person (ADR 0021): the executive on the task, else the holder, else Admin's preference, else the TL", () => {
+    const tl = { ...data("priya"), role: "TEAM_LEADER" as const };
+    expect(initialPick(row({ assignees: [{ id: "neha", name: "Neha Verma", avatar: null }] }), tl)).toBe("neha");
+    // held by the Team Leader with an executive preference: the TL still holds it
+    expect(initialPick(row({}), tl)).toBe("priya");
+    expect(initialPick(row({ assignees: [] }), tl)).toBe("arjun");
+    expect(initialPick(row({ assignees: [], preferredAssigneeIds: [] }), tl)).toBe("priya");
   });
 });

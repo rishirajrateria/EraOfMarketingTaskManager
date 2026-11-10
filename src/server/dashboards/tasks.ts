@@ -49,7 +49,7 @@ export async function taskDashboard(p: Pick<DashParams, "team" | "client" | "per
     client: { select: { name: true } }, teams: { select: { team: { select: { id: true, name: true } } } },
   } satisfies Prisma.TaskSelect;
   const [open, done] = await Promise.all([
-    prisma.task.findMany({ where: { ...where, status: { not: "COMPLETED" } }, select }),
+    prisma.task.findMany({ where: { ...where, status: { notIn: ["COMPLETED", "PENDING_APPROVAL"] } }, select }), // proposals hold no hours
     prisma.task.findMany({
       where: { ...where, status: "COMPLETED", OR: [{ approvedAt: { gte: range.start, lt: range.end } }, { approvedAt: null, actualEnd: { gte: range.start, lt: range.end } }] },
       select,

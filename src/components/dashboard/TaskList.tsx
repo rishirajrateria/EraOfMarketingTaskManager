@@ -2,6 +2,7 @@
 import { useRef, useState } from "react";
 import type { DashboardData, TaskRow as Row } from "@/server/tasks/types";
 import { TaskRow, type RowHandlers } from "@/components/dashboard/TaskRow";
+import { ProposalRow } from "@/components/dashboard/ProposalRow";
 
 const PULL_THRESHOLD = 70;
 
@@ -54,9 +55,9 @@ export function TaskList({
         <p className="mx-2.5 my-4 rounded-2xl border border-dashed border-hair bg-glass px-5 py-10 text-center text-[13px] text-muted">No tasks match the current filters.</p>
       ) : (
         <ul className="pb-3 pt-2.5">
-          {tasks.map((t) => (
-            <TaskRow key={t.id} t={t} data={data} h={handlers} pendingDone={pendingDone?.has(t.id)} needsShift={shiftIds?.has(t.id)} />
-          ))}
+          {tasks.map((t) =>
+            t.proposal ? <ProposalRow key={t.id} t={t} data={data} h={handlers} /> : <TaskRow key={t.id} t={t} data={data} h={handlers} pendingDone={pendingDone?.has(t.id)} needsShift={shiftIds?.has(t.id)} />,
+          )}
         </ul>
       )}
     </div>

@@ -21,6 +21,12 @@ export function dockNames(role: DashboardData["role"]) {
   } as const;
 }
 
+/** Admin's PEOPLE row (ADR 0021, prototype `prow3`): Team Leaders and executives by first name. */
+export function peopleRow(data: Pick<DashboardData, "role" | "people">): { id: string; label: string }[] {
+  if (data.role !== "ADMIN") return [];
+  return data.people.filter((p) => p.role === "TEAM_LEADER" || p.role === "EXECUTIVE").map((p) => ({ id: p.id, label: p.name.trim().split(/\s+/)[0] || p.name }));
+}
+
 /** Sheet pill (the prototype's `.seg` buttons). */
 function Opt({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -93,7 +99,7 @@ export function BottomBar({
 }) {
   const [dayOpen, setDayOpen] = useState(false);
   const names = dockNames(data.role);
-  const setRow = (key: "row1" | "row2") => (id: string | null) => onChange({ ...filters, [key]: id, pill: null });
+  const setRow = (key: "row1" | "row2" | "row3") => (id: string | null) => onChange({ ...filters, [key]: id, pill: null });
   const quick = (q: NonNullable<DashboardFilters["quick"]>) => onChange({ ...filters, quick: filters.quick === q ? null : q, date: null, pill: null });
   const tray = (
     <FilterTray userId={data.me.id} label={`Filters · ${summaryCaption(data, filters)}`}>
@@ -101,6 +107,7 @@ export function BottomBar({
       <div className="bar-glass border-t border-hair pt-1">
         <FilterRow label={names.row1[1]} items={data.row1} value={filters.row1} onChange={setRow("row1")} />
         <FilterRow label={names.row2[1]} items={data.row2} value={filters.row2} onChange={setRow("row2")} />
+        {data.role === "ADMIN" ? <FilterRow label="People" items={peopleRow(data)} value={filters.row3 ?? null} onChange={setRow("row3")} /> : null}
         <div className="scrollbar-none flex h-14 items-center gap-1.5 overflow-x-auto px-3">
           <DockPill on={!!filters.date} onClick={() => setDayOpen(true)} label="Pick a date">
             <CalendarDays size={16} strokeWidth={2.25} aria-hidden />

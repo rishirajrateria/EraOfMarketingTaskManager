@@ -26,7 +26,8 @@ export function summaryGroups(data: Pick<DashboardData, "role" | "tasks" | "team
   const ctx: FilterCtx = { role: data.role, meId: data.me.id, tz: data.tz, now, nextLeaveKey: data.nextLeaveKey };
   const keys = dayKeys(now, data.tz);
   const scoped = dockFilters(f);
-  const tasks = data.tasks.filter((t) => matchesFilters(t, scoped, ctx, keys));
+  // A proposal (ADR 0021) holds no time: it never counts in the hours tiles.
+  const tasks = data.tasks.filter((t) => t.status !== "PENDING_APPROVAL" && matchesFilters(t, scoped, ctx, keys));
   /** One tile: work hours (meetings don't count as hours) + the number of open tasks. */
   const tile = (id: string, label: string, pred: (t: TaskRow) => boolean) => {
     const hit = tasks.filter(pred);
@@ -65,10 +66,12 @@ export function summaryGroups(data: Pick<DashboardData, "role" | "tasks" | "team
 const dayKey = (iso: string, tz: string) => dateKey(new Date(iso), tz);
 
 /** Caption on the right of the first group: the active dock filters ("Social · Zenith Foods · Tomorrow") or "all tasks". */
-export function summaryCaption(data: Pick<DashboardData, "row1" | "row2">, f: DashboardFilters): string {
+export function summaryCaption(data: Pick<DashboardData, "row1" | "row2"> & Partial<Pick<DashboardData, "people">>, f: DashboardFilters): string {
+  const person = f.row3 ? data.people?.find((p) => p.id === f.row3) : undefined;
   const parts = [
     f.row1 ? data.row1.find((r) => r.id === f.row1)?.label : null,
     f.row2 ? data.row2.find((r) => r.id === f.row2)?.label : null,
+    person ? first(person.name) : null,
     dayLabel(f, true),
   ].filter((x): x is string => !!x);
   return parts.length ? parts.join(" · ") : "all tasks";

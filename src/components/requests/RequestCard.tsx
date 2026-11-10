@@ -6,7 +6,8 @@ import type { FinanceNeed } from "@/server/requests/inbox";
 import { REVIEW_FIELD_NAME, isReviewField } from "@/server/tasks/review-fields";
 import { formatINRWhole } from "@/server/finance/money";
 import { clsx } from "@/lib/clsx";
-import { fmtDate, fmtDateTime } from "@/lib/time";
+import { fmtDate, fmtDateTime, fmtMinutes } from "@/lib/time";
+import { proposalWants } from "@/components/dashboard/proposal-ui";
 
 /** Leave dates are calendar days stored as UTC midnight: "17 Oct". */
 const leaveDay = (iso: string) => fmtDate(new Date(iso), "UTC", "d MMM");
@@ -20,7 +21,17 @@ export const REQUEST_LABEL: Record<string, string> = {
   FIX_SELF_TASK: "Fix self-assigned task",
   LEAVE: "Leave request",
   APPROVED_CHANGE: "Change to approved leave",
+  TASK_PROPOSAL: "Proposal",
 };
+
+/** "Repo · Graphic · 2h · wants 13 Oct 2:30 pm" (ADR 0021, prototype `proposalCard`). */
+export function proposalLine(r: RequestItem): string | null {
+  const t = r.task;
+  const p = t?.proposal;
+  if (!t || !p) return null;
+  const wants = proposalWants({ deadlineOnly: p.deadlineOnly, proposal: { byId: r.raisedBy.id, requestedDate: p.requestedDate, requestedTime: p.requestedTime } });
+  return [p.team, p.deadlineOnly ? "Deadline" : fmtMinutes(p.minutes), wants].filter(Boolean).join(" · ");
+}
 
 const FIN_KIND = {
   APPROVE: { icon: FileText, tone: "bg-[linear-gradient(150deg,#f59e0b,#d97706)]", tag: "Approve & send" },
@@ -67,9 +78,11 @@ export function RequestHead({ r, tz }: { r: RequestItem; tz: string }) {
           {r.leave.to.slice(0, 10) !== r.leave.from.slice(0, 10) ? ` → ${leaveDay(r.leave.to)}` : ""}
         </Link>
       ) : null}
+      {proposalLine(r) ? <div className="mt-0.5 text-[12.5px] text-muted">{proposalLine(r)}</div> : null}
       {r.note ? <div className="mt-0.5 text-[13px] text-ink">“{r.note}”</div> : null}
       <div className="mt-0.5 text-[11.5px] text-muted">
         from <b className="font-semibold text-ink">{r.raisedBy.name}</b>
+        {r.type === "TASK_PROPOSAL" ? " (TL) · no time held until approved" : null}
         {r.status !== "OPEN" ? <span className="font-semibold uppercase"> · {r.status.toLowerCase()}</span> : null}
       </div>
     </div>

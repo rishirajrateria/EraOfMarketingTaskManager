@@ -19,6 +19,7 @@ import { getSettings } from "@/lib/settings";
 import { dateKey } from "@/lib/time";
 import { deadlineInstant } from "@/server/tasks/deadline";
 import { z } from "zod";
+import { assertNotPending } from "@/server/tasks/proposal-core";
 
 const noteSchema = z.string().max(2000);
 const maxDay = (a: string, b: string) => (a > b ? a : b);
@@ -28,6 +29,7 @@ async function loadTask(user: SessionUser, taskId: string) {
   if (!(await canView(user, taskId))) throw new ForbiddenError("Task not visible");
   const t = await prisma.task.findUnique({ where: { id: taskId }, include: { assignees: true, recurrenceRule: true } });
   if (!t || t.deletedAt) throw new Error("Task not found");
+  assertNotPending(t); // a proposal is not live until Admin approves it (ADR 0021)
   return t;
 }
 

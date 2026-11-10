@@ -23,7 +23,8 @@ import { sanitizeDescription } from "@/lib/sanitize";
 import { getSettings } from "@/lib/settings";
 import { parseDateKey, zonedEndOfDay, zonedStartOfDay } from "@/lib/time";
 import { deadlineDay, deadlineFields } from "@/server/tasks/deadline";
-import { openEditableRequests, tellEditHandled, tellTimeShifted, timesMoved } from "@/server/tasks/manage-notify";
+import { openEditableRequests, tellEditHandled, tellReassigned, tellTimeShifted, timesMoved } from "@/server/tasks/manage-notify";
+import { assertNotPending } from "@/server/tasks/proposal-core";
 
 const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 const attachmentSchema = z.object({
@@ -37,6 +38,7 @@ const filtersSchema = z.object({
   icons: z.array(z.enum(["paused", "doubt", "review", "important", "recurring", "restarted"])).max(6),
   row1: z.string().max(64).nullable(),
   row2: z.string().max(64).nullable(),
+  row3: z.string().max(64).nullable().optional(),
   pill: z.string().max(80).nullable(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   quick: z.enum(["asc", "tomorrow", "today"]).nullable(),
@@ -53,6 +55,7 @@ export async function updateTask(raw: unknown): Promise<ActionResult<undefined>>
     const input = taskUpdateSchema.parse(raw);
     const t = await prisma.task.findUnique({ where: { id: input.id }, include: { assignees: true, teams: true, tags: true } });
     if (!t || t.deletedAt) throw new Error("Task not found");
+    if (t.status === "PENDING_APPROVAL") throw new Error("This is a proposal — use Edit & approve");
     if (t.protected && t.createdById !== user.id) throw new ForbiddenError("This task is fixed by its owner");
     // A for-client task stays Admin's own: no team, work type or other assignee.
     if (t.forClient) {
@@ -150,8 +153,10 @@ export async function updateTask(raw: unknown): Promise<ActionResult<undefined>>
 }
 
 /**
- * Long-press → Assign executive (ADR 0008). Admin: any task; Team Leader: only tasks of their own team, and only
- * people of that team. Replaces the assignees, keeps Admin's preferences, and syncs Calendar / Drive / Chat members.
+ * Long-press → Assign / Change person (ADR 0008, ADR 0021). Admin: any task; Team Leader: only tasks of their own team,
+ * and only people of that team. Replaces only the assignees who belong to the caller's team(s) — on a multi-team task
+ * the other teams' people stay (audit B1) — keeps Admin's preferences, syncs Calendar / Drive / Chat members, and tells
+ * the old and new person. A pending proposal cannot be assigned before Admin approves it.
  */
 export async function assignExecutives(taskId: string, userIds: string[]): Promise<ActionResult<{ assigneeIds: string[] }>> {
   return wrap(async () => {
@@ -161,6 +166,7 @@ export async function assignExecutives(taskId: string, userIds: string[]): Promi
     const ids = Array.from(new Set(input.userIds));
     const t = await prisma.task.findUnique({ where: { id: input.taskId }, include: { assignees: true, teams: true } });
     if (!t || t.deletedAt) throw new Error("Task not found");
+    assertNotPending(t);
     if (t.status === "COMPLETED") throw new Error("This task is already completed");
     if (t.forClient) throw new Error("A client task stays with Admin — it has no team to assign");
     const taskTeams = t.teams.map((x) => x.teamId);
@@ -174,22 +180,23 @@ export async function assignExecutives(taskId: string, userIds: string[]): Promi
     const outside = ids.filter((id) => !members.some((m) => m.id === id));
     if (outside.length) throw new ForbiddenError("Only people in this task's team can be assigned");
     const before = t.assignees.map((a) => a.userId);
+    // Only the caller's team(s) are replaced; anyone else on the task (another team, Admin) stays.
+    const kept = before.filter((id) => !members.some((m) => m.id === id));
+    const after = Array.from(new Set([...kept, ...ids]));
     await prisma.task.update({
       where: { id: t.id },
-      data: { assignedById: user.id, assignees: { deleteMany: {}, create: ids.map((userId) => ({ userId })) } },
+      data: { assignedById: user.id, assignees: { deleteMany: { userId: { notIn: kept } }, create: after.filter((id) => !kept.includes(id)).map((userId) => ({ userId })) } },
     });
-    await audit(user.id, "task.assignExecutives", "Task", t.id, { assigneeIds: before }, { assigneeIds: ids, preferredAssigneeIds: t.preferredAssigneeIds });
+    await audit(user.id, "task.assignExecutives", "Task", t.id, { assigneeIds: before }, { assigneeIds: after, preferredAssigneeIds: t.preferredAssigneeIds });
     await queueTaskPropagation(t.id); // Calendar attendees, Drive sharing, Chat members
-    const added = ids.filter((id) => id !== user.id && !before.includes(id));
-    if (added.length) {
-      await notify({ userIds: added, kind: "TASK_ASSIGNED", title: `Assigned to you by ${firstName(user.name)}`, href: taskDeepLink(t.id), taskId: t.id, chat: false });
-    }
+    const added = after.filter((id) => !before.includes(id));
+    const removed = before.filter((id) => !after.includes(id));
+    await tellReassigned(t.id, { added, removed, actor: { id: user.id, name: user.name ?? null } });
     void import("@/google/queue").then((q) => q.processPending()).catch(() => undefined);
     void publishTaskChanged(t.id);
-    const removed = before.filter((id) => !ids.includes(id));
     if (removed.length) bus.publish({ type: "task.changed", taskId: t.id, userIds: removed });
     safeRevalidate("/dashboard");
-    return { assigneeIds: ids };
+    return { assigneeIds: after };
   });
 }
 
@@ -305,7 +312,8 @@ export async function ensureTaskDriveFolder(taskId: string): Promise<ActionResul
   return wrap(async () => {
     const user = await requireUser();
     if (!(await canView(user, taskId))) throw new ForbiddenError();
-    const t = await prisma.task.findUniqueOrThrow({ where: { id: taskId }, select: { driveFolderUrl: true, forClient: true } });
+    const t = await prisma.task.findUniqueOrThrow({ where: { id: taskId }, select: { driveFolderUrl: true, forClient: true, status: true } });
+    assertNotPending(t); // a proposal gets no Drive folder until Admin approves it
     if (t.forClient) throw new Error("Client tasks have no Drive folder");
     if (t.driveFolderUrl) return { url: t.driveFolderUrl };
     const folder = await ensureTaskFolder(taskId);
@@ -328,6 +336,7 @@ export async function uploadAttachment(form: FormData): Promise<ActionResult<{ i
     if (file.size > MAX_ATTACHMENT_BYTES) throw new Error("File is larger than 20 MB");
     if (!(await canView(user, taskId))) throw new ForbiddenError();
     const t = await prisma.task.findUniqueOrThrow({ where: { id: taskId }, include: { client: true } });
+    assertNotPending(t);
     if (kind === "VOICE_NOTE" && t.type === "MEETING") throw new Error("Meetings don't take voice notes — put the agenda in the description");
     // For-client tasks have no Drive folder: their files stay in the app.
     let folderId = t.driveFolderId;
