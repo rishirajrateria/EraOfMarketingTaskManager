@@ -29,6 +29,8 @@ enum TaskStatus {
   PAUSED
   FINISH_REQUESTED
   COMPLETED
+  /// A Team Leader's work-task proposal waiting for Admin (ADR 0021): holds no time, books nothing, no Google items.
+  PENDING_APPROVAL
 }
 
 enum Priority {
@@ -73,6 +75,8 @@ enum RequestType {
   FINISH
   LEAVE
   APPROVED_CHANGE
+  /// A Team Leader's work-task proposal (ADR 0021): Approve / Edit & approve / Reject with a note.
+  TASK_PROPOSAL
 }
 
 enum RequestStatus {
@@ -228,6 +232,14 @@ enum NotificationKind {
   TDS_THRESHOLD
   /// A decision, not an update: push / email reminder only, never a feed row (ADR 0017)
   PAYMENT_DUE
+  /// ADR 0021: a Team Leader proposed a work task (to Admins)
+  TASK_PROPOSED
+  /// ADR 0021: Admin approved the proposal (to the Team Leader)
+  TASK_PROPOSAL_APPROVED
+  /// ADR 0021: Admin rejected the proposal, with a note (to the Team Leader)
+  TASK_PROPOSAL_REJECTED
+  /// ADR 0021: the task moved to another person (old and new person)
+  TASK_REASSIGNED
   GENERIC
 }
 
@@ -514,6 +526,18 @@ model Task {
   /// Meetings: Google Calendar options (reminders, guest permissions, location, busy/free, visibility, colour,
   /// all day, time zone, Meet on/off) — validated by `meetingOptionsSchema` (ADR 0012).
   meetingOptions       Json?
+  /// Proposals (ADR 0021): the Team Leader who proposed it, and Admin's decision (approve / reject + note).
+  proposedById         String?
+  proposedAt           DateTime?
+  decidedById          String?
+  decidedAt            DateTime?
+  decisionNote         String?
+  /// The Team Leader's preferred slot while pending: a day (yyyy-MM-dd, company tz; the due day of a deadline) and an
+  /// optional start time (HH:mm). Nothing is scheduled until Admin approves.
+  requestedDate        String?
+  requestedTime        String?
+  /// "Repeat this task" picked on the proposal; the rule is created on approval.
+  requestedRecurrence  Json?
   sessions             TaskSession[]
   attachments          TaskAttachment[]
   requests             Request[]

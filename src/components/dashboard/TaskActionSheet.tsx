@@ -67,11 +67,12 @@ export function TaskActionSheet({
   // Assign executive (ADR 0008): Admin on any open task, Team Leader on their own team's open tasks.
   const first = (id: string) => (data.people.find((p) => p.id === id)?.name ?? "?").split(" ")[0];
   const assignItem: Item = {
-    label: "Assign executive",
+    label: "Assign / Change person",
     onClick: act("assign"),
-    hint: t.preferredAssigneeIds.length ? `Admin prefers ${t.preferredAssigneeIds.map(first).join(", ")} · you decide` : "Pick who does this task",
+    hint: t.preferredAssigneeIds.length && role === "TEAM_LEADER" ? `Admin prefers ${t.preferredAssigneeIds.map(first).join(", ")} · you decide` : "Another executive, or back to the Team Leader",
   };
-  const canAssign = s !== "COMPLETED" && !t.forClient && (role === "ADMIN" || (role === "TEAM_LEADER" && !!data.me.teamId && t.teams.some((x) => x.id === data.me.teamId)));
+  // Work tasks only (ADR 0021): a meeting's people are its guests; a proposal is assigned only after approval.
+  const canAssign = s !== "COMPLETED" && s !== "PENDING_APPROVAL" && t.type !== "MEETING" && !t.forClient && (role === "ADMIN" || (role === "TEAM_LEADER" && !!data.me.teamId && t.teams.some((x) => x.id === data.me.teamId)));
 
   if (role === "ADMIN") {
     if (canTransition(s, "START")) items.push({ label: "Start", onClick: act("start") });

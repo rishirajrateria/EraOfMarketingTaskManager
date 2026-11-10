@@ -13,7 +13,7 @@ import { dateKey } from "@/lib/time";
 
 export async function spawnNextOccurrence(taskId: string, actorId: string | null): Promise<string | null> {
   const t = await prisma.task.findUnique({ where: { id: taskId }, include: { assignees: true, teams: true, tags: true, recurrenceRule: true } });
-  if (!t?.recurrenceRule || t.recurrenceRule.stopped) return null;
+  if (!t?.recurrenceRule || t.recurrenceRule.stopped || t.status === "PENDING_APPROVAL") return null;
   const rule = t.recurrenceRule;
   const settings = await getSettings();
   // Occurrences that already exist (the first included) — "After N times" ends the series (ADR 0010).

@@ -38,6 +38,7 @@ export function taskPeople(t: Pick<TaskRow, "teams" | "assignees" | "preferredAs
 /** Human status label for the detail sheet. */
 export function statusLabel(t: Pick<TaskRow, "status" | "overdue" | "doubtRaised" | "paused" | "type">): string {
   if (t.status === "COMPLETED") return "Completed";
+  if (t.status === "PENDING_APPROVAL") return "Waiting for Admin · no time held";
   if (t.paused) return "Paused";
   if (t.doubtRaised) return "Doubt raised";
   if (t.status === "FINISH_REQUESTED") return "Finish requested";

@@ -10,6 +10,7 @@ import {
 import { approveFinish, rejectFinish, resolveDoubt } from "@/server/tasks/lifecycle";
 import { setTaskProtected } from "@/server/tasks/manage";
 import { resolveRequest } from "@/server/requests/actions";
+import { approveProposal, rejectProposal } from "@/server/tasks/proposals";
 import type { RequestTab } from "@/server/dashboards/params";
 import { useToast } from "@/components/ui/Toast";
 import { Sheet } from "@/components/ui/Sheet";
@@ -31,10 +32,12 @@ import { clsx } from "@/lib/clsx";
 const small = "inline-flex h-9 items-center justify-center rounded-xl px-3 text-[13px] font-semibold";
 const pri = `${small} bg-primary text-primary-ink disabled:opacity-45`;
 const sec = `${small} border border-hair bg-chip text-ink disabled:opacity-45`;
+/** Approve a proposal (prototype `.btn.green`). */
+const go = `${small} bg-[#16a34a] text-white disabled:opacity-45`;
 const sectionHead = "px-4 pb-1.5 pt-3 text-[11px] font-bold uppercase tracking-[.08em] text-muted";
 const card = "mx-3 overflow-hidden rounded-[18px] border border-hair bg-glass shadow-[var(--shadow)]";
 
-type Note = { action: "reject" | "resolve"; taskId: string };
+type Note = { action: "reject" | "resolve" | "reject_proposal"; taskId: string; title?: string };
 
 const ALL_WORK: WorkFilter = { team: null, client: null };
 
@@ -106,6 +109,13 @@ export function RequestsInbox({
     const t = r.task;
     return (
       <div className="mt-2 flex flex-wrap gap-2">
+        {r.type === "TASK_PROPOSAL" && t ? (
+          <>
+            <button disabled={pending} className={go} onClick={() => run(() => approveProposal(t.id))}>Approve</button>
+            <Link href={`/dashboard?approve=${t.id}`} className={sec}>Edit &amp; approve</Link>
+            <button disabled={pending} className={`${small} border border-hair bg-chip text-[#dc2626] disabled:opacity-45 dark:text-red-400`} onClick={() => setNote({ action: "reject_proposal", taskId: t.id, title: t.title })}>Reject…</button>
+          </>
+        ) : null}
         {r.type === "FINISH" && t ? (
           <>
             <button disabled={pending} className={pri} onClick={() => run(() => approveFinish(t.id))}>Approve</button>
@@ -229,17 +239,26 @@ export function RequestsInbox({
           </div>
         ) : null}
       </div>
-      <Sheet open={!!note} onClose={() => setNote(null)} title={note?.action === "reject" ? "Reject finish" : "Resolve doubt"}>
+      <Sheet open={!!note} onClose={() => setNote(null)} title={note?.action === "reject" ? "Reject finish" : note?.action === "reject_proposal" ? `Reject · ${note.title ?? ""}` : "Resolve doubt"}>
         <div className="space-y-3 p-4">
-          <textarea className={inputCls} rows={3} placeholder="Note to the team" value={text} onChange={(e) => setText(e.target.value)} />
+          <textarea
+            className={inputCls}
+            rows={3}
+            placeholder={note?.action === "reject_proposal" ? "Note for the Team Leader (required) · e.g. Not this week" : "Note to the team"}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
           <SheetButtons>
             <button
               type="button"
-              disabled={pending}
+              disabled={pending || (note?.action === "reject_proposal" && !text.trim())}
               className={btnPrimary}
-              onClick={() => note && run(() => (note.action === "reject" ? rejectFinish(note.taskId, text) : resolveDoubt(note.taskId, text)))}
+              onClick={() =>
+                note &&
+                run(() => (note.action === "reject" ? rejectFinish(note.taskId, text) : note.action === "reject_proposal" ? rejectProposal(note.taskId, text) : resolveDoubt(note.taskId, text)))
+              }
             >
-              Confirm
+              {note?.action === "reject_proposal" ? "Reject" : "Confirm"}
             </button>
           </SheetButtons>
         </div>

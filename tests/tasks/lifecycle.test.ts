@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { resetDb, seedBasics, testDb } from "../helpers/db";
 import { mockSession } from "../helpers/mock-session";
-import { createTaskAs, loadTask, settle } from "./helpers";
+import { createTaskAs, loadTask, legacyWorkAs, settle } from "./helpers";
 
 const session = mockSession();
 
@@ -160,7 +160,7 @@ describe("task lifecycle", () => {
     const { admin, tl, exec, client, taskId: tlTask } = await setup();
     const lc = await L();
     session.set(tl);
-    const execTask = await createTaskAs(client.id, [exec.id], { title: "Exec task" });
+    const execTask = await legacyWorkAs(tl, client.id, [exec.id], { title: "Exec task" });
 
     session.set(exec);
     const foreign = await lc.raiseReviewRequest(tlTask, "REVIEW", "please");

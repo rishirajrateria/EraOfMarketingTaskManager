@@ -32,6 +32,11 @@ export const KIND_META: Record<NotificationKind, KindMeta> = {
   TASK_NOT_STARTED: T("red", "Not started", "clock"),
   TASK_PAST_END: T("red", "Past end time", "clock"),
   TASK_SHIFTED: T("blue", "Time moved", "clock"),
+  // ADR 0021: Team Leader proposals and reassignment (all in the Tasks filter, scoped by the task's team / client).
+  TASK_PROPOSED: T("blue", "Proposal", "plus"),
+  TASK_PROPOSAL_APPROVED: T("green", "Approved", "check"),
+  TASK_PROPOSAL_REJECTED: T("red", "Rejected", "bell"),
+  TASK_REASSIGNED: T("blue", "Moved", "plus"),
   INTEGRATION_FAILED: T("red", "Google sync", "bell"),
   GENERIC: T("blue", "Update", "bell"),
   LEAVE_REQUESTED: T("amber", "Leave asked", "calendar", "PEOPLE"),
@@ -88,6 +93,8 @@ export type TargetInput = {
  */
 export function notificationTarget(n: TargetInput, role: Role): string | null {
   const meta = KIND_META[n.kind];
+  // A proposal still waiting: Admin decides it in Requests → Work (ADR 0021).
+  if (n.kind === "TASK_PROPOSED" && role === "ADMIN" && n.task?.status === "PENDING_APPROVAL" && !n.task.deleted) return "/admin/requests?tab=WORK";
   if (n.taskId && n.task !== null && role !== "HR" && role !== "CA") {
     if (n.task?.deleted) return null;
     return taskDeepLink(n.taskId, { completed: n.task?.status === "COMPLETED" || COMPLETION_KINDS.includes(n.kind) });

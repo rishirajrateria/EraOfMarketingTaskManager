@@ -11,14 +11,28 @@ export type RequestItem = {
   createdAt: string;
   raisedBy: { id: string; name: string };
   /** `clientId` / `teamIds` narrow the Work tab by the task's client and team(s) (ADR 0016 addendum). */
-  task: { id: string; title: string; status: string; client: string; clientId: string; teamIds: string[] } | null;
+  task: {
+    id: string;
+    title: string;
+    status: string;
+    client: string;
+    clientId: string;
+    teamIds: string[];
+    /** TASK_PROPOSAL (ADR 0021): what the Team Leader asked for — hours (0 = deadline), team, preferred day / time. */
+    proposal?: { minutes: number; deadlineOnly: boolean; requestedDate: string | null; requestedTime: string | null; team: string | null };
+  } | null;
   leave: { id: string; userName: string; from: string; to: string; status: string } | null;
   payload: unknown;
 };
 
 const include = {
   raisedBy: { select: { id: true, name: true } },
-  task: { select: { id: true, title: true, status: true, clientId: true, client: { select: { name: true } }, teams: { select: { teamId: true } } } },
+  task: {
+    select: {
+      id: true, title: true, status: true, clientId: true, allocatedMinutes: true, deadlineOnly: true, requestedDate: true, requestedTime: true,
+      client: { select: { name: true } }, teams: { select: { teamId: true, team: { select: { name: true } } } },
+    },
+  },
   leave: { select: { id: true, from: true, to: true, status: true, user: { select: { name: true } } } },
 } satisfies Prisma.RequestInclude;
 
@@ -32,7 +46,17 @@ function toItem(r: Prisma.RequestGetPayload<{ include: typeof include }>): Reque
     createdAt: r.createdAt.toISOString(),
     raisedBy: r.raisedBy,
     task: r.task
-      ? { id: r.task.id, title: r.task.title, status: r.task.status, client: r.task.client.name, clientId: r.task.clientId, teamIds: r.task.teams.map((t) => t.teamId) }
+      ? {
+          id: r.task.id,
+          title: r.task.title,
+          status: r.task.status,
+          client: r.task.client.name,
+          clientId: r.task.clientId,
+          teamIds: r.task.teams.map((t) => t.teamId),
+          ...(r.type === "TASK_PROPOSAL"
+            ? { proposal: { minutes: r.task.allocatedMinutes, deadlineOnly: r.task.deadlineOnly, requestedDate: r.task.requestedDate, requestedTime: r.task.requestedTime, team: r.task.teams[0]?.team.name ?? null } }
+            : {}),
+        }
       : null,
     leave: r.leave ? { id: r.leave.id, userName: r.leave.user.name, from: r.leave.from.toISOString(), to: r.leave.to.toISOString(), status: r.leave.status } : null,
     payload: r.payload,

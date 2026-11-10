@@ -6,7 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetDb, seedBasics, testDb } from "../helpers/db";
 import { mockSession } from "../helpers/mock-session";
-import { createTaskAs, settle } from "../tasks/helpers";
+import { legacyWorkAs, settle } from "../tasks/helpers";
 import { dateKey, parseDateKey, zonedDayAt } from "@/lib/time";
 import { toDbDate } from "@/server/inventory/compute";
 import type { Interval } from "@/lib/working-time";
@@ -32,10 +32,10 @@ async function inventoryRow(userId: string, key: string) {
   return inv.rows[0];
 }
 
-/** Up next for the Executive, created by their Team Leader through the real createTask action. */
+/** Up next for the Executive, placed for their Team Leader by the real slot finder (a live pre-ADR 0021 work task). */
 async function upNext(minutes: number) {
   session.set(seed.tl);
-  const id = await createTaskAs(seed.client.id, [seed.exec.id], { allocatedMinutes: minutes });
+  const id = await legacyWorkAs(seed.tl, seed.client.id, [seed.exec.id], { allocatedMinutes: minutes });
   return testDb.task.findUniqueOrThrow({ where: { id } });
 }
 

@@ -21,6 +21,7 @@ import { FindTimeSheet } from "@/components/tasks/FindTimeSheet";
 import { clientGuestFields, findTimeDay, guestCount, meetingShortcut, meetingTz, voiceNotesFor } from "@/components/tasks/meeting-helpers";
 import type { VoiceNote } from "@/components/tasks/VoiceRecorder";
 import { OffDayWarning, useOffDayWarnings } from "@/components/tasks/OffDayWarning";
+import { PROPOSAL_SUBMIT } from "@/components/dashboard/proposal-ui";
 import {
   EMPTY_LOADS,
   allowedAssignees,
@@ -100,7 +101,8 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
   useEffect(() => {
     if (!open) return;
     // The "+" speed dial: Task opens a task, Meeting opens a meeting; the Task | Meeting switch changes it later.
-    const type: TaskMode = mode === "MEETING" ? "MEETING" : "WORK";
+    // Executives book meetings only (ADR 0021).
+    const type: TaskMode = mode === "MEETING" || data.role === "EXECUTIVE" ? "MEETING" : "WORK";
     setChosen(type);
     setForm(emptyForm(type, data.me.id, data.role));
     setVoiceNotes([]);
@@ -155,9 +157,11 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
   // The day is read in `zone` (meetings: their own), like the server does on Save; a refusal shows in place of the time.
   const [preview, setPreview] = useState<SlotPreview | null>(null);
   const kind: TaskKind = kindOf({ type: chosen ?? "WORK", forClient: form.forClient });
+  // A Team Leader's work task is a proposal (ADR 0021): no executive, no slot preview, nothing booked until approved.
+  const proposal = data.role === "TEAM_LEADER" && kind === "WORK";
   // A deadline blocks no time: nothing to preview.
   const previewDay = isDateOnly(form.scheduledStart) && !isDeadline({ ...form, type: chosen ?? "WORK" }) && !(meeting && form.meeting?.allDay) ? form.scheduledStart : "";
-  const previewIds = effectiveAssignees({ ...form, type: chosen ?? "WORK" }, data).join(",");
+  const previewIds = proposal ? "" : effectiveAssignees({ ...form, type: chosen ?? "WORK" }, data).join(",");
   const previewMinutes = hoursToMinutes(form.hours);
   useEffect(() => {
     setPreview(null);
@@ -239,7 +243,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
     setBusy("saving");
     try {
       const live = { ...form, type: chosen };
-      const res = await createTask(toTaskInput({ ...live, assigneeIds: effectiveAssignees(live, data) }, data.tz));
+      const res = await createTask(toTaskInput({ ...live, assigneeIds: proposal ? [] : effectiveAssignees(live, data) }, data.tz));
       if (!res.ok) {
         toast(res.error, "err");
         setErrors(errorsFromMessage(res.error));
@@ -247,9 +251,10 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
       }
       // A date-only start that did not fit on that day: say where it went instead of a plain "Task created".
       const fallback = dayFallbackToast(res.data, zone);
-      if (fallback) toast(fallback, "ok", { ms: 6000 });
+      if (res.data.proposal) toast("Sent to Admin for approval · nothing is booked until approved", "ok", { ms: 5000 });
+      else if (fallback) toast(fallback, "ok", { ms: 6000 });
       else toast(meeting ? "Meeting scheduled" : live.forClient ? "Client task added · shows on their tracking link" : isDeadline(live) ? "Task created · no time blocked" : "Task created");
-      await uploadAll(res.data.taskId);
+      if (!res.data.proposal) await uploadAll(res.data.taskId);
       voiceNotes.forEach((n) => URL.revokeObjectURL(n.url));
       close();
       router.refresh();
@@ -285,7 +290,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
         <div className="flex h-full min-h-full flex-col" style={{ background: "var(--aurora), var(--bg)" }}>
           <AddTaskHeader loads={loads} teamName={headerName} />
           <AddTaskBody
-            header={<TypeSwitch type={chosen ? kind : null} onType={choose} disabled={!!busy} clientTasks={data.role === "ADMIN"} />}
+            header={<TypeSwitch type={chosen ? kind : null} onType={choose} disabled={!!busy} clientTasks={data.role === "ADMIN"} tasks={data.role !== "EXECUTIVE"} />}
             form={liveForm}
             patch={patch}
             titleError={errors.title}
@@ -304,6 +309,8 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
             onError={(m) => toast(m, "err")}
             onToast={(m) => toast(m)}
             formError={formError}
+            submitLabel={proposal ? PROPOSAL_SUBMIT : undefined}
+            noAttachments={proposal}
           />
           <OffDayWarning messages={offDay} className="mx-3 mb-1" />
           <AddTaskTray
@@ -313,6 +320,7 @@ export function AddTaskSheet({ open: openProp, mode: modeProp, onClose, data }: 
             type={chosen ? kind : null}
             tz={zone}
             preview={preview}
+            proposal={proposal}
             onShortcut={setShortcut}
             onOpenSchedule={() => setScheduleOpen(true)}
             onOpenDeadline={() => setDeadlineOpen(true)}

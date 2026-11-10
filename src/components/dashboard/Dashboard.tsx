@@ -30,6 +30,11 @@ import { FLASH_MS, OPEN_AFTER_MS, planDeepLink, strippedDashboardUrl } from "@/c
 import { pauseResumeMany } from "@/server/tasks/bulk";
 import { requestPillReview, resolvePillReview, withdrawPillReview } from "@/server/tasks/review";
 import { REVIEW_FIELD_NAME, type ReviewField } from "@/server/tasks/review-fields";
+import { approveProposal, rejectProposal, withdrawProposal } from "@/server/tasks/proposals";
+import { ProposalActionSheet, type ProposalAction } from "@/components/dashboard/ProposalActionSheet";
+import { ApproveEditSheet } from "@/components/dashboard/ApproveEditSheet";
+import { proposerName } from "@/components/dashboard/proposal-ui";
+import { approvedToast } from "@/components/dashboard/proposal-toast";
 
 const SAVE_DEBOUNCE_MS = 800;
 /**
@@ -40,12 +45,15 @@ export function Dashboard({
   data,
   filters: initialFilters,
   initialTaskId,
+  initialApproveId = null,
   showCompleted,
   user,
 }: {
   data: DashboardData;
   filters: DashboardFilters;
   initialTaskId: string | null;
+  /** `?approve=<id>` (Requests → Edit & approve, ADR 0021): opens the Edit & approve form. */
+  initialApproveId?: string | null;
   showCompleted: boolean;
   user: TopBarUser;
 }) {
@@ -67,6 +75,14 @@ export function Dashboard({
   const [pillNote, setPillNote] = useState<{ taskId: string; field: ReviewField } | null>(null);
   const [pauseAllOpen, setPauseAllOpen] = useState(false);
   const [contact, setContact] = useState<{ taskId: string; mode: ContactMode } | null>(null);
+  // Proposals (ADR 0021): the long-press menu, the reject note and the Edit & approve form.
+  const [propMenuId, setPropMenuId] = useState<string | null>(null);
+  const [rejectId, setRejectId] = useState<string | null>(null);
+  const [approveId, setApproveId] = useState<string | null>(initialApproveId);
+  useEffect(() => {
+    if (!initialApproveId) return;
+    window.history.replaceState(window.history.state, "", strippedDashboardUrl(window.location.pathname, window.location.search));
+  }, [initialApproveId]);
 
   const byId = useMemo(() => new Map(data.tasks.map((t) => [t.id, t])), [data.tasks]);
   const tasks = useMemo(() => applyFilters(data.tasks, filters, { role: data.role, meId: data.me.id, tz: data.tz, nextLeaveKey: data.nextLeaveKey }), [data, filters]);
@@ -186,6 +202,25 @@ export function Dashboard({
   );
 
   const onRetry = useCallback((t: TaskRow) => void run(retryIntegrations(t.id), "Retrying Google integrations"), [run]);
+  // A proposal has its own menu (Approve / Edit & approve / Reject · Withdraw).
+  const openMenu = useCallback((t: TaskRow) => (t.proposal ? setPropMenuId(t.id) : setActionId(t.id)), []);
+  const approve = useCallback(
+    async (t: TaskRow) => {
+      const res = await run(approveProposal(t.id), "");
+      if (res) toast(approvedToast(res, !!t.deadlineOnly, data.tz));
+    },
+    [run, toast, data.tz],
+  );
+  const onProposal = useCallback(
+    (a: ProposalAction, t: TaskRow) => {
+      if (a === "approve") return void approve(t);
+      if (a === "edit_approve") return setApproveId(t.id);
+      if (a === "reject") return setRejectId(t.id);
+      if (a === "withdraw") return void run(withdrawProposal(t.id), "Proposal withdrawn");
+      setDetailId(t.id);
+    },
+    [approve, run],
+  );
 
   const onAction = useCallback(
     (a: SimpleAction, t: TaskRow) => {
@@ -289,7 +324,10 @@ export function Dashboard({
             setDetailId(t.id);
             setScrollToAttachments(true);
           },
-          onLongPress: (t) => setActionId(t.id),
+          onLongPress: openMenu,
+          onApprove: (t) => void approve(t),
+          onEditApprove: (t) => setApproveId(t.id),
+          onReject: (t) => setRejectId(t.id),
           onCircle,
           onRestart,
           onRetry,
@@ -304,7 +342,7 @@ export function Dashboard({
         data={data}
         open={!!detailTask}
         onClose={() => setDetailId(null)}
-        onActions={(t) => setActionId(t.id)}
+        onActions={openMenu}
         onOpenTask={(id) => {
           if (byId.has(id)) setDetailId(id);
           else router.push(`/dashboard?task=${id}&completed=1`);
@@ -354,6 +392,22 @@ export function Dashboard({
       <DeleteTaskSheet task={deleteId ? byId.get(deleteId) ?? null : null} open={!!deleteId} busy={busy} onConfirm={confirmDelete} onClose={() => setDeleteId(null)} />
       <AssignExecutiveSheet task={assignId ? byId.get(assignId) ?? null : null} data={data} open={!!assignId} busy={busy} onClose={() => setAssignId(null)} onAssign={assign} />
       <EditTaskSheet task={editId ? byId.get(editId) ?? null : null} data={data} open={!!editId} onClose={() => setEditId(null)} />
+      <ProposalActionSheet task={propMenuId ? byId.get(propMenuId) ?? null : null} data={data} open={!!propMenuId} onClose={() => setPropMenuId(null)} onAction={onProposal} />
+      <NoteSheet
+        open={!!rejectId && byId.has(rejectId)}
+        title={rejectId ? `Reject · ${byId.get(rejectId)?.title ?? ""}` : ""}
+        placeholder={`Note for ${rejectId && byId.get(rejectId) ? proposerName(byId.get(rejectId)!, data.people) : "the Team Leader"} (required) · e.g. Not this week, please bundle with the reels task`}
+        submitLabel="Reject"
+        busy={busy}
+        onSubmit={async (text) => {
+          const t = rejectId ? byId.get(rejectId) : undefined;
+          if (!t) return;
+          const res = await run(rejectProposal(t.id, text), `Rejected · ${proposerName(t, data.people)} is notified`);
+          if (res !== null) setRejectId(null);
+        }}
+        onClose={() => setRejectId(null)}
+      />
+      {data.role === "ADMIN" ? <ApproveEditSheet task={approveId ? byId.get(approveId) ?? null : null} data={data} open={!!approveId && !!byId.get(approveId)?.proposal} onClose={() => setApproveId(null)} /> : null}
       <AddTaskSheet open={addMode !== null} mode={addMode} onClose={() => setAddMode(null)} data={data} />
     </div>
   );

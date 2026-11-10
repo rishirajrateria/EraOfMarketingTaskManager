@@ -5,7 +5,7 @@
  * client), tapping the picked pill again returns to All, and the selection rides in the URL (?team=&client=) next to
  * ?show=. The filter runs in the database, before the row limit (`scopeWhere`). HR and CA get no rows.
  */
-import type { Prisma, Role } from "@prisma/client";
+import type { NotificationKind, Prisma, Role } from "@prisma/client";
 import type { FeedFilter } from "@/lib/notification-kinds";
 
 export type FeedScope = { team: string | null; client: string | null };
@@ -100,3 +100,10 @@ export function scopeWhere(scope: FeedScope, matches: { taskIds: readonly string
   if (!scope.team && matches.invoiceIds.length) or.push({ taskId: null, invoiceId: { in: [...matches.invoiceIds] } });
   return { OR: or };
 }
+
+/**
+ * ADR 0021: proposal and reassignment updates are task notifications like any other — in the Tasks filter and scoped
+ * by the task's team and client. A rejected or withdrawn proposal is kept (soft-deleted), so its rows still filter by
+ * the team and client it was proposed for (the lookups above do not skip deleted tasks).
+ */
+export const PROPOSAL_FEED_KINDS = ["TASK_PROPOSED", "TASK_PROPOSAL_APPROVED", "TASK_PROPOSAL_REJECTED", "TASK_REASSIGNED"] as const satisfies readonly NotificationKind[];

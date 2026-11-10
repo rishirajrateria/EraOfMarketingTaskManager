@@ -123,8 +123,9 @@ export async function planAssignment(
   const assigneeIds = unique(input.assigneeIds);
   if (!assigneeIds.length) throw new Error("At least one assignee is required");
   await validate(assigneeIds, input.type);
-  const teamIds = unique(input.teamIds.length ? input.teamIds : user.teamId ? [user.teamId] : []);
-  if (work) await assertWorkType(tagIds, user.teamId ? [user.teamId] : []);
+  // Team Leader / Executive work is always their own team's (audit B2): any other teamIds are ignored.
+  const teamIds = user.teamId ? [user.teamId] : [];
+  if (work) await assertWorkType(tagIds, teamIds);
   return { assigneeIds, teamIds, tagIds, preferredAssigneeIds: [] };
 }
 

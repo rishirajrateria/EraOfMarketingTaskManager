@@ -5,6 +5,7 @@
  * reviewed (dot gone, request resolved) or flags a pill himself. All actions are idempotent.
  */
 import { z } from "zod";
+import { assertNotPending } from "@/server/tasks/proposal-core";
 import { prisma } from "@/lib/db";
 import { requireUser, can, ForbiddenError, type SessionUser } from "@/lib/rbac";
 import { wrap, type ActionResult } from "@/lib/action-result";
@@ -24,6 +25,7 @@ async function loadFor(user: SessionUser, taskId: string) {
   if (!(await canView(user, taskId))) throw new ForbiddenError("Task not visible");
   const t = await prisma.task.findUnique({ where: { id: taskId }, select: { id: true, title: true, status: true, deletedAt: true, reviewFields: true, reviewRequested: true, assignees: { select: { userId: true } } } });
   if (!t || t.deletedAt) throw new Error("Task not found");
+  assertNotPending(t);
   return t;
 }
 

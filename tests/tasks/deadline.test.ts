@@ -3,7 +3,7 @@ import { addDays } from "date-fns";
 import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
 import { resetDb, seedBasics, testDb } from "../helpers/db";
 import { mockSession } from "../helpers/mock-session";
-import { anyTeamWorkType, createTaskAs, loadTask, settle } from "./helpers";
+import { anyTeamWorkType, createTaskAs, loadTask, legacyWorkAs, settle } from "./helpers";
 import { deadlineDay, deadlineInstant } from "@/server/tasks/deadline";
 
 const session = mockSession();
@@ -68,7 +68,7 @@ describe("deadline-only tasks", () => {
     const { admin, tl, exec, client, team } = await seedBasics();
     session.set(tl);
     const day = workingDayAhead(2);
-    const id = await createTaskAs(client.id, [exec.id], { deadlineOnly: true, scheduledStart: day, allocatedMinutes: 480 });
+    const id = await legacyWorkAs(tl, client.id, [exec.id], { deadlineOnly: true, scheduledStart: day, allocatedMinutes: 480 });
     expect((await loadTask(id)).allocatedMinutes).toBe(0);
 
     // busy time: the deadline is not a block; the day's first free slot is still the start of the working day

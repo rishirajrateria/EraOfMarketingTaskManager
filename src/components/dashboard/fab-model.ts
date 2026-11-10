@@ -45,9 +45,13 @@ const ADMIN_MORE: FabItem[] = [
   listItem("KIT", "Client kit", "client", KeyRound),
 ];
 
-/** Team Leaders and Executives get Task + Meeting only; Admin also gets the create shortcuts. */
+/**
+ * Team Leaders get Task + Meeting; Executives Meeting only (ADR 0021: they no longer create work tasks); Admin also
+ * gets the create shortcuts.
+ */
 export function fabMenu(role: DashboardData["role"]): FabMenu {
-  return { main: MAIN, more: role === "ADMIN" ? ADMIN_MORE : [] };
+  const main = role === "EXECUTIVE" ? MAIN.filter((i) => i.key === "MEETING") : MAIN;
+  return { main, more: role === "ADMIN" ? ADMIN_MORE : [] };
 }
 
 /** Every item bottom → top (the DOM / focus order). */

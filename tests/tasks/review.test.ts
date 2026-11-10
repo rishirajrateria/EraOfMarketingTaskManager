@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { resetDb, seedBasics, testDb } from "../helpers/db";
 import { mockSession } from "../helpers/mock-session";
-import { createTaskAs, settle } from "./helpers";
+import { createTaskAs, legacyWorkAs, settle } from "./helpers";
 import { REVIEW_FIELD_NAME, fieldForKind, isReviewField, reviewFieldsOf, withField } from "@/server/tasks/review-fields";
 import { pillReviewItems } from "@/components/dashboard/PillReviewSheet";
 
@@ -94,7 +94,7 @@ describe("review per pill — actions", () => {
   it("Executives: own tasks only; the inbox's Mark resolved clears that pill's dot only", async () => {
     const { admin, tl, exec, client } = await seedBasics();
     session.set(tl);
-    const own = await createTaskAs(client.id, [exec.id]);
+    const own = await legacyWorkAs(tl, client.id, [exec.id]);
     session.set(admin);
     const other = await createTaskAs(client.id, [tl.id]);
     const r = await R();

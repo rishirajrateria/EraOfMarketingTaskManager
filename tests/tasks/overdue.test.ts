@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { resetDb, seedBasics, testDb } from "../helpers/db";
 import { mockSession } from "../helpers/mock-session";
-import { createTaskAs, loadTask, settle } from "./helpers";
+import { createTaskAs, loadTask, legacyWorkAs, settle } from "./helpers";
 
 const session = mockSession();
 const H = 3_600_000;
@@ -149,8 +149,8 @@ describe("jobs/overdue", () => {
   it("a started task gets only 'Still not finished', once, after its end; done from their side gets nothing", async () => {
     const { admin, tl, exec, client } = await seedBasics();
     session.set(tl); // Admin assigns executives only through their Team Leader (ADR 0008)
-    const id = await createTaskAs(client.id, [exec.id], { title: "running", scheduledStart: new Date(Date.now() + 1 * H).toISOString() });
-    const done = await createTaskAs(client.id, [exec.id], { title: "done", scheduledStart: new Date(Date.now() + 1 * H).toISOString() });
+    const id = await legacyWorkAs(tl, client.id, [exec.id], { title: "running", scheduledStart: new Date(Date.now() + 1 * H).toISOString() });
+    const done = await legacyWorkAs(tl, client.id, [exec.id], { title: "done", scheduledStart: new Date(Date.now() + 1 * H).toISOString() });
     const { startTask, requestFinish } = await import("@/server/tasks/lifecycle");
     await startTask(id);
     await startTask(done);

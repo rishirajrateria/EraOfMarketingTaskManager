@@ -177,9 +177,10 @@ export function registerTaskIntegrationHandlers() {
 }
 
 /** "For client" tasks (something needed from the client) skip every Google integration. */
+/** For-client tasks never get Google items; a pending proposal gets none until Admin approves it (ADR 0021). */
 async function isForClient(taskId: string, tx?: Parameters<typeof enqueue>[4]): Promise<boolean> {
-  const t = await (tx ?? prisma).task.findUnique({ where: { id: taskId }, select: { forClient: true } });
-  return !!t?.forClient;
+  const t = await (tx ?? prisma).task.findUnique({ where: { id: taskId }, select: { forClient: true, status: true } });
+  return !!t?.forClient || t?.status === "PENDING_APPROVAL";
 }
 
 /**

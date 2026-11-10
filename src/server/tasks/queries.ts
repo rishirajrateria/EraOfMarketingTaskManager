@@ -85,6 +85,7 @@ export function toRow(t: TaskWithRelations, opts: { hideClientContact?: boolean 
     })),
     createdById: t.createdById,
     createdAt: t.createdAt.toISOString(),
+    proposal: t.status === "PENDING_APPROVAL" ? { byId: t.proposedById ?? t.createdById, requestedDate: t.requestedDate, requestedTime: t.requestedTime } : null,
   };
 }
 
@@ -95,6 +96,8 @@ export function scopeWhere(user: SessionUser): Prisma.TaskWhereInput {
   if (user.role === "TEAM_LEADER") {
     return {
       forClient: false,
+      // A proposal (ADR 0021) is seen by the Team Leader who sent it (and Admin) only.
+      AND: [{ OR: [{ status: { not: "PENDING_APPROVAL" } }, { proposedById: user.id }] }],
       OR: [
         { assignees: { some: { userId: user.id } } },
         { assignees: { some: { user: { teamLeaderId: user.id } } } },
@@ -118,7 +121,10 @@ export async function listTasks(user: SessionUser, opts: { includeCompleted?: bo
     orderBy: [{ scheduledStart: "asc" }, { createdAt: "desc" }],
     take: 500,
   });
-  return rows.map((t) => toRow(t, { hideClientContact: hidesClientContact(user.role) }));
+  const out = rows.map((t) => toRow(t, { hideClientContact: hidesClientContact(user.role) }));
+  // Proposals (ADR 0021) have no time: they lead the list, newest first, like the prototype's unshift.
+  const proposals = out.filter((t) => t.proposal).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return proposals.length ? [...proposals, ...out.filter((t) => !t.proposal)] : out;
 }
 
 export async function getTaskRow(user: SessionUser, id: string): Promise<TaskRow | null> {

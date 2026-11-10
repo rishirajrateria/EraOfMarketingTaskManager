@@ -10,7 +10,8 @@ import { addKeyDays, type AvailabilityConfig, type PersonDay } from "@/server/av
 import { loadAvailability, loadPeople, type Availability } from "@/server/availability/load";
 
 /** Booked work: open work tasks with time (a deadline-only task books no hours; a meeting is busy time, not hours). */
-export const BOOKED_TASK_WHERE = { deletedAt: null, type: "WORK" as const, deadlineOnly: false, status: { not: "COMPLETED" as const } };
+/** A pending proposal (ADR 0021) books nothing until Admin approves it. */
+export const BOOKED_TASK_WHERE = { deletedAt: null, type: "WORK" as const, deadlineOnly: false, status: { notIn: ["COMPLETED" as const, "PENDING_APPROVAL" as const] } };
 
 export type BookedTask = { id: string; allocatedMinutes: number; scheduledStart: Date | null; scheduledEnd: Date | null };
 export type BookedRow = { taskId: string; userId: string; day: string; minutes: number };

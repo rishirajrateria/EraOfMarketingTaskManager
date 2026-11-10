@@ -18,10 +18,10 @@ export function planDeepLink(taskId: string | null, known: ReadonlySet<string>, 
   return { kind: "open", flash: shown.has(taskId) };
 }
 
-/** The URL after the deep link is consumed: `task` / `completed` / `edit` are dropped, anything else is kept. */
+/** The URL after the deep link is consumed: `task` / `completed` / `edit` / `approve` are dropped, anything else is kept. */
 export function strippedDashboardUrl(pathname: string, search: string): string {
   const q = new URLSearchParams(search);
-  for (const k of ["task", "completed", "edit"]) q.delete(k);
+  for (const k of ["task", "completed", "edit", "approve"]) q.delete(k);
   const s = q.toString();
   return `${pathname}${s ? `?${s}` : ""}`;
 }

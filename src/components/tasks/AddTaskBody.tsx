@@ -35,6 +35,10 @@ type Props = {
   onToast: (message: string) => void;
   /** A missing team / work type / client / invitee, shown next to Save (ADR 0015 removed the summary card). */
   formError?: string;
+  /** The Save button's text (a Team Leader's work task: "Send to Admin", ADR 0021). */
+  submitLabel?: string;
+  /** A proposal holds no files or voice notes until Admin approves it (ADR 0021): hide them. */
+  noAttachments?: boolean;
 };
 
 /**
@@ -44,7 +48,7 @@ type Props = {
  * "Goes to …" card (owner's revision, ADR 0015).
  */
 export function AddTaskBody(p: Props) {
-  const { header, form, patch, titleError, hoursError, canPickAssignees, onOpenAssignees, onOpenOptions, guestCount = 0, onOpenRepeat, onSubmit, voiceNotes, setVoiceNotes, files, setFiles, busy, onError, onToast, formError } = p;
+  const { header, form, patch, titleError, hoursError, canPickAssignees, onOpenAssignees, onOpenOptions, guestCount = 0, onOpenRepeat, onSubmit, voiceNotes, setVoiceNotes, files, setFiles, busy, onError, onToast, formError, submitLabel, noAttachments } = p;
   const editor = useRef<RichTextEditorHandle>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const meeting = form.type === "MEETING";
@@ -92,9 +96,11 @@ export function AddTaskBody(p: Props) {
             </ChipButton>
           </>
         ) : null}
-        <ChipButton onClick={() => fileInput.current?.click()} label="Attach files">
-          📎 Files{files.length ? ` · ${files.length}` : ""}
-        </ChipButton>
+        {noAttachments ? null : (
+          <ChipButton onClick={() => fileInput.current?.click()} label="Attach files">
+            📎 Files{files.length ? ` · ${files.length}` : ""}
+          </ChipButton>
+        )}
         <input ref={fileInput} type="file" multiple hidden onChange={(e) => setFiles([...files, ...Array.from(e.target.files ?? [])])} />
       </div>
 
@@ -115,7 +121,7 @@ export function AddTaskBody(p: Props) {
       {hoursError ? <span className="mt-1 block text-[11px] text-red-500">{hoursError}</span> : null}
 
       {/* Meetings take no voice note: the description is the agenda (ADR 0012). */}
-      {meeting ? null : <VoiceNoteRecorder notes={voiceNotes} onChange={setVoiceNotes} disabled={disabled} onError={onError} onAttached={() => onToast("Voice note attached")} />}
+      {meeting || noAttachments ? null : <VoiceNoteRecorder notes={voiceNotes} onChange={setVoiceNotes} disabled={disabled} onError={onError} onAttached={() => onToast("Voice note attached")} />}
 
       {files.length ? (
         <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Files">
@@ -155,7 +161,7 @@ export function AddTaskBody(p: Props) {
           aria-busy={disabled}
           className={clsx("pointer-events-auto h-10 rounded-full bg-primary px-[22px] text-sm font-semibold text-primary-ink shadow-[0_8px_24px_rgba(0,0,0,.2)] disabled:opacity-60", disabled && "animate-pulse")}
         >
-          {busy === "saving" ? "Saving…" : busy === "uploading" ? "Uploading…" : meeting ? "Schedule" : "Save"}
+          {busy === "saving" ? "Saving…" : busy === "uploading" ? "Uploading…" : meeting ? "Schedule" : (submitLabel ?? "Save")}
         </button>
       </div>
     </section>

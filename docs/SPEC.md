@@ -47,6 +47,10 @@ Four roles: **Admin**, **Team Leader**, **Executive**, **HR**.
 | Client vault access | ✔ + whoever Admin grants | granted only | granted only | ✖ |
 | Invoice/finance read access for CA | Admin grants a "CA" read-only user | | | |
 
+> Superseded in part by ADR 0021: a Team Leader's work task is a proposal until Admin approves it (no executive is
+> picked before approval; executives are assigned afterwards from "Assign / Change person"), and Executives create
+> meetings only.
+
 Admin's own self-assigned tasks can never be overlapped or moved by anyone. Team Leader / Executive self-assigned tasks may be overlapped or rescheduled by their superior; if the owner wants such a task protected/fixed, they raise a request to Admin.
 
 Every approval-changing action follows: **anything that was already approved can only be changed with Admin approval**.

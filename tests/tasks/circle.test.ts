@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { resetDb, seedBasics, testDb } from "../helpers/db";
 import { mockSession } from "../helpers/mock-session";
-import { createTaskAs, loadTask, settle } from "./helpers";
+import { createTaskAs, loadTask, legacyWorkAs, settle } from "./helpers";
 
 const session = mockSession();
 
@@ -50,8 +50,8 @@ describe("completeFromMySide — the card's completion circle (ADR 0015)", () =>
   it("Executive: own task only; paused tasks don't change", async () => {
     const { admin, tl, exec, client } = await seedBasics();
     session.set(tl);
-    const own = await createTaskAs(client.id, [exec.id]);
-    const notMine = await createTaskAs(client.id, [tl.id]);
+    const own = await legacyWorkAs(tl, client.id, [exec.id]);
+    const notMine = await legacyWorkAs(tl, client.id, [tl.id]);
     const { completeFromMySide, pauseTask } = await import("@/server/tasks/lifecycle");
     session.set(exec);
     const denied = await completeFromMySide(notMine);

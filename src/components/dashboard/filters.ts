@@ -63,6 +63,11 @@ function matchesRow1(t: TaskRow, id: string, role: FilterCtx["role"]): boolean {
   return t.client.id === id;
 }
 
+/** Admin's PEOPLE row (ADR 0021): the task's assignee — a proposal counts as its Team Leader's. */
+export function matchesPerson(t: TaskRow, id: string): boolean {
+  return t.proposal ? t.proposal.byId === id : t.assignees.some((a) => a.id === id);
+}
+
 function matchesRow2(t: TaskRow, id: string, role: FilterCtx["role"]): boolean {
   if (role === "EXECUTIVE") return t.tags.some((x) => x.id === id);
   return t.client.id === id;
@@ -101,6 +106,7 @@ export function matchesFilters(t: TaskRow, f: DashboardFilters, ctx: FilterCtx, 
   if (f.icons.length && !f.icons.some((i) => hasIcon(t, i))) return false;
   if (f.row1 && !matchesRow1(t, f.row1, ctx.role)) return false;
   if (f.row2 && !matchesRow2(t, f.row2, ctx.role)) return false;
+  if (f.row3 && ctx.role === "ADMIN" && !matchesPerson(t, f.row3)) return false;
   if (f.pill && !matchesPill(t, f.pill, ctx, keys)) return false;
   if (f.date && startKey(t, ctx.tz) !== f.date) return false;
   if (f.quick === "today" && startKey(t, ctx.tz) !== keys.today) return false;
@@ -146,6 +152,7 @@ export function normaliseFilters(raw: unknown): DashboardFilters {
     icons: list(r.icons, ICONS) as DashboardFilters["icons"],
     row1: strOrNull(r.row1),
     row2: strOrNull(r.row2),
+    row3: strOrNull(r.row3),
     pill: strOrNull(r.pill),
     date: typeof r.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(r.date) ? r.date : null,
     quick: quick && QUICK.has(quick) ? (quick as DashboardFilters["quick"]) : null,
@@ -167,6 +174,7 @@ export function activeFilterCount(f: DashboardFilters): number {
   if (f.icons.length) n++;
   if (f.row1) n++;
   if (f.row2) n++;
+  if (f.row3) n++;
   if (f.pill) n++;
   if (f.date) n++;
   if (f.quick) n++;

@@ -8,6 +8,7 @@ import { deadlinePill, detailsCaption, whenCaption, type SlotPreview } from "@/c
 import { AddTaskGreenRows, TagPill } from "@/components/tasks/AddTaskRows";
 import { MeetIcon } from "@/components/dashboard/GoogleIcons";
 import { MinimisableTray } from "@/components/dashboard/FilterTray";
+import { PROPOSAL_SENT } from "@/components/dashboard/proposal-ui";
 
 export type Shortcut = "upnext" | "tomorrow" | "today";
 
@@ -30,17 +31,19 @@ function TypeButton({ on, onClick, disabled, children }: { on: boolean; onClick:
 }
 
 /**
- * Task | For client | Meeting (prototype `.typeseg`, ADR 0016 addendum): a small segmented switch at the top of the
+ * Task | For client | Meeting (prototype `.typeseg`; Executives get Meeting only, ADR 0021, ADR 0016 addendum): a small segmented switch at the top of the
  * form, above the title; the + speed dial picks the starting one. "For client" (Admin only, `tClientBtn`) is something
  * needed FROM the client: no team, work type or hours — just the client and the day it is needed by.
  */
-export function TypeSwitch({ type, onType, disabled, clientTasks }: { type: TaskKind | null; onType: (type: TaskKind) => void; disabled?: boolean; clientTasks?: boolean }) {
+export function TypeSwitch({ type, onType, disabled, clientTasks, tasks = true }: { type: TaskKind | null; onType: (type: TaskKind) => void; disabled?: boolean; clientTasks?: boolean; tasks?: boolean }) {
   return (
     <div role="group" aria-label="Type" className="mb-2.5 inline-flex max-w-full gap-1 self-start overflow-x-auto rounded-[14px] border border-hair bg-chip p-[3px] [scrollbar-width:none]">
-      <TypeButton on={type === "WORK"} onClick={() => onType("WORK")} disabled={disabled}>
-        <ListTodo size={18} strokeWidth={2.2} aria-hidden className={type === "WORK" ? "text-[var(--nav-on)]" : undefined} />
-        Task
-      </TypeButton>
+      {tasks ? (
+        <TypeButton on={type === "WORK"} onClick={() => onType("WORK")} disabled={disabled}>
+          <ListTodo size={18} strokeWidth={2.2} aria-hidden className={type === "WORK" ? "text-[var(--nav-on)]" : undefined} />
+          Task
+        </TypeButton>
+      ) : null}
       {clientTasks ? (
         <TypeButton on={type === "CLIENT"} onClick={() => onType("CLIENT")} disabled={disabled}>
           <Building2 size={18} strokeWidth={2.2} aria-hidden className={type === "CLIENT" ? "text-[#2563eb] dark:text-[#93c5fd]" : undefined} />
@@ -82,7 +85,7 @@ function DeadlinePill({ form, onClick }: { form: AddTaskForm; onClick: () => voi
  * under the pills once the server's preview is in (ADR 0010 addendum). Deadline (not for meetings) picks a "done by"
  * day with no time; a client task has only "Needed by…".
  */
-function TimeRow({ form, type, tz, preview, onShortcut, onOpenSchedule, onOpenDeadline }: { form: AddTaskForm; type: TaskKind | null; tz: string; preview?: SlotPreview | null; onShortcut: (kind: Shortcut) => void; onOpenSchedule: () => void; onOpenDeadline: () => void }) {
+function TimeRow({ form, type, tz, preview, proposal, onShortcut, onOpenSchedule, onOpenDeadline }: { form: AddTaskForm; type: TaskKind | null; tz: string; preview?: SlotPreview | null; proposal?: boolean; onShortcut: (kind: Shortcut) => void; onOpenSchedule: () => void; onOpenDeadline: () => void }) {
   // Meetings: Today / Tomorrow mark the chosen day (the START row sets the time); tasks: the shortcut's day, no time.
   const startIs = (kind: "tomorrow" | "today") =>
     type === "MEETING" ? isShortcutDay(kind, form.scheduledStart, new Date(), tz) : !!form.scheduledStart && form.scheduledStart === shortcutStart(kind, new Date(), tz);
@@ -116,12 +119,17 @@ function TimeRow({ form, type, tz, preview, onShortcut, onOpenSchedule, onOpenDe
         )}
         {type === "MEETING" ? null : <DeadlinePill form={form} onClick={onOpenDeadline} />}
       </div>
-      {deadline ? (
+      {proposal ? (
+        <p data-proposal-caption className="-mt-2 truncate px-3 pb-2 text-[12px] font-medium text-muted" aria-live="polite">
+          {PROPOSAL_SENT}
+        </p>
+      ) : null}
+      {deadline && !proposal ? (
         <p data-deadline-caption className="-mt-2 truncate px-3 pb-2 text-[12px] text-muted" aria-live="polite">
           {whenCaption(form, new Date(), tz, null)}
         </p>
       ) : null}
-      {dayOnly ? (
+      {dayOnly && !proposal ? (
         <p data-slot-preview className={clsx("-mt-2 truncate px-3 pb-2 text-[12px]", preview?.error ? "text-red-600" : "text-muted")} aria-live="polite">
           {whenCaption(form, new Date(), tz, preview)}
           {preview?.day?.requestedDay === form.scheduledStart ? "" : "…"}
@@ -144,6 +152,7 @@ export function AddTaskTray({
   type,
   tz,
   preview,
+  proposal,
   onShortcut,
   onOpenSchedule,
   onOpenDeadline,
@@ -156,6 +165,8 @@ export function AddTaskTray({
   tz: string;
   /** The server's next free time for a date-only start (debounced `previewSlot`), null while unknown. */
   preview?: SlotPreview | null;
+  /** A Team Leader's work task (ADR 0021): no executive row, "Sent to Admin for approval …" instead of the slot preview. */
+  proposal?: boolean;
   onShortcut: (kind: Shortcut) => void;
   onOpenSchedule: () => void;
   onOpenDeadline: () => void;
@@ -163,8 +174,8 @@ export function AddTaskTray({
   return (
     <MinimisableTray kind="details" userId={data.me.id} label={detailsCaption(form, data, new Date(), tz, preview)}>
       <div className="strip-glass pt-1">
-        <AddTaskGreenRows form={form} patch={patch} data={data} />
-        <TimeRow form={form} type={type} tz={tz} preview={preview} onShortcut={onShortcut} onOpenSchedule={onOpenSchedule} onOpenDeadline={onOpenDeadline} />
+        <AddTaskGreenRows form={form} patch={patch} data={data} proposal={proposal} />
+        <TimeRow form={form} type={type} tz={tz} preview={preview} proposal={proposal} onShortcut={onShortcut} onOpenSchedule={onOpenSchedule} onOpenDeadline={onOpenDeadline} />
       </div>
     </MinimisableTray>
   );

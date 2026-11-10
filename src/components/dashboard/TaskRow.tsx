@@ -11,6 +11,8 @@ import { CompletionCircle, DateHoursPills, IconBtn, TimePill, stop } from "@/com
 import type { ReviewField } from "@/server/tasks/review-fields";
 import { WhatsAppIcon } from "@/components/shell/TopIcons";
 import type { ContactMode } from "@/components/dashboard/contacts";
+import { personChip } from "@/components/dashboard/proposal-ui";
+import { PERSON_CHIP } from "@/components/dashboard/ProposalRow";
 
 export type RowHandlers = {
   onOpen: (t: Row) => void;
@@ -24,6 +26,10 @@ export type RowHandlers = {
   onPillMenu: (t: Row, field: ReviewField) => void;
   /** Phone / WhatsApp / Email icons → the contact sheet (who depends on the viewer's role, ADR 0017). */
   onContact: (t: Row, mode: ContactMode) => void;
+  /** Admin's proposal pills (ADR 0021): Approve · Edit & approve · Reject…. */
+  onApprove?: (t: Row) => void;
+  onEditApprove?: (t: Row) => void;
+  onReject?: (t: Row) => void;
 };
 
 /** Opens a URL in a new tab. (For URLs resolved asynchronously — see openDrive — the tab is opened first so popup blockers allow it.) */
@@ -53,6 +59,8 @@ export function TaskRow({ t, data, h, pendingDone }: { t: Row; data: DashboardDa
   const meetDisabled = !t.meetLink || !t.meetActive;
   const team = teamChipLabel(t.teams);
   const hasVoice = t.attachments.some((a) => a.kind === "VOICE_NOTE");
+  // Admin sees who holds it (ADR 0021): the executive, or the Team Leader until one is picked.
+  const person = data.role === "ADMIN" && !t.forClient ? personChip(t, data.people) : "";
 
   const openDrive = async () => {
     if (t.driveFolderUrl) return openExternal(t.driveFolderUrl);
@@ -141,6 +149,11 @@ export function TaskRow({ t, data, h, pendingDone }: { t: Row; data: DashboardDa
           ) : team ? (
             <span className={TEAM_CHIP} title={t.teams.map((x) => x.name).join(", ")}>
               {team}
+            </span>
+          ) : null}
+          {person ? (
+            <span className={PERSON_CHIP} title={`Assigned to ${person}`}>
+              {person}
             </span>
           ) : null}
         </div>

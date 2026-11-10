@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { resetDb, seedBasics, testDb } from "../helpers/db";
 import { mockSession } from "../helpers/mock-session";
-import { createTaskAs, settle } from "../tasks/helpers";
+import { createTaskAs, legacyWorkAs, settle } from "../tasks/helpers";
 
 const session = mockSession();
 const H = 3_600_000;
@@ -18,8 +18,8 @@ describe("notifications feed (ADR 0017)", () => {
   it("start: late vs on time, to Admin + the team's TL, never to the one who started it", async () => {
     const { admin, tl, exec, client } = await seedBasics();
     session.set(tl);
-    const late = await createTaskAs(client.id, [exec.id], { title: "late one", scheduledStart: new Date(Date.now() - 2 * H).toISOString() });
-    const early = await createTaskAs(client.id, [exec.id], { title: "early one", scheduledStart: new Date(Date.now() + 2 * H).toISOString() });
+    const late = await legacyWorkAs(tl, client.id, [exec.id], { title: "late one", scheduledStart: new Date(Date.now() - 2 * H).toISOString() });
+    const early = await legacyWorkAs(tl, client.id, [exec.id], { title: "early one", scheduledStart: new Date(Date.now() + 2 * H).toISOString() });
     const { startTask } = await import("@/server/tasks/lifecycle");
     session.set(admin);
     expect((await startTask(late)).ok).toBe(true);
@@ -37,7 +37,7 @@ describe("notifications feed (ADR 0017)", () => {
   it("completed late: assignees + TL hear 'Completed · n min late'; done from their side reaches Admin", async () => {
     const { admin, tl, exec, client } = await seedBasics();
     session.set(tl);
-    const id = await createTaskAs(client.id, [exec.id], { title: "report", scheduledStart: new Date(Date.now() - 2 * H).toISOString() });
+    const id = await legacyWorkAs(tl, client.id, [exec.id], { title: "report", scheduledStart: new Date(Date.now() - 2 * H).toISOString() });
     await testDb.task.update({ where: { id }, data: { scheduledEnd: new Date(Date.now() - 30 * 60_000) } });
     const lc = await import("@/server/tasks/lifecycle");
     session.set(exec);

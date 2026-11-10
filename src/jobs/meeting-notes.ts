@@ -31,7 +31,7 @@ export function unfiledArtifacts(artifacts: Meet.MeetArtifact[], filedDocIds: It
 export async function run(now = new Date()): Promise<MeetingNotesResult> {
   const since = new Date(now.getTime() - LOOKBACK_DAYS * 24 * 60 * 60_000);
   const tasks = await prisma.task.findMany({
-    where: { deletedAt: null, meetSpaceName: { not: null }, scheduledStart: { lte: now }, scheduledEnd: { gte: since } },
+    where: { deletedAt: null, status: { not: "PENDING_APPROVAL" }, meetSpaceName: { not: null }, scheduledStart: { lte: now }, scheduledEnd: { gte: since } },
     select: { id: true, meetSpaceName: true, scheduledEnd: true, meetingNotes: { select: { docId: true } } },
     orderBy: { scheduledEnd: "desc" },
     take: MAX_TASKS,
