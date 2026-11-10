@@ -44,7 +44,7 @@ const CLIENT_TASK_CHIP = `${CHIP_SHAPE} border border-transparent bg-[linear-gra
  * + hours pills / icons · the scheduled time (tap it for the actual start / finish). No people on the card — they are in (i).
  * Right-click (desktop), long-press (phone) or Shift+F10 / the context-menu key opens the action menu.
  */
-export function TaskRow({ t, data, h, pendingDone }: { t: Row; data: DashboardData; h: RowHandlers; pendingDone?: boolean }) {
+export function TaskRow({ t, data, h, pendingDone, needsShift }: { t: Row; data: DashboardData; h: RowHandlers; pendingDone?: boolean; needsShift?: boolean }) {
   const toast = useToast();
   const [driveBusy, setDriveBusy] = useState(false);
   const press = useLongPress(() => h.onLongPress(t), () => h.onOpen(t));
@@ -83,10 +83,12 @@ export function TaskRow({ t, data, h, pendingDone }: { t: Row; data: DashboardDa
           h.onLongPress(t);
         }
       }}
-      className={clsx("no-select task-card", `row-${t.colour}`)}
+      className={clsx("no-select task-card", `row-${t.colour}`, needsShift && "shift")}
       data-task-id={t.id}
-      aria-label={t.title}
+      data-needs-shift={needsShift ? "" : undefined}
+      aria-label={needsShift ? `${t.title} · Needs shifting` : t.title}
     >
+      {needsShift ? <span className="ribbon">Needs shifting</span> : null}
 
       {/* Row 1: title (2 lines max) + badges · the circle top-right */}
       <div className="flex items-start gap-2">

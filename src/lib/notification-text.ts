@@ -60,3 +60,15 @@ export function leaveDays(fromKey: string, toKey: string): string {
 }
 
 export const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+/** "3 tasks need shifting" / "1 task needs shifting" / "no tasks to shift" (ADR 0022). */
+export const needShifting = (n: number) => (n ? `${plural(n, "task")} need${n === 1 ? "s" : ""} shifting` : "no tasks to shift");
+
+/** "Arush left early · 3 tasks need shifting" — the EARLY_LEAVE feed row and the dashboard banner (ADR 0022). */
+export const earlyLeftPhrase = (name: string | null | undefined, flagged: number) => `${first(name)} left early · ${needShifting(flagged)}`;
+
+/** "Arush still off · 2 tasks need shifting" — after "Still off" on the morning question. */
+export const stillOffPhrase = (name: string | null | undefined, flagged: number) => `${first(name)} still off · ${needShifting(flagged)}`;
+
+/** The morning question (BACK_QUESTION). */
+export const backQuestionPhrase = (name: string | null | undefined) => `Is ${first(name)} back today?`;

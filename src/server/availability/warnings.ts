@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { loadAvailability } from "@/server/availability/load";
 import type { AvailabilityConfig, DayKind } from "@/server/availability/day-status";
 
-const OFF: DayKind[] = ["OFF_WEEKLY", "HOLIDAY", "LEAVE", "ABSENT"];
+const OFF: DayKind[] = ["OFF_WEEKLY", "HOLIDAY", "LEAVE", "ABSENT", "AWAY"];
 
 export type OffDayWarning = { userId: string; name: string; kind: DayKind; message: string };
 

@@ -37,6 +37,8 @@ export const KIND_META: Record<NotificationKind, KindMeta> = {
   LEAVE_REQUESTED: T("amber", "Leave asked", "calendar", "PEOPLE"),
   LEAVE_APPROVED: T("amber", "Leave approved", "calendar", "PEOPLE"),
   LEAVE_REJECTED: T("amber", "Leave declined", "calendar", "PEOPLE"),
+  EARLY_LEAVE: T("amber", "Left early", "calendar", "PEOPLE"),
+  BACK_QUESTION: T("amber", "Back today?", "calendar", "PEOPLE"),
   VAULT_ACCESS_GRANTED: T("blue", "Vault access", "bell", "PEOPLE"),
   VAULT_ACCESS_EXPIRING: T("amber", "Vault access", "bell", "PEOPLE"),
   INVOICE_SENT: T("blue", "Invoice sent", "rupee", "MONEY"),
@@ -98,8 +100,19 @@ export function notificationTarget(n: TargetInput, role: Role): string | null {
     if (role === "HR") return n.href?.startsWith("/requests/leave") ? n.href : "/requests/leave";
     return "/leave";
   }
+  if (n.kind === "EARLY_LEAVE" || n.kind === "BACK_QUESTION") return earlyLeaveTarget(n.kind, role);
   if (n.taskId) return null; // HR / CA: task links lead nowhere
   return n.href && n.href !== "/" ? n.href : null;
+}
+
+/**
+ * Going home early (ADR 0022): Admin shifts the flagged tasks from the dashboard banner and answers the morning
+ * question at the top of Requests; HR sees both on Attendance.
+ */
+export function earlyLeaveTarget(kind: "EARLY_LEAVE" | "BACK_QUESTION", role: Role): string | null {
+  if (role === "ADMIN") return kind === "EARLY_LEAVE" ? "/dashboard" : "/admin/requests";
+  if (role === "HR") return "/attendance";
+  return null;
 }
 
 /** "Today" / "Yesterday" / "8 Oct" (another year: "8 Oct 2025") in the company timezone. */

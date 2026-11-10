@@ -12,6 +12,12 @@ import { STATUS_ORDER, STATUS_STYLE } from "@/components/attendance/status";
 import { MarkAttendanceSheet, type MarkTarget } from "@/components/attendance/MarkAttendanceSheet";
 
 const WEEKDAY = ["S", "M", "T", "W", "T", "F", "S"];
+/** Going home early (ADR 0022): orange "E" on the leaving day, "AW" on later covered days. */
+const AWAY_STYLE = (status: string) => ({
+  letter: status === "ABSENT" ? "AW" : "E",
+  label: status === "ABSENT" ? "Away" : "Left early",
+  cls: "border border-[var(--ban-bd)] bg-[var(--ban-bg)] text-[var(--ban-fg)]",
+});
 
 /**
  * Monthly attendance screen. With `canMark` (HR/Admin) each cell opens the marking sheet; otherwise the
@@ -24,6 +30,7 @@ export function AttendanceGrid({
   filterUsers,
   selectedUserId,
   hint,
+  today = null,
 }: {
   grid: MonthGrid;
   /** HR/Admin: tapping a cell opens the marking sheet. */
@@ -33,6 +40,8 @@ export function AttendanceGrid({
   selectedUserId?: string;
   /** One-line explanation shown under the title. */
   hint: string;
+  /** HR / Admin: the Today panel (going home early, ADR 0022) above the month. */
+  today?: React.ReactNode;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -87,6 +96,7 @@ export function AttendanceGrid({
 
   return (
     <Screen header={<ScreenHeader title="Attendance" subtitle={`${grid.label} · ${hint}`} />} zone={zone}>
+      {today}
       <section className="glass mx-3 my-3 rounded-2xl p-3">
       <div className="overflow-x-auto">
         <table className="border-separate border-spacing-0.5 text-[10px]">
@@ -107,8 +117,8 @@ export function AttendanceGrid({
                 <td className="sticky left-0 whitespace-nowrap bg-white/80 pr-2 text-xs backdrop-blur-md">{u.name}</td>
                 {grid.days.map((d) => {
                   const c = grid.cells[u.id]?.[d.key];
-                  const style = c ? STATUS_STYLE[c.status] : null;
-                  const title = c ? `${style?.label}${c.warning ? ` · Warning: ${c.warning}` : ""}${c.checkIn ? ` · in ${c.checkIn}` : ""}${c.checkOut ? ` · out ${c.checkOut}` : ""}${c.note ? ` · ${c.note}` : ""}` : d.key;
+                  const style = c ? (c.away ? AWAY_STYLE(c.status) : STATUS_STYLE[c.status]) : null;
+                  const title = c ? `${c.away ?? style?.label}${c.warning ? ` · Warning: ${c.warning}` : ""}${c.checkIn ? ` · in ${c.checkIn}` : ""}${c.checkOut ? ` · out ${c.checkOut}` : ""}${c.note ? ` · ${c.note}` : ""}` : d.key;
                   const cellCls = clsx(
                     "flex h-6 w-6 items-center justify-center rounded font-bold", c?.warning && "ring-2 ring-red-500",
                     style ? style.cls : d.working ? "bg-white/50 text-gray-400" : "bg-gray-300/50 text-gray-500",
@@ -149,6 +159,10 @@ export function AttendanceGrid({
             {STATUS_STYLE[s].label}
           </span>
         ))}
+        <span className="inline-flex items-center gap-1">
+          <span className={`rounded px-1 font-bold ${AWAY_STYLE("PRESENT").cls}`}>E</span>
+          Left early · AW away
+        </span>
         <span className="inline-flex items-center gap-1">
           <span className="rounded bg-gray-300/50 px-2 py-0.5" /> non-working
         </span>

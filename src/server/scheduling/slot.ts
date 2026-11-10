@@ -14,10 +14,11 @@ import { taskDeepLink } from "@/lib/notification-kinds";
 import { audit } from "@/lib/audit";
 import { ACTIVE_STATUSES } from "@/server/tasks/state";
 import { addKeyDays, type AvailabilityConfig } from "@/server/availability/day-status";
-import { loadWorld, type World } from "@/server/availability/booked";
+import { loadWorld, type BookedRow, type World } from "@/server/availability/booked";
 import { APPROVED_LEAVE_STATUSES, leaveKeys } from "@/server/availability/load";
 import { fromDbDate, toDbDate } from "@/server/inventory/compute";
 import { findAvailableSlot, slotDays } from "@/server/scheduling/finder";
+import { unmovableReason, type UnmovableReason } from "@/server/scheduling/unmovable";
 
 /**
  * The company's working-time config. Holidays are `@db.Date` columns: read with `fromDbDate` (the same conversion
@@ -50,6 +51,11 @@ export type BusyOptions = {
   requesterRole: "ADMIN" | "TEAM_LEADER" | "EXECUTIVE" | "HR" | "CA";
   requesterId: string;
   excludeTaskId?: string;
+  /**
+   * Placements not yet saved (a dry-run plan, ADR 0022): extra busy time and booked minutes, so a plan of several moves
+   * places each after the ones before it exactly as applying them one by one would.
+   */
+  extra?: { hard: Interval[]; booked: BookedRow[] };
 };
 
 /**
@@ -103,7 +109,7 @@ export type BusyTimeline = { hard: Interval[]; soft: { id: string; start: Date; 
  * of them.
  */
 export async function collectBusy(assigneeIds: string[], from: Date, to: Date, opts: BusyOptions, cfg: AvailabilityConfig): Promise<BusyTimeline> {
-  const hard: Interval[] = [];
+  const hard: Interval[] = [...(opts.extra?.hard ?? [])];
   const soft: BusyTimeline["soft"] = [];
   for (const id of assigneeIds) {
     const b = await busyFor(id, from, to, opts);
@@ -112,6 +118,7 @@ export async function collectBusy(assigneeIds: string[], from: Date, to: Date, o
   }
   const tz = cfg.timezone;
   const world = await loadWorld(assigneeIds, dateKey(from, tz), dateKey(to, tz), cfg, { excludeTaskId: opts.excludeTaskId });
+  if (opts.extra?.booked.length) world.booked.push(...opts.extra.booked);
   return { hard, soft, world };
 }
 
@@ -146,21 +153,13 @@ export async function shiftDisplacedTasks(taskIds: string[], actorId: string) {
   for (const id of taskIds) await shiftTaskToNextSlot(id, actorId, "Your self-assigned task was moved to make room for a task assigned by your superior.");
 }
 
-/** Why a task is never moved automatically: it is under way, a meeting, or fixed. */
-export type UnmovableReason = "started" | "meeting" | "protected";
-
-export function unmovableReason(t: { status: string; type: string; protected: boolean }): UnmovableReason | null {
-  if (t.type === "MEETING") return "meeting";
-  if (t.status === "STARTED") return "started";
-  if (t.protected) return "protected";
-  return null;
-}
+export { UNMOVABLE_LABEL, unmovableReason, type UnmovableReason } from "@/server/scheduling/unmovable";
 
 /**
  * Moves one task to the next slot. Never touches started tasks, meetings, protected or deadline-only ones.
  * `notBefore`: search from there (default now); if nothing is found from there, from now as a last resort.
  */
-export async function shiftTaskToNextSlot(taskId: string, actorId: string, reason: string, opts: { notBefore?: Date } = {}) {
+export async function shiftTaskToNextSlot(taskId: string, actorId: string, reason: string, opts: { notBefore?: Date; exceptActor?: boolean } = {}) {
   const task = await prisma.task.findUnique({
     where: { id: taskId },
     include: { assignees: { select: { userId: true } } },
@@ -173,8 +172,27 @@ export async function shiftTaskToNextSlot(taskId: string, actorId: string, reaso
   const now = new Date();
   const slot = (await search(opts.notBefore && opts.notBefore > now ? opts.notBefore : now)) ?? (opts.notBefore ? await search(now) : null);
   if (!slot) return null;
+  await applyTaskMove(task, slot, actorId, reason, { exceptActor: opts.exceptActor });
+  return slot;
+}
+
+/**
+ * Saves a move (new start / end) and tells the assignees and their Team Leaders (TASK_SHIFTED): audit, Google
+ * propagation, live update. Shared by the leave shift and the early-leave shift (ADR 0022).
+ */
+export async function applyTaskMove(
+  task: { id: string; scheduledStart: Date | null; scheduledEnd: Date | null; assignees: { userId: string }[] },
+  slot: { start: Date; end: Date },
+  actorId: string,
+  reason: string,
+  opts: { exceptActor?: boolean } = {},
+) {
+  const ids = task.assignees.map((a) => a.userId);
   const before = { scheduledStart: task.scheduledStart, scheduledEnd: task.scheduledEnd };
-  await prisma.task.update({ where: { id: task.id }, data: { scheduledStart: slot.start, scheduledEnd: slot.end, overdue: false } });
+  await prisma.task.update({
+    where: { id: task.id },
+    data: { scheduledStart: slot.start, scheduledEnd: slot.end, overdue: false, notStartedNotifiedAt: null, pastEndNotifiedAt: null },
+  });
   await audit(actorId, "task.shift", "Task", task.id, before, { scheduledStart: slot.start, scheduledEnd: slot.end });
   const { queueTaskPropagation } = await import("@/google/task-integrations");
   await queueTaskPropagation(task.id);
@@ -186,9 +204,9 @@ export async function shiftTaskToNextSlot(taskId: string, actorId: string, reaso
     body: reason,
     href: taskDeepLink(task.id),
     taskId: task.id,
+    exceptUserId: opts.exceptActor ? actorId : undefined,
   });
   void publishTaskChanged(task.id);
-  return slot;
 }
 
 export type AffectedTask = { id: string; title: string; start: Date | null; movable: boolean; why: UnmovableReason | null };

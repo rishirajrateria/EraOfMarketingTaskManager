@@ -14,6 +14,7 @@ const SCHEDULE: Record<JobName, number> = {
   payables: 60 * 60_000, // ADR 0009: next recurring bill + payment reminders (idempotent)
   "month-folders": 12 * 60 * 60_000, // ADR 0009: Finance/YYYY-MM in Drive (cached after the first run each month)
   "meeting-notes": 30 * 60_000, // ADR 0015: file Gemini meeting notes into each task's Drive "Meeting notes" folder
+  "back-question": 30 * 60_000, // ADR 0022: each working morning, "Is <Name> back today?" for "Ask tomorrow" early leaves
 };
 
 const g = globalThis as unknown as { __eomJobsStarted?: boolean };

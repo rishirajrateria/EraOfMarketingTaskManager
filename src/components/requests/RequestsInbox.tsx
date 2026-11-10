@@ -46,8 +46,11 @@ export function RequestsInbox({
   names = { teams: [], clients: [] },
   showAll,
   tz,
+  top = null,
 }: {
   inbox: RequestInbox;
+  /** Cards above the inbox: the morning "Is <Name> back today?" (ADR 0022). */
+  top?: React.ReactNode;
   tab: RequestTab;
   fin: FinanceGroup | null;
   /** Work tab: the Teams / Clients picks. */
@@ -187,6 +190,7 @@ export function RequestsInbox({
     <Screen zone={zone}>
       <div aria-busy={navPending} className={clsx("pb-4 transition-opacity", navPending && "opacity-55")}>
         <RequestsCaption />
+        {top}
         {showFin && finItems.length ? (
           <>
             <h2 className={sectionHead}>

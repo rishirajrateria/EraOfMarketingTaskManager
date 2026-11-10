@@ -228,7 +228,23 @@ enum NotificationKind {
   TDS_THRESHOLD
   /// A decision, not an update: push / email reminder only, never a feed row (ADR 0017)
   PAYMENT_DUE
+  /// "<Name> left early · N tasks need shifting" (ADR 0022): to Admins and HR, minus the person who marked it
+  EARLY_LEAVE
+  /// The morning "Is <Name> back today?" for an "Ask tomorrow" early leave (ADR 0022)
+  BACK_QUESTION
   GENERIC
+}
+
+/// Going home early (ADR 0022): "Away until…" a picked last day, or "Ask tomorrow" each next working morning.
+enum EarlyLeaveMode {
+  UNTIL
+  ASK
+}
+
+enum EarlyLeaveReason {
+  SICK
+  PERSONAL
+  OTHER
 }
 
 /// Payables (ADR 0009): an Expense is a bill; each payment due is an ExpenseOccurrence.
@@ -315,6 +331,8 @@ model User {
   attendance        Attendance[]        @relation("AttendanceUser")
   markedAttendance  Attendance[]        @relation("AttendanceMarkedBy")
   leaves            Leave[]             @relation("LeaveUser")
+  earlyLeaves       EarlyLeave[]        @relation("EarlyLeaveUser")
+  markedEarlyLeaves EarlyLeave[]        @relation("EarlyLeaveMarkedBy")
   inventory         InventorySnapshot[]
   auditLogs         AuditLog[]
   notifications     Notification[]
@@ -961,6 +979,38 @@ model Leave {
   updatedAt         DateTime    @updatedAt
 
   @@index([userId, from, to])
+}
+
+/// Going home early (ADR 0022), marked by Admin / HR only. Covers [leftAt, end of `coveredThrough`] in the company
+/// zone: the leaving day's window ends at leftAt, every later covered day is AWAY (`personDayStatus`).
+model EarlyLeave {
+  id             String           @id @default(cuid())
+  userId         String
+  user           User             @relation("EarlyLeaveUser", fields: [userId], references: [id], onDelete: Cascade)
+  /// The leaving day (company zone).
+  day            DateTime         @db.Date
+  leftAt         DateTime
+  reason         EarlyLeaveReason
+  mode           EarlyLeaveMode
+  /// UNTIL: the last day away.
+  until          DateTime?        @db.Date
+  /// The last covered day: `until` (UNTIL), else the leaving day plus every "Still off" answer (ASK).
+  coveredThrough DateTime         @db.Date
+  /// ASK: the morning question is waiting for this day ("Is <Name> back today?").
+  askDay         DateTime?        @db.Date
+  askedAt        DateTime?
+  /// ASK: answered "Back" on this day; no more questions.
+  backOn         DateTime?        @db.Date
+  active         Boolean          @default(true)
+  createdById    String
+  createdBy      User             @relation("EarlyLeaveMarkedBy", fields: [createdById], references: [id])
+  cancelledById  String?
+  cancelledAt    DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([userId, active])
+  @@index([active, coveredThrough])
 }
 
 model InventorySnapshot {

@@ -67,9 +67,16 @@ export async function requestInbox(opts: { includeResolved?: boolean } = {}, now
 /**
  * The Requests badge in the header. Admin: exactly what the inbox tabs add up to (Finance + Work + HR, via the same
  * `requestInbox` + `inboxCounts`). HR: open requests addressed to HR (HR's own leave goes to Admin, so never counted).
+ * Admin also counts the morning "Is <Name> back today?" questions at the top of Requests (ADR 0022; HR answers them on
+ * Attendance).
  */
 export async function requestBadgeCount(role: string): Promise<number> {
-  if (role === "ADMIN") return inboxTotal(inboxCounts(await requestInbox()));
+  if (role === "ADMIN") return inboxTotal(inboxCounts(await requestInbox())) + (await waitingBackQuestions());
   if (role === "HR") return prisma.request.count({ where: { status: "OPEN", targetRole: "HR" } });
   return 0;
+}
+
+/** "Is <Name> back today?" questions waiting for Admin / HR (ADR 0022): each counts as a decision. */
+function waitingBackQuestions(): Promise<number> {
+  return prisma.earlyLeave.count({ where: { active: true, mode: "ASK", backOn: null, askDay: { not: null } } });
 }
