@@ -1368,6 +1368,7 @@ function renderDash(){
  const quick=q=>{f.quick=f.quick===q?null:q;f.date=null;f.pill=null;save();renderDash();};
  $("#barg").replaceChildren(
   el("button",{class:"dk"+(f.date?" on":""),title:"Pick a date","aria-label":"Pick a date",onclick:daySheet},svg(I.cal,16,2.25),f.date?el("span",{},fmtD(f.date)):null),
+  el("button",{class:"dk"+(!f.date&&!f.quick?" on":""),"aria-pressed":String(!f.date&&!f.quick),onclick:()=>{f.quick=null;f.date=null;f.pill=null;save();renderDash();}},"All"),
   el("button",{class:"dk"+(f.quick==="today"?" on":""),onclick:()=>quick("today")},"Today"),
   el("button",{class:"dk"+(f.quick==="tomorrow"?" on":""),onclick:()=>quick("tomorrow")},"Tomorrow"),
   el("button",{class:"dk"+(f.quick==="asc"?" on":""),onclick:()=>quick("asc")},"Oldest"));

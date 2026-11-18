@@ -113,6 +113,9 @@ export function BottomBar({
             <CalendarDays size={16} strokeWidth={2.25} aria-hidden />
             {filters.date ? <span>{dayLabel(filters)}</span> : null}
           </DockPill>
+          <DockPill on={!filters.date && !filters.quick} onClick={() => onChange({ ...filters, quick: null, date: null, pill: null })}>
+            All
+          </DockPill>
           <DockPill on={filters.quick === "today"} onClick={() => quick("today")}>
             Today
           </DockPill>
