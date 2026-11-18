@@ -1,0 +1,20 @@
+node_modules
+.next
+out
+build
+dist
+coverage
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+/prisma/*.db
+.vercel
+tsconfig.tsbuildinfo
+next-env.d.ts
+.swarm
+.claude-flow
+
+# agent git worktrees (local working copies, never committed)
+.claude/worktrees/
