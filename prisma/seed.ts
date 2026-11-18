@@ -9,7 +9,8 @@ import { ensureCompanySettings } from "./seed-company";
 import { clearDemoNotifications, seedDemoContacts, seedDemoNotifications } from "./seed-notifications";
 
 const prisma = new PrismaClient();
-const DOMAIN = process.env.GOOGLE_WORKSPACE_DOMAIN || "eraofmarketing.com";
+// GOOGLE_WORKSPACE_DOMAIN may list several domains (ADR 0018); demo people use the first (staff) one.
+const DOMAIN = (process.env.GOOGLE_WORKSPACE_DOMAIN ?? "").split(",")[0]!.trim().replace(/^@/, "") || "eraofmarketing.com";
 const email = (local: string) => `${local}@${DOMAIN}`;
 
 async function main() {
